@@ -1,16 +1,16 @@
-# J.A.R.V.I.S.
-### *Just A Rather Very Intelligent System*
+# T.O.M.M.Y.
+### *Tactical Operations Multi-domain Machine, Yours*
 
 ![Python 3.11+](https://img.shields.io/badge/python-3.11+-white?style=flat-square&labelColor=black)
 ![License MIT](https://img.shields.io/badge/license-MIT-00ff80?style=flat-square&labelColor=black)
 ![Platform Windows](https://img.shields.io/badge/platform-Windows-ff0080?style=flat-square&labelColor=black)
 ![Voice AI](https://img.shields.io/badge/voice-AI%20Assistant-ff8800?style=flat-square&labelColor=black)
 
-![JARVIS HUD — Idle](screenshots/hero.jpg)
+![TOMMY HUD — Idle](screenshots/hero.jpg)
 
-A Windows-native, voice-first AI personal assistant inspired by the JARVIS from Iron Man — built from scratch in Python and a single HTML file.
+A Windows-native, voice-first AI personal assistant inspired by JARVIS from Iron Man — built from scratch in Python and a single HTML file. Renamed Tommy because, well, he's my mate.
 
-Lives quietly in the background. Wakes on **"Hey JARVIS"**. Speaks in a neural British voice. Manages your day, runs your code, hacks your hashes, and reads your calendar — all through one Iron Man–style HUD.
+Lives quietly in the background. Wakes on **"Hey TOMMY"**. Speaks in a neural British voice. Manages your day, runs your code, hacks your hashes, and reads your calendar — all through one Iron Man–style HUD.
 
 > Built it for myself. Sharing because I'd want to see it if someone else built it.
 
@@ -19,7 +19,7 @@ Lives quietly in the background. Wakes on **"Hey JARVIS"**. Speaks in a neural B
 ## What it can do
 
 ### Voice & Brain
-- 🎙 **Always-on wake word** — "Hey JARVIS" from anywhere; works even when the browser tab is closed
+- 🎙 **Always-on wake word** — "Hey TOMMY" from anywhere; works even when the browser tab is closed
 - 🧠 **Groq-powered** — `llama-3.3-70b-versatile` for thinking, `llama-4-scout` for vision
 - 🗣 **Neural TTS** — Microsoft edge-tts `en-GB-RyanNeural`
 - 🛑 **"Stop" command** — cuts speech instantly
@@ -65,21 +65,21 @@ Lives quietly in the background. Wakes on **"Hey JARVIS"**. Speaks in a neural B
 - Real-time FFT frequency bars on the orb, driven by your live mic input
 - Live CPU/RAM/disk/network/power graphs, scrolling telemetry
 - Code blocks with one-click COPY button
-- Typewriter animation on JARVIS replies
+- Typewriter animation on TOMMY replies
 - Animated grid background, drifting scan beam, wake-flash on activation
 
 ---
 
-## The HUD reacts to JARVIS's state
+## The HUD reacts to TOMMY's state
 
-The entire interface — orb, panels, frequency bars, brand mark, status pill, scan beam — shifts hue together depending on what JARVIS is doing.
+The entire interface — orb, panels, frequency bars, brand mark, status pill, scan beam — shifts hue together depending on what TOMMY is doing.
 
 | Standby (white) | Listening (magenta) | Speaking (lime) |
 |:---:|:---:|:---:|
 | ![Standby](screenshots/hero.jpg) | ![Listening](screenshots/hud-listening.jpg) | ![Speaking](screenshots/hud-speaking.jpg) |
 | idle, awaiting orders | mic engaged, capturing voice | answering, mid-reply |
 
-There's also a fourth state — **PROCESSING** (electric orange) — that flashes for the second or two JARVIS spends thinking before it speaks.
+There's also a fourth state — **PROCESSING** (electric orange) — that flashes for the second or two TOMMY spends thinking before it speaks.
 
 ---
 
@@ -93,8 +93,8 @@ There's also a fourth state — **PROCESSING** (electric orange) — that flashe
 
 ### 1. Clone the repo
 ```bat
-git clone https://github.com/Maher-Bhatt/Jarvis.git C:\Jarvis
-cd C:\Jarvis
+git clone https://github.com/Maher-Bhatt/Tommy.git C:\Tommy
+cd C:\Tommy
 ```
 
 ### 2. Create your config
@@ -111,7 +111,7 @@ GROQ_API_KEY = "gsk_xxxxxxxxxxxxxxxxxxxxxxxxx"
 Also set:
 ```python
 OWNER_NAME    = "YourName"
-OWNER_TITLE   = "Sir"        # what JARVIS should call you
+OWNER_TITLE   = "Sir"        # what TOMMY should call you
 OWNER_CITY    = "YourCity"   # for weather
 ```
 
@@ -127,17 +127,17 @@ py -3.11 -m pip install pipwin && py -3.11 -m pipwin install pyaudio
 ```
 
 ### 4. Launch
-Double-click **`START.bat`** — within 2 seconds you'll hear JARVIS greet you, and Chrome opens to `http://localhost:8888`.
+Double-click **`START.bat`** — within 2 seconds you'll hear TOMMY greet you, and Chrome opens to `http://localhost:8888`.
 
-That's it. Say **"Hey JARVIS, what time is it"** to test.
+That's it. Say **"Hey TOMMY, what time is it"** to test.
 
 ### 5. (optional) Auto-start on every Windows boot
 ```bat
 py -3.11 launcher.py
 ```
-This registers JARVIS under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` and drops a Startup-folder shortcut as backup. JARVIS will now launch silently every time you log in.
+This registers TOMMY under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` and drops a Startup-folder shortcut as backup. TOMMY will now launch silently every time you log in.
 
-To undo: open `regedit`, delete `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\JARVIS_v5`.
+To undo: open `regedit`, delete `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\TOMMY_v5`.
 
 ---
 
@@ -165,17 +165,17 @@ To undo: open `regedit`, delete `HKCU\Software\Microsoft\Windows\CurrentVersion\
 6. Browser opens → Allow.
 
 ### WhatsApp
-Just open `https://web.whatsapp.com` in Chrome once and scan the QR. After that JARVIS can send messages through it.
+Just open `https://web.whatsapp.com` in Chrome once and scan the QR. After that TOMMY can send messages through it.
 
 Add contacts:
-> *"Hey JARVIS, add contact Dev +919876543210"*
+> *"Hey TOMMY, add contact Dev +919876543210"*
 
 Send messages:
-> *"Hey JARVIS, send WhatsApp to Dev saying I'll be late"*
+> *"Hey TOMMY, send WhatsApp to Dev saying I'll be late"*
 
 ### Hash cracking
-Drop a wordlist at `data\wordlist.txt` (e.g., rockyou.txt) and JARVIS can crack hashes:
-> *"Hey JARVIS, crack hash 5f4dcc3b5aa765d61d8327deb882cf99"*
+Drop a wordlist at `data\wordlist.txt` (e.g., rockyou.txt) and TOMMY can crack hashes:
+> *"Hey TOMMY, crack hash 5f4dcc3b5aa765d61d8327deb882cf99"*
 
 ---
 
@@ -279,14 +279,14 @@ Drop a wordlist at `data\wordlist.txt` (e.g., rockyou.txt) and JARVIS can crack 
    launcher.py (silent boot, registers HKCU\...\Run)
 ```
 
-**Why stdlib only for the server?** No Flask, no FastAPI, no npm — JARVIS depends on Python's `http.server` + `ThreadingMixIn` and a single HTML file. Easier to audit, faster to start, no build step.
+**Why stdlib only for the server?** No Flask, no FastAPI, no npm — TOMMY depends on Python's `http.server` + `ThreadingMixIn` and a single HTML file. Easier to audit, faster to start, no build step.
 
 ---
 
 ## Project layout
 
 ```
-Jarvis/
+Tommy/
 ├── server.py             ← HTTP API + intent router + bg loops
 ├── listener.py           ← Always-on wake word + follow-up
 ├── launcher.py           ← Silent boot + Windows autostart
@@ -337,15 +337,15 @@ Jarvis/
 
 ## Troubleshooting
 
-**JARVIS doesn't greet me on launch.** Make sure your speakers are unmuted and `START.bat` shows no errors. If pygame fails, reinstall: `pip install --force-reinstall pygame`.
+**TOMMY doesn't greet me on launch.** Make sure your speakers are unmuted and `START.bat` shows no errors. If pygame fails, reinstall: `pip install --force-reinstall pygame`.
 
-**Wake word "Hey JARVIS" doesn't work.** Google STT needs internet. Check that `data/listener.log` says "listening". Also: Windows privacy → Microphone → make sure desktop apps can use it.
+**Wake word "Hey TOMMY" doesn't work.** Google STT needs internet. Check that `data/listener.log` says "listening". Also: Windows privacy → Microphone → make sure desktop apps can use it.
 
-**Spotify says "no active device".** Open Spotify (desktop or web player or phone) and hit play on any song for 2 seconds. JARVIS will auto-launch Spotify if it's not running, but Spotify still needs to register a device first.
+**Spotify says "no active device".** Open Spotify (desktop or web player or phone) and hit play on any song for 2 seconds. TOMMY will auto-launch Spotify if it's not running, but Spotify still needs to register a device first.
 
 **Server unreachable in browser.** Check Task Manager for `pythonw.exe` processes. If none, run `START.bat` again. The Windows Firewall may prompt the first time — click Allow.
 
-**Groq quota exceeded.** The free tier is 6,000 requests/day on the 70B model — should be plenty. If exceeded, JARVIS falls back to Ollama (if you have it installed) or just says it's unavailable.
+**Groq quota exceeded.** The free tier is 6,000 requests/day on the 70B model — should be plenty. If exceeded, TOMMY falls back to Ollama (if you have it installed) or just says it's unavailable.
 
 ---
 
@@ -357,7 +357,7 @@ MIT — see [LICENSE](LICENSE). Cybersecurity tooling is for **authorized testin
 
 ## Acknowledgments
 
-- The vision and the name come from Marvel's Tony Stark. JARVIS from the movies = the inspiration.
+- The vision and the name come from Marvel's Tony Stark. TOMMY from the movies = the inspiration.
 - [Groq](https://groq.com) for absurdly fast LLaMA inference
 - [edge-tts](https://github.com/rany2/edge-tts) for the neural Ryan voice
 - [crt.sh](https://crt.sh) and [NVD](https://nvd.nist.gov) for free security data

@@ -1,8 +1,8 @@
 """
-JARVIS Demo Runner
+TOMMY Demo Runner
 ==================
-Plays through a scripted showcase of JARVIS features, one command at a time.
-Each command waits for JARVIS to FINISH SPEAKING before the next one fires.
+Plays through a scripted showcase of TOMMY features, one command at a time.
+Each command waits for TOMMY to FINISH SPEAKING before the next one fires.
 
 Usage:
     py -3.11 demo.py            # full ~3 minute demo
@@ -63,7 +63,7 @@ def chat(text):
 
 
 def wait_for_speak_end(max_wait=60):
-    """Block while JARVIS is speaking. Returns when speaking==False."""
+    """Block while TOMMY is speaking. Returns when speaking==False."""
     # Allow up to 4s for speech to BEGIN
     deadline = time.time() + 4
     while time.time() < deadline:
@@ -80,7 +80,7 @@ def wait_for_speak_end(max_wait=60):
             sys.stdout.flush()
             return True
         sys.stdout.write(
-            f"\r{C['gray']}  {spinner[i % len(spinner)]} JARVIS speaking…{C['reset']}"
+            f"\r{C['gray']}  {spinner[i % len(spinner)]} TOMMY speaking…{C['reset']}"
         )
         sys.stdout.flush()
         i += 1
@@ -92,10 +92,10 @@ def wait_for_speak_end(max_wait=60):
 def banner():
     print(C["bold"] + C["magenta"])
     print("═" * 72)
-    print("           J . A . R . V . I . S .   —   DEMO RUNNER")
+    print("           T . O . M . M . Y .   —   DEMO RUNNER")
     print("═" * 72)
     print(C["reset"])
-    print(f"  {C['gray']}Each command waits for JARVIS to finish speaking before the next.")
+    print(f"  {C['gray']}Each command waits for TOMMY to finish speaking before the next.")
     print(f"  Press Ctrl+C to abort.{C['reset']}")
     print()
 
@@ -121,11 +121,11 @@ def run(text, show_reply=True, max_wait=60):
     if show_reply:
         src = r.get("source", "?")
         reply = (r.get("reply", "") or "").strip()
-        # Strip code fences for cleaner console — JARVIS still shows them in the UI
+        # Strip code fences for cleaner console — TOMMY still shows them in the UI
         compact = " ".join(reply.split())[:280]
         tag = "ai" if src == "ai" else "loc"
         tag_col = C["orange"] if src == "ai" else C["green"]
-        print(f"  {tag_col}{C['bold']}JARVIS← [{tag}]{C['reset']}  {compact}")
+        print(f"  {tag_col}{C['bold']}TOMMY← [{tag}]{C['reset']}  {compact}")
     wait_for_speak_end(max_wait=max_wait)
 
 
@@ -141,7 +141,7 @@ SEQUENCES = {
 
     "full": [
         ("OPENING — HUMANIZED GREETING",
-         "JARVIS introduces itself in a natural, varied way",
+         "TOMMY introduces itself in a natural, varied way",
          ["hi"]),
 
         ("LOCAL HANDLERS (zero API cost)",
@@ -171,8 +171,8 @@ SEQUENCES = {
          ["reverse shell python 10.10.14.5 4444"]),
 
         ("ENCODING / DECODING",
-         "Built-in codecs without leaving JARVIS",
-         ["base64 encode JARVIS online and operational",
+         "Built-in codecs without leaving TOMMY",
+         ["base64 encode TOMMY online and operational",
           "rot13 hello world"]),
 
         ("DPAPI PASSWORD VAULT",
@@ -186,8 +186,8 @@ SEQUENCES = {
 
         ("TASKS, NOTES, MEMORY",
          "Persistent personal assistant features",
-         ["add task ship JARVIS to GitHub tonight",
-          "take a note JARVIS demo recorded for LinkedIn",
+         ["add task ship TOMMY to GitHub tonight",
+          "take a note TOMMY demo recorded for LinkedIn",
           "remember I prefer the smart model llama 3.3 70b"]),
 
         ("WORKFLOW MODES",
@@ -196,7 +196,7 @@ SEQUENCES = {
 
         ("CLOSING",
          "Demo complete",
-         ["thanks JARVIS"]),
+         ["thanks TOMMY"]),
     ],
 
     "short": [
@@ -219,12 +219,12 @@ SEQUENCES = {
          ["ctf mode"]),
         ("CLOSE",
          "Note for the LinkedIn post",
-         ["take a note JARVIS demo recorded"]),
+         ["take a note TOMMY demo recorded"]),
     ],
 
     "cyber": [
         ("OPENING",
-         "Just JARVIS doing its thing",
+         "Just TOMMY doing its thing",
          ["hi"]),
         ("HASH ID + GENERATION",
          "MD5, identify, NTLM — all local",
@@ -282,7 +282,7 @@ def main():
     # Sanity check server
     s = status()
     if not s.get("online"):
-        print(f"  {C['red']}✗ JARVIS server not reachable at {BASE}{C['reset']}")
+        print(f"  {C['red']}✗ TOMMY server not reachable at {BASE}{C['reset']}")
         print(f"  {C['red']}  Run START.bat first.{C['reset']}")
         sys.exit(1)
 

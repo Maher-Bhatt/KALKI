@@ -1,5 +1,5 @@
 """
-JARVIS Vision — screenshot + multimodal analysis.
+TOMMY Vision — screenshot + multimodal analysis.
 Uses Groq vision models. Falls back to local OCR (pytesseract) if available.
 """
 
@@ -68,7 +68,7 @@ def screenshot_save(path=None):
     if not path:
         desk = os.path.join(os.path.expanduser("~"), "Desktop")
         path = os.path.join(desk,
-            f"jarvis_screen_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
+            f"tommy_screen_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
     img.save(path)
     return path
 
@@ -88,7 +88,7 @@ def ocr_screen():
 
 
 SYSTEM_VISION = (
-    "You are JARVIS — Sir's personal AI. Look at the screenshot Sir just took. "
+    "You are TOMMY — Sir's personal AI. Look at the screenshot Sir just took. "
     "Identify what is on screen and answer his question precisely. "
     "If it is a CTF/cyber challenge, solve it. "
     "If it is code, debug or explain it. "

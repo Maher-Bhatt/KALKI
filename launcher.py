@@ -1,5 +1,5 @@
 """
-JARVIS v5 — Silent Launcher
+TOMMY v5 — Silent Launcher
 - Registers Windows auto-start (HKCU Run + Startup folder shortcut).
 - Spawns server.py + listener.py with no console windows.
 - Respawns either child if it dies.
@@ -68,10 +68,10 @@ def register_registry(enabled=True):
             r"Software\Microsoft\Windows\CurrentVersion\Run",
             0, winreg.KEY_SET_VALUE)
         if enabled:
-            winreg.SetValueEx(key, "JARVIS_v5", 0, winreg.REG_SZ, cmd)
+            winreg.SetValueEx(key, "TOMMY_v5", 0, winreg.REG_SZ, cmd)
             log(f"registry autostart set: {cmd}")
         else:
-            try: winreg.DeleteValue(key, "JARVIS_v5")
+            try: winreg.DeleteValue(key, "TOMMY_v5")
             except FileNotFoundError: pass
             log("registry autostart removed")
         winreg.CloseKey(key)
@@ -87,7 +87,7 @@ def register_startup_folder(enabled=True):
         os.environ.get("APPDATA", ""),
         r"Microsoft\Windows\Start Menu\Programs\Startup",
     )
-    bat = os.path.join(startup, "JARVIS_v5.bat")
+    bat = os.path.join(startup, "TOMMY_v5.bat")
     pyw = find_pythonw()
     launcher = os.path.abspath(__file__)
     try:

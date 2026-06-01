@@ -1,5 +1,5 @@
 """
-JARVIS WhatsApp messaging via pywhatkit (uses WhatsApp Web).
+TOMMY WhatsApp messaging via pywhatkit (uses WhatsApp Web).
 First-time use: WhatsApp Web must be logged in in your browser.
 """
 

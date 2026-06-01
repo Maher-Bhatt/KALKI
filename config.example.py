@@ -1,5 +1,5 @@
 # ──────────────────────────────────────────────────────────────
-# JARVIS — Configuration Template
+# TOMMY — Configuration Template
 # Copy this file to config.py and fill in your own keys / settings.
 # config.py is gitignored so your secrets never get committed.
 # ──────────────────────────────────────────────────────────────
@@ -10,7 +10,7 @@ GROQ_API_KEY = "PASTE_YOUR_GROQ_KEY_HERE"
 
 # ── OWNER ───────────────────────────────────────────────────
 OWNER_NAME    = "YourName"
-OWNER_TITLE   = "Sir"          # or whatever JARVIS should call you
+OWNER_TITLE   = "Sir"          # or whatever TOMMY should call you
 OWNER_CITY    = "YourCity"
 OWNER_STATE   = "YourState"
 OWNER_COUNTRY = "YourCountry"
@@ -30,7 +30,7 @@ OLLAMA_URL  = "http://localhost:11434"     # used only if Groq fails
 MAX_HISTORY = 20
 
 # ── WAKE WORDS ──────────────────────────────────────────────
-WAKE_WORDS = ["hey jarvis", "jarvis", "hey sir", "ok jarvis"]
+WAKE_WORDS = ["hey tommy", "tommy", "hey sir", "ok tommy"]
 
 # ── STARTUP ─────────────────────────────────────────────────
 AUTO_START           = True

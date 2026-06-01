@@ -1,5 +1,5 @@
 """
-JARVIS workflow modes — single-phrase action chains.
+TOMMY workflow modes — single-phrase action chains.
 """
 
 import os

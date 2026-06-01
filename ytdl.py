@@ -1,5 +1,5 @@
 """
-JARVIS YouTube / video downloader via yt-dlp.
+TOMMY YouTube / video downloader via yt-dlp.
 """
 
 import os

@@ -1,5 +1,5 @@
 """
-JARVIS Code Engine — generate code via Groq, save, execute.
+TOMMY Code Engine — generate code via Groq, save, execute.
 Supports Python, PowerShell, Batch.
 """
 
@@ -85,7 +85,7 @@ def run_inline(code, lang="python", name="inline", timeout=60):
 
 # ─── Groq-driven code generation ────────────────────────
 CODE_SYSTEM_PROMPT = (
-    "You are JARVIS — Sir's personal coding engine. "
+    "You are TOMMY — Sir's personal coding engine. "
     "Write production-quality {LANG} code that does exactly what Sir asks. "
     "Output ONLY the code in a single fenced block (```{LANG} ... ```). "
     "No prose before or after. No explanations unless explicitly requested. "

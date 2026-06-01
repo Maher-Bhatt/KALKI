@@ -1,5 +1,5 @@
 """
-JARVIS Tasks & Reminders
+TOMMY Tasks & Reminders
 Tasks: persistent TODO list. Reminders: time-bound; fired by background thread.
 """
 

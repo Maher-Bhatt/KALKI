@@ -1,5 +1,5 @@
 """
-JARVIS Spotify control via Spotify Web API.
+TOMMY Spotify control via Spotify Web API.
 First-time setup runs setup_spotify.py to authorize.
 """
 

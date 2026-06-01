@@ -17,7 +17,7 @@ data/rockyou.txt
 data/scripts/
 
 # ── Logs ──
-data/jarvis.log
+data/tommy.log
 data/listener.log
 data/launcher.log
 *.log

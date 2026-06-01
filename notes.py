@@ -1,5 +1,5 @@
 """
-JARVIS Notes & Journal — quick capture, tagged, full-text search.
+TOMMY Notes & Journal — quick capture, tagged, full-text search.
 """
 
 import os

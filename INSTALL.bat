@@ -1,9 +1,9 @@
 @echo off
-title JARVIS v5 - Installer
+title TOMMY v5 - Installer
 color 0B
 echo.
 echo ============================================================
-echo   JARVIS v5 - Installing Dependencies
+echo   TOMMY v5 - Installing Dependencies
 echo ============================================================
 echo.
 py -3.11 -m pip install --upgrade pip

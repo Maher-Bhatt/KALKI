@@ -1,5 +1,5 @@
 """
-JARVIS v5 — Wake Word Listener
+TOMMY v5 — Wake Word Listener
 Always-on system mic. Captures wake word, then the follow-up command.
 NEVER calls AI itself — POSTs to /api/wake (greeting/Chrome) or /api/chat
 (voice command). The browser tab is purely a display.
@@ -42,10 +42,10 @@ STOP_WORDS = ["stop", "stop talking", "shut up", "be quiet", "silence",
               "quiet", "shush", "cancel"]
 WAKE_WORDS = [w.lower() for w in config.WAKE_WORDS]
 
-# Common Google STT mishearings of "Jarvis"
-WAKE_FUZZY = ["jarvis", "javis", "jervis", "service", "javed",
-              "jarves", "jarviss", "jervice", "darvis", "harvis",
-              "yarvis", "hey google"]
+# Common Google STT mishearings of "Tommy"
+WAKE_FUZZY = ["tommy", "tommi", "tommie", "tom", "tammy", "tummy",
+              "thomas", "tony", "tomby", "stormy", "tonny",
+              "hey google", "hey tom", "ok tom"]
 
 
 def _post(endpoint, body=None, timeout=15):
@@ -157,7 +157,7 @@ def listen_once(recognizer, mic, phrase_time_limit=4, timeout=None):
 
 
 def wait_until_silent(max_wait=4.0):
-    """Block while JARVIS is speaking so its own voice doesn't get transcribed."""
+    """Block while TOMMY is speaking so its own voice doesn't get transcribed."""
     deadline = time.time() + max_wait
     while time.time() < deadline:
         if not is_speaking():

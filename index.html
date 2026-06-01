@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>J.A.R.V.I.S.</title>
+<title>T.O.M.M.Y.</title>
 <style>
 /* ════════════════════════════════════════════════════════════════
-   J.A.R.V.I.S. — Monochrome + Neon Accent Theme
+   T.O.M.M.Y. — Monochrome + Neon Accent Theme
    Black & white base, single state-driven accent color that
-   shifts through magenta / orange / lime as JARVIS reacts.
+   shifts through magenta / orange / lime as TOMMY reacts.
    ════════════════════════════════════════════════════════════════ */
 
 :root{
@@ -323,8 +323,8 @@ select.qbtn{ appearance:none; background:rgba(0,0,0,0.5); }
 }
 .readout .line.user        { color:var(--text); }
 .readout .line.user::before{ background:#ffffff; box-shadow:0 0 8px rgba(255,255,255,0.4); }
-.readout .line.jarvis      { color:var(--text); }
-.readout .line.jarvis::before{ background:var(--lime); box-shadow:0 0 8px rgba(0,255,128,0.5); }
+.readout .line.tommy      { color:var(--text); }
+.readout .line.tommy::before{ background:var(--lime); box-shadow:0 0 8px rgba(0,255,128,0.5); }
 .readout .line.error       { color:var(--red); border-color:rgba(255,51,68,0.45); }
 .readout .line.error::before{ background:var(--red); box-shadow:0 0 10px rgba(255,51,68,0.55); }
 @keyframes lineIn{
@@ -500,7 +500,7 @@ select.qbtn{ appearance:none; background:rgba(0,0,0,0.5); }
   animation: wakeFlash .9s ease-out;
 }
 
-/* ── Typewriter cursor for JARVIS replies ──────── */
+/* ── Typewriter cursor for TOMMY replies ──────── */
 .typing::after{
   content:"▮";
   margin-left:2px;
@@ -519,8 +519,8 @@ select.qbtn{ appearance:none; background:rgba(0,0,0,0.5); }
 <div class="boot" id="boot">
   <pre>
     ╔═══════════════════════════════════════════════════════╗
-    ║   J . A . R . V . I . S .   v 5 . 0 0                 ║
-    ║   Just A Rather Very Intelligent System               ║
+    ║   T . O . M . M . Y .   v 5 . 0 0                 ║
+    ║   Tactical Operations Multi-domain Machine, Yours               ║
     ╚═══════════════════════════════════════════════════════╝</pre>
   <div class="lines" id="bootLines"></div>
 </div>
@@ -530,8 +530,8 @@ select.qbtn{ appearance:none; background:rgba(0,0,0,0.5); }
   <div class="brand">
     <div class="brand-mark"></div>
     <div>
-      <h1>J.A.R.V.I.S.</h1>
-      <div class="sub">Just A Rather Very Intelligent System</div>
+      <h1>T.O.M.M.Y.</h1>
+      <div class="sub">Tactical Operations Multi-domain Machine, Yours</div>
     </div>
   </div>
   <div class="top-meta">
@@ -649,7 +649,7 @@ select.qbtn{ appearance:none; background:rgba(0,0,0,0.5); }
   <div class="dropContent">
     <div class="dropIcon">⬇</div>
     <div class="dropText">DROP TO ATTACH</div>
-    <div class="dropHint">image / code / text — JARVIS will analyze</div>
+    <div class="dropHint">image / code / text — TOMMY will analyze</div>
   </div>
 </div>
 <div id="attachStrip"></div>
@@ -663,7 +663,7 @@ select.qbtn{ appearance:none; background:rgba(0,0,0,0.5); }
   <button class="iconBtn" id="sendBtn" title="Send">▶</button>
 </div>
 
-<div class="foot-tag">J · A · R · V · I · S</div>
+<div class="foot-tag">T · O · M · M · Y</div>
 <div class="reticle" id="reticle"></div>
 
 <script>
@@ -763,7 +763,7 @@ async function refreshStatus(){
 
     if (d.conversationSeq && d.conversationSeq > lastSeenSeq && d.recentExchange){
       addLine(d.recentExchange.user, "user");
-      addLine(d.recentExchange.reply, "jarvis");
+      addLine(d.recentExchange.reply, "tommy");
       pushStream("voice command captured","hot");
       lastSeenSeq = d.conversationSeq;
     } else if (d.conversationSeq && lastSeenSeq === 0) {
@@ -927,7 +927,7 @@ function typewriter(el, text, speed=14){
 
 function addLine(text, who){
   const ro = $("readout");
-  if (who === "jarvis" && /```[\s\S]*?```/.test(text)){
+  if (who === "tommy" && /```[\s\S]*?```/.test(text)){
     const segs = parseCodeBlocks(text);
     for (const s of segs){
       if (s.type === "code"){
@@ -936,14 +936,14 @@ function addLine(text, who){
         const t = s.text.trim();
         if (!t) continue;
         const div = document.createElement("div");
-        div.className = "line jarvis";
+        div.className = "line tommy";
         ro.appendChild(div);
         typewriter(div, t);
       }
     }
-  } else if (who === "jarvis"){
+  } else if (who === "tommy"){
     const div = document.createElement("div");
-    div.className = "line jarvis";
+    div.className = "line tommy";
     ro.appendChild(div);
     typewriter(div, text);
   } else {
@@ -1069,7 +1069,7 @@ async function send(text){
         body: JSON.stringify({image:firstImage.data, question:question}),
       });
       const d = await r.json();
-      addLine(d.reply || "...", "jarvis");
+      addLine(d.reply || "...", "tommy");
       pushStream("vision reply received");
       setMode("speaking");
       const dur = Math.min(14000, Math.max(2200, (d.reply||"").length * 55));
@@ -1108,7 +1108,7 @@ async function send(text){
     const d = await r.json();
     const reply = d.reply || "...";
     STATE.history.push({role:"assistant", content:reply});
-    addLine(reply, "jarvis");
+    addLine(reply, "tommy");
     pushStream("response received ("+(d.source||"ai")+")");
     setMode("speaking");
     const dur = Math.min(14000, Math.max(2200, reply.length * 55));
@@ -1297,7 +1297,7 @@ function drawOrb(){
   ox.globalAlpha = 1;
 
   drawArcRing(cx,cy, R*1.50, 36, t*0.004*sp, "#ffffff", 1.6, 0.35);
-  drawTextRing(cx,cy, R*1.62, "JARVIS · GROQ · LLAMA · NEURAL · ONLINE · ARC ·", t*0.0014*sp, "#ffffff", 10);
+  drawTextRing(cx,cy, R*1.62, "TOMMY · GROQ · LLAMA · NEURAL · ONLINE · ARC ·", t*0.0014*sp, "#ffffff", 10);
   drawArcRing(cx,cy, R*1.28, 24, -t*0.006*sp, C.ring, 1.6, 0.55);
   drawArcRing(cx,cy, R*1.12, 16, t*0.012*sp, C.ring, 1.2, 0.5);
 
@@ -1553,7 +1553,7 @@ document.addEventListener("visibilitychange", () => {
   if (!document.hidden){ _lastFrame = 0; _dialFrame = 0; }
 });
 
-setTimeout(()=>addLine("JARVIS online. Awaiting orders, Sir.","jarvis"), 1600);
+setTimeout(()=>addLine("TOMMY online. Awaiting orders, Sir.","tommy"), 1600);
 </script>
 </body>
 </html>

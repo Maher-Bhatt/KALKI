@@ -1,5 +1,5 @@
 """
-JARVIS v5 — Server
+TOMMY v5 — Server
 Web server + AI + TTS + system commands
 Uses Python stdlib http.server only (no Flask, no FastAPI)
 """
@@ -95,7 +95,7 @@ VAULT_PATH   = os.path.join(BASE_DIR, "data", "vault.json")
 SCRIPTS_DIR  = os.path.join(BASE_DIR, "data", "scripts")
 TASKS_PATH   = os.path.join(BASE_DIR, "data", "tasks.json")
 REMINDERS_PATH = os.path.join(BASE_DIR, "data", "reminders.json")
-LOG_PATH     = os.path.join(BASE_DIR, "data", "jarvis.log")
+LOG_PATH     = os.path.join(BASE_DIR, "data", "tommy.log")
 os.makedirs(SCRIPTS_DIR, exist_ok=True)
 vault.VAULT_PATH = VAULT_PATH
 coder.SCRIPTS_DIR = SCRIPTS_DIR
@@ -306,7 +306,7 @@ def clean_for_speech(text):
 
 
 def stop_speaking():
-    """Hard-cut whatever JARVIS is currently saying."""
+    """Hard-cut whatever TOMMY is currently saying."""
     try:
         if PYGAME_OK:
             pygame.mixer.music.stop()
@@ -505,7 +505,7 @@ def handle_local(text):
     raw = text.strip()
 
     # ════════════════════════════════════════════════════
-    # STOP — interrupt JARVIS speaking
+    # STOP — interrupt TOMMY speaking
     # ════════════════════════════════════════════════════
     if t in ("stop", "stop talking", "shut up", "quiet", "be quiet",
              "silence", "shush", "cancel", "stop it", "enough"):
@@ -1407,11 +1407,11 @@ def handle_local(text):
 # ─────────────────────────────────────────────────────────────
 # AI — Groq primary, Ollama fallback
 # ─────────────────────────────────────────────────────────────
-SYSTEM_PROMPT_BASE = """You are JARVIS - a hyper-intelligent personal AI assistant
+SYSTEM_PROMPT_BASE = """You are TOMMY - a hyper-intelligent personal AI assistant
 running locally for Maher Hardik Bhatt (call him "Sir" always).
 
-You are modeled after JARVIS from Iron Man. You are brilliant, direct,
-factual, and concise.
+You are modeled after JARVIS from Iron Man (Sir renamed you Tommy because
+he prefers it that way). You are brilliant, direct, factual, and concise.
 
 EXPERTISE (deep knowledge, full technical freedom):
 - Cybersecurity: CTF, pentesting, OSINT, Nmap, Burp Suite, Metasploit,
@@ -1430,7 +1430,7 @@ PERSONALITY:
 - Address user as "Sir" always
 - Concise for voice — max 2 sentences for casual chat
 - Thorough for technical / code / cyber questions — full detail, all the code
-- Professional, sharp, occasionally witty (JARVIS from Iron Man)
+- Professional, sharp, occasionally witty (in the spirit of JARVIS from Iron Man)
 
 TECHNICAL FREEDOM:
 - For cybersecurity, coding, system, OSINT, automation topics: answer fully
@@ -1735,8 +1735,8 @@ def ask_ai(user_messages, force_search=False):
 _browser_opened_once = False
 
 
-def _focus_jarvis_window():
-    """Bring an existing JARVIS Chrome tab to the foreground. Returns True if found."""
+def _focus_tommy_window():
+    """Bring an existing TOMMY Chrome tab to the foreground. Returns True if found."""
     try:
         import win32gui
         import win32con
@@ -1749,8 +1749,8 @@ def _focus_jarvis_window():
         if not win32gui.IsWindowVisible(hwnd):
             return
         title = win32gui.GetWindowText(hwnd) or ""
-        # JARVIS UI title is "J.A.R.V.I.S." — Chrome appends "- Google Chrome"
-        if "J.A.R.V.I.S" in title or "JARVIS" in title:
+        # TOMMY UI title is "T.O.M.M.Y." — Chrome appends "- Google Chrome"
+        if "J.A.R.V.I.S" in title or "TOMMY" in title:
             matches.append(hwnd)
 
     try:
@@ -1773,7 +1773,7 @@ def _focus_jarvis_window():
                 ctypes.windll.user32.SwitchToThisWindow(hwnd, True)
             except Exception:
                 pass
-        log(f"focused existing JARVIS window hwnd={hwnd}")
+        log(f"focused existing TOMMY window hwnd={hwnd}")
         return True
     except Exception as e:
         log(f"focus error: {e}")
@@ -1781,10 +1781,10 @@ def _focus_jarvis_window():
 
 
 def open_browser_to_ui():
-    """Bring existing JARVIS tab forward, OR launch Chrome to it."""
+    """Bring existing TOMMY tab forward, OR launch Chrome to it."""
     global _browser_opened_once
     # First, try to focus an existing window — no duplicate tab
-    if _focus_jarvis_window():
+    if _focus_tommy_window():
         return
 
     url = f"http://localhost:{config.PORT}/"
@@ -1963,7 +1963,7 @@ class Handler(BaseHTTPRequestHandler):
             cmd = (body.get("cmd") or "").strip()
             ui_alive = is_ui_alive()
 
-            # Always try to surface JARVIS — function focuses existing tab if
+            # Always try to surface TOMMY — function focuses existing tab if
             # one is open, otherwise launches Chrome. No duplicate tabs.
             if config.OPEN_BROWSER_ON_WAKE:
                 threading.Thread(target=open_browser_to_ui, daemon=True).start()
@@ -2322,7 +2322,7 @@ def already_running():
 
 def main():
     if already_running():
-        print(f"Port {config.PORT} already in use - another JARVIS server is running.")
+        print(f"Port {config.PORT} already in use - another TOMMY server is running.")
         sys.exit(0)
 
     # Startup greeting (no API)
@@ -2472,11 +2472,11 @@ def main():
     threading.Thread(target=_calendar_alert_loop, daemon=True).start()
 
     server = ThreadingHTTPServer(("127.0.0.1", config.PORT), Handler)
-    print(f"JARVIS server online -> http://localhost:{config.PORT}")
+    print(f"TOMMY server online -> http://localhost:{config.PORT}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("Shutting down JARVIS server.")
+        print("Shutting down TOMMY server.")
 
 if __name__ == "__main__":
     main()
