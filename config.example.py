@@ -16,8 +16,12 @@ OWNER_STATE   = "YourState"
 OWNER_COUNTRY = "YourCountry"
 
 # ── VOICE (edge-tts) ────────────────────────────────────────
-TTS_VOICE  = "en-GB-RyanNeural"   # try en-US-GuyNeural, en-AU-WilliamNeural
-TTS_RATE   = "-5%"
+# American males (Tommy vibe): en-US-GuyNeural (warm, default), en-US-DavisNeural
+#   (conversational), en-US-TonyNeural (deep), en-US-BrianNeural (professional)
+# British males: en-GB-RyanNeural (deep), en-GB-ThomasNeural (sharp)
+# Australian: en-AU-WilliamNeural
+TTS_VOICE  = "en-US-GuyNeural"
+TTS_RATE   = "+0%"                # +N% faster, -N% slower
 TTS_VOLUME = "+10%"
 
 # ── SERVER ──────────────────────────────────────────────────
