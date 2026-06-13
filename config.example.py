@@ -24,6 +24,10 @@ TTS_VOICE  = "en-US-BrianMultilingualNeural"
 TTS_RATE   = "+0%"                # +N% faster, -N% slower
 TTS_PITCH  = "+0Hz"               # +/-N Hz to shift pitch
 TTS_VOLUME = "+0%"
+# Output device for KALKI's voice (name substring). Set to your laptop speakers
+# (e.g. "Speakers (Realtek") so KALKI doesn't grab a shared Bluetooth headset
+# and interrupt your phone. Leave "" for the system default output.
+TTS_OUTPUT_DEVICE = ""
 
 # ── SERVER ──────────────────────────────────────────────────
 PORT    = 8888
@@ -36,6 +40,12 @@ MAX_HISTORY = 20
 
 # ── WAKE WORDS ──────────────────────────────────────────────
 WAKE_WORDS = ["hey kalki", "kalki", "hey sir", "ok kalki"]
+
+# ── LISTEN MODE ─────────────────────────────────────────────
+# "always" = hands-free always-on wake word (continuous mic).
+# "push"   = push-to-talk (mic off until you tap the HUD mic button). Use this
+#            if you share a Bluetooth headset with a phone (no audio cuts).
+LISTEN_MODE = "always"
 
 # ── MIC / STT INPUT ─────────────────────────────────────────
 # Keep Bluetooth headphones in high-quality A2DP: the listener avoids the

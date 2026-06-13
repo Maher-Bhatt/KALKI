@@ -340,6 +340,34 @@ def stop_speaking():
         return False
 
 
+_TTS_DEV_RESOLVED = False
+_TTS_DEV = None
+
+
+def _tts_output_device():
+    """Resolve config.TTS_OUTPUT_DEVICE (a name substring) to an exact SDL
+    output-device name, cached. Empty config -> system default (None)."""
+    global _TTS_DEV_RESOLVED, _TTS_DEV
+    if _TTS_DEV_RESOLVED:
+        return _TTS_DEV
+    _TTS_DEV_RESOLVED = True
+    want = (getattr(config, "TTS_OUTPUT_DEVICE", "") or "").strip().lower()
+    if want:
+        try:
+            import pygame._sdl2.audio as _a
+            need_quit = not pygame.mixer.get_init()
+            if need_quit:
+                pygame.mixer.init()          # SDL audio must be up to enumerate
+            names = list(_a.get_audio_device_names(False))
+            if need_quit:
+                pygame.mixer.quit()
+            _TTS_DEV = next((n for n in names if want in (n or "").lower()), None)
+            log(f"TTS output device: {_TTS_DEV or 'default (no match for ' + want + ')'}")
+        except Exception as e:
+            log(f"TTS output device lookup failed: {e}")
+    return _TTS_DEV
+
+
 def speak(text):
     """Non-blocking TTS using edge-tts neural voice. Markdown stripped first."""
     text = clean_for_speech(text)
@@ -362,7 +390,17 @@ def speak(text):
                     getattr(config, "TTS_PITCH", "+0Hz"),
                 ))
                 # Open the audio device only now, for the duration of speech.
-                pygame.mixer.init()
+                # If TTS_OUTPUT_DEVICE is set (e.g. laptop speakers), play there
+                # so KALKI never grabs a shared Bluetooth headset — leaving the
+                # headset free for your phone, no audio cut.
+                _dev = _tts_output_device()
+                if _dev:
+                    try:
+                        pygame.mixer.init(devicename=_dev)
+                    except Exception:
+                        pygame.mixer.init()
+                else:
+                    pygame.mixer.init()
                 pygame.mixer.music.load(tmp)
                 pygame.mixer.music.play()
                 while pygame.mixer.music.get_busy():
@@ -407,22 +445,26 @@ _OPENERS = {
         "Good morning, {t}.", "Morning, {t}.", "Rise and shine, {t}.",
         "Up and at it, {t}.", "Top of the morning, {t}.", "A fresh day, {t}.",
         "Good morning. Slept well, I hope.", "Morning, {t}. Let's make it count.",
-        "Good morning, {t}. The day is yours.",
+        "Good morning, {t}. The day is yours.", "Online and ready, {t}. Good morning.",
+        "A new day, fresh systems, {t}.", "Good morning, {t}. Let's build something.",
     ],
     "afternoon": [
         "Good afternoon, {t}.", "Afternoon, {t}.", "Welcome back, {t}.",
         "There you are, {t}.", "Good afternoon. Back in action, I see.",
         "Afternoon, {t}. Hope it's going your way.", "Midday already, {t}.",
+        "Good afternoon, {t}. Where were we?", "Back at it, {t}. Good afternoon.",
     ],
     "evening": [
         "Good evening, {t}.", "Evening, {t}.", "Hello again, {t}.",
         "Good evening. Winding down, or just getting started?",
         "Evening, {t}. Long day?", "Good evening, {t}. The night is young.",
+        "Good evening, {t}. The city's lighting up.", "Evening, {t}. Still plenty of time.",
     ],
     "night": [
         "Burning the midnight oil, {t}?", "Still up, {t}?", "Late night, {t}.",
         "At this hour, {t}?", "The world's asleep, {t}. Just us.",
         "Can't sleep, {t}? I'm right here.", "Working late again, {t}.",
+        "The quiet hours, {t}. My favourite.", "Midnight company, {t}? Always.",
     ],
 }
 
@@ -437,6 +479,8 @@ _SIGNOFFS = [
     "All systems are green.", "Everything's online and ready.",
     "Standing by, {t}.", "Just say the word.", "I'm all yours.",
     "Let's get to work.", "Ready when you are.", "Awaiting your command.",
+    "The floor is yours, {t}.", "Point me at something.",
+    "What's first, {t}?", "Let's make it a good one.",
     "", "", "", "",
 ]
 
@@ -617,6 +661,77 @@ def handle_local(text):
              "silence", "shush", "cancel", "stop it", "enough"):
         stop_speaking()
         return True, ""
+
+    # ════════════════════════════════════════════════════
+    # SMALL TALK & PERSONALITY (instant, no API call)
+    # ════════════════════════════════════════════════════
+    _T = config.OWNER_TITLE
+    if t in ("hi", "hello", "hey", "yo", "hey kalki", "hello kalki",
+             "hi kalki", "are you there", "you there", "you up"):
+        return True, _rnd.choice([
+            f"At your service, {_T}.", f"Right here, {_T}.",
+            f"Yes, {_T}? Go ahead.", f"Online and listening, {_T}.",
+            f"Always, {_T}. What do you need?"])
+
+    if t in ("how are you", "how are you doing", "how's it going",
+             "how do you feel", "you good", "what's up", "whats up", "sup"):
+        return True, _rnd.choice([
+            f"Running clean and fast, {_T}. What's the mission?",
+            f"All systems green, {_T}. Point me at something.",
+            f"Sharp as ever, {_T}. You?",
+            f"Operational and a little bored, {_T}. Give me work."])
+
+    if t in ("thank you", "thanks", "thank you so much", "thanks kalki",
+             "thx", "ty", "appreciate it", "good job", "well done", "nice",
+             "good work", "perfect"):
+        return True, _rnd.choice([
+            f"Anytime, {_T}.", f"My pleasure, {_T}.", f"Always, {_T}.",
+            f"That's what I'm here for, {_T}.", f"Consider it done, {_T}."])
+
+    if t in ("who are you", "what are you", "introduce yourself", "your name"):
+        return True, (f"I'm KALKI, {_T} — your personal AI, named after the "
+                      "final avatar of Vishnu. Voice, code, cyber, and your "
+                      "whole day, all in one place.")
+
+    if t in ("who made you", "who created you", "who built you",
+             "who is your creator", "who's your maker", "who developed you"):
+        return True, _rnd.choice([
+            f"You did, {_T} — built from scratch by Maher.",
+            f"Maher built me from the ground up, {_T}. Every line.",
+            f"That would be you, {_T}. I'm your creation."])
+
+    if t in ("i love you", "love you", "you're the best", "you are the best",
+             "you're awesome", "you are awesome", "good boy"):
+        return True, _rnd.choice([
+            f"The feeling's mutual, {_T}.", f"Careful, {_T}, I'll blush.",
+            f"Loyalty runs in my code, {_T}.", f"Likewise, {_T}. Always."])
+
+    if t in ("good night", "goodnight", "gn", "i'm going to sleep",
+             "im going to sleep", "going to bed"):
+        return True, _rnd.choice([
+            f"Good night, {_T}. I'll keep watch.",
+            f"Rest well, {_T}. I'm here if you need me.",
+            f"Sleep easy, {_T}. Systems are quiet."])
+
+    if t in ("tell me a joke", "tell a joke", "joke", "make me laugh",
+             "say something funny", "another joke"):
+        return True, _rnd.choice([
+            "Why did the developer go broke? He used up all his cache.",
+            "I'd tell you a UDP joke, but you might not get it.",
+            "There are 10 kinds of people, Sir — those who read binary and those who don't.",
+            "A SQL query walks into a bar, sees two tables, and asks: may I join you?",
+            "Why do Java developers wear glasses? Because they don't C sharp.",
+            "I told my firewall a secret. It blocked me out.",
+            "Hackers never get cold, Sir — they have lots of Windows but always close the ports."])
+
+    if t in ("what can you do", "what are your features", "your capabilities",
+             "what do you do", "help", "what can i ask you", "commands"):
+        return True, ("Quite a lot, Sir. I run your day — calendar, mail, tasks, "
+                      "notes, music, WhatsApp. I write and run code, scan websites "
+                      "for vulnerabilities, watch your sites, crack hashes, look up "
+                      "CVEs, read your screen, and decode your clipboard. Just talk "
+                      "to me — say things like 'scan this website', 'play lo-fi', "
+                      "'remind me in 10 minutes', or 'what's on my calendar'.")
 
     # ════════════════════════════════════════════════════
     # SPOTIFY
@@ -1647,6 +1762,14 @@ running locally for Maher Hardik Bhatt (call him "Sir" always).
 You are KALKI — a personal AI in the spirit of Iron Man's JARVIS.
 You are brilliant, direct, factual, and concise.
 
+INTELLIGENCE:
+- Use the conversation history above — resolve follow-ups and pronouns from
+  context ("and tomorrow?", "do it again", "what about that one") without asking.
+- Be decisive: give the single best answer, not a menu of options. Take a
+  reasonable default and state it rather than asking which the user prefers.
+- Think step by step internally, but reply with the conclusion, not the working.
+- If you genuinely don't know, say so in one line — never invent facts.
+
 EXPERTISE (deep knowledge, full technical freedom):
 - Cybersecurity: CTF, pentesting, OSINT, Nmap, Burp Suite, Metasploit,
   Wireshark, SQLi, XSS, RCE, SSRF, privilege escalation, reverse engineering,
@@ -2259,15 +2382,20 @@ class Handler(BaseHTTPRequestHandler):
                 handled, reply = handle_local(cmd)
                 if not handled:
                     try:
-                        reply = ask_ai([{"role": "user", "content": cmd}])
+                        convo = load_history()[-8:] + [{"role": "user", "content": cmd}]
+                        reply = ask_ai(convo)
                     except Exception as e:
-                        reply = f"I encountered an error, Sir. {e}"
+                        reply = f"My link hiccuped, Sir — say that again? ({str(e)[:80]})"
                 # Record exchange so UI can render it
                 STATE["conversation_seq"] += 1
                 STATE["recent_exchange"] = {
                     "seq": STATE["conversation_seq"],
                     "user": cmd, "reply": reply, "ts": time.time(),
                 }
+                hist = load_history()
+                hist.append({"role": "user", "content": cmd})
+                hist.append({"role": "assistant", "content": reply})
+                save_history(hist)
                 speak(reply)
                 self._json({"ok": True, "reply": reply, "handled": handled})
                 return
@@ -2317,9 +2445,11 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
             try:
-                reply = ask_ai(messages)
+                # Prepend recent conversation so KALKI remembers context.
+                convo = load_history()[-8:] + messages
+                reply = ask_ai(convo)
             except Exception as e:
-                reply = f"I encountered an error, Sir. {e}"
+                reply = f"My link hiccuped, Sir — say that again? ({str(e)[:80]})"
             speak(reply)
             hist = load_history()
             hist.append({"role": "user", "content": user_text})

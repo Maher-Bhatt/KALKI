@@ -367,8 +367,22 @@ def main():
     if not wait_for_server():
         log("server never came up; listener exiting")
         return
-    log("server reachable, opening mic")
 
+    # Push-to-talk: don't open the system mic at all. Avoids a multipoint
+    # Bluetooth headset switching to the laptop every listen cycle (which cuts
+    # your phone audio). Talk to KALKI with the HUD mic button instead.
+    mode = (getattr(config, "LISTEN_MODE", "always") or "always").lower()
+    if mode != "always":
+        log(f"LISTEN_MODE={mode} — continuous mic OFF (push-to-talk). "
+            f"Use the HUD mic button to talk.")
+        try:
+            while True:
+                time.sleep(60)
+        except KeyboardInterrupt:
+            pass
+        return
+
+    log("server reachable, opening mic")
     dev_index = pick_input_device()
 
     # Prefer offline Vosk (no network, less heat). Fall back to Google STT.
@@ -399,69 +413,94 @@ def main():
         except Exception as e:
             log(f"ambient calibration failed: {e}")
 
-    log(f"listening (wake words: {WAKE_WORDS})")
-    pause_status_log_at = 0
+    log(f"listening (continuous, wake words: {WAKE_WORDS})")
+
+    import queue as _queue
+    phrases = _queue.Queue()
+
+    def _bg_callback(rec, audio):
+        try:
+            txt = rec.recognize_google(audio)
+        except Exception:
+            return
+        if txt:
+            phrases.put(txt)
+
+    def _drain():
+        try:
+            while True:
+                phrases.get_nowait()
+        except _queue.Empty:
+            pass
+
+    # ONE persistent mic stream (no 6s open/close cycling that makes a
+    # multipoint Bluetooth headset re-switch every few seconds).
+    stop_bg = recognizer.listen_in_background(mic, _bg_callback, phrase_time_limit=6)
+    paused = False
 
     while True:
         try:
-            # ── Yield the mic when paused (so other apps can use it) ──
+            # Pause → stop the stream entirely so the mic is fully released.
             if is_paused():
-                if time.time() > pause_status_log_at:
+                if not paused:
+                    try: stop_bg(wait_for_stop=False)
+                    except Exception: pass
+                    paused = True
+                    _drain()
                     log("listener paused — mic released")
-                    pause_status_log_at = time.time() + 30
-                time.sleep(2.0)
+                time.sleep(1.0)
+                continue
+            if paused:
+                stop_bg = recognizer.listen_in_background(
+                    mic, _bg_callback, phrase_time_limit=6)
+                paused = False
+                log("listener resumed")
+
+            # Drop anything captured while KALKI is speaking (its own voice).
+            if is_speaking():
+                _drain()
+                time.sleep(0.1)
                 continue
 
-            # ── Idle listen: short cycling windows so the mic releases
-            #    briefly between waits, letting other apps share it. ──
-            phrase = listen_once(
-                recognizer, mic,
-                phrase_time_limit=4, timeout=6,
-            )
-            if not phrase:
-                # Brief breather so other apps can grab the mic in shared mode
-                time.sleep(0.15)
+            try:
+                phrase = phrases.get(timeout=1.0)
+            except _queue.Empty:
                 continue
             log(f"heard: {phrase}")
 
             if contains_stop(phrase):
-                post_stop()
-                continue
-
+                post_stop(); continue
             if not contains_wake(phrase):
                 continue
 
             inline = extract_inline(phrase)
-
             if inline:
-                # Wake + command in one breath: ship it
                 post_chat_voice(inline)
                 wait_until_silent(max_wait=8.0)
-                time.sleep(0.4)
+                _drain()
                 continue
 
-            # ── Wake only → server speaks "Yes, Sir?" then we capture follow-up ──
+            # wake only → greet, then capture the follow-up command
             post_wake("")
             wait_until_silent(max_wait=4.0)
-
-            follow = listen_once(
-                recognizer, mic,
-                phrase_time_limit=10, timeout=6,
-            )
+            _drain()
+            try:
+                follow = phrases.get(timeout=6.0)
+            except _queue.Empty:
+                follow = None
             if not follow:
                 log("no follow-up command within window")
                 continue
-
             log(f"follow-up: {follow}")
             if contains_stop(follow):
-                post_stop()
-                continue
-
+                post_stop(); continue
             post_chat_voice(follow)
             wait_until_silent(max_wait=12.0)
-            time.sleep(0.4)
+            _drain()
 
         except KeyboardInterrupt:
+            try: stop_bg(wait_for_stop=False)
+            except Exception: pass
             log("listener stopped by user")
             return
         except Exception as e:
