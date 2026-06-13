@@ -10,3 +10,8 @@ comtypes>=1.4.1
 requests>=2.31.0
 pytesseract>=0.3.10
 
+# Optional — offline wake word
+vosk>=0.3.45
+# Optional — deep "DevTools-level" website scan (run: playwright install chromium)
+playwright>=1.40.0
+

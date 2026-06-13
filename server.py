@@ -52,6 +52,7 @@ import webscan
 import browser_url
 import clipboard_mod
 import watchdog
+import deepscan
 
 # ─────────────────────────────────────────────────────────────
 # Optional dependencies — degrade gracefully if missing
@@ -120,6 +121,7 @@ whatsapp_mod.CONTACTS_PATH = os.path.join(BASE_DIR, "data", "contacts.json")
 notesmod.NOTES_PATH = os.path.join(BASE_DIR, "data", "notes.json")
 webscan.SCANS_DIR = os.path.join(BASE_DIR, "data", "scans")
 watchdog.WATCHLIST_PATH = os.path.join(BASE_DIR, "data", "watchlist.json")
+deepscan.SCANS_DIR = os.path.join(BASE_DIR, "data", "scans")
 
 
 def log(msg):
@@ -905,9 +907,15 @@ def handle_local(text):
     # WEB VULNERABILITY SCAN (authorized, non-destructive)
     # ════════════════════════════════════════════════════
     scan_intent = (any(k in t for k in ("scan", "vulnerab", "audit",
-                                        "security", "secure"))
+                                        "security", "secure", "analyz", "analys",
+                                        "inspect", "deep scan"))
                    or ("bug" in t and any(w in t for w in
                        ("site", "website", "page", "url", "web"))))
+    # Deep = drive a real headless browser (DevTools-level: all loaded files,
+    # rendered DOM, cookies, storage). Triggered by analyze/inspect/deep/"all".
+    deep = deepscan.available() and any(k in t for k in (
+        "analyz", "analys", "inspect", "deep", "all the vuln", "all vulnerab",
+        "everything", "inside file", "find all", "all the file"))
     target = None
     # "scan THIS website / find vulnerabilities on this page / scan the current tab"
     if scan_intent and _re_local.search(
@@ -919,7 +927,7 @@ def handle_local(text):
                           f"{config.OWNER_TITLE}. Say scan, then the website name.")
     if target is None:
         m = _re_local.search(
-            r"(?:scan|audit|security\s*scan|check|analyz[es]|find\s+(?:vulnerabilit|bug|issue)\w*\s+(?:in|on|of))"
+            r"(?:scan|audit|security\s*scan|check|analy\w+|inspect|find\s+(?:vulnerabilit|bug|issue)\w*\s+(?:in|on|of))"
             r"\s+(?:the\s+)?(?:website\s+|site\s+|web\s*site\s+|url\s+)?"
             r"([a-z0-9.\-]+\.[a-z]{2,}(?:/\S*)?|https?://\S+)"
             r"(?:\s+for\s+(?:vulnerabilit|bug|issue|security)\w*)?",
@@ -935,20 +943,26 @@ def handle_local(text):
             target = m.group(1).strip().rstrip(".?!")
     if target:
         host = target.replace("https://", "").replace("http://", "").split("/")[0]
-        speak(f"Scanning {host} now, {config.OWNER_TITLE}. Give me a moment — "
-              f"passive, non-destructive, and I'll pull the source too.")
         try:
-            result = webscan.scan(target)
+            if deep:
+                speak(f"Deep-inspecting {host}, {config.OWNER_TITLE}. Loading it in "
+                      f"a real browser and reading every file — give me a moment.")
+                result = deepscan.deep_scan(target)
+                spoken = deepscan.summarize(result, config.OWNER_TITLE)
+            else:
+                speak(f"Scanning {host} now, {config.OWNER_TITLE}. Give me a moment — "
+                      f"passive, non-destructive, and I'll pull the source too.")
+                result = webscan.scan(target)
+                spoken = webscan.summarize_for_speech(result, config.OWNER_TITLE)
+                if result.get("source_path"):
+                    spoken += " Source code saved too."
         except Exception as e:
             return True, f"Scan failed, {config.OWNER_TITLE}: {e}"
-        # Stash full report path + findings for the UI
         STATE["last_scan"] = result
-        spoken = webscan.summarize_for_speech(result, config.OWNER_TITLE)
-        if result.get("source_path"):
-            spoken += " Source code saved too."
-        # Append the full report in a code fence: clean_for_speech strips
-        # fenced blocks, so the voice says only the summary while the HUD
-        # shows every finding with its fix.
+        if result.get("files_dir"):
+            spoken += f" I saved all {result.get('resource_count', 0)} loaded files."
+        # Append the full report fenced: clean_for_speech strips fenced blocks,
+        # so the voice says only the summary while the HUD shows every finding.
         report_txt = ""
         try:
             with open(result["report_path"], "r", encoding="utf-8") as fh:
@@ -1801,6 +1815,11 @@ BUILT-IN ACTIONS (handled locally — mention them when relevant):
   pulls the page source + same-origin JS, hunts for leaked secrets/API keys,
   and maps the form/input attack surface. Reports findings with fixes.
 - "scan <domain>" does the same for any named site.
+- "analyze this website" / "inspect this site" / "find ALL the vulnerabilities"
+  → DEEP scan: loads the page in a real headless browser (like opening
+  DevTools), captures the rendered DOM and EVERY loaded file (all scripts incl.
+  third-party, CSS, JSON/XHR), reads cookies + localStorage, hunts secrets
+  across all of it, and saves every file to the scans folder.
 - Also: hashes, CVE lookup, subdomain enum, reverse-shell payloads, recon.
 
 GROUNDING (very important):
