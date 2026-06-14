@@ -311,6 +311,48 @@ def append_history(user_text, assistant_text):
         _atomic_write_json(HISTORY_PATH, hist[-config.MAX_HISTORY:])
 
 
+def _desktop_dir():
+    """Locate the user's Desktop (handles OneDrive redirection)."""
+    for d in (os.path.join(os.path.expanduser("~"), "OneDrive", "Desktop"),
+              os.path.join(os.path.expanduser("~"), "Desktop")):
+        if os.path.isdir(d):
+            return d
+    return None
+
+
+def copy_scan_to_desktop(result):
+    """Copy a scan's report (and the captured source/inspect, if any) to
+    Desktop\\KALKI Scans\\. Returns the report copy path or None."""
+    import shutil
+    desk = _desktop_dir()
+    if not desk:
+        return None
+    out = os.path.join(desk, "KALKI Scans")
+    try:
+        os.makedirs(out, exist_ok=True)
+    except Exception:
+        return None
+    report = result.get("report_path")
+    dst = None
+    if report and os.path.exists(report):
+        try:
+            dst = os.path.join(out, os.path.basename(report))
+            shutil.copy2(report, dst)
+        except Exception:
+            dst = None
+    # Deep-scan also drops a folder of the captured "inside files".
+    fd = result.get("files_dir")
+    if fd and os.path.isdir(fd):
+        try:
+            tgt = os.path.join(out, os.path.basename(fd))
+            if os.path.isdir(tgt):
+                shutil.rmtree(tgt, ignore_errors=True)
+            shutil.copytree(fd, tgt)
+        except Exception:
+            pass
+    return dst
+
+
 # ─────────────────────────────────────────────────────────────
 # TTS — edge-tts (non-blocking)
 # ─────────────────────────────────────────────────────────────
@@ -1002,6 +1044,9 @@ def handle_local(text):
         STATE["last_scan"] = result
         if result.get("files_dir"):
             spoken += f" I saved all {result.get('resource_count', 0)} loaded files."
+        # Always drop a copy on the Desktop.
+        if copy_scan_to_desktop(result):
+            spoken += " A copy is on your Desktop."
         # Append the full report fenced: clean_for_speech strips fenced blocks,
         # so the voice says only the summary while the HUD shows every finding.
         report_txt = ""
