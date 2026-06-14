@@ -7,6 +7,7 @@ Falls back to base64 (clearly marked) if pywin32 is missing.
 import os
 import json
 import base64
+import threading
 from datetime import datetime
 
 try:
@@ -14,6 +15,8 @@ try:
     HAS_DPAPI = True
 except Exception:
     HAS_DPAPI = False
+
+_lock = threading.Lock()
 
 VAULT_PATH = None  # set by server.py before first use
 
@@ -55,24 +58,34 @@ def _load():
 
 def _save(d):
     os.makedirs(os.path.dirname(VAULT_PATH), exist_ok=True)
-    with open(VAULT_PATH, "w", encoding="utf-8") as f:
+    tmp = VAULT_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(d, f, indent=2, ensure_ascii=False)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, VAULT_PATH)
 
 
 def save_entry(label, username="", password="", url="", notes=""):
     if not label:
         return False
-    d = _load()
-    key = label.lower().strip()
-    d[key] = {
-        "label": label,
-        "username": _enc(username),
-        "password": _enc(password),
-        "url": url or "",
-        "notes": notes or "",
-        "saved": datetime.now().isoformat(timespec="seconds"),
-    }
-    _save(d)
+    # Refuse to "encrypt" with reversible base64. Without DPAPI (pywin32),
+    # storing a secret would be no better than plaintext — fail loudly instead.
+    if (password or username) and not HAS_DPAPI:
+        return {"error": "DPAPI unavailable (install pywin32) — refusing to "
+                         "store credentials without real encryption."}
+    with _lock:
+        d = _load()
+        key = label.lower().strip()
+        d[key] = {
+            "label": label,
+            "username": _enc(username),
+            "password": _enc(password),
+            "url": url or "",
+            "notes": notes or "",
+            "saved": datetime.now().isoformat(timespec="seconds"),
+        }
+        _save(d)
     return True
 
 

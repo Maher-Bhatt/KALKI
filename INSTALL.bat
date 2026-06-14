@@ -7,7 +7,10 @@ echo   KALKI v5 - Installing Dependencies
 echo ============================================================
 echo.
 py -3.11 -m pip install --upgrade pip
-py -3.11 -m pip install SpeechRecognition pyaudio edge-tts pygame psutil pywin32 Pillow pycaw comtypes requests
+py -3.11 -m pip install -r requirements.txt
+echo.
+echo Installing Chromium for the deep website scanner (optional)...
+py -3.11 -m playwright install chromium
 echo.
 echo ============================================================
 echo   Done!  Now do this:

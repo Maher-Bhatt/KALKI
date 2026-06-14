@@ -243,6 +243,20 @@ NEWS_TRIGGERS = ["news", "headlines", "top stories", "what's happening"]
 # ─────────────────────────────────────────────────────────────
 # Memory / History
 # ─────────────────────────────────────────────────────────────
+# Serializes read-modify-write on the JSON state files so concurrent HTTP
+# threads can't overwrite each other or read a half-written file.
+_persist_lock = threading.Lock()
+
+
+def _atomic_write_json(path, obj):
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(obj, f, indent=2, ensure_ascii=False)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+
+
 def load_memory():
     try:
         with open(MEMORY_PATH, "r", encoding="utf-8") as f:
@@ -251,14 +265,19 @@ def load_memory():
         return []
 
 def save_memory(mems):
-    with open(MEMORY_PATH, "w", encoding="utf-8") as f:
-        json.dump(mems, f, indent=2, ensure_ascii=False)
+    with _persist_lock:
+        _atomic_write_json(MEMORY_PATH, mems)
 
 def add_memory(fact):
-    mems = load_memory()
-    mems.append({"fact": fact, "date": datetime.now().strftime("%Y-%m-%d")})
-    save_memory(mems)
-    return len(mems)
+    with _persist_lock:
+        try:
+            with open(MEMORY_PATH, "r", encoding="utf-8") as f:
+                mems = json.load(f)
+        except Exception:
+            mems = []
+        mems.append({"fact": fact, "date": datetime.now().strftime("%Y-%m-%d")})
+        _atomic_write_json(MEMORY_PATH, mems)
+        return len(mems)
 
 def get_memory_prompt():
     mems = load_memory()
@@ -275,9 +294,21 @@ def load_history():
         return []
 
 def save_history(hist):
-    hist = hist[-config.MAX_HISTORY:]
-    with open(HISTORY_PATH, "w", encoding="utf-8") as f:
-        json.dump(hist, f, indent=2, ensure_ascii=False)
+    with _persist_lock:
+        _atomic_write_json(HISTORY_PATH, hist[-config.MAX_HISTORY:])
+
+
+def append_history(user_text, assistant_text):
+    """Atomic read-modify-write append of one exchange."""
+    with _persist_lock:
+        try:
+            with open(HISTORY_PATH, "r", encoding="utf-8") as f:
+                hist = json.load(f)
+        except Exception:
+            hist = []
+        hist.append({"role": "user", "content": user_text})
+        hist.append({"role": "assistant", "content": assistant_text})
+        _atomic_write_json(HISTORY_PATH, hist[-config.MAX_HISTORY:])
 
 
 # ─────────────────────────────────────────────────────────────
@@ -1256,7 +1287,9 @@ def handle_local(text):
     if m:
         label = m.group(1).strip()
         pwd   = raw[-len(m.group(2).strip()):].strip().strip("\"'")
-        vault.save_entry(label, password=pwd)
+        res = vault.save_entry(label, password=pwd)
+        if isinstance(res, dict) and res.get("error"):
+            return True, res["error"]
         return True, f"Password for {label} sealed in your vault, {config.OWNER_TITLE}."
 
     # SAVE compact: "save password X for Y" or "vault X for Y"
@@ -1266,7 +1299,9 @@ def handle_local(text):
     )
     if m:
         pwd, label = m.group(1).strip().strip("\"'"), m.group(2).strip()
-        vault.save_entry(label, password=pwd)
+        res = vault.save_entry(label, password=pwd)
+        if isinstance(res, dict) and res.get("error"):
+            return True, res["error"]
         return True, f"Password for {label} sealed in your vault, {config.OWNER_TITLE}."
 
     # GET: "what is my X password" / "show X password" / "get X password"
@@ -2248,9 +2283,33 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
 
-    # CORS
+    # Only the local HUD may talk to the API. Blocks a malicious website you
+    # visit from POSTing to localhost:8888 (which could run code / read vault).
+    ALLOWED_HOSTS = ("localhost", "127.0.0.1")
+    MAX_BODY = 32 * 1024 * 1024   # 32 MB cap (images come through here)
+
+    def _origin_host(self):
+        origin = self.headers.get("Origin")
+        if not origin:
+            return None
+        try:
+            return urllib.parse.urlparse(origin).hostname
+        except Exception:
+            return "blocked"
+
+    def _origin_allowed(self):
+        # No Origin header = not a browser cross-site request (the Python
+        # listener / curl). Server is bound to 127.0.0.1, so that's local-only.
+        host = self._origin_host()
+        return host is None or host in self.ALLOWED_HOSTS
+
+    # CORS — echo the Origin back only when it's the local HUD; never wildcard.
     def _cors(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
+        host = self._origin_host()
+        if host in self.ALLOWED_HOSTS:
+            self.send_header("Access-Control-Allow-Origin",
+                             self.headers.get("Origin"))
+            self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
@@ -2278,9 +2337,20 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def _read_json(self):
-        length = int(self.headers.get("Content-Length", "0") or "0")
+        try:
+            length = int(self.headers.get("Content-Length", "0") or "0")
+        except ValueError:
+            return {}
         if length <= 0:
             return {}
+        if length > self.MAX_BODY:
+            log(f"rejected oversized body ({length} bytes) on {self.path}")
+            # Drain a little so the socket isn't left half-read, then bail.
+            try:
+                self.rfile.read(min(length, 4096))
+            except Exception:
+                pass
+            return {"__too_large__": True}
         raw = self.rfile.read(length)
         try:
             return json.loads(raw.decode("utf-8"))
@@ -2378,7 +2448,16 @@ class Handler(BaseHTTPRequestHandler):
 
     def _do_post_inner(self):
         path = urllib.parse.urlparse(self.path).path
+
+        # Reject cross-site requests (CSRF / DNS-rebinding to localhost).
+        if not self._origin_allowed():
+            self._json({"ok": False, "error": "forbidden origin"}, status=403)
+            return
+
         body = self._read_json()
+        if body.get("__too_large__"):
+            self._json({"ok": False, "error": "request too large"}, status=413)
+            return
 
         if path == "/api/stop":
             ok = stop_speaking()
@@ -2411,10 +2490,7 @@ class Handler(BaseHTTPRequestHandler):
                     "seq": STATE["conversation_seq"],
                     "user": cmd, "reply": reply, "ts": time.time(),
                 }
-                hist = load_history()
-                hist.append({"role": "user", "content": cmd})
-                hist.append({"role": "assistant", "content": reply})
-                save_history(hist)
+                append_history(cmd, reply)
                 speak(reply)
                 self._json({"ok": True, "reply": reply, "handled": handled})
                 return
@@ -2455,10 +2531,7 @@ class Handler(BaseHTTPRequestHandler):
             handled, local_reply = handle_local(user_text)
             if handled:
                 speak(local_reply)
-                hist = load_history()
-                hist.append({"role": "user", "content": user_text})
-                hist.append({"role": "assistant", "content": local_reply})
-                save_history(hist)
+                append_history(user_text, local_reply)
                 _record_exchange(local_reply)
                 self._json({"reply": local_reply, "source": "local"})
                 return
@@ -2470,10 +2543,7 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 reply = f"My link hiccuped, Sir — say that again? ({str(e)[:80]})"
             speak(reply)
-            hist = load_history()
-            hist.append({"role": "user", "content": user_text})
-            hist.append({"role": "assistant", "content": reply})
-            save_history(hist)
+            append_history(user_text, reply)
             _record_exchange(reply)
             self._json({"reply": reply, "source": "ai", "model": STATE["model"]})
             return
@@ -2519,13 +2589,15 @@ class Handler(BaseHTTPRequestHandler):
             label = (body.get("label") or "").strip()
             if not label:
                 self._json({"ok": False, "error": "label required"}, status=400); return
-            vault.save_entry(
+            res = vault.save_entry(
                 label,
                 username=(body.get("username") or "").strip(),
                 password=(body.get("password") or "").strip(),
                 url=(body.get("url") or "").strip(),
                 notes=(body.get("notes") or "").strip(),
             )
+            if isinstance(res, dict) and res.get("error"):
+                self._json({"ok": False, "error": res["error"]}, status=500); return
             self._json({"ok": True, "label": label}); return
 
         if path == "/api/vault/get":

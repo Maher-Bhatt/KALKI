@@ -6,10 +6,23 @@ Tasks: persistent TODO list. Reminders: time-bound; fired by background thread.
 import os
 import json
 import re
+import threading
 from datetime import datetime, timedelta
 
 TASKS_PATH = None
 REMINDERS_PATH = None
+
+_lock = threading.Lock()
+
+
+def _atomic_write(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
 
 
 # ─── Tasks ──────────────────────────────────────────────
@@ -22,21 +35,25 @@ def _load_tasks():
 
 
 def _save_tasks(data):
-    os.makedirs(os.path.dirname(TASKS_PATH), exist_ok=True)
-    with open(TASKS_PATH, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    with _lock:
+        _atomic_write(TASKS_PATH, data)
 
 
 def add_task(text):
-    tasks = _load_tasks()
-    nid = (max((t["id"] for t in tasks), default=0)) + 1
-    tasks.append({
-        "id": nid, "text": text.strip(),
-        "added": datetime.now().isoformat(timespec="seconds"),
-        "done": False,
-    })
-    _save_tasks(tasks)
-    return nid
+    with _lock:
+        try:
+            with open(TASKS_PATH, "r", encoding="utf-8") as f:
+                tasks = json.load(f)
+        except Exception:
+            tasks = []
+        nid = (max((t["id"] for t in tasks), default=0)) + 1
+        tasks.append({
+            "id": nid, "text": text.strip(),
+            "added": datetime.now().isoformat(timespec="seconds"),
+            "done": False,
+        })
+        _atomic_write(TASKS_PATH, tasks)
+        return nid
 
 
 def list_tasks(include_done=False):
@@ -89,20 +106,24 @@ def _load_reminders():
 
 
 def _save_reminders(data):
-    os.makedirs(os.path.dirname(REMINDERS_PATH), exist_ok=True)
-    with open(REMINDERS_PATH, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    with _lock:
+        _atomic_write(REMINDERS_PATH, data)
 
 
 def add_reminder(text, due):
     """due: datetime or ISO string"""
     if isinstance(due, datetime):
         due = due.isoformat(timespec="seconds")
-    rems = _load_reminders()
-    nid = (max((r["id"] for r in rems), default=0)) + 1
-    rems.append({"id": nid, "text": text, "due": due, "fired": False})
-    _save_reminders(rems)
-    return nid
+    with _lock:
+        try:
+            with open(REMINDERS_PATH, "r", encoding="utf-8") as f:
+                rems = json.load(f)
+        except Exception:
+            rems = []
+        nid = (max((r["id"] for r in rems), default=0)) + 1
+        rems.append({"id": nid, "text": text, "due": due, "fired": False})
+        _atomic_write(REMINDERS_PATH, rems)
+        return nid
 
 
 def list_reminders(include_fired=False):
@@ -172,9 +193,17 @@ def parse_when(text):
     if m:
         h = int(m.group(1)); minute = int(m.group(2) or 0)
         ampm = (m.group(3) or "").lower()
-        if ampm == "pm" and h < 12: h += 12
-        if ampm == "am" and h == 12: h = 0
-        cand = now.replace(hour=h % 24, minute=minute, second=0, microsecond=0)
+        # Reject invalid clock values instead of wrapping them silently.
+        if minute > 59:
+            return None, s
+        if ampm:
+            if not (1 <= h <= 12):
+                return None, s
+            if ampm == "pm" and h < 12: h += 12
+            if ampm == "am" and h == 12: h = 0
+        elif not (0 <= h <= 23):
+            return None, s
+        cand = now.replace(hour=h, minute=minute, second=0, microsecond=0)
         if cand < now:
             cand += timedelta(days=1)
         leftover = (s[:m.start()] + s[m.end():]).strip(" ,.")

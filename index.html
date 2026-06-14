@@ -886,12 +886,22 @@ async function refreshStatus(){
     if (!events.length){
       evDiv.innerHTML = "<span style='color:var(--text-dim)'>Calendar clear today</span>";
     } else {
-      evDiv.innerHTML = events.slice(0,3).map(e =>
-        `<div style="padding:2px 0">
-           <span style="color:var(--accent); transition:color .55s ease">${e.when}</span>
-           <span style="color:var(--text)">  ${e.summary}</span>
-         </div>`
-      ).join("");
+      // Build with textContent (NOT innerHTML) — a malicious calendar event
+      // title must never be able to inject HTML/JS into the HUD origin.
+      evDiv.textContent = "";
+      events.slice(0,3).forEach(e => {
+        const row = document.createElement("div");
+        row.style.padding = "2px 0";
+        const w = document.createElement("span");
+        w.style.color = "var(--accent)";
+        w.style.transition = "color .55s ease";
+        w.textContent = e.when;
+        const s = document.createElement("span");
+        s.style.color = "var(--text)";
+        s.textContent = "  " + e.summary;
+        row.appendChild(w); row.appendChild(s);
+        evDiv.appendChild(row);
+      });
     }
 
     const np = $("calNowPlaying");

@@ -4,9 +4,13 @@
 # config.py is gitignored so your secrets never get committed.
 # ──────────────────────────────────────────────────────────────
 
+import os
+
 # ── GROQ AI (required for the LLM brain) ────────────────────
 # Get a free key at https://console.groq.com
-GROQ_API_KEY = "PASTE_YOUR_GROQ_KEY_HERE"
+# Best practice: set GROQ_API_KEY in your environment and leave this as-is, so
+# the secret never lives in a file. The env var wins if set.
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "PASTE_YOUR_GROQ_KEY_HERE")
 
 # ── OWNER ───────────────────────────────────────────────────
 OWNER_NAME    = "YourName"
