@@ -2745,28 +2745,37 @@ def _focus_kalki_window():
 def open_browser_to_ui():
     """Bring existing KALKI tab forward, OR launch Chrome to it."""
     global _browser_opened_once
-    # First, try to focus an existing window — no duplicate tab
-    if _focus_kalki_window():
-        return
 
     url = f"http://localhost:{config.PORT}/"
+
+    # Try to focus an existing Chrome window that has the KALKI tab open
+    if _focus_kalki_window():
+        log("focused existing KALKI tab")
+        return
+
+    # No existing window found — open a fresh Chrome tab
     try:
-        if config.BROWSER == "chrome":
-            chrome_paths = [
-                r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-                r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-                os.path.expanduser(r"~\AppData\Local\Google\Chrome\Application\chrome.exe"),
-            ]
-            for p in chrome_paths:
-                if os.path.exists(p):
-                    subprocess.Popen([p, url])
-                    log(f"launched Chrome: {p}")
-                    _browser_opened_once = True
-                    return
-            log("chrome.exe not found in standard paths — using webbrowser fallback")
-        webbrowser.open(url)
-        _browser_opened_once = True
-        log(f"opened browser via webbrowser.open({url})")
+        chrome_paths = [
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+            os.path.expanduser(r"~\AppData\Local\Google\Chrome\Application\chrome.exe"),
+        ]
+        chrome_exe = None
+        for p in chrome_paths:
+            if os.path.exists(p):
+                chrome_exe = p
+                break
+
+        if chrome_exe:
+            # --new-tab opens in existing Chrome window instead of a new one
+            subprocess.Popen([chrome_exe, "--new-tab", url])
+            log(f"launched Chrome tab: {chrome_exe}")
+            _browser_opened_once = True
+        else:
+            # Fallback for any other browser
+            webbrowser.open(url)
+            _browser_opened_once = True
+            log(f"opened browser via webbrowser.open({url})")
     except Exception as e:
         log(f"Browser open error: {e}")
 
@@ -2875,6 +2884,9 @@ class Handler(BaseHTTPRequestHandler):
         try:
             fn()
         except Exception as e:
+            # WinError 10053 = browser closed the connection mid-poll (normal, not an error)
+            if "10053" in str(e) or "10054" in str(e):
+                return
             log(f"handler error on {self.path}: {e}")
             try:
                 self._json({"ok": False, "error": str(e)}, status=500)
