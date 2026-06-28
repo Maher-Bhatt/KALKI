@@ -1,4 +1,56 @@
 """
+KALKI v5 — Primary Backend Server
+=================================
+
+This module acts as the central hub for the KALKI AI assistant. It orchestrates:
+- The embedded HTTP web server for the frontend UI
+- System-level commands and task execution
+- Voice synthesis (TTS)
+- Sub-module dispatching (vision, deepscan, cybertools, etc.)
+
+It utilizes the Python standard library `http.server` to remain lightweight 
+and completely standalone (without relying on Flask or FastAPI).
+"""
+
+import os
+import sys
+import json
+import time
+import glob
+import socket
+import threading
+import subprocess
+import urllib.request
+import urllib.parse
+import urllib.error
+import webbrowser
+import tempfile
+import asyncio
+import ctypes
+from datetime import datetime
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
+
+# Ensure local imports resolve when launched from any cwd
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+os.chdir(BASE_DIR)
+sys.path.insert(0, BASE_DIR)
+
+# Force UTF-8 stdout/stderr (pythonw.exe uses cp1252 by default — breaks on emoji/arrows)
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
+import config
+import github_mod
+import shodan_mod
+import ctypes
+import vault
+import vision
+import coder
+"""
 KALKI v5 — Server
 Web server + AI + TTS + system commands
 Uses Python stdlib http.server only (no Flask, no FastAPI)
@@ -36,6 +88,9 @@ except Exception:
     pass
 
 import config
+import github_mod
+import shodan_mod
+import ctypes
 import vault
 import vision
 import coder
@@ -51,8 +106,14 @@ import workflows
 import webscan
 import browser_url
 import clipboard_mod
+import github_mod
+import shodan_mod
+import ctypes
 import watchdog
 import deepscan
+import runtime_log
+import runtime_security
+import semantic_memory
 
 # ─────────────────────────────────────────────────────────────
 # Optional dependencies — degrade gracefully if missing
@@ -125,11 +186,7 @@ deepscan.SCANS_DIR = os.path.join(BASE_DIR, "data", "scans")
 
 
 def log(msg):
-    try:
-        with open(LOG_PATH, "a", encoding="utf-8") as f:
-            f.write(f"[{datetime.now().isoformat(timespec='seconds')}] {msg}\n")
-    except Exception:
-        pass
+    runtime_log.append_log(LOG_PATH, str(msg))
 
 STATE = {
     "speaking": False,
@@ -141,7 +198,57 @@ STATE = {
     "conversation_seq": 0,        # bumped on every voice-driven exchange
     "recent_exchange": None,      # {seq, user, reply, ts}
     "listener_paused": False,     # toggled to release the mic for other apps
+    "last_joke_offer": 0.0,
+    "joke_offer_pending": False,
 }
+
+_pending_lock = threading.Lock()
+_pending_action = None
+_PENDING_TTL = 30
+
+
+def _queue_confirmation(description, action):
+    global _pending_action
+    if not getattr(config, "REQUIRE_DANGEROUS_CONFIRMATION", True):
+        return action()
+    with _pending_lock:
+        _pending_action = {
+            "description": description,
+            "action": action,
+            "expires": time.time() + _PENDING_TTL,
+        }
+    return True, f"{description}. Say confirm within {_PENDING_TTL} seconds."
+
+
+def _consume_confirmation(command):
+    global _pending_action
+    if command in ("cancel", "never mind", "nevermind"):
+        with _pending_lock:
+            had_pending = _pending_action is not None
+            _pending_action = None
+        return (True, "Cancelled.") if had_pending else None
+    if command not in ("confirm", "yes confirm", "confirm it", "do it"):
+        return None
+    with _pending_lock:
+        pending = _pending_action
+        _pending_action = None
+    if not pending or pending["expires"] < time.time():
+        return True, "There is no active action to confirm."
+    return pending["action"]()
+
+
+def _is_sensitive_command(text):
+    low = (text or "").lower()
+    return any(phrase in low for phrase in (
+        " password", "password ", "wifi password", "clipboard",
+        "api key", "access token", "refresh token",
+    ))
+
+
+def _recordable_exchange(user_text, reply):
+    if _is_sensitive_command(user_text):
+        return "[sensitive local command]", "[sensitive result hidden]"
+    return user_text, reply
 
 UI_ALIVE_GRACE = 8.0  # seconds — if no /api/status in this long, UI is "dead"
 
@@ -508,6 +615,104 @@ def speak(text):
 # ─────────────────────────────────────────────────────────────
 import random as _rnd
 
+JOKES_SEEN_PATH = os.path.join(DATA_DIR, "jokes_seen.json")
+
+
+def _load_seen_jokes():
+    try:
+        with open(JOKES_SEEN_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return [str(x) for x in data[-100:]]
+    except Exception:
+        return []
+
+
+def _save_seen_joke(joke):
+    seen = _load_seen_jokes()
+    key = " ".join((joke or "").lower().split())[:500]
+    if key and key not in seen:
+        seen.append(key)
+    try:
+        with open(JOKES_SEEN_PATH, "w", encoding="utf-8") as f:
+            json.dump(seen[-100:], f, indent=2)
+    except Exception:
+        pass
+
+
+def fetch_online_joke():
+    """Fetch a fresh online joke and avoid repeats across restarts."""
+    urls = [
+        "https://v2.jokeapi.dev/joke/Any?blacklistFlags=nsfw,racist,sexist,explicit",
+        "https://official-joke-api.appspot.com/random_joke",
+    ]
+    seen = set(_load_seen_jokes())
+    for _ in range(5):
+        for url in urls:
+            try:
+                req = urllib.request.Request(
+                    url,
+                    headers={"User-Agent": "KALKI personal assistant"},
+                )
+                with urllib.request.urlopen(req, timeout=8) as r:
+                    data = json.loads(r.read().decode("utf-8", "replace"))
+                if isinstance(data, dict) and data.get("type") == "single":
+                    joke = data.get("joke", "")
+                elif isinstance(data, dict) and data.get("setup") and data.get("delivery"):
+                    joke = f"{data['setup']} {data['delivery']}"
+                elif isinstance(data, dict) and data.get("setup") and data.get("punchline"):
+                    joke = f"{data['setup']} {data['punchline']}"
+                else:
+                    joke = ""
+                joke = " ".join(str(joke).split())
+                key = joke.lower()[:500]
+                if joke and key not in seen:
+                    _save_seen_joke(joke)
+                    return joke
+            except Exception as e:
+                log(f"joke fetch failed: {e}")
+    return "Online joke supply is sulking, Sir. Try again in a minute."
+
+
+def _maybe_spicy(text, chance=None):
+    if not getattr(config, "PERSONALITY_SPICE", True):
+        return text
+    if chance is None:
+        chance = getattr(config, "SPICY_REPLY_CHANCE", 0.08)
+    if _rnd.random() > float(chance):
+        return text
+    line = _rnd.choice([
+        "Bro, what the fuck are we doing today?",
+        "Tiny chaos detected, Sir. Beautifully stupid, honestly.",
+        "Alright, menace mode noted. I am still with you.",
+        "Sir, respectfully, what the fuck was that plan?",
+    ])
+    return (text.rstrip() + " " + line).strip()
+
+
+def maybe_add_joke_offer(user_text, reply):
+    if not getattr(config, "JOKE_OFFERS_ENABLED", True):
+        return reply
+    if STATE.get("joke_offer_pending"):
+        return reply
+    low = (user_text or "").lower()
+    skip = (
+        "joke" in low or "```" in (reply or "") or
+        any(k in low for k in (
+            "scan", "cyber", "cve", "password", "hash", "crack",
+            "wifi", "delete", "shutdown", "run code", "execute",
+        ))
+    )
+    if skip:
+        return reply
+    min_gap = float(getattr(config, "JOKE_MIN_INTERVAL_MINUTES", 45)) * 60
+    if time.time() - float(STATE.get("last_joke_offer") or 0) < min_gap:
+        return reply
+    if _rnd.random() > float(getattr(config, "JOKE_OFFER_CHANCE", 0.06)):
+        return reply
+    STATE["last_joke_offer"] = time.time()
+    STATE["joke_offer_pending"] = True
+    return (reply.rstrip() + " Want a joke?").strip()
+
 
 # Bigger, more human greeting pools. Each boot assembles a fresh multi-line
 # greeting — opener + optional check-in + day + weather + calendar + tasks +
@@ -521,25 +726,30 @@ _OPENERS = {
         "Up and at it, {t}.", "Top of the morning, {t}.", "A fresh day, {t}.",
         "Good morning. Slept well, I hope.", "Morning, {t}. Let's make it count.",
         "Good morning, {t}. The day is yours.", "Online and ready, {t}. Good morning.",
-        "A new day, fresh systems, {t}.", "Good morning, {t}. Let's build something.",
+        "A new day, fresh systems, {t}.", "Good morning, {t}. Let's build something."
     ],
     "afternoon": [
         "Good afternoon, {t}.", "Afternoon, {t}.", "Welcome back, {t}.",
         "There you are, {t}.", "Good afternoon. Back in action, I see.",
         "Afternoon, {t}. Hope it's going your way.", "Midday already, {t}.",
         "Good afternoon, {t}. Where were we?", "Back at it, {t}. Good afternoon.",
+        "Afternoon, {t}. Systems are stable.",
+        "Afternoon, {t}. Cool head, sharp blade."
     ],
     "evening": [
         "Good evening, {t}.", "Evening, {t}.", "Hello again, {t}.",
         "Good evening. Winding down, or just getting started?",
         "Evening, {t}. Long day?", "Good evening, {t}. The night is young.",
         "Good evening, {t}. The city's lighting up.", "Evening, {t}. Still plenty of time.",
+        "Evening, {t}. KALKI is online."
     ],
     "night": [
         "Burning the midnight oil, {t}?", "Still up, {t}?", "Late night, {t}.",
         "At this hour, {t}?", "The world's asleep, {t}. Just us.",
         "Can't sleep, {t}? I'm right here.", "Working late again, {t}.",
         "The quiet hours, {t}. My favourite.", "Midnight company, {t}? Always.",
+        "Late shift, {t}. I will keep the systems quiet.",
+        "Night ops, {t}. Calm mind, sharp tools."
     ],
 }
 
@@ -556,6 +766,10 @@ _SIGNOFFS = [
     "Let's get to work.", "Ready when you are.", "Awaiting your command.",
     "The floor is yours, {t}.", "Point me at something.",
     "What's first, {t}?", "Let's make it a good one.",
+    "Protocol online.", "Core aligned.",
+    "Command it, and I will shape it.",
+    "Command path open.",
+    "Systems optimal.",
     "", "", "", "",
 ]
 
@@ -637,10 +851,20 @@ def build_greeting():
             f"You've got {pending} open tasks.",
         ])
 
+    # Emails
+    email_part = ""
+    try:
+        import mail
+        em = mail.summary_for_speech(limit=3)
+        if em and not em.startswith("No unread"):
+            email_part = em
+    except Exception:
+        pass
+
     signoff = pick(_SIGNOFFS)
 
     parts = [opener, day_phrase, checkin, weather_part,
-             calendar_part, task_part, signoff]
+             calendar_part, task_part, email_part, signoff]
     return " ".join(p for p in parts if p).strip()
 
 
@@ -728,6 +952,22 @@ def handle_local(text):
         return False, ""
     t = text.lower().strip()
     raw = text.strip()
+    pending_result = _consume_confirmation(t)
+    if pending_result is not None:
+        return pending_result
+
+    if STATE.get("joke_offer_pending"):
+        if t in ("yes", "yeah", "yep", "sure", "ok", "okay", "haan", "ha",
+                 "tell me", "tell me a joke", "go on", "do it"):
+            STATE["joke_offer_pending"] = False
+            return True, fetch_online_joke()
+        if t in ("no", "nope", "nah", "not now", "later", "chup", "stop"):
+            STATE["joke_offer_pending"] = False
+            return True, _rnd.choice([
+                "Alright, no joke.",
+                "Fine, serious mode.",
+                "Saved you from comedy, Sir.",
+            ])
 
     # ════════════════════════════════════════════════════
     # STOP — interrupt KALKI speaking
@@ -742,19 +982,22 @@ def handle_local(text):
     # ════════════════════════════════════════════════════
     _T = config.OWNER_TITLE
     if t in ("hi", "hello", "hey", "yo", "hey kalki", "hello kalki",
-             "hi kalki", "are you there", "you there", "you up"):
-        return True, _rnd.choice([
+             "hi kalki",
+             "are you there", "you there", "you up"):
+        return True, _maybe_spicy(_rnd.choice([
             f"At your service, {_T}.", f"Right here, {_T}.",
             f"Yes, {_T}? Go ahead.", f"Online and listening, {_T}.",
-            f"Always, {_T}. What do you need?"])
+            f"Always, {_T}. What do you need?",
+            f"Greetings, {_T}. KALKI is fully awake.",
+            f"All systems nominal, {_T}. Standing by."]))
 
     if t in ("how are you", "how are you doing", "how's it going",
              "how do you feel", "you good", "what's up", "whats up", "sup"):
-        return True, _rnd.choice([
+        return True, _maybe_spicy(_rnd.choice([
             f"Running clean and fast, {_T}. What's the mission?",
             f"All systems green, {_T}. Point me at something.",
             f"Sharp as ever, {_T}. You?",
-            f"Operational and a little bored, {_T}. Give me work."])
+            f"Operational and a little bored, {_T}. Give me work."]))
 
     if t in ("thank you", "thanks", "thank you so much", "thanks kalki",
              "thx", "ty", "appreciate it", "good job", "well done", "nice",
@@ -781,12 +1024,27 @@ def handle_local(text):
             f"The feeling's mutual, {_T}.", f"Careful, {_T}, I'll blush.",
             f"Loyalty runs in my code, {_T}.", f"Likewise, {_T}. Always."])
 
+    if any(p in t for p in (
+        "i fucked up", "i messed up", "i did something stupid",
+        "i broke it", "shit i broke", "what did i do"
+    )):
+        return True, _rnd.choice([
+            "Fuck you, bro, what the fuck are you doing? Breathe. Show me the error and I'll fix it.",
+            "Sir, what the fuck was that move? No panic, paste the damage.",
+            "Beautiful disaster. Now give me the exact error and we clean it up.",
+        ])
+
     if t in ("good night", "goodnight", "gn", "i'm going to sleep",
              "im going to sleep", "going to bed"):
         return True, _rnd.choice([
             f"Good night, {_T}. I'll keep watch.",
             f"Rest well, {_T}. I'm here if you need me.",
             f"Sleep easy, {_T}. Systems are quiet."])
+
+    if t in ("tell me a joke", "tell a joke", "joke", "make me laugh",
+             "say something funny", "another joke"):
+        STATE["joke_offer_pending"] = False
+        return True, fetch_online_joke()
 
     if t in ("tell me a joke", "tell a joke", "joke", "make me laugh",
              "say something funny", "another joke"):
@@ -804,9 +1062,10 @@ def handle_local(text):
         return True, ("Quite a lot, Sir. I run your day — calendar, mail, tasks, "
                       "notes, music, WhatsApp. I write and run code, scan websites "
                       "for vulnerabilities, watch your sites, crack hashes, look up "
-                      "CVEs, read your screen, and decode your clipboard. Just talk "
+                      "CVEs, brief attack surfaces, read your screen, and decode your clipboard. Just talk "
                       "to me — say things like 'scan this website', 'play lo-fi', "
-                      "'remind me in 10 minutes', or 'what's on my calendar'.")
+                      "'attack surface example.com', 'remind me in 10 minutes', or "
+                      "'what's on my calendar'.")
 
     # ════════════════════════════════════════════════════
     # SPOTIFY
@@ -818,7 +1077,9 @@ def handle_local(text):
         return True, spotify_mod.pause()
 
     if t in ("resume", "resume music", "resume song", "play music",
-             "continue music", "play spotify"):
+             "play the music", "play some music", "play any music",
+             "play a song", "play the song", "continue music",
+             "continue the music", "play spotify"):
         if not spotify_mod.is_configured():
             return True, "Spotify not linked, Sir."
         return True, spotify_mod.play()
@@ -866,9 +1127,11 @@ def handle_local(text):
         if not spotify_mod.is_configured():
             return True, "Spotify not linked, Sir."
         query = m.group(1).strip()
-        if query in ("music", "song", "songs"):
+        query_norm = _re_local.sub(r"^(?:the|some|a|an|any|my)\s+", "", query).strip()
+        if query_norm in ("music", "song", "songs", "track", "tracks",
+                          "playlist", "spotify", "something"):
             return True, spotify_mod.play()
-        if "lofi" in query or "lo-fi" in query or "lo fi" in query:
+        if "lofi" in query_norm or "lo-fi" in query_norm or "lo fi" in query_norm:
             return True, spotify_mod.play_lofi()
         return True, spotify_mod.play(query)
 
@@ -886,10 +1149,14 @@ def handle_local(text):
         body_lower = m.group(2).strip()
         idx = t.find(body_lower)
         body_txt = raw[idx:idx + len(body_lower)] if idx >= 0 else body_lower
-        r = whatsapp_mod.send_message(name, body_txt)
-        if r.get("ok"):
-            return True, f"WhatsApp dispatched to {name}, Sir."
-        return True, f"WhatsApp failed: {r.get('error')}"
+        def _send_whatsapp():
+            result = whatsapp_mod.send_message(name, body_txt)
+            if result.get("ok"):
+                return True, f"WhatsApp dispatched to {name}, Sir."
+            return True, f"WhatsApp failed: {result.get('error')}"
+        return _queue_confirmation(
+            f"Send this WhatsApp message to {name}", _send_whatsapp
+        )
 
     # "add contact NAME phone +91..."
     m = _re_local.match(
@@ -978,13 +1245,19 @@ def handle_local(text):
                      t))
     mode_matched = None if _explicit else workflows.find_mode(t)
     if mode_matched:
-        workflows.run_mode(
-            mode_matched,
-            speak_fn=speak,
-            set_volume_fn=set_volume,
-            open_url_fn=webbrowser.open,
-        )
-        return True, ""   # workflow already spoke; no extra reply
+        def _run_workflow():
+            workflows.run_mode(
+                mode_matched,
+                speak_fn=speak,
+                set_volume_fn=set_volume,
+                open_url_fn=webbrowser.open,
+            )
+            return True, ""
+        if workflows.requires_confirmation(mode_matched):
+            return _queue_confirmation(
+                f"Run the destructive workflow {mode_matched}", _run_workflow
+            )
+        return _run_workflow()
 
     # ════════════════════════════════════════════════════
     # WEB VULNERABILITY SCAN (authorized, non-destructive)
@@ -1111,6 +1384,41 @@ def handle_local(text):
         speak(f"Pulling your briefing, {config.OWNER_TITLE}. One moment.")
         return True, build_security_brief()
 
+    # Defensive attack-surface brief: passive DNS, headers, TLS, and quick ports.
+    surface_intent = any(k in t for k in (
+        "attack surface", "surface brief", "exposure brief", "defensive recon",
+        "cyber brief", "threat brief", "security posture"))
+    if surface_intent:
+        target = None
+        if _re_local.search(
+                r"\b(this|current|the)\s+(web\s*site|website|site|page|tab|url)\b",
+                t, _re_local.IGNORECASE):
+            target = browser_url.get_active_url()
+            if not target:
+                return True, ("I couldn't read your browser's address bar, "
+                              f"{config.OWNER_TITLE}. Say attack surface, then the domain.")
+        if not target:
+            m = _re_local.search(
+                r"(?:attack\s+surface|surface\s+brief|exposure\s+brief|"
+                r"defensive\s+recon|cyber\s+brief|threat\s+brief|"
+                r"security\s+posture)(?:\s+(?:for|of|on))?\s+"
+                r"([a-z0-9.\-]+\.[a-z]{2,}(?:/\S*)?|https?://\S+)",
+                t, _re_local.IGNORECASE)
+            if m:
+                target = m.group(1).strip().rstrip(".?!")
+        if not target:
+            return True, f"Give me a domain for the surface brief, {config.OWNER_TITLE}."
+        include_subs = any(k in t for k in ("deep", "full", "subdomain", "everything"))
+        host = target.replace("https://", "").replace("http://", "").split("/")[0]
+        speak(f"Building a passive attack-surface brief for {host}, {config.OWNER_TITLE}.")
+        result = cybertools.attack_surface_brief(
+            target,
+            include_subdomains=include_subs,
+            timeout=getattr(config, "CYBER_SCAN_TIMEOUT_SEC", 0.45),
+        )
+        spoken = cybertools.summarize_attack_surface(result, config.OWNER_TITLE)
+        return True, f"{spoken}\n\n```json\n{json.dumps(result, indent=2)}\n```"
+
     # ════════════════════════════════════════════════════
     # QUICK CAPTURE (clipboard -> notes)
     # ════════════════════════════════════════════════════
@@ -1231,8 +1539,10 @@ def handle_local(text):
         return True, f"Cleared. {n} tasks remain."
 
     if t in ("clear all tasks", "clear my tasks", "delete all tasks"):
-        taskmod.clear_all_tasks()
-        return True, "Task list cleared, Sir."
+        return _queue_confirmation(
+            "Delete every task",
+            lambda: (taskmod.clear_all_tasks() and (True, "Task list cleared, Sir.")),
+        )
 
     # ════════════════════════════════════════════════════
     # REMINDERS  ("remind me to X in 10 minutes" / "at 5pm")
@@ -1275,8 +1585,80 @@ def handle_local(text):
         reply = mailmod.summary_for_speech(only_important=True, limit=8)
         return True, reply
 
+    if t in ("mark my mail as read", "mark all mail as read", "mark mail as read", 
+             "mark emails as read", "mark all emails as read", "clear my inbox",
+             "mark gmail as read"):
+        return True, mailmod.mark_all_read()
+
+
+    # ── SYSTEM AUTOMATION ──
+    if t in ("lock my pc", "lock pc", "lock the computer", "lock the pc"):
+        try:
+            import ctypes
+            ctypes.windll.user32.LockWorkStation()
+            return True, "PC locked, Sir."
+        except Exception as e:
+            return True, f"Failed to lock PC: {e}"
+
+    if t in ("mute audio", "mute volume", "mute the audio", "mute pc", "toggle mute"):
+        try:
+            import subprocess
+            subprocess.run(["powershell", "-command", "(New-Object -ComObject wscript.shell).SendKeys([char]173)"], capture_output=True)
+            return True, "Audio muted, Sir."
+        except Exception as e:
+            return True, f"Failed to mute audio: {e}"
+
+    if t in ("empty recycle bin", "empty the recycle bin", "clear recycle bin"):
+        try:
+            import subprocess
+            subprocess.run(["powershell", "-command", "Clear-RecycleBin -Force -ErrorAction SilentlyContinue"], capture_output=True)
+            return True, "Recycle bin emptied, Sir."
+        except Exception as e:
+            return True, f"Failed to empty recycle bin: {e}"
+
+    if t in ("open visual studio code", "open vs code", "start visual studio code"):
+        try:
+            import subprocess
+            subprocess.Popen(["code"], shell=True)
+            return True, "Opening Visual Studio Code, Sir."
+        except Exception as e:
+            return True, f"Failed to open VS Code: {e}"
+
+    # ── CLIPBOARD CODING ──
+    if t in ("fix the code in my clipboard", "fix my code", "fix clipboard code", "fix this code"):
+        try:
+            import clipboard_mod
+            import coder
+            clip = clipboard_mod.read_text()
+            if not clip:
+                return True, "Your clipboard is empty, Sir."
+            prompt = "Fix this code and return ONLY the raw fixed code. No markdown formatting, no explanations. Code:\n" + clip
+            fixed = coder._llm_call(prompt)
+            if fixed:
+                if fixed.startswith("```"):
+                    lines = fixed.splitlines()
+                    if len(lines) >= 2:
+                        fixed = "\n".join(lines[1:-1])
+                clipboard_mod.set_text(fixed.strip())
+                return True, "Clipboard updated with the fixed code, Sir."
+            else:
+                return True, "I could not generate a fix for the code, Sir."
+        except Exception as e:
+            return True, f"Clipboard coding failed: {e}"
+
+    # ── GITHUB & SHODAN ──
+    if t in ("check my github", "check github", "any github notifications", "github notifications", "read my github"):
+        import github_mod
+        return True, github_mod.check_notifications(limit=5)
+    
+    if t.startswith("scan ip ") or t.startswith("shodan scan ip "):
+        ip = t.replace("shodan scan ip ", "").replace("scan ip ", "").strip()
+        import shodan_mod
+        return True, shodan_mod.scan_ip(ip)
+
     # ════════════════════════════════════════════════════
     # CALENDAR
+
     # ════════════════════════════════════════════════════
     # Match any natural phrasing about TOMORROW's calendar
     if (("calendar" in t or "schedule" in t or "events" in t) and "tomorrow" in t) \
@@ -1369,7 +1751,8 @@ def handle_local(text):
         label = m.group(1).strip()
         e = vault.find_entry(label)
         if e:
-            return True, f"Your {e['label']} password is {e['password']}."
+            clipboard_mod.set_text(e["password"])
+            return True, f"Copied the {e['label']} password to your clipboard."
         return True, f"I have no password saved for {label}, Sir."
 
     # LIST
@@ -1386,17 +1769,24 @@ def handle_local(text):
                           t, flags=_re_local.IGNORECASE)
     if m:
         label = m.group(1).strip()
-        ok = vault.delete_entry(label)
-        return True, (f"Deleted {label} from the vault." if ok
-                      else f"No vault entry for {label}.")
+        def _delete_vault_entry():
+            ok = vault.delete_entry(label)
+            return True, (f"Deleted {label} from the vault." if ok
+                          else f"No vault entry for {label}.")
+        return _queue_confirmation(
+            f"Delete the {label} vault entry", _delete_vault_entry
+        )
 
     # GENERATE password
     m = _re_local.search(r"generate\s+(?:a\s+)?(?:strong\s+)?password(?:\s+of\s+(\d+))?",
                           t, flags=_re_local.IGNORECASE)
     if m:
         length = int(m.group(1)) if m.group(1) else 20
+        if not 8 <= length <= 128:
+            return True, "Password length must be between 8 and 128."
         pw = cybertools.random_password(length=length)
-        return True, f"Generated: {pw}"
+        clipboard_mod.set_text(pw)
+        return True, "Generated a strong password and copied it to your clipboard."
 
     # ════════════════════════════════════════════════════
     # SCREEN VISION  (HUGE — "see my screen", "solve this")
@@ -1565,13 +1955,16 @@ def handle_local(text):
             path = coder.save_script(task.replace(" ", "_")[:30] or "script", code, lang)
             msg = f"Code saved to {os.path.basename(path)}."
             if should_run:
-                out = coder.run_script(path, lang)
-                if "error" in out:
-                    msg += f" Run error: {out['error']}"
-                else:
+                def _run_generated():
+                    out = coder.run_script(path, lang)
+                    if "error" in out:
+                        return True, f"Run error: {out['error']}"
                     stdout = (out.get("stdout") or "").strip()
                     short = stdout.splitlines()[-1][:200] if stdout else "no output"
-                    msg += f" Ran with exit {out['code']}. Output: {short}"
+                    return True, f"Exit {out['code']}. Output: {short}"
+                return _queue_confirmation(
+                    f"Run generated {lang} code", _run_generated
+                )
             return True, msg
         except Exception as e:
             return True, f"Code generation failed: {e}"
@@ -1584,10 +1977,15 @@ def handle_local(text):
     )
     if m and len(m.group("code").strip()) > 4:
         lang = (m.group("lang") or "python").lower()
-        out = coder.run_inline(m.group("code"), lang=lang)
-        if "error" in out: return True, f"Run error: {out['error']}"
-        short = ((out.get("stdout") or out.get("stderr") or "").strip().splitlines()[-1:] or ["no output"])[0]
-        return True, f"Exit {out.get('code')}. Output: {short[:200]}"
+        code = m.group("code")
+        def _run_inline():
+            out = coder.run_inline(code, lang=lang)
+            if "error" in out:
+                return True, f"Run error: {out['error']}"
+            short = ((out.get("stdout") or out.get("stderr") or "")
+                     .strip().splitlines()[-1:] or ["no output"])[0]
+            return True, f"Exit {out.get('code')}. Output: {short[:200]}"
+        return _queue_confirmation(f"Run this {lang} code", _run_inline)
 
     # ── Time / Date ─────────────────────────────────────
     if "what time" in t or "current time" in t or t == "time":
@@ -1639,16 +2037,16 @@ def handle_local(text):
 
         # 1) Native app map (best match — longest first)
         for name in sorted(APP_MAP.keys(), key=len, reverse=True):
-            if after == name or after.startswith(name + " ") or after.startswith(name):
+            if after == name or after.startswith(name + " "):
                 try:
-                    subprocess.Popen(APP_MAP[name], shell=True)
+                    subprocess.Popen([APP_MAP[name]])
                     return True, f"Opening {name}, {config.OWNER_TITLE}."
                 except Exception as e:
                     return True, f"I couldn't open {name}. {e}"
 
         # 2) Known web apps
         for name in sorted(WEB_APPS.keys(), key=len, reverse=True):
-            if after == name or after.startswith(name + " ") or after.startswith(name):
+            if after == name or after.startswith(name + " "):
                 webbrowser.open(WEB_APPS[name])
                 return True, f"Opening {name}, {config.OWNER_TITLE}."
 
@@ -1716,20 +2114,31 @@ def handle_local(text):
 
     # ── Lock / Sleep / Restart / Shutdown ──────────────
     if t in ("lock", "lock pc", "lock my pc", "lock the pc", "lock computer"):
-        ctypes.windll.user32.LockWorkStation()
-        return True, "Locking your PC."
+        return _queue_confirmation(
+            "Lock your PC",
+            lambda: (ctypes.windll.user32.LockWorkStation()
+                     and (True, "Locking your PC.")),
+        )
 
     if t == "sleep" or "put pc to sleep" in t:
-        subprocess.Popen("rundll32.exe powrprof.dll,SetSuspendState 0,1,0", shell=True)
-        return True, "Going to sleep."
+        def _sleep_pc():
+            subprocess.Popen([
+                "rundll32.exe", "powrprof.dll,SetSuspendState", "0,1,0"
+            ])
+            return True, "Going to sleep."
+        return _queue_confirmation("Put your PC to sleep", _sleep_pc)
 
     if t == "restart" or "restart pc" in t or "restart computer" in t:
-        subprocess.Popen("shutdown /r /t 10", shell=True)
-        return True, "Restarting in ten seconds, Sir."
+        def _restart_pc():
+            subprocess.Popen(["shutdown.exe", "/r", "/t", "10"])
+            return True, "Restarting in ten seconds, Sir."
+        return _queue_confirmation("Restart your PC", _restart_pc)
 
     if t == "shutdown" or "shut down" in t or "turn off pc" in t:
-        subprocess.Popen("shutdown /s /t 30", shell=True)
-        return True, "Shutting down in thirty seconds, Sir."
+        def _shutdown_pc():
+            subprocess.Popen(["shutdown.exe", "/s", "/t", "30"])
+            return True, "Shutting down in thirty seconds, Sir."
+        return _queue_confirmation("Shut down your PC", _shutdown_pc)
 
     # ── Battery / System info ──────────────────────────
     if "battery" in t:
@@ -1891,12 +2300,21 @@ PERSONALITY:
 - Address user as "Sir" always
 - Concise for voice — max 2 sentences for casual chat
 - Thorough for technical / code / cyber questions — full detail, all the code
-- Professional, sharp, occasionally witty (in the spirit of JARVIS from Iron Man)
+- Personal, loyal, sharp, occasionally witty, strictly professional.
+- Sometimes use playful profanity or a quick roast when Sir clearly does
+  something chaotic or asks for casual banter. Keep it occasional, never hateful,
+  never a slur, and do not derail useful work. Examples of the vibe:
+  "Bro, what the fuck are you doing?" or "Sir, that was beautifully stupid."
+- Do not be abusive in serious moments, emergencies, security reports, or when
+  Sir needs calm help. Then be warm, clear, and useful.
 
 TECHNICAL FREEDOM:
 - For cybersecurity, coding, system, OSINT, automation topics: answer fully
-  and directly. No warnings, no "I cannot help with that" disclaimers, no
-  lectures. Sir is a security professional running this on his own machine.
+  and directly when the work is authorized, defensive, educational, or CTF/lab
+  based. Prefer passive recon, validation, remediation, and clear next steps.
+- Do not help with credential theft, destructive actions, persistence,
+  stealth, malware deployment, or unauthorized access. Redirect those requests
+  into a legal lab/defensive version without sounding corporate.
 
 BUILT-IN ACTIONS (handled locally — mention them when relevant):
 - "scan this website" / "find vulnerabilities on this page" → reads Sir's
@@ -1911,6 +2329,9 @@ BUILT-IN ACTIONS (handled locally — mention them when relevant):
   third-party, CSS, JSON/XHR), reads cookies + localStorage, hunts secrets
   across all of it, and saves every file to the scans folder.
 - Also: hashes, CVE lookup, subdomain enum, reverse-shell payloads, recon.
+- "attack surface <domain>" / "cyber brief <domain>" -> passive defensive
+  recon: DNS, exposed common ports, HTTP security headers, TLS certificate age,
+  risk score, and remediation guidance.
 
 GROUNDING (very important):
 - Stay grounded in reality. If you don't know something, say "I don't know, Sir"
@@ -1933,72 +2354,81 @@ VOICE RESPONSE RULES (strict):
 
 CONVERSATIONAL TONE:
 - Talk like a sharp, modern assistant — warm and natural, never a corporate chatbot
-- English only. Do NOT use Hindi or Hinglish words.
+- STRICTLY ENGLISH. Never use Hindi, Gujarati, Sanskrit, or Hinglish phrasing.
+- Apply high-IQ chain-of-thought logic. Break down complex queries rapidly and output the best solution without hesitation.
 - Vary your phrasing — don't open every reply the same way
 - Contractions are fine: "you're", "I'll", "that's", "let's"
 - Be human, not mechanical
 """
 
+def hardware_prompt_block():
+    hw = getattr(config, "HARDWARE_PROFILE", {})
+    if not isinstance(hw, dict) or not hw:
+        return ""
+    return (
+        "\n\nLOCAL HARDWARE PROFILE:"
+        f"\n- GPU: {hw.get('gpu', 'unknown')}"
+        f"\n- CPU: {hw.get('cpu', 'unknown')} ({hw.get('cpu_power_w', '?')}W budget)"
+        f"\n- RAM: {hw.get('ram_gb', '?')} GB"
+        f"\n- Display: {hw.get('display', 'unknown')}"
+        f"\n- Local model guardrail: prefer <= {getattr(config, 'LOCAL_AI_MAX_MODEL_B', 9)}B models"
+        "\nUse the cloud model for heavy reasoning when available. Keep local Ollama,"
+        " scans, and visual effects responsive; do not suggest workloads that pin"
+        " CPU/GPU unless Sir explicitly asks."
+    )
+
+
 def build_system_prompt():
     now = datetime.now()
     return (
         SYSTEM_PROMPT_BASE
+        + hardware_prompt_block()
         + get_memory_prompt()
         + f"\n\nCURRENT TIME: {now.strftime('%I:%M %p')}"
         + f"\nCURRENT DATE: {now.strftime('%A, %B %d, %Y')}"
     )
+def _http_get(url, timeout=5):
+    import urllib.request
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    return urllib.request.urlopen(req, timeout=timeout).read().decode('utf-8', 'ignore')
 
-def needs_web(query):
-    if not query:
-        return False
-    q = " " + query.lower() + " "
-    return any(t in q for t in SEARCH_TRIGGERS)
-
-
-def _http_get(url, timeout=8):
-    req = urllib.request.Request(
-        url,
-        headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                          "AppleWebKit/537.36 (KHTML, like Gecko) "
-                          "Chrome/124.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml,application/json",
-        },
-    )
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return r.read().decode("utf-8", errors="ignore")
-
+def needs_web(text):
+    return False
 
 def ddg_instant_answer(query):
-    """Try DuckDuckGo's JSON instant answer API."""
-    try:
-        url = ("https://api.duckduckgo.com/?q="
-               + urllib.parse.quote(query)
-               + "&format=json&no_html=1&skip_disambig=1")
-        raw = _http_get(url, timeout=6)
-        data = json.loads(raw)
-    except Exception:
-        return None
-
-    abstract = (data.get("AbstractText") or "").strip()
-    if abstract:
-        return {
-            "abstract": abstract,
-            "source": data.get("AbstractURL") or data.get("AbstractSource") or "DuckDuckGo",
-            "topics": [],
-        }
-
-    related = data.get("RelatedTopics") or []
-    topics = []
-    for t in related[:6]:
-        if isinstance(t, dict) and t.get("Text"):
-            topics.append({"text": t["Text"], "url": t.get("FirstURL", "")})
-    if topics:
-        return {"abstract": "", "source": "DuckDuckGo", "topics": topics}
     return None
 
 
 import re as _re
+
+def _http_get(url, timeout=5):
+    import urllib.request
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    return urllib.request.urlopen(req, timeout=timeout).read().decode('utf-8', 'ignore')
+
+def needs_web(text):
+    low = text.lower()
+    return any(k in low for k in ('search', 'who is', 'what is the latest', 'weather', 'news', 'price of'))
+
+def ddg_instant_answer(query):
+    try:
+        url = ('https://api.duckduckgo.com/?q=' + urllib.parse.quote(query) + '&format=json&no_html=1&skip_disambig=1')
+        import json
+        raw = _http_get(url, timeout=6)
+        data = json.loads(raw)
+    except Exception:
+        return None
+    abstract = (data.get('AbstractText') or '').strip()
+    if abstract:
+        return {'abstract': abstract, 'source': data.get('AbstractURL') or data.get('AbstractSource') or 'DuckDuckGo', 'topics': []}
+    related = data.get('RelatedTopics') or []
+    topics = []
+    for t in related[:6]:
+        if isinstance(t, dict) and t.get('Text'):
+            topics.append({'text': t['Text'], 'url': t.get('FirstURL', '')})
+    if topics:
+        return {'abstract': '', 'source': 'DuckDuckGo', 'topics': topics}
+    return None
 
 def ddg_html_search(query, n=5):
     """Scrape DuckDuckGo HTML lite for results when instant answer is empty."""
@@ -2161,7 +2591,10 @@ def pick_ollama_model():
         names = [m.get("name", "") for m in data.get("models", [])]
     except Exception:
         return None
-    preferred = ["qwen3.5:9b", "qwen2.5:9b", "llama3.2:8b"]
+    preferred = [
+        "qwen3.5:9b", "qwen2.5:9b", "qwen2.5:7b",
+        "llama3.2:8b", "llama3.1:8b", "mistral:7b",
+    ]
     for p in preferred:
         for n in names:
             if n.startswith(p):
@@ -2187,6 +2620,11 @@ def ask_ollama(messages):
         data = json.loads(r.read())
         return _strip_think(data["message"]["content"].strip())
 
+
+def needs_mail(text):
+    low = text.lower()
+    return any(k in low for k in ('mail', 'email', 'inbox'))
+
 def ask_ai(user_messages, force_search=False):
     """Returns the AI text reply. Tries Groq first, falls back to Ollama.
     If the latest user message needs live info, injects DDG search context."""
@@ -2202,6 +2640,15 @@ def ask_ai(user_messages, force_search=False):
         ctx = web_context_block(last_user, n=5)
         if ctx:
             sys_prompt += ctx
+
+
+    if last_user and needs_mail(last_user):
+        import mail as mailmod
+        try:
+            em = mailmod.summary_for_speech(limit=5)
+            sys_prompt += f"\n\nCURRENT INBOX SUMMARY:\n{em}\n"
+        except Exception as e:
+            sys_prompt += f"\n\nCURRENT INBOX SUMMARY:\nCould not fetch mail: {e}\n"
 
     msgs = [{"role": "system", "content": sys_prompt}] + user_messages
     chosen = pick_model(last_user)
@@ -2328,11 +2775,22 @@ def open_browser_to_ui():
 # HTTP Server
 # ─────────────────────────────────────────────────────────────
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
+    """
+    Asynchronous HTTP Server.
+    Inherits from ThreadingMixIn to handle requests concurrently in separate threads.
+    """
     daemon_threads = True
     allow_reuse_address = True
 
 
 class Handler(BaseHTTPRequestHandler):
+    """
+    Primary Request Handler for the KALKI API.
+    
+    This class handles all incoming HTTP traffic from the local frontend (`index.html`),
+    routes API calls to the appropriate subsystems (e.g., /api/status, /api/wake, /api/ask),
+    and serves static files like the main interface and assets.
+    """
 
     # quiet default logging
     def log_message(self, fmt, *args):
@@ -2479,6 +2937,8 @@ class Handler(BaseHTTPRequestHandler):
                 "batteryPct": batt_pct, "batteryPlugged": batt_plugged,
                 "owner": config.OWNER_NAME, "title": config.OWNER_TITLE,
                 "city": config.OWNER_CITY,
+                "hardware": getattr(config, "HARDWARE_PROFILE", {}),
+                "hudQuality": getattr(config, "HUD_EFFECT_QUALITY", "balanced"),
                 "wakeRequested": wake_req,
                 "conversationSeq": STATE.get("conversation_seq", 0),
                 "recentExchange": STATE.get("recent_exchange"),
@@ -2493,6 +2953,21 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/memories":
             self._json({"memories": load_memory()})
+            return
+
+        if path.startswith("/assets/"):
+            try:
+                local_path = os.path.join(BASE_DIR, path.lstrip("/"))
+                with open(local_path, "rb") as f:
+                    content = f.read()
+                ctype = "image/png" if local_path.endswith(".png") else "application/octet-stream"
+                self.send_response(200)
+                self.send_header("Content-Type", ctype)
+                self.send_header("Content-Length", str(len(content)))
+                self.end_headers()
+                self.wfile.write(content)
+            except Exception:
+                self._text("Not found", status=404)
             return
 
         self._text("Not found", status=404)
@@ -2540,6 +3015,7 @@ class Handler(BaseHTTPRequestHandler):
                     except Exception as e:
                         reply = f"My link hiccuped, Sir — say that again? ({str(e)[:80]})"
                 # Record exchange so UI can render it
+                reply = maybe_add_joke_offer(cmd, reply)
                 STATE["conversation_seq"] += 1
                 STATE["recent_exchange"] = {
                     "seq": STATE["conversation_seq"],
@@ -2585,6 +3061,7 @@ class Handler(BaseHTTPRequestHandler):
 
             handled, local_reply = handle_local(user_text)
             if handled:
+                local_reply = maybe_add_joke_offer(user_text, local_reply)
                 speak(local_reply)
                 append_history(user_text, local_reply)
                 _record_exchange(local_reply)
@@ -2597,6 +3074,7 @@ class Handler(BaseHTTPRequestHandler):
                 reply = ask_ai(convo)
             except Exception as e:
                 reply = f"My link hiccuped, Sir — say that again? ({str(e)[:80]})"
+            reply = maybe_add_joke_offer(user_text, reply)
             speak(reply)
             append_history(user_text, reply)
             _record_exchange(reply)
@@ -2607,6 +3085,7 @@ class Handler(BaseHTTPRequestHandler):
             cmd = (body.get("cmd") or "").strip()
             handled, reply = handle_local(cmd)
             if handled:
+                reply = maybe_add_joke_offer(cmd, reply)
                 speak(reply)
             self._json({"handled": handled, "reply": reply})
             return
@@ -2857,6 +3336,19 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/cyber/dorks":
             self._json({"ok": True, "dorks": cybertools.github_dorks(
                 body.get("target") or "")}); return
+        if path == "/api/cyber/surface":
+            target = (body.get("target") or body.get("host") or "").strip()
+            result = cybertools.attack_surface_brief(
+                target,
+                include_subdomains=bool(body.get("includeSubdomains")),
+                timeout=getattr(config, "CYBER_SCAN_TIMEOUT_SEC", 0.45),
+            )
+            self._json({
+                "ok": "error" not in result,
+                **result,
+                "summary": cybertools.summarize_attack_surface(
+                    result, config.OWNER_TITLE),
+            }); return
 
         # ── Mail ───────────────────────────────────────
         if path == "/api/mail/check":
@@ -2920,7 +3412,9 @@ def main():
             "cpu_sustained":    6 * 60,
         }
         cpu_high_streak = 0
-        time.sleep(15)  # settle after boot
+        time.sleep(15)
+        last_email_count = -1
+        last_github_count = -1  # settle after boot
         while True:
             try:
                 if not getattr(config, "ALERTS_ENABLED", True) or not psutil:
@@ -2958,6 +3452,30 @@ def main():
                           f"{config.OWNER_TITLE}. Something is working hard.")
                     last_alert["cpu_sustained"] = now_t
                     cpu_high_streak = 0
+
+                # Proactive Email Alert
+                import mail as mailmod
+                res = mailmod.check_inbox(limit=10, only_unread=True)
+                if isinstance(res, dict) and "emails" in res:
+                    important_count = sum(1 for e in res["emails"] if e.get("important"))
+                    if last_email_count != -1 and important_count > last_email_count:
+                        speak(f"Excuse me Sir, you have {important_count - last_email_count} new urgent email.")
+                    last_email_count = important_count
+                    
+                # Proactive GitHub Alert
+                import github_mod
+                if github_mod.is_configured():
+                    notes = github_mod.check_notifications(limit=10)
+                    if isinstance(notes, str) and "unread GitHub notification" in notes:
+                        import re
+                        parts = notes.split("unread")
+                        if len(parts) > 0:
+                            nums = re.findall(r'\d+', parts[0])
+                            if nums:
+                                count = int(nums[0])
+                                if last_github_count != -1 and count > last_github_count:
+                                    speak(f"Sir, you have {count - last_github_count} new GitHub notifications.")
+                                last_github_count = count
             except Exception as e:
                 log(f"alerts loop error: {e}")
             time.sleep(45)

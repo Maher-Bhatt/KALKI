@@ -1,0 +1,31 @@
+
+HTML SNIPPET:
+═════════════════════════════════════════════ */
+let _lastFrame = 0, _dialFrame = 0;
+function frameInterval(){
+  // Full 30fps only when something is happening; idle coasts at 12fps to
+  // keep the laptop cool. Mic/listening/thinking/speaking = active.
+  const active = STATE.micActive || (STATE.mode && STATE.mode !== "idle")
+                 || STATE.pulse > 0.02;
+  return active ? (1000/30) : (1000/12);
+}
+function loop(ts){
+  if (document.hidden){ setTimeout(()=>requestAnimationFrame(loop), 500); return; }
+  if (!_lastFrame) _lastFrame = ts;
+  if (ts - _lastFrame >= frameInterval()){
+    _lastFrame = ts;
+    drawOrb(); drawWave();
+    if (++_dialFrame >= 6){ _dialFrame = 0; drawDial(); drawGauge(); }
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden){ _lastFrame = 0; _dialFrame = 0; }
+});
+
+setTimeout(()=>addLine("KALKI online. Awaiting orders, Sir.","kalki"), 1600);
+</script>
+
+
+</body></html>

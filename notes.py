@@ -5,9 +5,11 @@ KALKI Notes & Journal — quick capture, tagged, full-text search.
 import os
 import json
 import re
+import threading
 from datetime import datetime, timedelta
 
 NOTES_PATH = None  # set by server
+_lock = threading.RLock()
 
 
 def _load():
@@ -20,8 +22,12 @@ def _load():
 
 def _save(d):
     os.makedirs(os.path.dirname(NOTES_PATH), exist_ok=True)
-    with open(NOTES_PATH, "w", encoding="utf-8") as f:
+    tmp = NOTES_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(d, f, indent=2, ensure_ascii=False)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, NOTES_PATH)
 
 
 def _extract_tags(text):
@@ -29,17 +35,21 @@ def _extract_tags(text):
 
 
 def add_note(text):
-    notes = _load()
-    nid = (max((n["id"] for n in notes), default=0)) + 1
-    notes.append({
-        "id": nid,
-        "text": text.strip(),
-        "tags": _extract_tags(text),
-        "ts": datetime.now().isoformat(timespec="seconds"),
-        "date": datetime.now().strftime("%Y-%m-%d"),
-    })
-    _save(notes)
-    return nid
+    text = str(text).strip()
+    if not text:
+        return None
+    with _lock:
+        notes = _load()
+        nid = (max((n["id"] for n in notes), default=0)) + 1
+        notes.append({
+            "id": nid,
+            "text": text,
+            "tags": _extract_tags(text),
+            "ts": datetime.now().isoformat(timespec="seconds"),
+            "date": datetime.now().strftime("%Y-%m-%d"),
+        })
+        _save(notes)
+        return nid
 
 
 def list_recent(n=5):
@@ -76,13 +86,16 @@ def search(query):
 
 
 def delete_note(nid_or_text):
-    notes = _load()
-    needle = str(nid_or_text).lower()
-    keep = [n for n in notes if not (
-        str(n["id"]) == needle or needle in n["text"].lower())]
-    if len(keep) != len(notes):
-        _save(keep)
-        return True
+    needle = str(nid_or_text).strip().lower()
+    if not needle:
+        return False
+    with _lock:
+        notes = _load()
+        keep = [note for note in notes if not (
+            str(note["id"]) == needle or needle in note["text"].lower())]
+        if len(keep) != len(notes):
+            _save(keep)
+            return True
     return False
 
 

@@ -9,10 +9,12 @@ import ssl
 import json
 import socket
 import urllib.request
+import threading
 from datetime import datetime, timezone
 
 WATCHLIST_PATH = None   # set by server.py
 UA = "KALKI-Watchdog/1.0"
+_lock = threading.RLock()
 
 
 def _load():
@@ -25,8 +27,13 @@ def _load():
 
 def _save(sites):
     try:
-        with open(WATCHLIST_PATH, "w", encoding="utf-8") as f:
+        os.makedirs(os.path.dirname(WATCHLIST_PATH), exist_ok=True)
+        tmp = WATCHLIST_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
             json.dump(sites, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, WATCHLIST_PATH)
     except Exception:
         pass
 
@@ -40,20 +47,25 @@ def add_site(url, label=""):
     url = url.strip().rstrip("/")
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
-    sites = _load()
-    if any(s["url"] == url for s in sites):
-        return f"Already watching {_host(url)}, Sir."
-    sites.append({"url": url, "label": label or _host(url)})
-    _save(sites)
+    with _lock:
+        sites = _load()
+        if any(s["url"] == url for s in sites):
+            return f"Already watching {_host(url)}, Sir."
+        sites.append({"url": url, "label": label or _host(url)})
+        _save(sites)
     return f"Now watching {_host(url)}, Sir. I'll alert you if it goes down or its cert is expiring."
 
 
 def remove_site(needle):
-    sites = _load()
-    keep = [s for s in sites if needle.lower() not in s["url"].lower()
-            and needle.lower() not in s.get("label", "").lower()]
-    _save(keep)
-    removed = len(sites) - len(keep)
+    needle = str(needle).strip().lower()
+    if not needle:
+        return "A site name is required."
+    with _lock:
+        sites = _load()
+        keep = [s for s in sites if needle not in s["url"].lower()
+                and needle not in s.get("label", "").lower()]
+        _save(keep)
+        removed = len(sites) - len(keep)
     return f"Stopped watching {removed} site(s)." if removed else "No matching watched site, Sir."
 
 

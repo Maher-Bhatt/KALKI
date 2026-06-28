@@ -9,19 +9,21 @@ import json
 import base64
 import threading
 from datetime import datetime
+from typing import Optional, Dict, Any, List, Union
 
 try:
     import win32crypt
     HAS_DPAPI = True
-except Exception:
+except ImportError:
     HAS_DPAPI = False
 
-_lock = threading.Lock()
+_lock = threading.RLock()
 
-VAULT_PATH = None  # set by server.py before first use
+VAULT_PATH: Optional[str] = None  # set by server.py before first use
 
 
-def _enc(plain):
+def _enc(plain: Union[str, bytes, None]) -> str:
+    """Encrypt a plaintext string or bytes using Windows DPAPI."""
     if plain is None or plain == "":
         return ""
     data = plain.encode("utf-8") if isinstance(plain, str) else plain
@@ -31,7 +33,8 @@ def _enc(plain):
     return "B64:" + base64.b64encode(data).decode()
 
 
-def _dec(blob):
+def _dec(blob: str) -> str:
+    """Decrypt a DPAPI or Base64 encoded blob."""
     if not blob:
         return ""
     if blob.startswith("DPAPI:") and HAS_DPAPI:
@@ -48,7 +51,10 @@ def _dec(blob):
     return blob
 
 
-def _load():
+def _load() -> Dict[str, Any]:
+    """Load the vault JSON file into a dictionary."""
+    if VAULT_PATH is None:
+        return {}
     try:
         with open(VAULT_PATH, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -56,7 +62,10 @@ def _load():
         return {}
 
 
-def _save(d):
+def _save(d: Dict[str, Any]) -> None:
+    """Save the vault dictionary securely to disk."""
+    if VAULT_PATH is None:
+        return
     os.makedirs(os.path.dirname(VAULT_PATH), exist_ok=True)
     tmp = VAULT_PATH + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
@@ -66,7 +75,20 @@ def _save(d):
     os.replace(tmp, VAULT_PATH)
 
 
-def save_entry(label, username="", password="", url="", notes=""):
+def save_entry(label: str, username: str = "", password: str = "", url: str = "", notes: str = "") -> Union[bool, Dict[str, str]]:
+    """
+    Save a new entry to the encrypted vault.
+    
+    Args:
+        label (str): The unique label/name of the entry.
+        username (str): The username for the entry.
+        password (str): The password to encrypt.
+        url (str): Associated URL.
+        notes (str): Any extra encrypted notes.
+        
+    Returns:
+        Union[bool, Dict[str, str]]: True if saved successfully, Dict containing error if pywin32 is missing, or False on bad input.
+    """
     if not label:
         return False
     # Refuse to "encrypt" with reversible base64. Without DPAPI (pywin32),
@@ -89,7 +111,13 @@ def save_entry(label, username="", password="", url="", notes=""):
     return True
 
 
-def list_labels():
+def list_labels() -> List[Dict[str, str]]:
+    """
+    List all entry labels and unencrypted metadata in the vault.
+    
+    Returns:
+        List[Dict[str, str]]: A list of dictionaries containing label, url, and save date.
+    """
     d = _load()
     return [
         {"label": v["label"], "url": v.get("url", ""), "saved": v.get("saved", "")}
@@ -97,7 +125,18 @@ def list_labels():
     ]
 
 
-def get_entry(label):
+def get_entry(label: str) -> Optional[Dict[str, str]]:
+    """
+    Retrieve and decrypt a specific entry by exact label.
+    
+    Args:
+        label (str): The exact label to fetch.
+        
+    Returns:
+        Optional[Dict[str, str]]: The decrypted entry dictionary, or None if not found.
+    """
+    if not str(label).strip():
+        return None
     d = _load()
     e = d.get(label.lower().strip())
     if not e:
@@ -112,8 +151,16 @@ def get_entry(label):
     }
 
 
-def find_entry(query):
-    """Fuzzy match — first label containing the query."""
+def find_entry(query: str) -> Optional[Dict[str, str]]:
+    """
+    Fuzzy match — returns the first decrypted entry containing the query.
+    
+    Args:
+        query (str): The string to search for in the labels.
+        
+    Returns:
+        Optional[Dict[str, str]]: The decrypted entry, or None if not found.
+    """
     if not query:
         return None
     q = query.lower().strip()
@@ -126,17 +173,28 @@ def find_entry(query):
     return None
 
 
-def delete_entry(label):
-    d = _load()
-    k = label.lower().strip()
-    if k in d:
-        del d[k]
-        _save(d)
-        return True
-    # try fuzzy delete
-    for key in list(d.keys()):
-        if label.lower() in key:
-            del d[key]
-            _save(d)
+def delete_entry(label: str) -> bool:
+    """
+    Delete an entry from the vault.
+    
+    Args:
+        label (str): The exact or partial label of the entry to delete.
+        
+    Returns:
+        bool: True if an entry was deleted, False otherwise.
+    """
+    query = str(label).strip().lower()
+    if not query:
+        return False
+    with _lock:
+        data = _load()
+        if query in data:
+            del data[query]
+            _save(data)
             return True
+        for key in list(data):
+            if query in key:
+                del data[key]
+                _save(data)
+                return True
     return False

@@ -1,775 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<!--
-====================================================================
-KALKI v5 — Frontend User Interface
-====================================================================
-Architecture:
-- Pure HTML/CSS/JS (Zero external dependencies or frameworks).
-- Fully responsive HUD layout with absolute positioning.
-- Communicates directly with the local Python backend via fetch().
-- Web Speech API integration for local voice wake words.
-====================================================================
--->
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>K.A.L.K.I.</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
-/* ════════════════════════════════════════════════════════════════
-   K.A.L.K.I. — Bharat Temple Theme
-   Deep wine & maroon base, warm saffron / gold / marigold
-   accents that shift as KALKI responds.
-   ════════════════════════════════════════════════════════════════ */
 
-
-:root{
-  --bg: #0a0a0a;
-  --bg-elev: #111111;
-  --bg-panel: rgba(15, 15, 15, 0.9);
-  --text: #ffffff;
-  --text-dim: #888888;
-  --frame: #333333;
-  --frame-strong: #666666;
-  --accent: #ffffff;
-  --accent-glow: transparent;
-  --accent-soft: rgba(255, 255, 255, 0.1);
-  --lime: #ffffff;
-  --orange: #ff9900;
-  --red: #cccccc;
-}
-
-
-/* state-driven accents */
-body.mode-idle      { --accent: #ffffff; --accent-glow:transparent; --accent-soft:rgba(255,255,255,0.05); }
-body.mode-listening { --accent: #ffffff; --accent-glow:rgba(255,255,255,0.2); --accent-soft:rgba(255,255,255,0.1); }
-body.mode-thinking  { --accent: #ffffff; --accent-glow:transparent; --accent-soft:rgba(255,255,255,0.05); }
-body.mode-speaking  { --accent: #ffffff; --accent-glow:transparent; --accent-soft:rgba(255,255,255,0.1); }
-
-body.mode-listening { --accent: #ffffff; --accent-glow:transparent; --accent-soft:rgba(255,153,51,0.2); }
-body.mode-thinking  { --accent: #ffffff; --accent-glow:transparent; --accent-soft:rgba(255,255,255,0.15); }
-body.mode-speaking  { --accent: #ffffff; --accent-glow:transparent; --accent-soft:rgba(255,107,0,0.2); }
-
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{
-  width:100%;height:100%;overflow:hidden;
-  background:var(--bg);
-  color:var(--text);
-  font-family:"Inter", sans-serif;
-  letter-spacing:0.5px;
-  user-select:none;
-  transition: background .8s ease;
-}
-
-body::before{
-  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
-  background: #0a0a0a;
-}
-@keyframes bgSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-/* Gentle center ambient light, not a blinding glow */
-body::after{
-  content:"";position:fixed;inset:0;z-index:1;pointer-events:none;
-  background: radial-gradient(circle at 50% 50%, var(--accent-soft) 0%, transparent 60%);
-  transition: background .8s ease;
-  opacity: 0.6;
-}
-
-/* ❖ HUD side panels ❖ */
-.hud {
-  position:fixed; z-index:15;
-  border: 1px solid var(--frame);
-  background: var(--bg-panel);
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-  padding:15px 17px; font-size:12px;
-  border-radius: 6px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-}
-
-
-.hud.left { top:115px; left:24px; width:280px; max-height: calc(100vh - 170px); overflow-y:auto; }
-.hud.right{ top:115px; right:24px; width:260px; max-height: calc(100vh - 230px); overflow-y:auto; }
-.hud.left::-webkit-scrollbar{ width:4px; }
-.hud.left::-webkit-scrollbar-thumb{ background:#ffffff; }
-.hud.right::-webkit-scrollbar{ width:4px; }
-.hud.right::-webkit-scrollbar-thumb{ background:#ffffff; }
-.hud .title {
-  color:#ffffff;
-  font-family:"Inter", sans-serif;font-weight:700;
-  font-size:12px;letter-spacing:1px;
-  padding-bottom:3px;border-bottom:1px solid rgba(255,153,51,0.3);
-  margin-bottom:8px;
-}/* -- Top bar ---------------------------------------- */
-.topbar{
-  position:fixed;top:0;left:0;right:0;height:64px;z-index:20;
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 28px;
-  border-bottom: 1px solid var(--frame);
-  background: rgba(10,10,10,0.9);
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-}
-.brand{display:flex;align-items:center;gap:14px}
-.brand-mark{
-  width:42px;height:42px;position:relative;
-  display:flex;align-items:center;justify-content:center;
-}
-.brand-mark .chakra{
-  width:100%;height:100%;
-  filter: drop-shadow(0 2px 4px rgba(212,175,55,0.8));
-  transition: transform 1s ease;
-}
-.brand-mark .chakra-spin{
-  transform-origin:50px 50px;
-  animation: chakraSpin 10s linear infinite;
-}
-@keyframes chakraSpin{
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-.brand h1{
-  font-family:"Inter", sans-serif;
-  font-size:22px;font-weight:700;letter-spacing:1px;
-  background:linear-gradient(180deg, var(--gold-bright), var(--gold-deep));
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-}
-.brand .sub{
-  font-size:10px;color:var(--sandstone);letter-spacing:1px;text-transform:uppercase;
-  font-family:"Mukta", sans-serif;
-}
-.top-meta{
-  display:flex;gap:20px;font-size:12px;color:var(--text-dim);
-  letter-spacing:1px;text-transform:uppercase; font-family:"Inter", sans-serif;
-}
-.top-meta .v{color:#ffffff}
-
-/* ── Status badge (formerly pill) ───────────────────────────────── */
-.pill {
-  color:#ffffff;
-  border: 1px solid #ffffff;
-  border-radius: 20px;
-  background: rgba(10,10,10,0.85);
-  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  text-transform:uppercase; z-index:25; font-weight:600;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.6);
-  font-family:"Inter", sans-serif;
-  transition: border-color .5s ease;
-}
-.pill .dot{
-  display:inline-block;width:6px;height:6px;border-radius:50%;
-  background:var(--accent);margin-right:10px;vertical-align:middle;
-  box-shadow: 0 0 4px var(--accent);
-}
-
-/* ── Panel Borders ───────────────────────────── */
-.panel{
-  background:var(--bg-panel);
-  border: 1px solid var(--frame);
-  border-radius: 8px; /* Elegant slightly rounded corners */
-  padding:20px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(212,175,55,0.1);
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  display:flex;flex-direction:column;gap:16px;
-  position:relative;
-  overflow:hidden;
-}
-/* Traditional corner flourishes for panels */
-.panel::before, .panel::after {
-  content:""; position:absolute; width:16px; height:16px;
-  border:1px solid #ffffff; pointer-events:none; opacity:0.5;
-}
-.panel::before { top:6px; left:6px; border-right:none; border-bottom:none; }
-.panel::after { bottom:6px; right:6px; border-left:none; border-top:none; }
-
-/* ── HUD side panels ────────────────────────────── */
-
-.hud .title::before{
-  content:"";flex:0 0 auto;width:15px;height:10px;margin-right:8px;
-  background: var(--accent); opacity:.9;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 16'%3E%3Cpath fill='%23000' d='M12 15C12 8 8 4 12 1C16 4 12 8 12 15ZM12 15C7 11 3 11 2 7C8 7 11 11 12 15ZM12 15C17 11 21 11 22 7C16 7 13 11 12 15Z'/%3E%3C/svg%3E") center/contain no-repeat;
-          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 16'%3E%3Cpath fill='%23000' d='M12 15C12 8 8 4 12 1C16 4 12 8 12 15ZM12 15C7 11 3 11 2 7C8 7 11 11 12 15ZM12 15C17 11 21 11 22 7C16 7 13 11 12 15Z'/%3E%3C/svg%3E") center/contain no-repeat;
-  transition: background .55s ease;
-}
-.hud .title::after{
-  content:"";flex:1;height:1px;
-  background: linear-gradient(to right, var(--accent), transparent);
-  margin-left:10px;
-  transition: background .55s ease;
-}
-
-.row{display:flex;justify-content:space-between;padding:3px 0;color:var(--text-dim);font-size:11px;letter-spacing:0}
-.row .v{color:var(--text)}
-.row .v.ok{color:var(--lime)}
-.row .v.warn{color:var(--orange)}
-.row .v.bad{color:var(--red)}
-.row .v.cy{color:var(--accent); transition: color .55s ease}
-
-.bar{
-  display:flex;align-items:center;gap:10px;margin:5px 0;
-  font-size:9px;letter-spacing:0;color:var(--text-dim);
-}
-.bar .lbl{width:30px}
-.bar .num{width:38px;text-align:right;color:var(--text);font-variant-numeric:tabular-nums}
-.bar .track {
-  flex:1; height:4px; background:rgba(20,20,20,0.9);
-  border-radius:2px; overflow:hidden;
-  border: 1px solid rgba(255,255,255,0.2);
-}
-.bar .fill {
-  height:100%; background:#ffffff;
-  box-shadow: 0 0 5px #ffffff;
-  transition: width 0.3s ease;
-}
-.bar.warn .fill {
-  height:100%; background:#ffffff;
-  box-shadow: 0 0 5px #ffffff;
-  transition: width 0.3s ease;
-}
-.bar.bad  .fill {
-  height:100%; background:#ffffff;
-  box-shadow: 0 0 5px #ffffff;
-  transition: width 0.3s ease;
-}
-
-/* tags */
-.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
-.tag{
-  background:rgba(255,255,255,0.04);
-  border:1px solid var(--frame);
-  color:var(--text);padding:2px 7px;border-radius:2px;
-  font-size:9px;letter-spacing:0;font-weight:600;
-  transition: all .2s;
-}
-.tag:hover{
-  border-color:var(--accent);color:var(--accent);
-  box-shadow:0 0 8px var(--accent-glow);
-}
-
-/* dials */
-.dial {
-  position:relative;width:100%;height:110px;margin-top:6px;
-  border: 1px solid var(--frame);
-  border-radius: 50%;
-  background: rgba(15,15,15, 0.8);
-}
-.dial canvas{width:100%;height:100%}
-
-/* ── Buttons (Quick / Tactical) — shimmer on hover ── */
-.qbtn {
-  background: rgba(20,20,20,0.9);
-  border: 1px solid var(--frame);
-  color: var(--text);
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  text-align: left;
-  font-family: "Inter", sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  transition: all 0.2s ease;
-}
-.qbtn:hover {
-  background: rgba(255,255,255,0.1);
-  border-color: var(--text);
-}
-.qbtn::before{
-  content:"";position:absolute;inset:0;
-  background:linear-gradient(90deg, transparent, var(--accent-glow), transparent);
-  transform:translateX(-110%);
-  transition:transform .45s ease;
-  pointer-events:none;
-}
-.qbtn:hover {
-  background: rgba(255,255,255,0.1);
-  border-color: var(--text);
-}
-.qbtn:hover::before{ transform:translateX(110%); }
-.qbtn:active{ transform:translateX(2px) scale(0.985); }
-select.qbtn {
-  background: rgba(20,20,20,0.9);
-  border: 1px solid var(--frame);
-  color: var(--text);
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  text-align: left;
-  font-family: "Inter", sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  transition: all 0.2s ease;
-}
-.qbtn:hover {
-  background: rgba(255,255,255,0.1);
-  border-color: var(--text);
-}
-
-/* Data telemetry stream */
-.stream{
-  margin-top:8px;font-family:"JetBrains Mono", monospace;
-  font-size:9.5px;color:var(--text-dim);line-height:1.5;
-  height:104px;overflow:hidden;border-top:1px dashed var(--frame);padding-top:6px;
-}
-.stream div {
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; animation:streamIn .2s ease-out;
-  background: rgba(10,10,10,0.9);
-  color: #ffffff;
-  border-left: 3px solid #ffffff;
-  padding: 4px 8px;
-  margin-bottom: 4px;
-}
-.stream div.hot{color:var(--accent); transition: color .55s ease}
-@keyframes thinkingPulse {
-  0% { box-shadow: inset 0 0 0px transparent; }
-  50% { box-shadow: inset 0 0 150px rgba(255,255,255, 0.4); }
-  100% { box-shadow: inset 0 0 0px transparent; }
-}
-body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
-
-/* ❖ Center Piece ❖ */
-#center-container {
-  position:fixed; 
-  left: 320px; /* Constrain inside left panel */
-  right: 320px; /* Constrain inside right panel */
-  top:64px; bottom:120px;
-  z-index:4; cursor:pointer;
-  display: flex; align-items: center; justify-content: center;
-}
-#center-mandala {
-  position: absolute;
-  width: 350px;
-  height: 350px;
-  object-fit: contain;
-  animation: rotateMandala 20s linear infinite;
-  z-index: 5;
-  border-radius: 50%;
-}
-@keyframes rotateMandala {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-#orb {
-  position: absolute;
-  left:50%; top:50%;
-  transform: translate(-50%, -50%);
-  width: 450px;
-  height: 450px;
-  z-index: 6;
-  pointer-events: none;
-}
-
-/* ── Readout transcript ────────────────────────── */
-.readout{
-  position:fixed;bottom:138px;left:50%;transform:translateX(-50%);
-  width:min(880px,92vw);max-height:46vh;overflow-y:auto;overflow-x:hidden;
-  z-index:12;text-align:left;
-  scrollbar-width:thin;scrollbar-color:var(--frame) transparent;
-  padding:6px 8px;
-}
-.readout::-webkit-scrollbar{width:5px}
-.readout::-webkit-scrollbar-thumb{background:var(--frame);border-radius:3px}
-.readout .line{
-  display:block;margin:5px 0;padding:10px 14px 10px 18px;
-  border:1px solid var(--frame-strong);
-  background: rgba(15,15,15,0.9);
-  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  font-size:13px;line-height:1.55;color:var(--text);
-  word-wrap:break-word;white-space:pre-wrap;
-  position:relative;
-  border-radius:4px;
-  animation: lineIn .28s ease-out;
-}
-.readout .line::before{
-  content:""; position:absolute; left:0; top:6%; bottom:6%; width:3px;
-  background:var(--accent); box-shadow:0 0 10px var(--accent-glow);
-}
-.readout .line.user        { color:var(--text); }
-.readout .line.user::before{ background:#ffffff; box-shadow:0 0 8px rgba(255,255,255,0.4); }
-.readout .line.kalki      { color:var(--text); }
-.readout .line.kalki::before{ background:var(--lime); box-shadow:0 0 8px rgba(0,255,128,0.5); }
-.readout .line.error       { color:var(--red); border-color:rgba(255,51,68,0.45); }
-.readout .line.error::before{ background:var(--red); box-shadow:0 0 10px rgba(255,51,68,0.55); }
-@keyframes lineIn{
-  from { opacity:0; transform: translateY(6px); }
-  to   { opacity:1; transform: translateY(0); }
-}
-
-/* Code blocks inside the readout */
-.codeBlock{
-  margin:6px 0;border:1px solid var(--frame-strong);
-  background:#000;position:relative;border-radius:2px;
-}
-.codeHead{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:5px 10px;background:rgba(255,255,255,0.04);
-  border-bottom:1px solid var(--frame);
-  font-size:9.5px;letter-spacing:0;color:var(--accent);
-  text-transform:uppercase;font-family:"JetBrains Mono", monospace;
-  font-weight:700;
-}
-.codeCopy{
-  background:transparent;border:1px solid var(--frame-strong);
-  color:var(--text);font-size:9.5px;letter-spacing:0;
-  padding:3px 9px;border-radius:2px;cursor:pointer;
-  font-family:inherit;font-weight:700;
-  transition: all .18s;
-}
-.codeCopy:hover{ background:var(--accent); color:#000; border-color:var(--accent); }
-.codeCopy.copied{ color:#000; background:var(--lime); border-color:var(--lime); }
-.codeBlock pre{
-  margin:0;padding:12px 14px;
-  font-family:"JetBrains Mono","Consolas","Courier New",monospace;
-  font-size:12px;line-height:1.55;color:#fff5e6;
-  white-space:pre;overflow-x:auto;max-height:340px;overflow-y:auto;
-  scrollbar-width:thin;scrollbar-color:var(--frame) transparent;
-}
-.codeBlock pre::-webkit-scrollbar{height:5px;width:5px}
-.codeBlock pre::-webkit-scrollbar-thumb{background:var(--frame)}
-
-/* ── Bottom audio wave ─────────────────────────── */
-#wave{
-  position:fixed;bottom:96px;left:0;right:0;height:34px;
-  z-index:8;pointer-events:none;width:100vw;
-}
-
-/* ── Composer ──────────────────────────────────── */
-
-
-.composer {
-  position:fixed; bottom:28px; left:50%; transform:translateX(-50%); width:600px;
-  display:flex; align-items:center; gap:8px;
-  background:rgba(10,10,10,0.9);
-  border:1px solid #ffffff;
-  border-radius:8px;
-  padding:8px 12px;
-  z-index:20;
-  box-shadow:0 0 15px rgba(255,255,255,0.2);
-  transition: box-shadow 0.3s ease;
-}
-.composer:focus-within {
-  animation: breatheGlow 2s infinite alternate;
-}
-@keyframes breatheGlow {
-  from { box-shadow: 0 0 10px rgba(255,255,255,0.2); }
-  to { box-shadow: 0 0 25px rgba(255,255,255,0.6); }
-}
-#input{
-  flex:1;background:#111111;
-  border:1px solid var(--frame-strong);color:var(--text);
-  padding:14px 22px;font-size:14px;font-family:inherit;outline:none;
-  letter-spacing:0;
-  clip-path:polygon(14px 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,14px 100%,0 50%);
-  transition: border-color .25s;
-}
-#input:focus{
-  border-color:var(--accent);
-  box-shadow:0 0 24px var(--accent-glow);
-}
-#input::placeholder{color:var(--text-dim);letter-spacing:0;font-size:12px}
-
-.iconBtn{
-  width:46px;height:46px;border:1px solid var(--frame-strong);
-  background:rgba(0,0,0,0.85);color:var(--text);cursor:pointer;
-  display:flex;align-items:center;justify-content:center;font-size:18px;
-  clip-path:polygon(14px 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,14px 100%,0 50%);
-  transition: all .2s;
-}
-.iconBtn:hover{ color:var(--accent); border-color:var(--accent); box-shadow:0 0 14px var(--accent-glow); }
-#micBtn.active{ color:var(--lime); border-color:var(--lime); box-shadow:0 0 18px rgba(0,255,128,0.55); }
-#stopBtn{color:var(--red);border-color:rgba(255,51,68,0.5)}
-#stopBtn:hover{color:#ff7080;border-color:var(--red);box-shadow:0 0 14px rgba(255,51,68,0.5)}
-
-/* ── Drag-and-drop overlay ─────────────────────── */
-#dropZone{
-  position:fixed;inset:0;z-index:60;
-  background:rgba(0,0,0,0.95);
-  border:4px dashed var(--accent);
-  display:none;align-items:center;justify-content:center;
-  backdrop-filter:blur(6px);
-  pointer-events:none;
-}
-#dropZone.active{display:flex}
-.dropContent{text-align:center;color:var(--accent)}
-.dropIcon{font-size:88px;line-height:1;margin-bottom:12px;
-          text-shadow:0 0 30px var(--accent-glow);
-          animation: dropBob 1.4s ease-in-out infinite;}
-@keyframes dropBob{ 50% { transform:translateY(-8px); } }
-.dropText{font-size:30px;letter-spacing:0;font-weight:700}
-.dropHint{font-size:11px;color:var(--text-dim);letter-spacing:0;
-          margin-top:10px;text-transform:uppercase}
-
-/* ── Attachment chip strip ─────────────────────── */
-#attachStrip{
-  position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
-  width:min(740px,92vw);
-  display:flex;gap:8px;z-index:14;flex-wrap:wrap;
-}
-.attach-chip{
-  background:rgba(0,0,0,0.92);
-  border:1px solid var(--accent);
-  padding:5px 10px;display:flex;align-items:center;gap:8px;
-  font-size:11px;color:var(--text);border-radius:2px;
-  box-shadow:0 0 12px var(--accent-glow);
-  animation:lineIn .2s ease-out;
-}
-.attach-chip img{
-  height:30px;width:30px;object-fit:cover;border-radius:2px;
-  border:1px solid var(--accent);
-}
-.attach-chip .name{
-  max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-}
-.attach-chip button{
-  background:none;border:none;color:var(--text-dim);cursor:pointer;
-  font-size:14px;line-height:1;padding:0 2px;
-}
-.attach-chip button:hover{color:var(--red)}
-
-/* ── Footer tag ────────────────────────────────── */
-.foot-tag{
-  position:fixed;bottom:6px;left:50%;transform:translateX(-50%);
-  z-index:6;pointer-events:none;
-  font-size:10px;letter-spacing:0;color:rgba(255,196,77,0.32);
-  font-weight:700;
-}
-
-/* ── Boot sequence overlay ─────────────────────── */
-.boot{
-  position:fixed;inset:0;z-index:60;
-  background: #0a0a0a;
-  display:flex;flex-direction:column;justify-content:center;align-items:center;
-  font-family:"JetBrains Mono", monospace;color:var(--gold-bright);
-  letter-spacing:0;font-size:12px;
-  transition: opacity .8s;
-}
-.boot pre{color:#ffffff;font-size:11px;line-height:1.2;margin-bottom:20px;
-          text-shadow:0 0 14px var(--accent-glow)}
-.boot .lines{max-width:560px;width:100%;padding:0 24px}
-.boot .line{margin:2px 0;opacity:0;animation:fadein .3s forwards}
-.boot .line .ok{color:var(--lime)}
-.boot.hide{opacity:0;pointer-events:none}
-@keyframes fadein{ to { opacity:1 } }
-
-/* ── Reticle that follows cursor ───────────────── */
-.reticle{
-  position:fixed;width:60px;height:60px;z-index:32;pointer-events:none;
-  border:1px solid var(--accent);border-radius:50%;
-  transform:translate(-50%,-50%);
-  mix-blend-mode:screen;
-  display:none;opacity:.45;
-  transition: border-color .55s ease;
-}
-.reticle::before,.reticle::after{
-  content:"";position:absolute;background:var(--accent);
-  transition: background .55s ease;
-}
-.reticle::before{left:50%;top:-8px;bottom:-8px;width:1px;transform:translateX(-50%)}
-.reticle::after{top:50%;left:-8px;right:-8px;height:1px;transform:translateY(-50%)}
-
-/* ── Wake flash effect (fires on wake word) ────── */
-@keyframes wakeFlash{
-  0%   { opacity:0; }
-  20%  { opacity:.75; }
-  100% { opacity:0; }
-}
-.wake-flash{
-  position:fixed;inset:0;z-index:55;pointer-events:none;
-  background: #0a0a0a 0%, transparent 65%);
-  animation: wakeFlash .9s ease-out;
-}
-
-/* ── Typewriter cursor for KALKI replies ──────── */
-.typing::after{
-  content:"▮";
-  margin-left:2px;
-  color:var(--lime);
-  animation: blink .8s steps(1) infinite;
-}
-@keyframes blink{ 50% { opacity:0 } }
-</style>
-</head>
-<body class="mode-idle">
-
-
-
-<!-- BOOT SEQUENCE -->
-<div class="boot" id="boot">
-  <pre>
-    ╔═══════════════════════════════════════════════════════╗
-    ║   K . A . L . K . I .   v 5 . 0 0                      ║
-    ║   The Final Avatar  ·  Autonomous AI                  ║
-    ╚═══════════════════════════════════════════════════════╝</pre>
-  <div class="lines" id="bootLines"></div>
-</div>
-
-<!-- TOP BAR -->
-<div class="topbar">
-  <div class="brand">
-    <div class="brand-mark" title="KALKI AI Assistant">
-      <img src="assets/kalki_logo.png" alt="KALKI Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%;">
-    </div>
-    <div>
-      <h1>K.A.L.K.I.</h1>
-      <div class="sub">System Core // Autonomous AI</div>
-    </div>
-  </div>
-  <div class="top-meta">
-    <div>OPER <span class="v" id="topOwner">Sir</span></div>
-    <div>LOC <span class="v" id="topLoc">—</span></div>
-    <div>MODE <span class="v cy" id="topMode">SYSTEM</span></div>
-    <div>SYS <span class="v" id="topSys">v5.00</span></div>
-    <div>NET <span class="v ok" id="topNet">ONLINE</span></div>
-    <div><span class="v cy" id="topClock">00:00:00</span></div>
-  </div>
-</div>
-
-<!-- STATUS PILL -->
-<div class="pill" id="statusPill"><span class="dot"></span><span id="statusText">STANDBY</span></div>
-
-<!-- CORNERS -->
-
-
-<!-- LEFT HUD -->
-<div class="hud left" id="leftHud">
-  <div class="title">SYS DIAGNOSTICS</div>
-  <div class="bar"><div class="lbl">CPU</div><div class="track"><div class="fill" id="cpuFill"></div></div><div class="num" id="cpuNum">0%</div></div>
-  <div class="bar"><div class="lbl">RAM</div><div class="track"><div class="fill" id="ramFill"></div></div><div class="num" id="ramNum">0%</div></div>
-  <div class="bar"><div class="lbl">DSK</div><div class="track"><div class="fill" id="dskFill"></div></div><div class="num" id="dskNum">0%</div></div>
-  <div class="bar"><div class="lbl">NET</div><div class="track"><div class="fill" id="netFill"></div></div><div class="num" id="netNum">--</div></div>
-  <div class="bar"><div class="lbl">PWR</div><div class="track"><div class="fill" id="pwrFill"></div></div><div class="num" id="pwrNum">--</div></div>
-
-  <div class="title" style="margin-top:14px">CORE SUBSYSTEMS</div>
-  <div class="row"><span>GROQ AI</span><span class="v" id="sGroq">…</span></div>
-  <div class="row"><span>OLLAMA</span><span class="v" id="sOllama">…</span></div>
-  <div class="row"><span>VOICE</span><span class="v ok">Brian · Neural</span></div>
-  <div class="row"><span>MIC LINK</span><span class="v" id="sMic">stand-by</span></div>
-  <div class="row"><span>HARDWARE</span><span class="v cy" id="sHardware">RTX // 32GB</span></div>
-  <div class="row"><span>SYSTEM CORE</span><span class="v ok">ACTIVE</span></div>
-  <div class="row"><span>MEM BANK</span><span class="v cy" id="sMem">0</span></div>
-  <div class="row"><span>UPTIME</span><span class="v cy" id="sUp">0s</span></div>
-
-  <div class="title" style="margin-top:14px">EXPERTISE</div>
-  <div class="tags">
-    <span class="tag">CYBER</span><span class="tag">PWN</span>
-    <span class="tag">PY</span><span class="tag">TS</span>
-    <span class="tag">REACT</span><span class="tag">NODE</span>
-    <span class="tag">RUST</span><span class="tag">AI</span>
-    <span class="tag">OSINT</span><span class="tag">CTF</span>
-    <span class="tag">SYSTEM</span><span class="tag">GUJARAT</span>
-  </div>
-</div>
-
-<!-- RIGHT HUD -->
-<div class="hud right" id="rightHud">
-  <div class="title">SYSTEM EVENT LOGS</div>
-  <div id="eventLogsWidget" style="font-size:11px;line-height:1.5;color:var(--text-dim);height:75px;overflow:hidden;font-family:monospace;margin-bottom:12px;">
-    <div style="color:var(--lime)">[OK] Auth daemon started</div>
-    <div style="color:var(--accent)">[WARN] High traffic on port 443</div>
-    <div style="color:var(--text-dim)">[INFO] Syncing mail...</div>
-    <div style="color:var(--text-dim)">[INFO] Node proxy active</div>
-    <div style="color:var(--lime)">[OK] Workspace initialized</div>
-  </div>
-
-  <div class="title" style="margin-top:8px">RECENT THREATS (CVE)</div>
-  <div id="cveWidget" style="font-size:11px;line-height:1.5;color:var(--text-dim);height:75px;overflow:hidden;font-family:monospace;margin-bottom:4px;">
-    <div style="color:#ff5555">[CRIT] CVE-2026-1043</div>
-    <div style="color:var(--text-dim);padding-left:8px;">Kernel overflow detected</div>
-    <div style="color:var(--accent);margin-top:4px;">[HIGH] CVE-2025-9982</div>
-    <div style="color:var(--text-dim);padding-left:8px;">Webkit exploit in wild</div>
-  </div>
-
-  <div class="title" style="margin-top:8px">TODAY</div>
-  <div id="calWidget" style="font-size:11px;line-height:1.5;color:var(--text-dim);">
-    <div id="calMailLine" style="color:var(--accent); transition:color .55s ease">📬 — unread important</div>
-    <div id="calNowPlaying" style="color:var(--lime);display:none">♫ —</div>
-    <div id="calEvents" style="margin-top:4px">Calendar idle</div>
-  </div>
-
-  <div class="title" style="margin-top:8px">NEURAL MODEL</div>
-  <select class="qbtn" id="modelSel">
-    <option value="llama-3.3-70b-versatile">llama-3.3-70b (smart)</option>
-    <option value="llama-3.1-8b-instant">llama-3.1-8b (fast)</option>
-    <option value="meta-llama/llama-4-scout-17b-16e-instruct">llama-4-scout</option>
-    <option value="meta-llama/llama-4-maverick-17b-128e-instruct">llama-4-maverick</option>
-    <option value="gemma2-9b-it">gemma2-9b</option>
-  </select>
-
-  <div class="title" style="margin-top:12px">TACTICAL OPS</div>
-  <button class="qbtn" id="pauseListenerBtn">MIC: LISTENING</button>
-  <button class="qbtn" data-cmd="look at my screen and solve it">SCAN SCREEN</button>
-  <button class="qbtn" data-cmd="what's on my calendar">CALENDAR</button>
-  <button class="qbtn" data-cmd="list my passwords">VAULT LIST</button>
-  <button class="qbtn" data-cmd="generate a strong password">NEW PASSWORD</button>
-  <button class="qbtn" data-cmd="what is my ip">MY IP</button>
-  <button class="qbtn" data-cmd="ip info">GEO LOOKUP</button>
-  <button class="qbtn" data-cmd="list my wifi">WIFI LIST</button>
-  <button class="qbtn" data-cmd="what's playing">NOW PLAYING</button>
-  <button class="qbtn" data-cmd="pause">PAUSE MUSIC</button>
-  <button class="qbtn" data-cmd="next song">NEXT TRACK</button>
-  <button class="qbtn" data-cmd="study mode">STUDY MODE</button>
-  <button class="qbtn" data-cmd="gaming mode">GAMING MODE</button>
-  <button class="qbtn" data-cmd="ctf mode">CTF MODE</button>
-  <button class="qbtn" data-cmd="recent critical cves">CRITICAL CVES</button>
-  <button class="qbtn" data-cmd="security brief">SECURITY BRIEF</button>
-  <button class="qbtn" data-cmd="attack surface this site">SURFACE THIS SITE</button>
-
-  <div class="title" style="margin-top:12px">QUICK COMMANDS</div>
-  <button class="qbtn" data-cmd="what time is it">TIME</button>
-  <button class="qbtn" data-cmd="weather">WEATHER</button>
-  <button class="qbtn" data-cmd="show my tasks">MY TASKS</button>
-  <button class="qbtn" data-cmd="any important mail">CHECK MAIL</button>
-  <button class="qbtn" data-cmd="system info">SYSTEM INFO</button>
-  <button class="qbtn" data-cmd="take a screenshot">SCREENSHOT</button>
-  <button class="qbtn" data-cmd="what do you remember">MEMORY DUMP</button>
-
-  <div class="title" style="margin-top:12px">TELEMETRY</div>
-  <div class="stream" id="stream"></div>
-</div>
-
-<!-- READOUT TRANSCRIPT -->
-<div class="readout" id="readout"></div>
-
-<!-- BOTTOM AUDIO WAVE -->
-<canvas id="wave"></canvas>
-
-<!-- CENTER PIECE -->
-<div id="center-container">
-  
-  <canvas id="orb"></canvas>
-</div>
-
-<!-- File upload (hidden), drag-drop overlay, attachment strip -->
-<input type="file" id="fileInput" multiple style="display:none"
-       accept="image/*,.txt,.py,.js,.ts,.tsx,.jsx,.html,.css,.md,.json,.xml,.yaml,.yml,.csv,.log,.c,.cpp,.h,.go,.rs,.sh,.ps1,.bat,.sql,.toml,.ini">
-<div id="dropZone">
-  <div class="dropContent">
-    <div class="dropIcon">⬇</div>
-    <div class="dropText">DROP TO ATTACH</div>
-    <div class="dropHint">image / code / text — KALKI will analyze</div>
-  </div>
-</div>
-<div id="attachStrip"></div>
-
-<!-- COMPOSER -->
-<div class="composer">
-  <input id="input" placeholder="◤ ENTER COMMAND, SIR ◢" autocomplete="off" />
-  <button class="iconBtn" id="attachBtn" title="Attach file / image">📎</button>
-  <button class="iconBtn" id="stopBtn" title="Stop speaking">■</button>
-  <button class="iconBtn" id="micBtn" title="Toggle microphone">◉</button>
-  <button class="iconBtn" id="sendBtn" title="Send">▶</button>
-</div>
-
-<div class="foot-tag">K · A · L · K · I</div>
-<div class="reticle" id="reticle"></div>
-
-<script>
 /* ════════════════════════════════════════════════════════════════
    BOOT SEQUENCE
    ════════════════════════════════════════════════════════════════ */
@@ -866,7 +95,7 @@ async function refreshStatus(){
     $("topClock").textContent= d.timeFull || "";
     $("topOwner").textContent= d.owner || "Sir";
     $("topLoc").textContent  = d.city || "";
-    $("topMode").textContent = "SYSTEM/" + (d.hudQuality || "balanced").toUpperCase();
+    $("topMode").textContent = "BHARAT/" + (d.hudQuality || "balanced").toUpperCase();
     if (d.hardware){
       const gpu = (d.hardware.gpu || "RTX").replace("RTX ", "RTX");
       const ram = d.hardware.ram_gb ? `${d.hardware.ram_gb}GB` : "32GB";
@@ -898,11 +127,11 @@ async function refreshStatus(){
 
     const pbtn = $("pauseListenerBtn");
     if (d.listenerPaused){
-      pbtn.textContent = "MIC: PAUSED (click to resume)";
+      pbtn.textContent = "◢ MIC: PAUSED (click to resume)";
       pbtn.dataset.paused = "1";
       pbtn.style.color = "var(--orange)";
     } else {
-      pbtn.textContent = "MIC: LISTENING";
+      pbtn.textContent = "◢ MIC: LISTENING";
       pbtn.dataset.paused = "0";
       pbtn.style.color = "";
     }
@@ -988,7 +217,7 @@ function pushStream(text, cls){
   const d = document.createElement("div");
   if (cls) d.className = cls;
   const ts = new Date().toTimeString().slice(0,8);
-  d.textContent = `${ts}  ${text}`;
+  d.textContent = `${ts}  ▸ ${text}`;
   streamEl.insertBefore(d, streamEl.firstChild);
   while (streamEl.childNodes.length > 8) streamEl.removeChild(streamEl.lastChild);
 }
@@ -1349,72 +578,18 @@ window.addEventListener("mousemove", e=>{
 /* ════════════════════════════════════════════════════════════════
    CANVAS — Surya mandala (temple + accent)
    ════════════════════════════════════════════════════════════════ */
-
-const cpuHistory = new Array(60).fill(0);
-const ramHistory = new Array(60).fill(0);
-
-function drawHistoryGraph(canvasId, dataArray, color) {
-  const c = document.getElementById(canvasId);
-  if (!c) return;
-  const ctx = c.getContext("2d");
-  const w = c.clientWidth;
-  const h = c.clientHeight;
-  if (c.width !== w * DPR) {
-    c.width = w * DPR; c.height = h * DPR;
-    ctx.scale(DPR, DPR);
-  }
-  ctx.clearRect(0, 0, w, h);
-  
-  // draw grid
-  ctx.strokeStyle = "rgba(255,255,255,0.05)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  for(let i=1; i<4; i++) {
-    let y = h * (i/4);
-    ctx.moveTo(0, y); ctx.lineTo(w, y);
-  }
-  ctx.stroke();
-  
-  ctx.beginPath();
-  const step = w / (dataArray.length - 1);
-  for(let i=0; i<dataArray.length; i++) {
-    let val = dataArray[i];
-    let x = i * step;
-    let y = h - (val / 100) * (h * 0.8) - (h * 0.1); // Scale 0-100 to canvas with 10% padding
-    if (i===0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.lineJoin = "round";
-  ctx.stroke();
-  
-  // Fill under
-  ctx.lineTo(w, h);
-  ctx.lineTo(0, h);
-  ctx.closePath();
-  ctx.fillStyle = color.replace(")", ", 0.1)").replace("rgb", "rgba");
-  if(ctx.fillStyle === color) ctx.fillStyle = "rgba(255,255,255,0.1)"; // fallback
-  ctx.fill();
-}
-
-
 const orb = $("orb"), ox = orb.getContext("2d");
 // Cap pixel density: a full-screen mandala at 2-3x DPR is the main GPU/heat
 // cost. 1.5x still looks crisp but draws far fewer pixels.
 let W=0, H=0, DPR = Math.min(1.5, Math.max(1, window.devicePixelRatio||1));
 function resizeOrb(){
-  const container = document.getElementById("center-container");
-  if (!container) return;
-  W = container.clientWidth;
-  H = container.clientHeight;
+  W = window.innerWidth;
+  H = window.innerHeight - 64 - 120; // exclude topbar + bottom bar
   orb.width = W*DPR; orb.height = H*DPR;
   orb.style.width = W+"px"; orb.style.height = H+"px";
   ox.setTransform(DPR,0,0,DPR,0,0);
 }
 window.addEventListener("resize", resizeOrb); resizeOrb();
-
-document.getElementById("center-container").addEventListener("click", () => { if(typeof toggleMic === "function") toggleMic(); });
 
 const ORBIT = Array.from({length:120},()=>({
   a:Math.random()*Math.PI*2, r:0.85+Math.random()*0.95,
@@ -1458,56 +633,108 @@ function sampleTime(){
   }
   const tmp = new Uint8Array(analyser.fftSize);
   analyser.getByteTimeDomainData(tmp);
-      STATE.timeData = tmp;
+  STATE.timeData = tmp;
 }
 
 let t = 0;
 let chakraAngle = 0;   // accumulated so speed changes are smooth (no snap)
-function drawOrb() {
-  if (!ox) return;
-  try {
-    t++;
-    const cx = W/2, cy = H/2;
-    const R = Math.min(W,H) * 0.35;
-    
-    ox.clearRect(0,0,W,H);
-    
-    sampleFreq();
-    let vol = 0;
-    for (let i=0;i<72;i++) vol += STATE.freqData[i];
-    vol = (vol / 72) / 255;
-    
-    const glow = ox.createRadialGradient(cx, cy, R*0.5, cx, cy, R*1.5);
-    glow.addColorStop(0, "rgba(255,255,255," + (0.05 + vol*0.2) + ")");
-    glow.addColorStop(1, "rgba(0,0,0,0)");
-    
-    ox.fillStyle = glow;
-    ox.beginPath(); ox.arc(cx, cy, R*1.5, 0, Math.PI*2); ox.fill();
-    
-    ox.strokeStyle = "#ffffff";
-    ox.lineWidth = 1 + vol*3;
-    ox.globalAlpha = 0.5 + vol*0.5;
-    ox.beginPath(); ox.arc(cx, cy, R, 0, Math.PI*2); ox.stroke();
-    ox.globalAlpha = 1;
-    
-    // audio ring
-    ox.beginPath();
-    for(let i=0; i<72; i++) {
-        let angle = (i/72) * Math.PI * 2 + (t*0.01);
-        let v = STATE.freqData[i]/255;
-        let ext = R + (v * R * 0.3);
-        let px = cx + Math.cos(angle) * ext;
-        let py = cy + Math.sin(angle) * ext;
-        if(i===0) ox.moveTo(px,py);
-        else ox.lineTo(px,py);
-    }
-    ox.closePath();
-    ox.lineWidth = 1;
-    ox.stroke();
-    
-  } catch (err) {
-    console.error("DRAW ERROR:", err);
+function drawOrb(){
+  t++;
+  const C = modeColors();
+  const cx = W/2, cy = H/2;
+  const R = Math.min(W,H) * 0.125; // Smaller radius to prevent overlapping
+  const sp = C.speed * 4.0; // Extreme, fast animations for heavy load
+  
+  // Wheel rotation
+  const chakraSp = (STATE.mode === "thinking") ? sp*2.5 : sp;
+  chakraAngle += 0.005 * chakraSp;
+
+  ox.clearRect(0,0,W,H);
+
+  sampleFreq();
+  let vol = 0;
+  for (let i=0;i<72;i++) vol += STATE.freqData[i];
+  vol = (vol / 72) / 255;
+
+  // ── Sleek High-Tech AI Core ──
+  // Ambient deep glow
+  const coreGlow = ox.createRadialGradient(cx,cy,R*0.2, cx,cy,R*3.5);
+  coreGlow.addColorStop(0, C.accent);
+  coreGlow.addColorStop(0.3, "rgba(0,0,0,0.6)");
+  coreGlow.addColorStop(1, "rgba(0,0,0,0)");
+  ox.fillStyle = coreGlow;
+  ox.globalAlpha = 0.5 + vol;
+  ox.beginPath(); ox.arc(cx,cy,R*3.5,0,Math.PI*2); ox.fill();
+  ox.globalAlpha = 1;
+
+  // Swirling tech particles
+  for (const p of STARS){
+    p.twinkle += 0.08 * sp;
+    p.x += Math.sin(t*0.01 + p.y*0.01) * 0.5;
+    p.y -= 0.5 * sp;
+    if (p.y < 0) p.y = H;
+    if (p.x < 0) p.x = W;
+    if (p.x > W) p.x = 0;
+    ox.fillStyle = C.accent;
+    ox.globalAlpha = 0.1 + Math.abs(Math.sin(p.twinkle))*0.4;
+    ox.beginPath(); ox.arc(p.x, p.y, p.s*1.2, 0, Math.PI*2); ox.fill();
   }
+  ox.globalAlpha = 1;
+
+  // ── Audio-Reactive Plasma Ring ──
+  const barInner = R*1.15;
+  const barMax = R*0.45;
+  ox.lineCap = "round";
+  for (let i=0;i<72;i++){
+    const a = (i/72)*Math.PI*2 + t*0.002*sp;
+    const v = STATE.freqData[i]/255;
+    const len = barMax * (0.1 + v*1.5);
+    const x1 = cx + Math.cos(a)*barInner, y1 = cy + Math.sin(a)*barInner;
+    const x2 = cx + Math.cos(a)*(barInner+len), y2 = cy + Math.sin(a)*(barInner+len);
+    ox.strokeStyle = C.accent;
+    ox.globalAlpha = 0.3 + v*0.7;
+    ox.lineWidth = 3;
+    ox.beginPath(); ox.moveTo(x1,y1); ox.lineTo(x2,y2); ox.stroke();
+  }
+  ox.globalAlpha = 1;
+
+  // ── High-Tech Segmented Arcs ──
+  drawArcRing(cx,cy, R*1.05, 3,  chakraAngle, C.ring, 2.5, 0.2);
+  drawArcRing(cx,cy, R*1.35, 6, -chakraAngle*1.5, C.ring, 1.5, 0.4);
+  drawArcRing(cx,cy, R*1.65, 12, chakraAngle*0.5, C.accent, 1.0, 0.15);
+
+  // Orbiting data nodes
+  for (const p of ORBIT){
+    p.a += 0.008*sp*p.s;
+    const rr = R*(1.8 + p.r*0.6) + Math.sin(t*0.02+p.a*4)*5;
+    const px = cx + Math.cos(p.a)*rr, py = cy + Math.sin(p.a)*rr;
+    ox.fillStyle = C.ring;
+    ox.globalAlpha = 0.8;
+    ox.beginPath(); ox.arc(px,py,p.size*1.5,0,Math.PI*2); ox.fill();
+  }
+  ox.globalAlpha = 1;
+
+  // ── Central Plasma Core ──
+  const coreBase = R*(0.75 + vol*0.15);
+  const coreG = ox.createRadialGradient(cx,cy,0, cx,cy,coreBase);
+  coreG.addColorStop(0, "#ffffff");
+  coreG.addColorStop(0.2, C.core);
+  coreG.addColorStop(0.8, C.accent);
+  coreG.addColorStop(1, "rgba(0,0,0,0.8)");
+  
+  ox.shadowColor = C.accent;
+  ox.shadowBlur = 30 + vol*50;
+  ox.fillStyle = coreG;
+  ox.beginPath(); ox.arc(cx,cy,coreBase,0,Math.PI*2); ox.fill();
+  ox.shadowBlur = 0;
+  
+  ox.beginPath();
+  for (let i=0;i<6;i++){
+    const a = (i/6)*Math.PI*2 + Math.PI/6;
+    const x = cx + Math.cos(a)*R*0.3, y = cy + Math.sin(a)*R*0.3;
+    if (i===0) ox.moveTo(x,y); else ox.lineTo(x,y);
+  }
+  ox.closePath(); ox.strokeStyle = "#fff"; ox.lineWidth = 2; ox.stroke();
 }
 
 function drawArcRing(cx,cy,r,segments,phase,color,lineW,dim=0.5){
@@ -1704,11 +931,10 @@ function drawWave(){
 /* ════════════════════════════════════════════════════════════════
    DIAL + GAUGE
    ════════════════════════════════════════════════════════════════ */
-const dial = $("dial"), dx = dial ? dial.getContext("2d") : null;
-const gauge = $("gauge"), gx = gauge ? gauge.getContext("2d") : null;
+const dial = $("dial"), dx = dial.getContext("2d");
+const gauge = $("gauge"), gx = gauge.getContext("2d");
 function resizeMini(){
   for (const c of [dial,gauge]){
-    if (!c) continue;
     const r = c.getBoundingClientRect();
     c.width = r.width*DPR; c.height = r.height*DPR;
     c.getContext("2d").setTransform(DPR,0,0,DPR,0,0);
@@ -1717,7 +943,6 @@ function resizeMini(){
 window.addEventListener("resize", resizeMini); setTimeout(resizeMini, 30);
 
 function drawDial(){
-  if (!dial) return;
   const r = dial.getBoundingClientRect();
   const W2 = r.width, H2 = r.height;
   if (!W2) return;
@@ -1753,7 +978,6 @@ function drawDial(){
 }
 
 function drawGauge(){
-  if (!gauge) return;
   const r = gauge.getBoundingClientRect();
   const W2 = r.width, H2 = r.height;
   if (!W2) return;
@@ -1812,6 +1036,3 @@ document.addEventListener("visibilitychange", () => {
 });
 
 setTimeout(()=>addLine("KALKI online. Awaiting orders, Sir.","kalki"), 1600);
-</script>
-</body>
-</html>

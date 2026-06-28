@@ -74,8 +74,7 @@ MODE_ALIASES = {
                          "focus session", "let's study"],
     "gaming mode":      ["gaming", "game mode", "let's game", "play games",
                          "gaming time"],
-    "shutdown routine": ["shutdown", "shut down", "wind down", "shutting down",
-                         "shutdown mode"],
+    "shutdown routine": ["wind down", "shutdown mode"],
     "focus mode":       ["focus", "focused mode", "concentrate", "deep work"],
     "morning routine":  ["morning", "morning mode", "wake up"],
     "ctf mode":         ["ctf", "city of mode", "see tee eff", "city of",
@@ -99,13 +98,24 @@ def find_mode(text):
         words = mode.split()
         if all(w in t for w in words):
             return mode
-    # 3) Aliases (covers STT mishearings) — whole-word match so "ctf" does NOT
-    #    match inside "ctf.example.com" and "focus" not inside "focuses".
+    activation = re.search(
+        r"\b(start|activate|enable|engage|begin|launch|enter|switch to|turn on)\b",
+        t,
+    )
+    # 3) Aliases only match as a complete command or with an activation verb.
     for mode, aliases in MODE_ALIASES.items():
         for a in aliases:
-            if re.search(r"\b" + re.escape(a) + r"\b", t):
+            if t == a or (activation and re.search(
+                    r"\b" + re.escape(a) + r"\b", t)):
                 return mode
     return None
+
+
+def requires_confirmation(mode_name):
+    return any(
+        step[0] in {"kill_app", "lock_pc"}
+        for step in MODES.get(mode_name, ())
+    )
 
 
 def run_mode(mode_name, *, speak_fn=None, set_volume_fn=None,
@@ -124,7 +134,7 @@ def run_mode(mode_name, *, speak_fn=None, set_volume_fn=None,
         try:
             if action == "open_app":
                 exe = APP_MAP.get(args[0], args[0])
-                subprocess.Popen(exe, shell=True)
+                subprocess.Popen([exe])
                 log.append(f"opened {args[0]}")
 
             elif action == "kill_app":
@@ -157,7 +167,9 @@ def run_mode(mode_name, *, speak_fn=None, set_volume_fn=None,
                 if lock_fn:
                     lock_fn()
                 else:
-                    os.system("rundll32.exe user32.dll,LockWorkStation")
+                    subprocess.Popen(
+                        ["rundll32.exe", "user32.dll,LockWorkStation"]
+                    )
                 log.append("locked PC")
 
             elif action == "speak":

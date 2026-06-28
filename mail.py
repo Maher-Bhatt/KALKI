@@ -99,3 +99,28 @@ def summary_for_speech(only_important=False, limit=5):
         prefix = "Important: " if e["important"] else ""
         lines.append(f"{prefix}from {short_from}, subject {short_subj}")
     return (f"{len(items)} unread. " + ". Next: ".join(lines))[:600]
+
+
+def mark_all_read():
+    try:
+        M = _connect()
+    except Exception as e:
+        return f"I can't reach your mail: {e}"
+    
+    try:
+        M.select("INBOX")
+        rc, ids = M.search(None, "UNSEEN")
+        if rc != "OK":
+            return "Failed to search inbox."
+        
+        id_list = ids[0].split()
+        if not id_list:
+            return "There are no unread emails to mark, Sir."
+            
+        for eid in id_list:
+            M.store(eid, '+FLAGS', '\\Seen')
+            
+        return f"Successfully marked {len(id_list)} emails as read, Sir."
+    finally:
+        try: M.logout()
+        except Exception: pass

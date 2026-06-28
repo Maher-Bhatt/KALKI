@@ -7,9 +7,10 @@ import os
 import json
 import urllib.parse
 import webbrowser
-import time
+import threading
 
 CONTACTS_PATH = None  # set by server
+_lock = threading.RLock()
 
 
 def _load_contacts():
@@ -22,19 +23,30 @@ def _load_contacts():
 
 def _save_contacts(d):
     os.makedirs(os.path.dirname(CONTACTS_PATH), exist_ok=True)
-    with open(CONTACTS_PATH, "w", encoding="utf-8") as f:
+    tmp = CONTACTS_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(d, f, indent=2, ensure_ascii=False)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, CONTACTS_PATH)
 
 
 def add_contact(name, phone):
     """phone must include country code, e.g. +91xxxxxxxxxx"""
-    contacts = _load_contacts()
-    contacts[name.lower().strip()] = phone.strip()
-    _save_contacts(contacts)
-    return True
+    name = str(name).strip()
+    phone = str(phone).strip()
+    if not name or not phone.startswith("+") or not phone[1:].isdigit():
+        return False
+    with _lock:
+        contacts = _load_contacts()
+        contacts[name.lower()] = phone
+        _save_contacts(contacts)
+        return True
 
 
 def get_contact(name):
+    if not str(name).strip():
+        return None
     contacts = _load_contacts()
     key = name.lower().strip()
     if key in contacts:
@@ -52,6 +64,10 @@ def list_contacts():
 
 def send_message(name_or_phone, message):
     """Send via pywhatkit — opens WhatsApp Web, sends instantly."""
+    name_or_phone = str(name_or_phone).strip()
+    message = str(message).strip()
+    if not name_or_phone or not message:
+        return {"ok": False, "error": "recipient and message are required"}
     phone = name_or_phone
     if not name_or_phone.startswith("+"):
         # Treat as contact name

@@ -50,27 +50,47 @@ SENSITIVE_PATHS = [
     ("Exposed Docker compose",       "/docker-compose.yml",("services:", "image:")),
     ("Exposed environment sample",   "/.env.example",     ("=", "APP_")),
     ("Exposed npm debug log",        "/npm-debug.log",    ("npm", "error")),
+    # Expanded directory brute force / common sensitive paths
+    ("Admin Panel",                  "/admin/",           ("admin", "login", "dashboard", "password")),
+    ("phpMyAdmin",                   "/phpmyadmin/",      ("phpMyAdmin", "Welcome to")),
+    ("Login Page",                   "/login",            ("password", "username", "login")),
+    ("Database SQLite",              "/database.sqlite",  ("SQLite format 3",)),
+    ("Exposed SSH Key",              "/.ssh/id_rsa",      ("BEGIN RSA PRIVATE KEY", "BEGIN OPENSSH PRIVATE KEY")),
 ]
 
 INFO_PATHS = ["/robots.txt", "/sitemap.xml", "/.well-known/security.txt"]
 
 
-def _norm_url(url):
+from typing import Optional, Dict, Any, List, Tuple
+
+def _norm_url(url: str) -> str:
+    """Normalize a target URL string, ensuring an https:// prefix."""
     url = url.strip().rstrip("/")
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
     return url
 
 
-def _ctx_insecure():
+def _ctx_insecure() -> ssl.SSLContext:
+    """Create a completely unverified SSL context for security probing."""
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
     return ctx
 
 
-def _request(url, method="GET", timeout=TIMEOUT):
-    """Return (status, headers_dict, body_text, final_url) or raises."""
+def _request(url: str, method: str = "GET", timeout: int = TIMEOUT) -> Tuple[int, Dict[str, str], str, str]:
+    """
+    Perform a synchronous HTTP request against the target.
+    
+    Args:
+        url (str): Target URL.
+        method (str): HTTP method.
+        timeout (int): Request timeout in seconds.
+        
+    Returns:
+        Tuple[int, Dict[str, str], str, str]: status code, headers dict, response body string, and the final URL after redirects.
+    """
     req = urllib.request.Request(url, method=method,
                                  headers={"User-Agent": UA, "Accept": "*/*"})
     with urllib.request.urlopen(req, timeout=timeout, context=_ctx_insecure()) as r:
@@ -82,7 +102,8 @@ def _request(url, method="GET", timeout=TIMEOUT):
         return (r.status, dict(r.getheaders()), body.decode("utf-8", "ignore"), r.geturl())
 
 
-def _finding(sev, title, detail, fix=""):
+def _finding(sev: str, title: str, detail: str, fix: str = "") -> Dict[str, str]:
+    """Helper to construct a standardized vulnerability finding dictionary."""
     return {"severity": sev, "title": title, "detail": detail, "fix": fix}
 
 
@@ -399,6 +420,7 @@ def scan(url, active=True):
     # active checks (still non-destructive: benign markers, observe-only)
     if active:
         try:
+            findings += check_sqli(target, base)
             findings += check_reflected_xss(target, base)
             findings += check_open_redirect(base)
             findings += crawl_links(base, body or "", limit=4)
@@ -440,6 +462,39 @@ def _no_redirect_location(url):
         return e.headers.get("Location", "") or ""
     except Exception:
         return ""
+
+def check_sqli(target, base):
+    """Inject a single quote into query params; flag SQL errors in response."""
+    out = []
+    parsed = urllib.parse.urlparse(target if "?" in target else base)
+    qs = urllib.parse.parse_qs(parsed.query)
+    if not qs:
+        # Check standard common params if none provided
+        qs = {"id": ["1"], "page": ["1"], "user": ["1"]}
+        parsed = parsed._replace(query=urllib.parse.urlencode(qs, doseq=True))
+    
+    payloads = ["'", "\"", "' OR '1'='1", "1' ORDER BY 1--"]
+    errors = ["sql syntax", "mysql_fetch_array", "ora-01756", "mariadb", "you have an error in your sql syntax"]
+    params = list(qs.keys())
+    
+    for p in params[:6]:
+        for payload in payloads:
+            flat = {k: v[0] for k, v in qs.items()}
+            flat[p] = flat[p] + payload
+            url = parsed._replace(query=urllib.parse.urlencode(flat)).geturl()
+            try:
+                _, _, body, _ = _request(url, timeout=6)
+            except Exception:
+                continue
+            
+            body_lower = (body or "").lower()
+            for err in errors:
+                if err in body_lower:
+                    out.append(_finding("HIGH", f"Possible SQL Injection on '{p}'",
+                                        f"SQL error '{err}' leaked at {url}",
+                                        "Use parameterized queries/prepared statements."))
+                    break
+    return out
 
 
 def check_reflected_xss(target, base):

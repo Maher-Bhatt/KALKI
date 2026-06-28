@@ -41,6 +41,29 @@ BROWSER = "chrome"
 GROQ_MODEL  = "llama-3.3-70b-versatile"   # smart default
 OLLAMA_URL  = "http://localhost:11434"     # used only if Groq fails
 MAX_HISTORY = 20
+REQUIRE_DANGEROUS_CONFIRMATION = True
+LOG_TRANSCRIPTS = False
+
+# Personality seasoning. Keep these low so KALKI feels personal, not noisy.
+PERSONALITY_SPICE = True
+SPICY_REPLY_CHANCE = 0.08
+JOKE_OFFERS_ENABLED = True
+JOKE_OFFER_CHANCE = 0.06
+JOKE_MIN_INTERVAL_MINUTES = 45
+
+# Hardware-aware limits. Tune these to your machine so KALKI stays dramatic
+# without pinning CPU/GPU.
+HARDWARE_PROFILE = {
+    "gpu": "RTX 5060",
+    "cpu": "Ryzen 7",
+    "cpu_power_w": 250,
+    "ram_gb": 32,
+    "display": "2K",
+}
+LOCAL_AI_MAX_MODEL_B = 9
+CYBER_SCAN_TIMEOUT_SEC = 0.45
+CYBER_SCAN_PORT_LIMIT = 64
+HUD_EFFECT_QUALITY = "balanced"
 
 # ── WAKE WORDS ──────────────────────────────────────────────
 WAKE_WORDS = ["hey kalki", "kalki", "hey sir", "ok kalki"]
@@ -55,7 +78,7 @@ LISTEN_MODE = "always"
 # Keep Bluetooth headphones in high-quality A2DP: the listener avoids the
 # BT mic (which forces muffled HFP mode) and uses the built-in mic instead.
 STT_AVOID_BLUETOOTH = True
-STT_INPUT_DEVICE    = ""   # name substring to force a device, else auto
+STT_INPUT_DEVICE    = "microsoft sound mapper - input"   # name substring to force a device, else auto
 STT_ENGINE          = "auto"          # auto | vosk (offline) | google (cloud)
 VOSK_MODEL_PATH     = "data/vosk-model"
 
@@ -92,3 +115,7 @@ BATTERY_LOW_PCT      = 20
 BATTERY_CRITICAL_PCT = 10
 RAM_HIGH_PCT         = 90
 CPU_HIGH_PCT         = 95
+
+# -- Integrations --
+GITHUB_TOKEN = "your_personal_access_token"
+SHODAN_API_KEY = "your_shodan_api_key"
