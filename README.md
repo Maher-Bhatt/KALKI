@@ -1,85 +1,98 @@
 # K.A.L.K.I.
-### *The Final Avatar · Autonomous AI*
+### *Autonomous AI Personal Assistant — v5*
 
-A Windows-native, voice-first AI personal assistant inspired by JARVIS from Iron Man — built from scratch in Python and a single HTML file. Named after Kalki, the final avatar of Vishnu.
-
-Lives quietly in the background. Wakes on **"Hey KALKI"**. Speaks in a natural neural voice. Manages your day, runs your code, hacks your hashes, scans websites for vulnerabilities, and reads your calendar — all through one Iron Man-style HUD.
+A Windows-native, voice-first AI assistant inspired by J.A.R.V.I.S. from Iron Man — built from scratch in Python and a single HTML file. Wakes on **"Hey KALKI"**, speaks in a neural voice, and manages your life through a sleek sci-fi HUD.
 
 ![KALKI HUD](screenshots/kalki-hud.png)
 
-> The HUD is **state-reactive** — the whole interface retunes its colour as KALKI idles, listens, thinks, and speaks:
+> The HUD is **state-reactive** — the interface retunes as KALKI idles, listens, thinks, and speaks.
 
-| Idle (saffron) | Listening (peacock) |
+| Standby | Listening |
 |:---:|:---:|
 | ![idle](screenshots/kalki-standby.png) | ![listening](screenshots/kalki-listening.png) |
 
 ---
 
+## What's New in v5
+
+- 🖥️ **OS Control** — Lock PC, mute audio, empty recycle bin, open VS Code by voice
+- 🤖 **Proactive Alerts** — KALKI interrupts you when urgent email arrives or GitHub has new notifications
+- 🐙 **GitHub Integration** — Check your GitHub notifications by voice
+- 🛰 **Shodan OSINT** — *"Scan IP 8.8.8.8"* pulls open ports, CVEs, org info from Shodan
+- 📋 **Clipboard AI Coding** — Copy broken code, say *"Fix the code in my clipboard"* — KALKI fixes and pastes it back
+- 📧 **Mark Emails as Read** — *"Mark all emails as read"* — stops the repeat notifications instantly
+- 🎙 **Mic auto-fix** — `start_jarvis.bat` auto-selects the correct Python 3.11 environment with full audio support
+
+---
+
 ## Highlights
 
-- 🎙 **Voice-first, always-on** — "Hey KALKI" wake word; cloud STT, with an optional **offline Vosk** engine. Built-in-mic selection keeps Bluetooth headsets in high-quality A2DP.
-- 🧠 **Smart model routing** — casual turns use a fast 8B model, code/cyber turns use LLaMA-3.3-70B. **Offline fallback** to a local Ollama model.
-- 🔐 **Web vulnerability scanner** — *"scan this website"* reads your open browser tab, audits TLS / headers / cookies / CORS / exposed files / dangerous methods, pulls the source + JS, hunts leaked secrets, maps the form/injection surface, and runs active reflected-XSS / open-redirect checks. Non-destructive, findings + fixes.
-- 🛰 **Site Watchdog** — background monitor for your sites: down/recovered alerts + SSL-expiry warnings (14/7/2 days).
-- 📋 **Clipboard genie** — *"decode my clipboard"* auto-detects JWT / base64 / hex / hashes.
-- 🌅 **Morning security brief** — new critical CVEs relevant to your stack + watched-site status.
-- 🎨 **Indian "Mahal" HUD** — maroon + gold, jali lattice, an Ashoka-chakra / lotus / Surya mandala reactor, rangoli accents.
+- 🎙 **Voice-first, always-on** — "Hey KALKI" wake word; cloud STT with optional **offline Vosk** engine
+- 🧠 **Smart model routing** — fast 8B for casual turns, LLaMA-3.3-70B for code/cyber. **Offline fallback** to local Ollama
+- 🔐 **Web vulnerability scanner** — reads your open browser tab, audits TLS/headers/cookies/CORS/XSS/injections
+- 🛰 **Site Watchdog** — background monitor: down/recovered alerts + SSL-expiry warnings
+- 📋 **Clipboard genie** — auto-detects JWT / base64 / hex / hashes
+- 🌅 **Morning security brief** — new critical CVEs + watched-site status on every boot
+- ⚡ **No build step** — pure Python + one HTML file. Clone and run
 
 ---
 
 ## Features
 
 ### Voice & Intelligence
-- **Always-on wake-word** — say "Hey KALKI" from anywhere; works even when the browser tab is closed
-- **Voice-only operation** — listener captures the follow-up sentence after wake; no clicks needed
+- **Always-on wake-word** — say "Hey KALKI" from anywhere, even with browser tab closed
 - **Groq-powered brain** — `llama-3.3-70b-versatile` for thinking, `llama-4-scout` for vision
-- **Neural TTS** — Microsoft edge-tts `en-GB-RyanNeural` (the closest thing to the movie voice)
-- **Stop command** — say "stop" anywhere and the audio cuts instantly
+- **Neural TTS** — Microsoft edge-tts `en-GB-RyanNeural`
+- **Stop command** — say "stop" anywhere to cut speech instantly
 
 ### Personal Assistant
-- **Google Calendar** — speaks today's + tomorrow's events on every boot
-- **Auto event reminders** — KALKI warns you 15 minutes before every meeting, unprompted
-- **Gmail (Primary filter)** — reads only important unread mail; ignores promotions, social, updates, forums, spam
-- **Tasks + reminders** — natural-language "remind me to X in 10 minutes" / "at 5 PM"
-- **Notes + journal** — "take a note", "what did I note yesterday", `#tags` parsed automatically
-- **Password vault** — DPAPI-encrypted (Windows user-account locked, no master password)
-- **WhatsApp messaging** — "send a WhatsApp to Dev saying I'll be late" (via pywhatkit)
-- **Spotify control** — "play lo-fi", "next song", "pause", "what's playing"; auto-launches if not running
-- **Workflow modes** — "study mode", "gaming mode", "CTF mode" trigger multi-step action chains
+- **Google Calendar** — speaks today's/tomorrow's events on boot
+- **Auto event reminders** — warns 15 minutes before every meeting, unprompted
+- **Gmail** — reads important unread mail; ignores promotions/social/spam
+- **Mark emails as read** — *"Mark all emails as read"* clears your inbox via IMAP
+- **Tasks + reminders** — natural language: *"remind me to X in 10 minutes"*
+- **Notes + journal** — *"take a note"*, *"what did I note yesterday"*, `#tags` auto-parsed
+- **Password vault** — DPAPI-encrypted, Windows user-account locked
+- **WhatsApp messaging** — *"Send a WhatsApp to Dev saying I'll be late"*
+- **Spotify control** — play, pause, next, volume, now playing
+- **Workflow modes** — study/gaming/CTF/focus trigger multi-step action chains
+
+### OS & System Control *(New in v5)*
+- **Lock PC** — *"Lock my PC"*
+- **Mute audio** — *"Mute audio"* / *"Toggle mute"*
+- **Empty Recycle Bin** — *"Empty the recycle bin"*
+- **Open VS Code** — *"Open Visual Studio Code"*
+- **Clipboard AI Coding** — copy buggy code → *"Fix the code in my clipboard"* → paste fixed code
 
 ### Cybersecurity Toolkit
-- **Hashes** — identify, generate (MD5/SHA1/SHA256/SHA512/SHA3/NTLM/MD4), and dictionary-crack
+- **Web scanner** — full audit: TLS, headers, cookies, CORS, XSS, injections, secrets
+- **Hashes** — identify, generate (MD5/SHA1/SHA256/SHA512/NTLM), dictionary-crack
 - **Encode/decode** — base64, hex, URL, rot13, binary, morse
-- **CVE intel** — `lookup CVE-2024-3094` (NVD API) and "recent critical CVEs" (last 30 days, newest first)
-- **Subdomain enumeration** — via crt.sh with hackertarget.com fallback
-- **GitHub dorking** — pre-baked search URLs for AWS keys, API keys, passwords, .env files, SSH keys
-- **Reverse shell payloads** — Bash, sh, Python, Python3, PowerShell, nc, mkfifo, PHP, Perl, Ruby
-- **Port scan / DNS / HTTP headers / WHOIS / ping** — fast TCP probe of the standard 42 ports
-- **WiFi password recovery** — own networks via `netsh wlan show profile`
-- **Screen vision** — Groq vision API analyzes screenshots ("look at my screen and solve this")
+- **CVE intel** — `lookup CVE-2024-3094` and *"recent critical CVEs"* (last 30 days)
+- **Subdomain enumeration** — crt.sh + hackertarget fallback
+- **GitHub dorking** — pre-baked search URLs for leaked keys, .env, SSH keys
+- **Shodan OSINT** *(New)* — *"Scan IP x.x.x.x"* — open ports, vulns, org from Shodan API
+- **Reverse shell payloads** — Bash, Python, PowerShell, PHP, Perl, Ruby, nc
+- **Port scan / DNS / WHOIS / HTTP headers / Ping**
+- **WiFi password recovery** — via `netsh wlan show profile`
 
-### Vision & File Upload
-- **Click 📎, drag-and-drop anywhere, or paste Ctrl+V** to attach images / code / text
-- Images go to Groq vision for analysis (CTF challenges, code screenshots, error dialogs)
-- Text/code files are prepended to your message so the AI sees full content
+### GitHub Integration *(New in v5)*
+- **Check notifications** — *"Check my GitHub"* or *"Any GitHub notifications?"*
+- Proactive alert if new GitHub notifications arrive while you work
 
-### Code Engine
-- **"Write and run a Python script that scans port 80 on 10 IPs"** — generates, saves, executes
-- Python, PowerShell, Batch, Node, HTML
-- Scripts saved to `data/scripts/` with timestamps
-
-### Proactive Alerts (background)
-- **Battery** — speaks unprompted at <20% and <10%
-- **CPU** — sustained high (>95% for 3 consecutive checks)
+### Proactive Alerts *(Upgraded in v5)*
+- **Urgent email** — KALKI interrupts you: *"Excuse me Sir, you have a new urgent email"*
+- **GitHub notifications** — alerts when new notifications arrive
+- **Battery** — speaks at <20% and <10%
+- **CPU** — sustained high (>95% for 3 checks)
 - **RAM** — over 90%
-- All alerts have cooldowns (8–25 minutes) to avoid spam
+- All alerts have cooldowns to avoid spam
 
 ### The HUD
-- **Arc reactor center** — 60fps canvas, 72 mic-reactive frequency bars, 32 orbiting particles, 12 hex cells, 6 petal flares, rotating text rings ("KALKI · GROQ · LLAMA · NEURAL"), pulse ring on state change
-- **State-reactive theme** — entire UI shifts hue when KALKI is idle/listening/thinking/speaking (panels, brand mark, readout stripes all retune)
-- **Live HUD panels** — CPU/RAM/disk/network/power bars, today's calendar, unread mail count, now-playing track, scrolling telemetry stream
-- **Code blocks with copy button** — KALKI replies with triple-backtick fences; UI renders them in monospace with a one-click COPY chip
-- **No "asterisk asterisk" in TTS** — markdown stripped before speaking
+- **Arc reactor** — 60fps canvas, 72 mic-reactive bars, 32 orbiting particles, rotating text rings
+- **State-reactive theme** — UI shifts hue when idle/listening/thinking/speaking
+- **Live panels** — CPU/RAM/disk/network/power, calendar, unread mail, now-playing track
+- **Code blocks** — rendered in monospace with one-click COPY button
 
 ---
 
@@ -95,26 +108,25 @@ Lives quietly in the background. Wakes on **"Hey KALKI"**. Speaks in a natural n
    ┌───────────────────────┴──────────────────────────┐
    │                  server.py                       │
    │  http.server + ThreadingMixIn (stdlib only)      │
-   │  - intent router (local commands)                │
+   │  - intent router (800+ local commands)           │
    │  - background loops (alerts, calendar, reminders)│
-   │  - voice TTS pipeline                            │
-   └─┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬───────┘
-     │  │  │  │  │  │  │  │  │  │  │  │  │  │  │
+   │  - voice TTS pipeline (edge-tts + pygame)        │
+   └─┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬───────┘
+     │  │  │  │  │  │  │  │  │  │  │  │  │  │
    vault gcal vision coder spotify whatsapp notes tasks
-   cybertools  workflows  mail  ytdl
+   cybertools workflows mail ytdl github_mod shodan_mod
                            ▲
                            │ POST /api/wake|chat|stop
                            │
                 ┌──────────┴──────────────┐
                 │      listener.py        │
-                │  SpeechRecognition+PyAudio
+                │  SpeechRecognition+PyAudio│
                 │  cycles mic, fuzzy match│
                 └─────────────────────────┘
 
-   launcher.py (silent boot, registers HKCU\...\Run)
+   start_jarvis.bat → launches server + listener on Python 3.11
+   launcher.py      → silent boot, registers HKCU\...\Run
 ```
-
-**Why stdlib only for the server?** No Flask, no FastAPI, no npm — KALKI depends on `python -m http.server`'s threading model and a single HTML file. Easier to audit, faster to start, runs forever without a build step.
 
 ---
 
@@ -127,40 +139,47 @@ C:\Kalki\
 ├── launcher.py          ← Silent boot + Windows autostart
 ├── config.py            ← All keys & settings (gitignored)
 ├── config.example.py    ← Template — copy to config.py and fill in
-├── index.html           ← The Iron Man HUD (canvas + vanilla JS)
+├── index.html           ← The HUD (canvas + vanilla JS)
 ├── requirements.txt     ← pip dependencies
 ├── INSTALL.bat          ← One-click installer
-├── START.bat            ← Manual launch (with console for debugging)
+├── START.bat            ← Manual launch (console visible for debugging)
+├── start_jarvis.bat     ← Recommended launcher (auto Python 3.11 + mic)
 │
-│   ── Modules ──
+│   ── Core Modules ──
 ├── vault.py             ← DPAPI password store
 ├── cybertools.py        ← Hashes, codecs, network, CVE, recon, payloads
 ├── vision.py            ← Screenshot / image analysis via Groq vision
 ├── coder.py             ← Code generation + execution sandbox
-├── tasks.py             ← Tasks + reminders (with time parsing)
-├── notes.py             ← Notes + journal with full-text search
-├── mail.py              ← IMAP Gmail reader (alt to OAuth)
+├── tasks.py             ← Tasks + reminders
+├── notes.py             ← Notes + journal
+├── mail.py              ← IMAP Gmail (check + mark as read)
 ├── gcal.py              ← Google Calendar + Gmail OAuth
 ├── spotify_mod.py       ← Spotify Web API control
-├── whatsapp_mod.py      ← pywhatkit-based messaging
-├── workflows.py         ← Multi-step modes (study/gaming/ctf/...)
+├── whatsapp_mod.py      ← pywhatkit messaging
+├── workflows.py         ← Multi-step modes
+├── clipboard_mod.py     ← Clipboard read/write + AI code fix
+├── webscan.py           ← Full web vulnerability scanner
+├── deepscan.py          ← Deep Playwright-powered site scanner
+├── semantic_memory.py   ← Long-term AI memory
+├── runtime_security.py  ← Runtime security monitoring
 ├── ytdl.py              ← yt-dlp wrapper
 │
-│   ── One-time setup scripts ──
-├── setup_google.py      ← Google OAuth authorize
-├── setup_spotify.py     ← Spotify OAuth authorize
+│   ── New in v5 ──
+├── github_mod.py        ← GitHub notifications integration
+├── shodan_mod.py        ← Shodan OSINT / IP scanner
+│
+│   ── One-time setup ──
+├── setup_google.py      ← Google OAuth
+├── setup_spotify.py     ← Spotify OAuth
+├── setup_startup.py     ← Windows autostart registration
 │
 └── data/                ← Local state (gitignored)
     ├── memory.json
-    ├── history.json
     ├── tasks.json
-    ├── reminders.json
     ├── notes.json
     ├── vault.json           (DPAPI-encrypted)
-    ├── google_token.pickle  (OAuth cache)
-    ├── spotify_token.json
-    ├── contacts.json
-    └── scripts/             (generated by /api/code/generate)
+    ├── google_token.pickle
+    └── scripts/
 ```
 
 ---
@@ -171,24 +190,23 @@ C:\Kalki\
 - **Windows 10/11**
 - **Python 3.11** — install from [python.org](https://www.python.org/downloads/release/python-3119/) and tick **"Add Python to PATH"**
 - A **microphone**
-- A **free Groq API key** (the only thing that's required — takes 1 minute)
+- A **free Groq API key** (takes 1 minute)
 
 ---
 
-### Step 1 — Get your free Groq API key  *(required)*
+### Step 1 — Get your free Groq API key
 
 KALKI's brain runs on [Groq](https://console.groq.com) (free, very fast LLaMA inference).
 
-1. Go to **<https://console.groq.com>** and sign in (Google login works).
-2. In the left menu open **API Keys**.
-3. Click **Create API Key**, give it a name (e.g. `kalki`), and **Create**.
-4. **Copy the key** — it looks like `gsk_xxxxxxxxxxxxxxxxxxxx`. You only see it once, so copy it now.
+1. Go to **<https://console.groq.com>** and sign in
+2. Open **API Keys** → **Create API Key**
+3. Copy the key (looks like `gsk_xxxx`) — you only see it once
 
-> 🔒 This key is yours. Keep it private — anyone with it can use your Groq quota.
+> 🔒 Keep this key private. Never commit it to GitHub.
 
 ---
 
-### Step 2 — Download & configure
+### Step 2 — Clone & configure
 
 ```bat
 git clone https://github.com/Maher-Bhatt/KALKI.git C:\Kalki
@@ -196,129 +214,126 @@ cd C:\Kalki
 copy config.example.py config.py
 ```
 
-Open **`config.py`** in any editor and paste your key:
+Open **`config.py`** and fill in your details:
 
 ```python
-GROQ_API_KEY = "gsk_your_key_here"   # <- paste the key from Step 1
-OWNER_NAME   = "YourName"            # how KALKI addresses you
-OWNER_CITY   = "YourCity"            # for the weather line
+GROQ_API_KEY   = "gsk_your_key_here"
+OWNER_NAME     = "YourName"
+OWNER_CITY     = "YourCity"
+
+# Optional — for new v5 features
+GITHUB_TOKEN   = "your_github_personal_access_token"
+SHODAN_API_KEY = "your_shodan_api_key"
 ```
 
-> ⚠️ **`config.py` is gitignored** — your keys live only on your machine and are never committed. Never put real keys in `config.example.py`.
+> ⚠️ **`config.py` is gitignored** — your keys stay on your machine only.
 
 ---
 
 ### Step 3 — Install & run
 
 ```bat
-INSTALL.bat        :: installs Python dependencies
-START.bat          :: launches KALKI
+INSTALL.bat          :: installs all Python dependencies
+start_jarvis.bat     :: launches KALKI (recommended)
 ```
 
-Within a couple of seconds you'll hear a greeting, Chrome opens to **`http://localhost:8888`**, and the HUD appears. Say **"Hey KALKI"** to talk to it.
+KALKI opens in your browser at `http://localhost:8888`. Say **"Hey KALKI"** to begin.
 
-**Auto-start on every boot (optional):**
+**Auto-start on boot (optional):**
 ```bat
-py -3.11 launcher.py
+py -3.11 setup_startup.py
 ```
-Registers KALKI under `HKCU\...\Run` + a Startup shortcut so it launches silently each login. To remove, delete the `KALKI_v5` registry value.
 
 ---
 
 ### Step 4 — Optional integrations
 
-All optional — KALKI works fully without them.
-
-| Integration | How to set up |
+| Integration | Setup |
 |---|---|
-| **Google Calendar + Gmail** | At [console.cloud.google.com](https://console.cloud.google.com): create a project → enable **Calendar API** + **Gmail API** → **OAuth consent screen** (External, add your email as a test user) → **Credentials → OAuth client ID → Desktop app** → download the JSON to `data/google_credentials.json` → run `py -3.11 setup_google.py` and approve in the browser. |
-| **Spotify** | At [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard): create an app, set redirect URI **`http://127.0.0.1:8889/callback`**, copy the **Client ID + Secret** into `config.py`, then run `py -3.11 setup_spotify.py`. |
-| **Offline brain** | Install [Ollama](https://ollama.com) and `ollama pull qwen2.5:7b` — KALKI falls back to it when offline. |
-| **Tesseract OCR** (vision text fallback) | Install from the [UB-Mannheim build](https://github.com/UB-Mannheim/tesseract/wiki). |
-| **Wordlist** (hash cracking) | Drop a wordlist at `data/wordlist.txt`. |
+| **Google Calendar + Gmail** | [console.cloud.google.com](https://console.cloud.google.com) → enable Calendar + Gmail API → OAuth credentials → `py -3.11 setup_google.py` |
+| **Spotify** | [developer.spotify.com](https://developer.spotify.com/dashboard) → create app → redirect URI `http://127.0.0.1:8889/callback` → paste Client ID + Secret in `config.py` → `py -3.11 setup_spotify.py` |
+| **GitHub** | Create a Personal Access Token at [github.com/settings/tokens](https://github.com/settings/tokens) → paste in `config.py` as `GITHUB_TOKEN` |
+| **Shodan** | Get a free API key at [shodan.io](https://shodan.io) → paste in `config.py` as `SHODAN_API_KEY` |
+| **Offline brain** | Install [Ollama](https://ollama.com) → `ollama pull qwen2.5:7b` |
+| **Tesseract OCR** | Install from [UB-Mannheim](https://github.com/UB-Mannheim/tesseract/wiki) |
 
 ---
 
 ## Voice Command Reference
 
+### New in v5
+| Say | Action |
+|---|---|
+| "Lock my PC" | Locks Windows instantly |
+| "Mute audio" / "Toggle mute" | Mutes system audio |
+| "Empty the recycle bin" | Clears recycle bin silently |
+| "Open Visual Studio Code" | Launches VS Code |
+| "Fix the code in my clipboard" | AI fixes your copied code, pastes back |
+| "Mark all emails as read" | Marks every unread Gmail as read via IMAP |
+| "Check my GitHub" | Reads unread GitHub notifications |
+| "Scan IP 8.8.8.8" | Shodan OSINT report on that IP |
+
 ### Music & Media
 | Say | Action |
 |---|---|
 | "Play lo-fi" | Spotify search + play |
-| "Play Believer" | Plays the song |
-| "Pause" / "Resume" | Spotify playback |
+| "Pause" / "Resume" | Playback control |
 | "Next song" / "Previous song" | Skip / back |
 | "What's playing" | Speaks current track |
-| "Spotify volume 50" | Sets Spotify volume |
-| "Download this YouTube video <url>" | yt-dlp grab |
+| "Download this YouTube video \<url\>" | yt-dlp |
 
 ### Productivity
 | Say | Action |
 |---|---|
-| "What's on my calendar" | Today's events (falls through to tomorrow if clear) |
-| "What's on my calendar tomorrow" | Tomorrow's events |
-| "Check my Gmail" | Important unread, Primary tab only |
+| "What's on my calendar" | Today's events |
+| "Check my Gmail" | Important unread mail |
+| "Mark all emails as read" | Clears inbox notifications |
 | "Add task X" / "Show my tasks" | Task management |
-| "Remind me to X in 10 minutes" / "at 5 PM" | Time-bound reminder |
-| "Take a note Y" / "Show my notes" / "Notes from yesterday" | Notes |
-| "Send a WhatsApp to Dev saying I'll be late" | WhatsApp Web message |
-| "Add contact Dev +91XXXXXXXXXX" | Save to contacts |
+| "Remind me to X in 10 minutes" | Timed reminder |
+| "Take a note Y" / "Show my notes" | Notes journal |
+| "Send a WhatsApp to Dev..." | WhatsApp Web message |
 
 ### Cybersecurity
 | Say | Action |
 |---|---|
-| "MD5 of admin123" | Hashes the string |
-| "Identify hash <hash>" | Guesses the type by length |
-| "Crack hash <hash>" | Dictionary attack against `data/wordlist.txt` |
-| "Lookup CVE-2024-3094" | NVD lookup, summary + score |
+| "MD5 of admin123" | Hash it |
+| "Crack hash \<hash\>" | Dictionary attack |
+| "Lookup CVE-2024-3094" | NVD lookup |
 | "Recent critical CVEs" | Last 30 days |
-| "Find subdomains of paypal.com" | crt.sh + hackertarget |
-| "GitHub dorks for example.com" | Search URL list |
-| "Reverse shell python 10.10.14.5 4444" | Payload in copyable code block |
+| "Find subdomains of paypal.com" | crt.sh recon |
+| "Scan IP 1.2.3.4" | Shodan OSINT *(New)* |
+| "Reverse shell python 10.0.0.1 4444" | Payload generator |
 | "Port scan 192.168.1.1" | Top 42 TCP ports |
-| "DNS google.com" / "Headers for example.com" / "Ping 1.1.1.1" | Network recon |
-| "Base64 encode <text>" / "Decode base64 <blob>" | Codecs (also hex, URL, rot13, binary, morse) |
-| "What's my IP" / "IP info" | Public IP + geolocation |
-| "List my WiFi" / "WiFi password for HomeNet" | `netsh` recovery |
+| "What's my IP" | Public IP + geolocation |
+| "WiFi password for HomeNet" | `netsh` recovery |
 
-### System
+### System Control
 | Say | Action |
 |---|---|
-| "What time is it" / "What date" | Local |
+| "Lock my PC" | Windows lock *(New)* |
+| "Mute audio" | Mute system *(New)* |
+| "Empty the recycle bin" | Clear bin *(New)* |
+| "Open Visual Studio Code" | Launch VS Code *(New)* |
 | "Battery" / "System info" | psutil stats |
-| "Set volume 60" / "Mute" / "Unmute" | pycaw |
-| "Take a screenshot" | Pillow ImageGrab → Desktop |
-| "Lock my PC" / "Sleep" / "Restart" / "Shutdown" | Windows commands |
-| "Open Chrome" / "Open YouTube" / "Open Documents" | Launches apps/folders |
-| "Close Spotify" | psutil kill |
+| "Take a screenshot" | Saves to Desktop |
+| "Sleep" / "Restart" / "Shutdown" | Windows power commands |
 
 ### Vault & Vision
 | Say | Action |
 |---|---|
-| "Save my Gmail password as hunter2" | DPAPI-encrypted vault |
-| "What is my Gmail password" | Speaks + displays |
-| "List my passwords" | All labels |
-| "Generate a strong password" | 20-char random |
+| "Save my Gmail password as X" | DPAPI vault |
+| "What is my Gmail password" | Retrieve from vault |
 | "Look at my screen and solve it" | Screenshot → Groq vision |
-| (Drag image into window) "solve this" | Uploaded image → Groq vision |
+| "Fix the code in my clipboard" | AI clipboard coding *(New)* |
 
-### Workflow Modes (fuzzy-matched)
+### Workflow Modes
 | Say | What runs |
 |---|---|
 | "Study mode" | Opens Code, lo-fi playlist, lowers volume |
 | "Gaming mode" | Opens Steam + Discord, kills Chrome |
-| "CTF mode" (also "city of mode" — handles mishearings) | Opens Code, terminal, exploit-db, gtfobins |
+| "CTF mode" | Opens Code, terminal, exploit-db, gtfobins |
 | "Focus mode" | Lowers volume, kills Discord |
 | "Morning routine" | Opens Gmail + Calendar |
-| "Shutdown routine" | Closes apps, locks PC |
-
-### Meta
-| Say | Action |
-|---|---|
-| "Stop" / "Shut up" / "Quiet" | Cuts current speech |
-| "Pause listener" / "Resume listener" | Frees the mic for other apps |
-| "Remember <fact>" / "What do you remember" | Long-term memory |
-| "Tell me my details" | Owner profile + memory count |
 
 ---
 
@@ -327,15 +342,16 @@ All optional — KALKI works fully without them.
 | Layer | Tech |
 |---|---|
 | Server | Python 3.11 stdlib (`http.server` + `ThreadingMixIn`) — no Flask |
-| LLM | Groq API (llama-3.3-70b-versatile / llama-4-scout vision) |
+| LLM | Groq API (`llama-3.3-70b-versatile` / `llama-4-scout` vision) |
 | TTS | Microsoft edge-tts + pygame mixer (non-blocking) |
-| STT | Python SpeechRecognition + Google STT for the wake word |
-| Calendar/Mail | google-api-python-client + google-auth-oauthlib |
+| STT | SpeechRecognition + PyAudio + Google STT |
+| Calendar/Mail | google-api-python-client + google-auth-oauthlib + imaplib |
 | Music | spotipy (Spotify Web API) |
-| Messaging | pywhatkit (WhatsApp Web automation) |
+| Messaging | pywhatkit (WhatsApp Web) |
 | Vault | pywin32 / `win32crypt` (DPAPI) |
-| System | psutil, pycaw, pillow, comtypes |
-| Recon | crt.sh, NVD API, hackertarget.com, DuckDuckGo HTML |
+| System | psutil, pycaw, pillow, comtypes, ctypes |
+| OSINT | Shodan API, crt.sh, NVD API, hackertarget.com |
+| GitHub | GitHub REST API v3 |
 | Frontend | Vanilla JS + Canvas2D, single `index.html`, no build step |
 
 ---
@@ -348,11 +364,10 @@ MIT — see [LICENSE](LICENSE).
 
 ## Acknowledgments
 
-- The vision and the name come from Marvel's Tony Stark. KALKI in the movies = the inspiration.
-- [Groq](https://groq.com) for absurdly fast LLaMA inference
-- [edge-tts](https://github.com/rany2/edge-tts) for the neural Ryan voice
+- Inspired by Tony Stark's J.A.R.V.I.S. from the MCU
+- [Groq](https://groq.com) for blazing-fast LLaMA inference
+- [edge-tts](https://github.com/rany2/edge-tts) for the neural voice
 - [crt.sh](https://crt.sh) and [NVD](https://nvd.nist.gov) for free security data
-- The MCU script writers for making Tony Stark sound like that
 
 ---
 
