@@ -2725,16 +2725,30 @@ def _focus_kalki_window():
 
     hwnd = matches[0]
     try:
+        # Restore if minimized
         if win32gui.IsIconic(hwnd):
             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+
+        # Windows blocks SetForegroundWindow unless the calling thread
+        # already has focus. The keybd_event trick grants it temporarily.
+        try:
+            import ctypes
+            ctypes.windll.user32.keybd_event(0, 0, 0, 0)
+        except Exception:
+            pass
+
         try:
             win32gui.SetForegroundWindow(hwnd)
         except Exception:
-            # SetForegroundWindow may be denied — fall back to SwitchToThisWindow
             try:
                 ctypes.windll.user32.SwitchToThisWindow(hwnd, True)
             except Exception:
-                pass
+                # Last resort — flash taskbar so user sees it
+                try:
+                    win32gui.FlashWindow(hwnd, True)
+                except Exception:
+                    pass
+
         log(f"focused existing KALKI window hwnd={hwnd}")
         return True
     except Exception as e:
