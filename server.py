@@ -556,7 +556,7 @@ def speak(text):
     if not text:
         return
     if edge_tts is None or not PYGAME_OK:
-        print(f"[TTS missing] {text}")
+        log(f"[TTS missing] {text} (edge_tts is None or not PYGAME_OK)")
         return
 
     def _run():
@@ -588,7 +588,7 @@ def speak(text):
                 while pygame.mixer.music.get_busy():
                     time.sleep(0.1)
             except Exception as e:
-                print(f"TTS error: {e}")
+                log(f"TTS error: {e}")
             finally:
                 # Release the audio device so a shared BT headset can switch
                 # back to the phone the moment KALKI stops talking.
