@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="screenshots/kalki-hud.png" alt="KALKI HUD" width="100%">
+  <img src="screenshots/poster_banner.png" alt="KALKI AI Assistant" width="100%">
 
   <h1><img src="assets/kalki_logo.png" width="48" style="vertical-align: middle;"> KALKI</h1>
 
@@ -74,6 +74,13 @@ KALKI is modularly designed, entirely decoupling its "Brain" from its visual "Bo
 3. Windows 10/11 required. A free Groq API key is required for the cloud AI brain.
 
 ## Showcase
+
+<div align="center">
+  <img src="screenshots/poster_features.png" width="48%" alt="Command by Voice">
+  <img src="screenshots/poster_logo.png" width="48%" alt="KALKI Logo">
+</div>
+
+<br>
 
 <div align="center">
   <img src="screenshots/kalki-hud.png" width="98%" alt="Main HUD">
