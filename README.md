@@ -1,7 +1,7 @@
 <div align="center">
   <img src="screenshots/kalki-hud.png" alt="KALKI HUD" width="100%">
 
-  <h1>&lt;/&gt; KALKI</h1>
+  <h1><img src="assets/kalki_logo.png" width="48" style="vertical-align: middle;"> KALKI</h1>
 
   <h2>A Windows-native, voice-first AI assistant inspired by J.A.R.V.I.S.</h2>
 
