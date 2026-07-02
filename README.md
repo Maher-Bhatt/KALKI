@@ -39,7 +39,9 @@ KALKI is an autonomous personal assistant built from scratch in Python and a sin
 
 ## Showcase
 
-*(Please upload new screenshots to the screenshots/ folder to display them here)*
+<div align="center">
+  <img src="screenshots/kalki-hud.png" width="98%" alt="Main HUD">
+</div>
 
 <br>
 
