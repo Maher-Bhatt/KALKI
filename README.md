@@ -7,7 +7,7 @@
   <em>Inspired by Tony Stark's J.A.R.V.I.S., engineered for modern developers and power users.</em>
 
   <p>
-    <img src="https://img.shields.io/badge/release-v1.0.1_PRO-6c757d?style=for-the-badge" alt="release">
+    <img src="https://img.shields.io/badge/release-v1.0.2_PRO-6c757d?style=for-the-badge" alt="release">
     <img src="https://img.shields.io/badge/platform-Windows_10%2B-8a8276?style=for-the-badge" alt="platform">
     <img src="https://img.shields.io/badge/brain-Groq_%2B_LLaMA-c4a065?style=for-the-badge" alt="tech">
     <img src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge" alt="license">
@@ -58,7 +58,7 @@ Designed to completely bypass the standard clunky chat interfaces, KALKI lives o
 KALKI requires **zero manual build steps**. 
 
 1. **Download:** Navigate to the [Releases](https://github.com/Maher-Bhatt/KALKI/releases) page.
-2. **Install:** Run `KALKI_Setup.exe` (v1.0.1 or newer). The wizard will seamlessly install the core engine, the deepscan Chromium browser, and all offline assets.
+2. **Install:** Run `KALKI_Setup.exe` (v1.0.2 or newer). The wizard will seamlessly install the core engine, the deepscan Chromium browser, and all offline assets.
 3. **Configure:** A free API key from [Groq](https://groq.com) is required to power the cloud LLaMA brain. Add it to the integrated settings panel.
 4. **Launch:** Say *"Hi KALKI"* and welcome your new assistant online.
 
