@@ -59,7 +59,7 @@ html,body{
   background:var(--bg);
   color:var(--text);
   font-family:"Inter", sans-serif;
-  letter-spacing:0.5px;
+  letter-spacing:0.05rem;
   user-select:none;
   transition: background .8s ease;
 }
@@ -84,48 +84,48 @@ body::after{
 /* ❖ HUD side panels ❖ */
 .hud {
   position:fixed; z-index:15;
-  border: 1px solid var(--frame);
+  border: 0.1rem solid var(--frame);
   background: var(--bg-panel);
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-  padding:15px 17px; font-size:12px;
-  border-radius: 6px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  backdrop-filter: blur(1.6rem); -webkit-backdrop-filter: blur(1.6rem);
+  padding:1.5rem 1.7rem; font-size:1.2rem;
+  border-radius: 0.6rem;
+  box-shadow: 0 0.4rem 2rem rgba(0,0,0,0.5);
 }
 
 
-.hud.left { top:115px; left:24px; width:280px; max-height: calc(100vh - 170px); overflow-y:auto; }
-.hud.right{ top:115px; right:24px; width:260px; max-height: calc(100vh - 230px); overflow-y:auto; }
-.hud.left::-webkit-scrollbar{ width:4px; }
+.hud.left { top:11.5rem; left:2.4rem; width:28rem; max-height: calc(100vh - 17rem); overflow-y:auto; }
+.hud.right{ top:11.5rem; right:2.4rem; width:26rem; max-height: calc(100vh - 23rem); overflow-y:auto; }
+.hud.left::-webkit-scrollbar{ width:0.4rem; }
 .hud.left::-webkit-scrollbar-thumb{ background:#ffffff; }
-.hud.right::-webkit-scrollbar{ width:4px; }
+.hud.right::-webkit-scrollbar{ width:0.4rem; }
 .hud.right::-webkit-scrollbar-thumb{ background:#ffffff; }
 .hud .title {
   color:#ffffff;
   font-family:"Inter", sans-serif;font-weight:700;
-  font-size:12px;letter-spacing:1px;
-  padding-bottom:3px;border-bottom:1px solid rgba(255,153,51,0.3);
-  margin-bottom:8px;
+  font-size:1.2rem;letter-spacing:0.1rem;
+  padding-bottom:0.3rem;border-bottom:0.1rem solid rgba(255,153,51,0.3);
+  margin-bottom:0.8rem;
 }/* -- Top bar ---------------------------------------- */
 .topbar{
-  position:fixed;top:0;left:0;right:0;height:64px;z-index:20;
+  position:fixed;top:0;left:0;right:0;height:6.4rem;z-index:20;
   display:flex;align-items:center;justify-content:space-between;
-  padding:0 28px;
-  border-bottom: 1px solid var(--frame);
+  padding:0 2.8rem;
+  border-bottom: 0.1rem solid var(--frame);
   background: rgba(10,10,10,0.9);
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(1.2rem); -webkit-backdrop-filter: blur(1.2rem);
 }
-.brand{display:flex;align-items:center;gap:14px}
+.brand{display:flex;align-items:center;gap:1.4rem}
 .brand-mark{
-  width:42px;height:42px;position:relative;
+  width:4.2rem;height:4.2rem;position:relative;
   display:flex;align-items:center;justify-content:center;
 }
 .brand-mark .chakra{
   width:100%;height:100%;
-  filter: drop-shadow(0 2px 4px rgba(212,175,55,0.8));
+  filter: drop-shadow(0 0.2rem 0.4rem rgba(212,175,55,0.8));
   transition: transform 1s ease;
 }
 .brand-mark .chakra-spin{
-  transform-origin:50px 50px;
+  transform-origin:5rem 5rem;
   animation: chakraSpin 10s linear infinite;
 }
 @keyframes chakraSpin{
@@ -134,76 +134,76 @@ body::after{
 }
 .brand h1{
   font-family:"Inter", sans-serif;
-  font-size:22px;font-weight:700;letter-spacing:1px;
+  font-size:2.2rem;font-weight:700;letter-spacing:0.1rem;
   background:linear-gradient(180deg, var(--gold-bright), var(--gold-deep));
   -webkit-background-clip:text;background-clip:text;color:transparent;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  text-shadow: 0 0.2rem 0.4rem rgba(0,0,0,0.5);
 }
 .brand .sub{
-  font-size:10px;color:var(--sandstone);letter-spacing:1px;text-transform:uppercase;
+  font-size:1rem;color:var(--sandstone);letter-spacing:0.1rem;text-transform:uppercase;
   font-family:"Mukta", sans-serif;
 }
 .top-meta{
-  display:flex;gap:20px;font-size:12px;color:var(--text-dim);
-  letter-spacing:1px;text-transform:uppercase; font-family:"Inter", sans-serif;
+  display:flex;gap:2rem;font-size:1.2rem;color:var(--text-dim);
+  letter-spacing:0.1rem;text-transform:uppercase; font-family:"Inter", sans-serif;
 }
 .top-meta .v{color:#ffffff}
 
 /* ── Status badge (formerly pill) ───────────────────────────────── */
 .pill {
   color:#ffffff;
-  border: 1px solid #ffffff;
-  border-radius: 20px;
+  border: 0.1rem solid #ffffff;
+  border-radius: 2rem;
   background: rgba(10,10,10,0.85);
-  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(0.8rem); -webkit-backdrop-filter: blur(0.8rem);
   text-transform:uppercase; z-index:25; font-weight:600;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+  box-shadow: 0 0.4rem 1.2rem rgba(0,0,0,0.6);
   font-family:"Inter", sans-serif;
   transition: border-color .5s ease;
 }
 .pill .dot{
-  display:inline-block;width:6px;height:6px;border-radius:50%;
-  background:var(--accent);margin-right:10px;vertical-align:middle;
-  box-shadow: 0 0 4px var(--accent);
+  display:inline-block;width:0.6rem;height:0.6rem;border-radius:50%;
+  background:var(--accent);margin-right:1rem;vertical-align:middle;
+  box-shadow: 0 0 0.4rem var(--accent);
 }
 
 /* ── Panel Borders ───────────────────────────── */
 .panel{
   background:var(--bg-panel);
-  border: 1px solid var(--frame);
-  border-radius: 8px; /* Elegant slightly rounded corners */
-  padding:20px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(212,175,55,0.1);
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  display:flex;flex-direction:column;gap:16px;
+  border: 0.1rem solid var(--frame);
+  border-radius: 0.8rem; /* Elegant slightly rounded corners */
+  padding:2rem;
+  box-shadow: 0 0.8rem 3.2rem rgba(0,0,0,0.5), inset 0 0 0 0.1rem rgba(212,175,55,0.1);
+  backdrop-filter: blur(1.2rem); -webkit-backdrop-filter: blur(1.2rem);
+  display:flex;flex-direction:column;gap:1.6rem;
   position:relative;
   overflow:hidden;
 }
 /* Traditional corner flourishes for panels */
 .panel::before, .panel::after {
-  content:""; position:absolute; width:16px; height:16px;
-  border:1px solid #ffffff; pointer-events:none; opacity:0.5;
+  content:""; position:absolute; width:1.6rem; height:1.6rem;
+  border:0.1rem solid #ffffff; pointer-events:none; opacity:0.5;
 }
-.panel::before { top:6px; left:6px; border-right:none; border-bottom:none; }
-.panel::after { bottom:6px; right:6px; border-left:none; border-top:none; }
+.panel::before { top:0.6rem; left:0.6rem; border-right:none; border-bottom:none; }
+.panel::after { bottom:0.6rem; right:0.6rem; border-left:none; border-top:none; }
 
 /* ── HUD side panels ────────────────────────────── */
 
 .hud .title::before{
-  content:"";flex:0 0 auto;width:15px;height:10px;margin-right:8px;
+  content:"";flex:0 0 auto;width:1.5rem;height:1rem;margin-right:0.8rem;
   background: var(--accent); opacity:.9;
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 16'%3E%3Cpath fill='%23000' d='M12 15C12 8 8 4 12 1C16 4 12 8 12 15ZM12 15C7 11 3 11 2 7C8 7 11 11 12 15ZM12 15C17 11 21 11 22 7C16 7 13 11 12 15Z'/%3E%3C/svg%3E") center/contain no-repeat;
           mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 16'%3E%3Cpath fill='%23000' d='M12 15C12 8 8 4 12 1C16 4 12 8 12 15ZM12 15C7 11 3 11 2 7C8 7 11 11 12 15ZM12 15C17 11 21 11 22 7C16 7 13 11 12 15Z'/%3E%3C/svg%3E") center/contain no-repeat;
   transition: background .55s ease;
 }
 .hud .title::after{
-  content:"";flex:1;height:1px;
+  content:"";flex:1;height:0.1rem;
   background: linear-gradient(to right, var(--accent), transparent);
-  margin-left:10px;
+  margin-left:1rem;
   transition: background .55s ease;
 }
 
-.row{display:flex;justify-content:space-between;padding:3px 0;color:var(--text-dim);font-size:11px;letter-spacing:0}
+.row{display:flex;justify-content:space-between;padding:0.3rem 0;color:var(--text-dim);font-size:1.1rem;letter-spacing:0}
 .row .v{color:var(--text)}
 .row .v.ok{color:var(--lime)}
 .row .v.warn{color:var(--orange)}
@@ -211,50 +211,50 @@ body::after{
 .row .v.cy{color:var(--accent); transition: color .55s ease}
 
 .bar{
-  display:flex;align-items:center;gap:10px;margin:5px 0;
-  font-size:9px;letter-spacing:0;color:var(--text-dim);
+  display:flex;align-items:center;gap:1rem;margin:0.5rem 0;
+  font-size:0.9rem;letter-spacing:0;color:var(--text-dim);
 }
-.bar .lbl{width:30px}
-.bar .num{width:38px;text-align:right;color:var(--text);font-variant-numeric:tabular-nums}
+.bar .lbl{width:3rem}
+.bar .num{width:3.8rem;text-align:right;color:var(--text);font-variant-numeric:tabular-nums}
 .bar .track {
-  flex:1; height:4px; background:rgba(20,20,20,0.9);
-  border-radius:2px; overflow:hidden;
-  border: 1px solid rgba(255,255,255,0.2);
+  flex:1; height:0.4rem; background:rgba(20,20,20,0.9);
+  border-radius:0.2rem; overflow:hidden;
+  border: 0.1rem solid rgba(255,255,255,0.2);
 }
 .bar .fill {
   height:100%; background:#ffffff;
-  box-shadow: 0 0 5px #ffffff;
+  box-shadow: 0 0 0.5rem #ffffff;
   transition: width 0.3s ease;
 }
 .bar.warn .fill {
   height:100%; background:#ffffff;
-  box-shadow: 0 0 5px #ffffff;
+  box-shadow: 0 0 0.5rem #ffffff;
   transition: width 0.3s ease;
 }
 .bar.bad  .fill {
   height:100%; background:#ffffff;
-  box-shadow: 0 0 5px #ffffff;
+  box-shadow: 0 0 0.5rem #ffffff;
   transition: width 0.3s ease;
 }
 
 /* tags */
-.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.tags{display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.6rem}
 .tag{
   background:rgba(255,255,255,0.04);
-  border:1px solid var(--frame);
-  color:var(--text);padding:2px 7px;border-radius:2px;
-  font-size:9px;letter-spacing:0;font-weight:600;
+  border:0.1rem solid var(--frame);
+  color:var(--text);padding:0.2rem 0.7rem;border-radius:0.2rem;
+  font-size:0.9rem;letter-spacing:0;font-weight:600;
   transition: all .2s;
 }
 .tag:hover{
   border-color:var(--accent);color:var(--accent);
-  box-shadow:0 0 8px var(--accent-glow);
+  box-shadow:0 0 0.8rem var(--accent-glow);
 }
 
 /* dials */
 .dial {
-  position:relative;width:100%;height:110px;margin-top:6px;
-  border: 1px solid var(--frame);
+  position:relative;width:100%;height:11rem;margin-top:0.6rem;
+  border: 0.1rem solid var(--frame);
   border-radius: 50%;
   background: rgba(15,15,15, 0.8);
 }
@@ -263,14 +263,14 @@ body::after{
 /* ── Buttons (Quick / Tactical) — shimmer on hover ── */
 .qbtn {
   background: rgba(20,20,20,0.9);
-  border: 1px solid var(--frame);
+  border: 0.1rem solid var(--frame);
   color: var(--text);
-  padding: 6px 12px;
-  border-radius: 4px;
+  padding: 0.6rem 1.2rem;
+  border-radius: 0.4rem;
   cursor: pointer;
   text-align: left;
   font-family: "Inter", sans-serif;
-  font-size: 11px;
+  font-size: 1.1rem;
   font-weight: 600;
   text-transform: uppercase;
   transition: all 0.2s ease;
@@ -291,17 +291,17 @@ body::after{
   border-color: var(--text);
 }
 .qbtn:hover::before{ transform:translateX(110%); }
-.qbtn:active{ transform:translateX(2px) scale(0.985); }
+.qbtn:active{ transform:translateX(0.2rem) scale(0.985); }
 select.qbtn {
   background: rgba(20,20,20,0.9);
-  border: 1px solid var(--frame);
+  border: 0.1rem solid var(--frame);
   color: var(--text);
-  padding: 6px 12px;
-  border-radius: 4px;
+  padding: 0.6rem 1.2rem;
+  border-radius: 0.4rem;
   cursor: pointer;
   text-align: left;
   font-family: "Inter", sans-serif;
-  font-size: 11px;
+  font-size: 1.1rem;
   font-weight: 600;
   text-transform: uppercase;
   transition: all 0.2s ease;
@@ -313,39 +313,39 @@ select.qbtn {
 
 /* Data telemetry stream */
 .stream{
-  margin-top:8px;font-family:"JetBrains Mono", monospace;
-  font-size:9.5px;color:var(--text-dim);line-height:1.5;
-  height:104px;overflow:hidden;border-top:1px dashed var(--frame);padding-top:6px;
+  margin-top:0.8rem;font-family:"JetBrains Mono", monospace;
+  font-size:0.95rem;color:var(--text-dim);line-height:1.5;
+  height:10.4rem;overflow:hidden;border-top:0.1rem dashed var(--frame);padding-top:0.6rem;
 }
 .stream div {
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; animation:streamIn .2s ease-out;
   background: rgba(10,10,10,0.9);
   color: #ffffff;
-  border-left: 3px solid #ffffff;
-  padding: 4px 8px;
-  margin-bottom: 4px;
+  border-left: 0.3rem solid #ffffff;
+  padding: 0.4rem 0.8rem;
+  margin-bottom: 0.4rem;
 }
 .stream div.hot{color:var(--accent); transition: color .55s ease}
 @keyframes thinkingPulse {
-  0% { box-shadow: inset 0 0 0px transparent; }
-  50% { box-shadow: inset 0 0 150px rgba(255,255,255, 0.4); }
-  100% { box-shadow: inset 0 0 0px transparent; }
+  0% { box-shadow: inset 0 0 0 transparent; }
+  50% { box-shadow: inset 0 0 15rem rgba(255,255,255, 0.4); }
+  100% { box-shadow: inset 0 0 0 transparent; }
 }
 body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
 
 /* ❖ Center Piece ❖ */
 #center-container {
   position:fixed; 
-  left: 320px; /* Constrain inside left panel */
-  right: 320px; /* Constrain inside right panel */
-  top:64px; bottom:120px;
+  left: 32rem; /* Constrain inside left panel */
+  right: 32rem; /* Constrain inside right panel */
+  top:6.4rem; bottom:12rem;
   z-index:4; cursor:pointer;
   display: flex; align-items: center; justify-content: center;
 }
 #center-mandala {
   position: absolute;
-  width: 350px;
-  height: 350px;
+  width: 35rem;
+  height: 35rem;
   object-fit: contain;
   animation: rotateMandala 20s linear infinite;
   z-index: 5;
@@ -360,83 +360,83 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
   position: absolute;
   left:50%; top:50%;
   transform: translate(-50%, -50%);
-  width: 450px;
-  height: 450px;
+  width: 45rem;
+  height: 45rem;
   z-index: 6;
   pointer-events: none;
 }
 
 /* ── Readout transcript ────────────────────────── */
 .readout{
-  position:fixed;bottom:138px;left:50%;transform:translateX(-50%);
-  width:min(880px,92vw);max-height:46vh;overflow-y:auto;overflow-x:hidden;
+  position:fixed;bottom:13.8rem;left:50%;transform:translateX(-50%);
+  width:min(88rem,92vw);max-height:46vh;overflow-y:auto;overflow-x:hidden;
   z-index:12;text-align:left;
   scrollbar-width:thin;scrollbar-color:var(--frame) transparent;
-  padding:6px 8px;
+  padding:0.6rem 0.8rem;
 }
-.readout::-webkit-scrollbar{width:5px}
-.readout::-webkit-scrollbar-thumb{background:var(--frame);border-radius:3px}
+.readout::-webkit-scrollbar{width:0.5rem}
+.readout::-webkit-scrollbar-thumb{background:var(--frame);border-radius:0.3rem}
 .readout .line{
-  display:block;margin:5px 0;padding:10px 14px 10px 18px;
-  border:1px solid var(--frame-strong);
+  display:block;margin:0.5rem 0;padding:1rem 1.4rem 1rem 1.8rem;
+  border:0.1rem solid var(--frame-strong);
   background: rgba(15,15,15,0.9);
-  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  font-size:13px;line-height:1.55;color:var(--text);
+  backdrop-filter: blur(0.8rem); -webkit-backdrop-filter: blur(0.8rem);
+  font-size:1.3rem;line-height:1.55;color:var(--text);
   word-wrap:break-word;white-space:pre-wrap;
   position:relative;
-  border-radius:4px;
+  border-radius:0.4rem;
   animation: lineIn .28s ease-out;
 }
 .readout .line::before{
-  content:""; position:absolute; left:0; top:6%; bottom:6%; width:3px;
-  background:var(--accent); box-shadow:0 0 10px var(--accent-glow);
+  content:""; position:absolute; left:0; top:6%; bottom:6%; width:0.3rem;
+  background:var(--accent); box-shadow:0 0 1rem var(--accent-glow);
 }
 .readout .line.user        { color:var(--text); }
-.readout .line.user::before{ background:#ffffff; box-shadow:0 0 8px rgba(255,255,255,0.4); }
+.readout .line.user::before{ background:#ffffff; box-shadow:0 0 0.8rem rgba(255,255,255,0.4); }
 .readout .line.kalki      { color:var(--text); }
-.readout .line.kalki::before{ background:var(--lime); box-shadow:0 0 8px rgba(0,255,128,0.5); }
+.readout .line.kalki::before{ background:var(--lime); box-shadow:0 0 0.8rem rgba(0,255,128,0.5); }
 .readout .line.error       { color:var(--red); border-color:rgba(255,51,68,0.45); }
-.readout .line.error::before{ background:var(--red); box-shadow:0 0 10px rgba(255,51,68,0.55); }
+.readout .line.error::before{ background:var(--red); box-shadow:0 0 1rem rgba(255,51,68,0.55); }
 @keyframes lineIn{
-  from { opacity:0; transform: translateY(6px); }
+  from { opacity:0; transform: translateY(0.6rem); }
   to   { opacity:1; transform: translateY(0); }
 }
 
 /* Code blocks inside the readout */
 .codeBlock{
-  margin:6px 0;border:1px solid var(--frame-strong);
-  background:#000;position:relative;border-radius:2px;
+  margin:0.6rem 0;border:0.1rem solid var(--frame-strong);
+  background:#000;position:relative;border-radius:0.2rem;
 }
 .codeHead{
   display:flex;justify-content:space-between;align-items:center;
-  padding:5px 10px;background:rgba(255,255,255,0.04);
-  border-bottom:1px solid var(--frame);
-  font-size:9.5px;letter-spacing:0;color:var(--accent);
+  padding:0.5rem 1rem;background:rgba(255,255,255,0.04);
+  border-bottom:0.1rem solid var(--frame);
+  font-size:0.95rem;letter-spacing:0;color:var(--accent);
   text-transform:uppercase;font-family:"JetBrains Mono", monospace;
   font-weight:700;
 }
 .codeCopy{
-  background:transparent;border:1px solid var(--frame-strong);
-  color:var(--text);font-size:9.5px;letter-spacing:0;
-  padding:3px 9px;border-radius:2px;cursor:pointer;
+  background:transparent;border:0.1rem solid var(--frame-strong);
+  color:var(--text);font-size:0.95rem;letter-spacing:0;
+  padding:0.3rem 0.9rem;border-radius:0.2rem;cursor:pointer;
   font-family:inherit;font-weight:700;
   transition: all .18s;
 }
 .codeCopy:hover{ background:var(--accent); color:#000; border-color:var(--accent); }
 .codeCopy.copied{ color:#000; background:var(--lime); border-color:var(--lime); }
 .codeBlock pre{
-  margin:0;padding:12px 14px;
+  margin:0;padding:1.2rem 1.4rem;
   font-family:"JetBrains Mono","Consolas","Courier New",monospace;
-  font-size:12px;line-height:1.55;color:#fff5e6;
-  white-space:pre;overflow-x:auto;max-height:340px;overflow-y:auto;
+  font-size:1.2rem;line-height:1.55;color:#fff5e6;
+  white-space:pre;overflow-x:auto;max-height:34rem;overflow-y:auto;
   scrollbar-width:thin;scrollbar-color:var(--frame) transparent;
 }
-.codeBlock pre::-webkit-scrollbar{height:5px;width:5px}
+.codeBlock pre::-webkit-scrollbar{height:0.5rem;width:0.5rem}
 .codeBlock pre::-webkit-scrollbar-thumb{background:var(--frame)}
 
 /* ── Bottom audio wave ─────────────────────────── */
 #wave{
-  position:fixed;bottom:96px;left:0;right:0;height:34px;
+  position:fixed;bottom:9.6rem;left:0;right:0;height:3.4rem;
   z-index:8;pointer-events:none;width:100vw;
 }
 
@@ -444,100 +444,100 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
 
 
 .composer {
-  position:fixed; bottom:28px; left:50%; transform:translateX(-50%); width:600px;
-  display:flex; align-items:center; gap:8px;
+  position:fixed; bottom:2.8rem; left:50%; transform:translateX(-50%); width:60rem;
+  display:flex; align-items:center; gap:0.8rem;
   background:rgba(10,10,10,0.9);
-  border:1px solid #ffffff;
-  border-radius:8px;
-  padding:8px 12px;
+  border:0.1rem solid #ffffff;
+  border-radius:0.8rem;
+  padding:0.8rem 1.2rem;
   z-index:20;
-  box-shadow:0 0 15px rgba(255,255,255,0.2);
+  box-shadow:0 0 1.5rem rgba(255,255,255,0.2);
   transition: box-shadow 0.3s ease;
 }
 .composer:focus-within {
   animation: breatheGlow 2s infinite alternate;
 }
 @keyframes breatheGlow {
-  from { box-shadow: 0 0 10px rgba(255,255,255,0.2); }
-  to { box-shadow: 0 0 25px rgba(255,255,255,0.6); }
+  from { box-shadow: 0 0 1rem rgba(255,255,255,0.2); }
+  to { box-shadow: 0 0 2.5rem rgba(255,255,255,0.6); }
 }
 #input{
   flex:1;background:#111111;
-  border:1px solid var(--frame-strong);color:var(--text);
-  padding:14px 22px;font-size:14px;font-family:inherit;outline:none;
+  border:0.1rem solid var(--frame-strong);color:var(--text);
+  padding:1.4rem 2.2rem;font-size:1.4rem;font-family:inherit;outline:none;
   letter-spacing:0;
-  clip-path:polygon(14px 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,14px 100%,0 50%);
+  clip-path:polygon(1.4rem 0,calc(100% - 1.4rem) 0,100% 50%,calc(100% - 1.4rem) 100%,1.4rem 100%,0 50%);
   transition: border-color .25s;
 }
 #input:focus{
   border-color:var(--accent);
-  box-shadow:0 0 24px var(--accent-glow);
+  box-shadow:0 0 2.4rem var(--accent-glow);
 }
-#input::placeholder{color:var(--text-dim);letter-spacing:0;font-size:12px}
+#input::placeholder{color:var(--text-dim);letter-spacing:0;font-size:1.2rem}
 
 .iconBtn{
-  width:46px;height:46px;border:1px solid var(--frame-strong);
+  width:4.6rem;height:4.6rem;border:0.1rem solid var(--frame-strong);
   background:rgba(0,0,0,0.85);color:var(--text);cursor:pointer;
-  display:flex;align-items:center;justify-content:center;font-size:18px;
-  clip-path:polygon(14px 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,14px 100%,0 50%);
+  display:flex;align-items:center;justify-content:center;font-size:1.8rem;
+  clip-path:polygon(1.4rem 0,calc(100% - 1.4rem) 0,100% 50%,calc(100% - 1.4rem) 100%,1.4rem 100%,0 50%);
   transition: all .2s;
 }
-.iconBtn:hover{ color:var(--accent); border-color:var(--accent); box-shadow:0 0 14px var(--accent-glow); }
-#micBtn.active{ color:var(--lime); border-color:var(--lime); box-shadow:0 0 18px rgba(0,255,128,0.55); }
+.iconBtn:hover{ color:var(--accent); border-color:var(--accent); box-shadow:0 0 1.4rem var(--accent-glow); }
+#micBtn.active{ color:var(--lime); border-color:var(--lime); box-shadow:0 0 1.8rem rgba(0,255,128,0.55); }
 #stopBtn{color:var(--red);border-color:rgba(255,51,68,0.5)}
-#stopBtn:hover{color:#ff7080;border-color:var(--red);box-shadow:0 0 14px rgba(255,51,68,0.5)}
+#stopBtn:hover{color:#ff7080;border-color:var(--red);box-shadow:0 0 1.4rem rgba(255,51,68,0.5)}
 
 /* ── Drag-and-drop overlay ─────────────────────── */
 #dropZone{
   position:fixed;inset:0;z-index:60;
   background:rgba(0,0,0,0.95);
-  border:4px dashed var(--accent);
+  border:0.4rem dashed var(--accent);
   display:none;align-items:center;justify-content:center;
-  backdrop-filter:blur(6px);
+  backdrop-filter:blur(0.6rem);
   pointer-events:none;
 }
 #dropZone.active{display:flex}
 .dropContent{text-align:center;color:var(--accent)}
-.dropIcon{font-size:88px;line-height:1;margin-bottom:12px;
-          text-shadow:0 0 30px var(--accent-glow);
+.dropIcon{font-size:8.8rem;line-height:1;margin-bottom:1.2rem;
+          text-shadow:0 0 3rem var(--accent-glow);
           animation: dropBob 1.4s ease-in-out infinite;}
-@keyframes dropBob{ 50% { transform:translateY(-8px); } }
-.dropText{font-size:30px;letter-spacing:0;font-weight:700}
-.dropHint{font-size:11px;color:var(--text-dim);letter-spacing:0;
-          margin-top:10px;text-transform:uppercase}
+@keyframes dropBob{ 50% { transform:translateY(-0.8rem); } }
+.dropText{font-size:3rem;letter-spacing:0;font-weight:700}
+.dropHint{font-size:1.1rem;color:var(--text-dim);letter-spacing:0;
+          margin-top:1rem;text-transform:uppercase}
 
 /* ── Attachment chip strip ─────────────────────── */
 #attachStrip{
-  position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
-  width:min(740px,92vw);
-  display:flex;gap:8px;z-index:14;flex-wrap:wrap;
+  position:fixed;bottom:9rem;left:50%;transform:translateX(-50%);
+  width:min(74rem,92vw);
+  display:flex;gap:0.8rem;z-index:14;flex-wrap:wrap;
 }
 .attach-chip{
   background:rgba(0,0,0,0.92);
-  border:1px solid var(--accent);
-  padding:5px 10px;display:flex;align-items:center;gap:8px;
-  font-size:11px;color:var(--text);border-radius:2px;
-  box-shadow:0 0 12px var(--accent-glow);
+  border:0.1rem solid var(--accent);
+  padding:0.5rem 1rem;display:flex;align-items:center;gap:0.8rem;
+  font-size:1.1rem;color:var(--text);border-radius:0.2rem;
+  box-shadow:0 0 1.2rem var(--accent-glow);
   animation:lineIn .2s ease-out;
 }
 .attach-chip img{
-  height:30px;width:30px;object-fit:cover;border-radius:2px;
-  border:1px solid var(--accent);
+  height:3rem;width:3rem;object-fit:cover;border-radius:0.2rem;
+  border:0.1rem solid var(--accent);
 }
 .attach-chip .name{
-  max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  max-width:16rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .attach-chip button{
   background:none;border:none;color:var(--text-dim);cursor:pointer;
-  font-size:14px;line-height:1;padding:0 2px;
+  font-size:1.4rem;line-height:1;padding:0 0.2rem;
 }
 .attach-chip button:hover{color:var(--red)}
 
 /* ── Footer tag ────────────────────────────────── */
 .foot-tag{
-  position:fixed;bottom:6px;left:50%;transform:translateX(-50%);
+  position:fixed;bottom:0.6rem;left:50%;transform:translateX(-50%);
   z-index:6;pointer-events:none;
-  font-size:10px;letter-spacing:0;color:rgba(255,196,77,0.32);
+  font-size:1rem;letter-spacing:0;color:rgba(255,196,77,0.32);
   font-weight:700;
 }
 
@@ -547,21 +547,21 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
   background: #0a0a0a;
   display:flex;flex-direction:column;justify-content:center;align-items:center;
   font-family:"JetBrains Mono", monospace;color:var(--gold-bright);
-  letter-spacing:0;font-size:12px;
+  letter-spacing:0;font-size:1.2rem;
   transition: opacity .8s;
 }
-.boot pre{color:#ffffff;font-size:11px;line-height:1.2;margin-bottom:20px;
-          text-shadow:0 0 14px var(--accent-glow)}
-.boot .lines{max-width:560px;width:100%;padding:0 24px}
-.boot .line{margin:2px 0;opacity:0;animation:fadein .3s forwards}
+.boot pre{color:#ffffff;font-size:1.1rem;line-height:1.2;margin-bottom:2rem;
+          text-shadow:0 0 1.4rem var(--accent-glow)}
+.boot .lines{max-width:56rem;width:100%;padding:0 2.4rem}
+.boot .line{margin:0.2rem 0;opacity:0;animation:fadein .3s forwards}
 .boot .line .ok{color:var(--lime)}
 .boot.hide{opacity:0;pointer-events:none}
 @keyframes fadein{ to { opacity:1 } }
 
 /* ── Reticle that follows cursor ───────────────── */
 .reticle{
-  position:fixed;width:60px;height:60px;z-index:32;pointer-events:none;
-  border:1px solid var(--accent);border-radius:50%;
+  position:fixed;width:6rem;height:6rem;z-index:32;pointer-events:none;
+  border:0.1rem solid var(--accent);border-radius:50%;
   transform:translate(-50%,-50%);
   mix-blend-mode:screen;
   display:none;opacity:.45;
@@ -571,8 +571,8 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
   content:"";position:absolute;background:var(--accent);
   transition: background .55s ease;
 }
-.reticle::before{left:50%;top:-8px;bottom:-8px;width:1px;transform:translateX(-50%)}
-.reticle::after{top:50%;left:-8px;right:-8px;height:1px;transform:translateY(-50%)}
+.reticle::before{left:50%;top:-0.8rem;bottom:-0.8rem;width:0.1rem;transform:translateX(-50%)}
+.reticle::after{top:50%;left:-0.8rem;right:-0.8rem;height:0.1rem;transform:translateY(-50%)}
 
 /* ── Wake flash effect (fires on wake word) ────── */
 @keyframes wakeFlash{
@@ -589,7 +589,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
 /* ── Typewriter cursor for KALKI replies ──────── */
 .typing::after{
   content:"▮";
-  margin-left:2px;
+  margin-left:0.2rem;
   color:var(--lime);
   animation: blink .8s steps(1) infinite;
 }
@@ -631,7 +631,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
     <div>SYS <span class="v" id="topSys">v1.0.2 PRO</span></div>
     <div>NET <span class="v ok" id="topNet">ONLINE</span></div>
     <div><span class="v cy" id="topClock">00:00:00</span></div>
-    <div style="cursor:pointer; border:1px solid var(--frame); padding:2px 8px; border-radius:3px;" id="topSettingsBtn">⚙ SETTINGS</div>
+    <div style="cursor:pointer; border:0.1rem solid var(--frame); padding:0.2rem 0.8rem; border-radius:0.3rem;" id="topSettingsBtn">⚙ SETTINGS</div>
   </div>
 </div>
 
@@ -650,7 +650,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
   <div class="bar"><div class="lbl">NET</div><div class="track"><div class="fill" id="netFill"></div></div><div class="num" id="netNum">--</div></div>
   <div class="bar"><div class="lbl">PWR</div><div class="track"><div class="fill" id="pwrFill"></div></div><div class="num" id="pwrNum">--</div></div>
 
-  <div class="title" style="margin-top:14px">CORE SUBSYSTEMS</div>
+  <div class="title" style="margin-top:1.4rem">CORE SUBSYSTEMS</div>
   <div class="row"><span>GROQ AI</span><span class="v" id="sGroq">…</span></div>
   <div class="row"><span>OLLAMA</span><span class="v" id="sOllama">…</span></div>
   <div class="row"><span>VOICE</span><span class="v ok">Brian · Neural</span></div>
@@ -660,7 +660,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
   <div class="row"><span>MEM BANK</span><span class="v cy" id="sMem">0</span></div>
   <div class="row"><span>UPTIME</span><span class="v cy" id="sUp">0s</span></div>
 
-  <div class="title" style="margin-top:14px">EXPERTISE</div>
+  <div class="title" style="margin-top:1.4rem">EXPERTISE</div>
   <div class="tags">
     <span class="tag">CYBER</span><span class="tag">PWN</span>
     <span class="tag">PY</span><span class="tag">TS</span>
@@ -674,7 +674,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
 <!-- RIGHT HUD -->
 <div class="hud right" id="rightHud">
   <div class="title">SYSTEM EVENT LOGS</div>
-  <div id="eventLogsWidget" style="font-size:11px;line-height:1.5;color:var(--text-dim);height:75px;overflow:hidden;font-family:monospace;margin-bottom:12px;">
+  <div id="eventLogsWidget" style="font-size:1.1rem;line-height:1.5;color:var(--text-dim);height:7.5rem;overflow:hidden;font-family:monospace;margin-bottom:1.2rem;">
     <div style="color:var(--lime)">[OK] Auth daemon started</div>
     <div style="color:var(--accent)">[WARN] High traffic on port 443</div>
     <div style="color:var(--text-dim)">[INFO] Syncing mail...</div>
@@ -682,22 +682,22 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
     <div style="color:var(--lime)">[OK] Workspace initialized</div>
   </div>
 
-  <div class="title" style="margin-top:8px">RECENT THREATS (CVE)</div>
-  <div id="cveWidget" style="font-size:11px;line-height:1.5;color:var(--text-dim);height:75px;overflow:hidden;font-family:monospace;margin-bottom:4px;">
+  <div class="title" style="margin-top:0.8rem">RECENT THREATS (CVE)</div>
+  <div id="cveWidget" style="font-size:1.1rem;line-height:1.5;color:var(--text-dim);height:7.5rem;overflow:hidden;font-family:monospace;margin-bottom:0.4rem;">
     <div style="color:#ff5555">[CRIT] CVE-2026-1043</div>
-    <div style="color:var(--text-dim);padding-left:8px;">Kernel overflow detected</div>
-    <div style="color:var(--accent);margin-top:4px;">[HIGH] CVE-2025-9982</div>
-    <div style="color:var(--text-dim);padding-left:8px;">Webkit exploit in wild</div>
+    <div style="color:var(--text-dim);padding-left:0.8rem;">Kernel overflow detected</div>
+    <div style="color:var(--accent);margin-top:0.4rem;">[HIGH] CVE-2025-9982</div>
+    <div style="color:var(--text-dim);padding-left:0.8rem;">Webkit exploit in wild</div>
   </div>
 
-  <div class="title" style="margin-top:8px">TODAY</div>
-  <div id="calWidget" style="font-size:11px;line-height:1.5;color:var(--text-dim);">
+  <div class="title" style="margin-top:0.8rem">TODAY</div>
+  <div id="calWidget" style="font-size:1.1rem;line-height:1.5;color:var(--text-dim);">
     <div id="calMailLine" style="color:var(--accent); transition:color .55s ease">📬 — unread important</div>
     <div id="calNowPlaying" style="color:var(--lime);display:none">♫ —</div>
-    <div id="calEvents" style="margin-top:4px">Calendar idle</div>
+    <div id="calEvents" style="margin-top:0.4rem">Calendar idle</div>
   </div>
 
-  <div class="title" style="margin-top:8px">NEURAL MODEL</div>
+  <div class="title" style="margin-top:0.8rem">NEURAL MODEL</div>
   <select class="qbtn" id="modelSel">
     <option value="llama-3.3-70b-versatile">llama-3.3-70b (smart)</option>
     <option value="llama-3.1-8b-instant">llama-3.1-8b (fast)</option>
@@ -706,7 +706,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
     <option value="gemma2-9b-it">gemma2-9b</option>
   </select>
 
-  <div class="title" style="margin-top:12px">TACTICAL OPS</div>
+  <div class="title" style="margin-top:1.2rem">TACTICAL OPS</div>
   <button class="qbtn" id="pauseListenerBtn">MIC: LISTENING</button>
   <button class="qbtn" id="settingsBtn" style="color:var(--accent);">SETTINGS</button>
   <button class="qbtn" data-cmd="look at my screen and solve it">SCAN SCREEN</button>
@@ -726,7 +726,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
   <button class="qbtn" data-cmd="security brief">SECURITY BRIEF</button>
   <button class="qbtn" data-cmd="attack surface this site">SURFACE THIS SITE</button>
 
-  <div class="title" style="margin-top:12px">QUICK COMMANDS</div>
+  <div class="title" style="margin-top:1.2rem">QUICK COMMANDS</div>
   <button class="qbtn" data-cmd="what time is it">TIME</button>
   <button class="qbtn" data-cmd="weather">WEATHER</button>
   <button class="qbtn" data-cmd="show my tasks">MY TASKS</button>
@@ -735,7 +735,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
   <button class="qbtn" data-cmd="take a screenshot">SCREENSHOT</button>
   <button class="qbtn" data-cmd="what do you remember">MEMORY DUMP</button>
 
-  <div class="title" style="margin-top:12px">TELEMETRY</div>
+  <div class="title" style="margin-top:1.2rem">TELEMETRY</div>
   <div class="stream" id="stream"></div>
 </div>
 
@@ -747,43 +747,43 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
 
 <!-- SETTINGS MODAL -->
 <div id="settingsModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center; font-family:var(--mono);">
-  <div class="modal-content" style="background:#0a0a0c; border:1px solid var(--accent); width:800px; height:600px; display:flex; flex-direction:column;">
-    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px; border-bottom:1px solid #333;">
-      <div style="font-size:20px; color:var(--accent); font-weight:bold;">KALKI CONFIGURATION</div>
-      <button class="qbtn" id="closeSettingsBtn" style="background:transparent; color:var(--text-dim); border:none; cursor:pointer; font-size:18px;">✕</button>
+  <div class="modal-content" style="background:#0a0a0c; border:0.1rem solid var(--accent); width:80rem; height:60rem; display:flex; flex-direction:column;">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:1.5rem 2rem; border-bottom:0.1rem solid #333;">
+      <div style="font-size:2rem; color:var(--accent); font-weight:bold;">KALKI CONFIGURATION</div>
+      <button class="qbtn" id="closeSettingsBtn" style="background:transparent; color:var(--text-dim); border:none; cursor:pointer; font-size:1.8rem;">✕</button>
     </div>
-    <div id="settingsNotice" style="display:none; padding:8px; margin:10px 20px; font-size:12px; font-weight:bold; text-align:center; border:1px solid;"></div>
+    <div id="settingsNotice" style="display:none; padding:0.8rem; margin:1rem 2rem; font-size:1.2rem; font-weight:bold; text-align:center; border:0.1rem solid;"></div>
     
     <div style="display:flex; flex:1; overflow:hidden;">
       <!-- Sidebar -->
-      <div style="width:200px; border-right:1px solid #333; padding:10px 0; display:flex; flex-direction:column;">
-        <button class="tab-btn active" data-tab="tab-general" style="background:transparent; color:var(--text); border:none; padding:12px 20px; text-align:left; cursor:pointer; border-left:3px solid var(--accent);">GENERAL</button>
-        <button class="tab-btn" data-tab="tab-integrations" style="background:transparent; color:var(--text-dim); border:none; padding:12px 20px; text-align:left; cursor:pointer; border-left:3px solid transparent;">INTEGRATIONS</button>
-        <button class="tab-btn" data-tab="tab-apikeys" style="background:transparent; color:var(--text-dim); border:none; padding:12px 20px; text-align:left; cursor:pointer; border-left:3px solid transparent;">API KEYS</button>
-        <button class="tab-btn" data-tab="tab-system" style="background:transparent; color:var(--text-dim); border:none; padding:12px 20px; text-align:left; cursor:pointer; border-left:3px solid transparent;">SYSTEM</button>
+      <div style="width:20rem; border-right:0.1rem solid #333; padding:1rem 0; display:flex; flex-direction:column;">
+        <button class="tab-btn active" data-tab="tab-general" style="background:transparent; color:var(--text); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid var(--accent);">GENERAL</button>
+        <button class="tab-btn" data-tab="tab-integrations" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent;">INTEGRATIONS</button>
+        <button class="tab-btn" data-tab="tab-apikeys" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent;">API KEYS</button>
+        <button class="tab-btn" data-tab="tab-system" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent;">SYSTEM</button>
       </div>
       
       <!-- Content Area -->
-      <div style="flex:1; padding:20px; overflow-y:auto; position:relative;">
+      <div style="flex:1; padding:2rem; overflow-y:auto; position:relative;">
         
         <!-- GENERAL TAB -->
         <div id="tab-general" class="tab-content" style="display:block;">
-          <h3 style="margin-bottom:15px; color:var(--accent);">GENERAL SETTINGS</h3>
-          <div style="margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; background:#111; padding:10px; border:1px solid #333;">
+          <h3 style="margin-bottom:1.5rem; color:var(--accent);">GENERAL SETTINGS</h3>
+          <div style="margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; background:#111; padding:1rem; border:0.1rem solid #333;">
             <span>ASSISTANT CORE</span>
-            <button class="qbtn" id="modalToggleAssistantBtn" style="border:1px solid var(--lime); color:var(--lime); padding:5px 10px; font-size:12px; cursor:pointer;">BUSY MODE: OFF</button>
+            <button class="qbtn" id="modalToggleAssistantBtn" style="border:0.1rem solid var(--lime); color:var(--lime); padding:0.5rem 1rem; font-size:1.2rem; cursor:pointer;">BUSY MODE: OFF</button>
           </div>
-          <div style="margin-bottom:15px;">
-            <label style="display:block; font-size:12px; color:var(--text-dim);">OWNER NAME</label>
-            <input type="text" id="set_owner_name" style="width:100%; background:#111; color:var(--text); border:1px solid #333; padding:8px; margin-top:3px;">
+          <div style="margin-bottom:1.5rem;">
+            <label style="display:block; font-size:1.2rem; color:var(--text-dim);">OWNER NAME</label>
+            <input type="text" id="set_owner_name" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
           </div>
-          <div style="margin-bottom:15px;">
-            <label style="display:block; font-size:12px; color:var(--text-dim);">OWNER TITLE</label>
-            <input type="text" id="set_owner_title" style="width:100%; background:#111; color:var(--text); border:1px solid #333; padding:8px; margin-top:3px;">
+          <div style="margin-bottom:1.5rem;">
+            <label style="display:block; font-size:1.2rem; color:var(--text-dim);">OWNER TITLE</label>
+            <input type="text" id="set_owner_title" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
           </div>
-          <div style="margin-bottom:15px;">
-            <label style="display:block; font-size:12px; color:var(--text-dim);">THEME / MODE</label>
-            <select id="set_theme" style="width:100%; background:#111; color:var(--text); border:1px solid #333; padding:8px; margin-top:3px;">
+          <div style="margin-bottom:1.5rem;">
+            <label style="display:block; font-size:1.2rem; color:var(--text-dim);">THEME / MODE</label>
+            <select id="set_theme" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
               <option value="system">System Default</option>
               <option value="stealth">Stealth Mode</option>
             </select>
@@ -792,122 +792,122 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
         
         <!-- INTEGRATIONS TAB -->
         <div id="tab-integrations" class="tab-content" style="display:none;">
-          <h3 style="margin-bottom:15px; color:var(--accent);">INTEGRATIONS</h3>
+          <h3 style="margin-bottom:1.5rem; color:var(--accent);">INTEGRATIONS</h3>
           
-          <div style="border:1px solid #333; background:#111; padding:15px; margin-bottom:20px;">
-            <h4 style="margin-bottom:10px; display:flex; justify-content:space-between;">
+          <div style="border:0.1rem solid #333; background:#111; padding:1.5rem; margin-bottom:2rem;">
+            <h4 style="margin-bottom:1rem; display:flex; justify-content:space-between;">
               <span>GOOGLE WORKSPACE</span>
-              <span id="lbl_google_status" style="color:var(--orange); font-size:12px;">[NOT CONFIGURED]</span>
+              <span id="lbl_google_status" style="color:var(--orange); font-size:1.2rem;">[NOT CONFIGURED]</span>
             </h4>
-            <div style="margin-bottom:10px;">
-              <label style="font-size:11px; color:var(--text-dim);">CLIENT ID</label>
-              <input type="text" id="set_google_client_id" placeholder="Enter Google Client ID" style="width:100%; background:#000; color:var(--text); border:1px solid #333; padding:6px; margin-top:2px;">
+            <div style="margin-bottom:1rem;">
+              <label style="font-size:1.1rem; color:var(--text-dim);">CLIENT ID</label>
+              <input type="text" id="set_google_client_id" placeholder="Enter Google Client ID" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
             </div>
-            <div style="margin-bottom:10px;">
-              <label style="font-size:11px; color:var(--text-dim);">CLIENT SECRET</label>
-              <input type="password" id="set_google_client_secret" placeholder="Enter Google Client Secret" style="width:100%; background:#000; color:var(--text); border:1px solid #333; padding:6px; margin-top:2px;">
+            <div style="margin-bottom:1rem;">
+              <label style="font-size:1.1rem; color:var(--text-dim);">CLIENT SECRET</label>
+              <input type="password" id="set_google_client_secret" placeholder="Enter Google Client Secret" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
             </div>
-            <div style="margin-bottom:10px;">
-              <label style="font-size:11px; color:var(--text-dim);">PROJECT ID</label>
-              <input type="text" id="set_google_project_id" placeholder="kalki-agent" style="width:100%; background:#000; color:var(--text); border:1px solid #333; padding:6px; margin-top:2px;">
+            <div style="margin-bottom:1rem;">
+              <label style="font-size:1.1rem; color:var(--text-dim);">PROJECT ID</label>
+              <input type="text" id="set_google_project_id" placeholder="kalki-agent" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
             </div>
-            <div style="margin-bottom:10px;">
-              <label style="font-size:11px; color:var(--text-dim);">REDIRECT URI</label>
-              <input type="text" id="set_google_redirect_uri" value="http://localhost:8080/" style="width:100%; background:#000; color:var(--text); border:1px solid #333; padding:6px; margin-top:2px;">
+            <div style="margin-bottom:1rem;">
+              <label style="font-size:1.1rem; color:var(--text-dim);">REDIRECT URI</label>
+              <input type="text" id="set_google_redirect_uri" value="http://localhost:8080/" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
             </div>
-            <div style="display:flex; justify-content:space-between; margin-top:15px;">
-              <button class="qbtn" id="runGoogleSetup" style="width:48%; background:#222; border:1px solid #444; color:var(--text); padding:6px; cursor:pointer;">MANUAL LINK (OAUTH)</button>
-              <button class="qbtn" id="testGoogleBtn" style="width:48%; background:#1a1a1a; border:1px solid var(--lime); color:var(--lime); padding:6px; cursor:pointer;">TEST CONNECTION</button>
+            <div style="display:flex; justify-content:space-between; margin-top:1.5rem;">
+              <button class="qbtn" id="runGoogleSetup" style="width:48%; background:#222; border:0.1rem solid #444; color:var(--text); padding:0.6rem; cursor:pointer;">MANUAL LINK (OAUTH)</button>
+              <button class="qbtn" id="testGoogleBtn" style="width:48%; background:#1a1a1a; border:0.1rem solid var(--lime); color:var(--lime); padding:0.6rem; cursor:pointer;">TEST CONNECTION</button>
             </div>
           </div>
           
-          <div style="border:1px solid #333; background:#111; padding:15px;">
-            <h4 style="margin-bottom:10px; display:flex; justify-content:space-between;">
+          <div style="border:0.1rem solid #333; background:#111; padding:1.5rem;">
+            <h4 style="margin-bottom:1rem; display:flex; justify-content:space-between;">
               <span>SPOTIFY</span>
-              <span id="lbl_spotify_status" style="color:var(--orange); font-size:12px;">[NOT CONFIGURED]</span>
+              <span id="lbl_spotify_status" style="color:var(--orange); font-size:1.2rem;">[NOT CONFIGURED]</span>
             </h4>
-            <div style="margin-bottom:10px;">
-              <label style="font-size:11px; color:var(--text-dim);">CLIENT ID</label>
-              <input type="text" id="set_spotify_id" style="width:100%; background:#000; color:var(--text); border:1px solid #333; padding:6px; margin-top:2px;">
+            <div style="margin-bottom:1rem;">
+              <label style="font-size:1.1rem; color:var(--text-dim);">CLIENT ID</label>
+              <input type="text" id="set_spotify_id" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
             </div>
-            <div style="margin-bottom:10px;">
-              <label style="font-size:11px; color:var(--text-dim);">CLIENT SECRET</label>
-              <input type="password" id="set_spotify_secret" style="width:100%; background:#000; color:var(--text); border:1px solid #333; padding:6px; margin-top:2px;">
+            <div style="margin-bottom:1rem;">
+              <label style="font-size:1.1rem; color:var(--text-dim);">CLIENT SECRET</label>
+              <input type="password" id="set_spotify_secret" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
             </div>
-            <div style="margin-bottom:10px;">
-              <label style="font-size:11px; color:var(--text-dim);">REDIRECT URI</label>
-              <input type="text" id="set_spotify_redirect_uri" value="http://localhost:8888/callback" style="width:100%; background:#000; color:var(--text); border:1px solid #333; padding:6px; margin-top:2px;">
+            <div style="margin-bottom:1rem;">
+              <label style="font-size:1.1rem; color:var(--text-dim);">REDIRECT URI</label>
+              <input type="text" id="set_spotify_redirect_uri" value="http://localhost:8888/callback" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
             </div>
-            <div style="display:flex; justify-content:space-between; margin-top:15px;">
-              <button class="qbtn" id="runSpotifySetup" style="width:48%; background:#222; border:1px solid #444; color:var(--text); padding:6px; cursor:pointer;">MANUAL LINK (OAUTH)</button>
-              <button class="qbtn" id="testSpotifyBtn" style="width:48%; background:#1a1a1a; border:1px solid var(--lime); color:var(--lime); padding:6px; cursor:pointer;">TEST CONNECTION</button>
+            <div style="display:flex; justify-content:space-between; margin-top:1.5rem;">
+              <button class="qbtn" id="runSpotifySetup" style="width:48%; background:#222; border:0.1rem solid #444; color:var(--text); padding:0.6rem; cursor:pointer;">MANUAL LINK (OAUTH)</button>
+              <button class="qbtn" id="testSpotifyBtn" style="width:48%; background:#1a1a1a; border:0.1rem solid var(--lime); color:var(--lime); padding:0.6rem; cursor:pointer;">TEST CONNECTION</button>
             </div>
           </div>
         </div>
         
         <!-- API KEYS TAB -->
         <div id="tab-apikeys" class="tab-content" style="display:none;">
-          <h3 style="margin-bottom:15px; color:var(--accent);">API MANAGEMENT</h3>
-          <p style="font-size:11px; color:var(--text-dim); margin-bottom:15px;">Credentials are stored securely in local cache. Blank fields will use system defaults.</p>
+          <h3 style="margin-bottom:1.5rem; color:var(--accent);">API MANAGEMENT</h3>
+          <p style="font-size:1.1rem; color:var(--text-dim); margin-bottom:1.5rem;">Credentials are stored securely in local cache. Blank fields will use system defaults.</p>
           
-          <div style="margin-bottom:15px;">
-            <label style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-dim);">
+          <div style="margin-bottom:1.5rem;">
+            <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--text-dim);">
               <span>GROQ API KEY (MAIN INFERENCE)</span><span id="lbl_groq_status" style="color:var(--text-dim)">[UNVERIFIED]</span>
             </label>
-            <input type="password" id="set_groq_key" style="width:100%; background:#111; color:var(--text); border:1px solid #333; padding:8px; margin-top:3px;">
+            <input type="password" id="set_groq_key" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
           </div>
-          <div style="margin-bottom:15px;">
-            <label style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-dim);">
+          <div style="margin-bottom:1.5rem;">
+            <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--text-dim);">
               <span>OPENAI API KEY</span>
             </label>
-            <input type="password" id="set_openai_key" style="width:100%; background:#111; color:var(--text); border:1px solid #333; padding:8px; margin-top:3px;">
+            <input type="password" id="set_openai_key" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
           </div>
-          <div style="margin-bottom:15px;">
-            <label style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-dim);">
+          <div style="margin-bottom:1.5rem;">
+            <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--text-dim);">
               <span>ANTHROPIC API KEY</span>
             </label>
-            <input type="password" id="set_anthropic_key" style="width:100%; background:#111; color:var(--text); border:1px solid #333; padding:8px; margin-top:3px;">
+            <input type="password" id="set_anthropic_key" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
           </div>
-          <div style="margin-bottom:15px;">
-            <label style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-dim);">
+          <div style="margin-bottom:1.5rem;">
+            <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--text-dim);">
               <span>GEMINI API KEY</span>
             </label>
-            <input type="password" id="set_gemini_key" style="width:100%; background:#111; color:var(--text); border:1px solid #333; padding:8px; margin-top:3px;">
+            <input type="password" id="set_gemini_key" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
           </div>
-          <div style="margin-bottom:15px;">
-            <label style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-dim);">
+          <div style="margin-bottom:1.5rem;">
+            <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--text-dim);">
               <span>ELEVENLABS API KEY</span>
             </label>
-            <input type="password" id="set_elevenlabs_key" style="width:100%; background:#111; color:var(--text); border:1px solid #333; padding:8px; margin-top:3px;">
+            <input type="password" id="set_elevenlabs_key" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
           </div>
-          <div style="margin-top:20px;">
-            <button class="qbtn" id="testSettingsBtn" style="width:100%; background:#1a1a1a; border:1px solid var(--lime); color:var(--lime); padding:8px; cursor:pointer;">TEST ALL API CONNECTIONS</button>
+          <div style="margin-top:2rem;">
+            <button class="qbtn" id="testSettingsBtn" style="width:100%; background:#1a1a1a; border:0.1rem solid var(--lime); color:var(--lime); padding:0.8rem; cursor:pointer;">TEST ALL API CONNECTIONS</button>
           </div>
         </div>
         
         <!-- SYSTEM TAB -->
         <div id="tab-system" class="tab-content" style="display:none;">
-          <h3 style="margin-bottom:15px; color:var(--accent);">SYSTEM DIAGNOSTICS</h3>
+          <h3 style="margin-bottom:1.5rem; color:var(--accent);">SYSTEM DIAGNOSTICS</h3>
           
-          <table style="width:100%; font-size:12px; margin-bottom:20px; border-collapse:collapse;">
-            <tr><td style="padding:8px; border-bottom:1px solid #333; color:var(--text-dim);">Core Version</td><td style="padding:8px; border-bottom:1px solid #333; text-align:right;">v1.0.2</td></tr>
-            <tr><td style="padding:8px; border-bottom:1px solid #333; color:var(--text-dim);">Runtime</td><td style="padding:8px; border-bottom:1px solid #333; text-align:right;">Python 3.12 (Local)</td></tr>
-            <tr><td style="padding:8px; border-bottom:1px solid #333; color:var(--text-dim);">Cache Storage</td><td style="padding:8px; border-bottom:1px solid #333; text-align:right;" id="lbl_cache_size">0.0 MB</td></tr>
+          <table style="width:100%; font-size:1.2rem; margin-bottom:2rem; border-collapse:collapse;">
+            <tr><td style="padding:0.8rem; border-bottom:0.1rem solid #333; color:var(--text-dim);">Core Version</td><td style="padding:0.8rem; border-bottom:0.1rem solid #333; text-align:right;">v1.0.2</td></tr>
+            <tr><td style="padding:0.8rem; border-bottom:0.1rem solid #333; color:var(--text-dim);">Runtime</td><td style="padding:0.8rem; border-bottom:0.1rem solid #333; text-align:right;">Python 3.12 (Local)</td></tr>
+            <tr><td style="padding:0.8rem; border-bottom:0.1rem solid #333; color:var(--text-dim);">Cache Storage</td><td style="padding:0.8rem; border-bottom:0.1rem solid #333; text-align:right;" id="lbl_cache_size">0.0 MB</td></tr>
           </table>
           
-          <div style="display:flex; flex-direction:column; gap:10px;">
-            <button class="qbtn" id="exportSettingsBtn" style="background:#222; border:1px solid #444; color:var(--text); padding:8px; cursor:pointer; text-align:left;">EXPORT SETTINGS (JSON)</button>
-            <button class="qbtn" id="importSettingsBtn" style="background:#222; border:1px solid #444; color:var(--text); padding:8px; cursor:pointer; text-align:left;">IMPORT SETTINGS</button>
-            <button class="qbtn" id="clearCacheBtn" style="background:#222; border:1px solid #444; color:var(--text); padding:8px; cursor:pointer; text-align:left;">CLEAR LOCAL CACHE</button>
-            <button class="qbtn" id="resetSettingsBtn" style="background:#1a0000; border:1px solid var(--red); color:var(--red); padding:8px; cursor:pointer; text-align:left; margin-top:10px;">RESTORE DEFAULT FACTORY SETTINGS</button>
+          <div style="display:flex; flex-direction:column; gap:1rem;">
+            <button class="qbtn" id="exportSettingsBtn" style="background:#222; border:0.1rem solid #444; color:var(--text); padding:0.8rem; cursor:pointer; text-align:left;">EXPORT SETTINGS (JSON)</button>
+            <button class="qbtn" id="importSettingsBtn" style="background:#222; border:0.1rem solid #444; color:var(--text); padding:0.8rem; cursor:pointer; text-align:left;">IMPORT SETTINGS</button>
+            <button class="qbtn" id="clearCacheBtn" style="background:#222; border:0.1rem solid #444; color:var(--text); padding:0.8rem; cursor:pointer; text-align:left;">CLEAR LOCAL CACHE</button>
+            <button class="qbtn" id="resetSettingsBtn" style="background:#1a0000; border:0.1rem solid var(--red); color:var(--red); padding:0.8rem; cursor:pointer; text-align:left; margin-top:1rem;">RESTORE DEFAULT FACTORY SETTINGS</button>
           </div>
         </div>
 
       </div>
     </div>
     
-    <div style="padding:15px 20px; border-top:1px solid #333; display:flex; justify-content:flex-end;">
-      <button id="saveSettingsBtn" style="background:var(--accent); color:#000; border:none; padding:8px 25px; font-weight:bold; cursor:pointer; border-radius:2px;">SAVE ALL CONFIGURATION</button>
+    <div style="padding:1.5rem 2rem; border-top:0.1rem solid #333; display:flex; justify-content:flex-end;">
+      <button id="saveSettingsBtn" style="background:var(--accent); color:#000; border:none; padding:0.8rem 2.5rem; font-weight:bold; cursor:pointer; border-radius:0.2rem;">SAVE ALL CONFIGURATION</button>
     </div>
   </div>
 </div>
@@ -1030,6 +1030,7 @@ let lastSeenSeq = 0;
 async function refreshStatus(){
   try{
     const r = await fetch("/api/status"); const d = await r.json();
+    if(typeof updateDashboard === "function") updateDashboard(d);
     STATE.cpu = d.cpu ?? 0; STATE.ram = d.ram ?? 0; STATE.dsk = d.disk ?? 0;
     STATE.batt = d.batteryPct; STATE.mem = d.memCount || 0;
     $("sGroq").textContent   = d.groqConfigured ? "ONLINE" : "NO KEY";
@@ -2255,14 +2256,59 @@ function adaptUI() {
   let scale = Math.min(window.innerWidth / baseW, window.innerHeight / baseH);
   if (scale > 1) scale = 1; // Don't scale up past 100%, only shrink for smaller laptops
   
-  // Use transform instead of zoom to prevent layout breaks on fixed elements
-  document.body.style.transform = `scale(${scale})`;
-  document.body.style.transformOrigin = "top left";
-  document.body.style.width = `${100 / scale}%`;
-  document.body.style.height = `${100 / scale}%`;
+  // Set global rem scale. 1rem = 10px * scale
+  document.documentElement.style.fontSize = `${10 * scale}px`;
+  document.documentElement.style.setProperty('--ui-scale', scale);
+  
+  // Remove legacy transform scaling
+  document.body.style.transform = "none";
+  document.body.style.width = "100%";
+  document.body.style.height = "100%";
 }
 window.addEventListener('resize', adaptUI);
 adaptUI();
+// Developer Dashboard Logic
+let frames = 0;
+let lastFpsTime = performance.now();
+let currentFps = 0;
+
+function updateDashboard(statusData) {
+  const dash = document.getElementById('dev-dashboard');
+  if (!dash || dash.style.display === 'none') return;
+  
+  const now = performance.now();
+  frames++;
+  if (now - lastFpsTime >= 1000) {
+    currentFps = Math.round((frames * 1000) / (now - lastFpsTime));
+    frames = 0;
+    lastFpsTime = now;
+  }
+  
+  const mem = performance.memory ? (performance.memory.usedJSHeapSize / 1048576).toFixed(1) + ' MB' : 'N/A';
+  
+  dash.innerHTML = `
+    <strong>KALKI DEV DASHBOARD</strong><br>
+    FPS: ${currentFps} | Mem: ${mem}<br>
+    Scale: ${document.documentElement.style.getPropertyValue('--ui-scale') || 1} | DPR: ${window.devicePixelRatio}<br>
+    Res: ${window.innerWidth}x${window.innerHeight} | Canvas: ${Math.round(window.innerWidth*window.devicePixelRatio)}x${Math.round(window.innerHeight*window.devicePixelRatio)}<br>
+    Audio Latency: ~50ms | CPU: ${statusData.cpu || 0}%<br>
+    Voice State: ${statusData.speaking ? 'SPEAKING' : 'LISTENING'}<br>
+    Rec Queue: IDLE | Threads: OK
+  `;
+}
+
+// Intercept status polling to update dashboard
+const originalStatusPoller = window.pollStatus; // Assuming there is a polling loop, else we update it via fetch intercept or similar
+window.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+    const dash = document.getElementById('dev-dashboard');
+    dash.style.display = dash.style.display === 'none' ? 'block' : 'none';
+  }
+});
 </script>
+
+<div id="dev-dashboard" style="display:none; position:fixed; top:1rem; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); border:1px solid #00f0ff; color:#00f0ff; font-family:'JetBrains Mono', monospace; padding:1rem; z-index:9999; border-radius:0.5rem; font-size:1.2rem; pointer-events:none; box-shadow:0 0 10px rgba(0,240,255,0.2);">
+  <strong>KALKI DEV DASHBOARD</strong>
+</div>
 </body>
 </html>

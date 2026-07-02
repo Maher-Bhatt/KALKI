@@ -13,6 +13,38 @@ def main():
     print("Installing PyInstaller...")
     run_cmd(f"{sys.executable} -m pip install pyinstaller")
 
+    # Generate Version Info File for Windows executable metadata
+    version_info_path = os.path.abspath(os.path.join("build_tools", "file_version_info.txt"))
+    with open(version_info_path, "w", encoding="utf-8") as f:
+        f.write("""VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(1, 0, 3, 0),
+    prodvers=(1, 0, 3, 0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+    ),
+  kids=[
+    StringFileInfo(
+      [
+      StringTable(
+        '040904B0',
+        [StringStruct('CompanyName', 'KALKI Technologies'),
+        StringStruct('FileDescription', 'KALKI AI Desktop Assistant'),
+        StringStruct('FileVersion', '1.0.3'),
+        StringStruct('InternalName', 'kalki_assistant'),
+        StringStruct('LegalCopyright', '© 2026 KALKI Technologies. All rights reserved.'),
+        StringStruct('OriginalFilename', 'KALKI.exe'),
+        StringStruct('ProductName', 'KALKI AI Assistant'),
+        StringStruct('ProductVersion', '1.0.3')])
+      ]), 
+    VarFileInfo([VarStruct('Translation', [1033, 1200])])
+  ]
+)""")
+
     # The targets
     targets = [
         ("server.py", "KALKI_Server", False),
@@ -32,6 +64,7 @@ def main():
             "--clean",
             f"--name={name}",
             f"--icon=\"{os.path.abspath('assets/kalki_icon.ico')}\"",
+            f"--version-file=\"{version_info_path}\"",
             "--specpath=build_tools",
         ]
         

@@ -32,6 +32,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    version='C:\\Users\\maher\\Music\\KALKI application\\build_tools\\file_version_info.txt',
     icon=['C:\\Users\\maher\\Music\\KALKI application\\assets\\kalki_icon.ico'],
 )
 coll = COLLECT(

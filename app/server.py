@@ -46,6 +46,7 @@ except Exception:
     pass
 
 import config
+from core.state import STATE
 import github_mod
 import shodan_mod
 import ctypes
@@ -92,6 +93,7 @@ except Exception:
     pass
 
 import config
+from core.state import STATE
 import github_mod
 import shodan_mod
 import ctypes
@@ -210,53 +212,7 @@ threading.Thread(target=update_location_from_ip, daemon=True).start()
 
 AVAILABLE_GROQ_MODELS = []
 
-STATE = {
-    "speaking": False,
-    "model": config.GROQ_MODEL,
-    "started_at": time.time(),
-    # ── UI presence + voice-driven exchange tracking ──
-    "ui_last_ping": 0.0,         # last time /api/status was hit by a UI
-    "wake_pending": False,        # set when /api/wake fires → UI engages listening
-    "conversation_seq": 0,        # bumped on every voice-driven exchange
-    "recent_exchange": None,      # {seq, user, reply, ts}
-    "listener_paused": False,     # toggled to release the mic for other apps
-    "last_joke_offer": 0.0,
-    "joke_offer_pending": False,
-}
 
-_pending_lock = threading.Lock()
-_pending_action = None
-_PENDING_TTL = 30
-
-
-def _queue_confirmation(description, action):
-    global _pending_action
-    if not getattr(config, "REQUIRE_DANGEROUS_CONFIRMATION", True):
-        return action()
-    with _pending_lock:
-        _pending_action = {
-            "description": description,
-            "action": action,
-            "expires": time.time() + _PENDING_TTL,
-        }
-    return True, f"{description}. Say confirm within {_PENDING_TTL} seconds."
-
-
-def _consume_confirmation(command):
-    global _pending_action
-    if command in ("cancel", "never mind", "nevermind"):
-        with _pending_lock:
-            had_pending = _pending_action is not None
-            _pending_action = None
-        return (True, "Cancelled.") if had_pending else None
-    if command not in ("confirm", "yes confirm", "confirm it", "do it"):
-        return None
-    with _pending_lock:
-        pending = _pending_action
-        _pending_action = None
-    if not pending or pending["expires"] < time.time():
-        return True, "There is no active action to confirm."
-    return pending["action"]()
 
 
 def _is_sensitive_command(text):

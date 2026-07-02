@@ -357,8 +357,11 @@ def run_vosk(dev_index):
 
             data = stream.read(CHUNK, exception_on_overflow=False)
 
-            # Ignore audio while KALKI is speaking (don't transcribe own voice).
+            # Aggressively drain buffer while speaking to prevent lag/echo loops
             if is_speaking():
+                avail = stream.get_read_available()
+                if avail > 0:
+                    stream.read(avail, exception_on_overflow=False)
                 rec.Reset() if hasattr(rec, "Reset") else None
                 continue
 

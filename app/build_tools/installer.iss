@@ -1,6 +1,6 @@
 #define MyAppName "KALKI"
-#define MyAppVersion "1.0.0"
-#define MyAppPublisher "Maher"
+#define MyAppVersion "1.0.3"
+#define MyAppPublisher "KALKI Technologies"
 #define MyAppExeName "KALKI.exe"
 
 [Setup]
