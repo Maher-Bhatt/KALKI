@@ -31,6 +31,42 @@ KALKI is an autonomous personal assistant built from scratch in Python and a sin
 - **Personal Assistant:** Google Calendar events, Gmail reader, Tasks, Reminders, Password vault.
 - **No build step:** Pure Python + one HTML file. Clone and run.
 
+## System Requirements
+
+KALKI dynamically scales depending on whether you rely on Cloud AI (Groq API) or Local Offline LLMs (Ollama).
+
+### Minimum Requirements (Cloud AI Mode)
+- **OS:** Windows 10 or Windows 11 (64-bit)
+- **CPU:** Intel Core i3 / AMD Ryzen 3 or equivalent
+- **RAM:** 4 GB system memory
+- **Storage:** 2 GB available space (SSD highly recommended)
+- **Audio:** Working Microphone (essential for voice control) and Speakers
+- **Network:** High-speed internet connection (required for Groq LLM, Edge TTS, Google STT)
+
+### Recommended Requirements (Local Offline Mode)
+*Required if you intend to run LLaMA 8B locally via Ollama instead of the Cloud API.*
+- **OS:** Windows 10 / 11 (64-bit)
+- **CPU:** Intel Core i5 / AMD Ryzen 5 or better
+- **RAM:** 16 GB system memory 
+- **GPU:** NVIDIA RTX 2060 / AMD RX 6600 or better (VRAM 6GB+ for hardware acceleration)
+- **Storage:** 15 GB+ available space on an NVMe SSD
+
+## Core Subsystems & Architecture
+
+KALKI is modularly designed, entirely decoupling its "Brain" from its visual "Body" to ensure real-time responsiveness and zero UI blocking.
+
+1. **The HUD Interface (`index.html`)**
+   A completely standalone, zero-build-step frontend built in Vanilla JS and Canvas2D. The interface continuously polls the backend for state changes, updating telemetry, logs, audio waveforms, and tactical controls visually.
+
+2. **The Server Core (`main.py`)**
+   A lightweight, multi-threaded HTTP server using Python's standard library. It handles incoming requests from the HUD, processes voice input asynchronously in background threads, and routes execution to the appropriate integration.
+
+3. **Cognitive Routing**
+   KALKI intelligently routes tasks based on difficulty. Casual chatter and system commands are sent to a blazing-fast `LLaMA-3.1-8B` model for instant responses. Complex coding questions, clipboard AI fixing, and deep cybersecurity scans are dynamically routed to the heavy `LLaMA-3.3-70B` or `LLaMA-4-SCOUT` vision models.
+
+4. **Cyber Reconnaissance Engine**
+   Built-in capabilities for deep network reconnaissance. KALKI can scan a domain for missing security headers, execute Shodan IP queries, enumerate subdomains using `crt.sh`, and pull critical CVE intelligence from NVD—all requested via natural voice commands.
+
 ## Install
 
 1. Download `KALKI_Setup.exe` from the [Releases](https://github.com/Maher-Bhatt/KALKI/releases) page.
