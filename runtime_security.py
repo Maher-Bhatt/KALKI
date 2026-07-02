@@ -4,9 +4,12 @@ import hmac
 import os
 import secrets
 import subprocess
+import sys
 
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.abspath(
+    sys.executable if getattr(sys, "frozen", False) else __file__
+))
 TOKEN_PATH = os.path.join(BASE_DIR, "data", "api_token.txt")
 TOKEN_HEADER = "X-KALKI-Token"
 TOKEN_COOKIE = "kalki_session"

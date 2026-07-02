@@ -615,7 +615,11 @@ def attack_surface_brief(target: str, include_subdomains: bool = False, ports: O
     else:
         ports = [int(p) for p in ports][:64]
 
-    dns = dns_lookup(host)
+    try:
+        import socket
+        dns = {"A": [socket.gethostbyname(host)]}
+    except:
+        dns = {"A": []}
     open_ports = port_scan(host, ports=ports, timeout=timeout)
     probe = http_probe(url)
     headers = probe if "headers" in probe else http_headers(url)

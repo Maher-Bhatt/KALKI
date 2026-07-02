@@ -1,6 +1,6 @@
 """
-KALKI v5 — Primary Backend Server
-=================================
+KALKI v1.00 PRO — Primary Backend Server
+========================================
 
 This module acts as the central hub for the KALKI AI assistant. It orchestrates:
 - The embedded HTTP web server for the frontend UI
@@ -32,7 +32,9 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 
 # Ensure local imports resolve when launched from any cwd
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.abspath(
+    sys.executable if getattr(sys, "frozen", False) else __file__
+))
 os.chdir(BASE_DIR)
 sys.path.insert(0, BASE_DIR)
 
@@ -51,7 +53,7 @@ import vault
 import vision
 import coder
 """
-KALKI v5 — Server
+KALKI v1.00 PRO — Server
 Web server + AI + TTS + system commands
 Uses Python stdlib http.server only (no Flask, no FastAPI)
 """
@@ -76,7 +78,9 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 
 # Ensure local imports resolve when launched from any cwd
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.abspath(
+    sys.executable if getattr(sys, "frozen", False) else __file__
+))
 os.chdir(BASE_DIR)
 sys.path.insert(0, BASE_DIR)
 
@@ -187,6 +191,24 @@ deepscan.SCANS_DIR = os.path.join(BASE_DIR, "data", "scans")
 
 def log(msg):
     runtime_log.append_log(LOG_PATH, str(msg))
+
+def update_location_from_ip():
+    try:
+        import urllib.request, json
+        req = urllib.request.Request("http://ip-api.com/json/", headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=5) as r:
+            data = json.loads(r.read())
+            if data.get("status") == "success":
+                config.OWNER_CITY = data.get("city", config.OWNER_CITY)
+                config.OWNER_STATE = data.get("regionName", config.OWNER_STATE)
+                config.OWNER_COUNTRY = data.get("country", config.OWNER_COUNTRY)
+                log(f"Auto-location updated: {config.OWNER_CITY}, {config.OWNER_STATE}, {config.OWNER_COUNTRY}")
+    except Exception as e:
+        log(f"Auto-location failed: {e}")
+
+threading.Thread(target=update_location_from_ip, daemon=True).start()
+
+AVAILABLE_GROQ_MODELS = []
 
 STATE = {
     "speaking": False,
@@ -429,12 +451,12 @@ def _desktop_dir():
 
 def copy_scan_to_desktop(result):
     """Copy a scan's report (and the captured source/inspect, if any) to
-    Desktop\\KALKI Scans\\. Returns the report copy path or None."""
+    Desktop\\Kalki data\\. Returns the report copy path or None."""
     import shutil
     desk = _desktop_dir()
     if not desk:
         return None
-    out = os.path.join(desk, "KALKI Scans")
+    out = os.path.join(desk, "Kalki data")
     try:
         os.makedirs(out, exist_ok=True)
     except Exception:
@@ -447,6 +469,15 @@ def copy_scan_to_desktop(result):
             shutil.copy2(report, dst)
         except Exception:
             dst = None
+            
+    # Also copy the captured source file if it exists (from web scans)
+    source = result.get("source_path")
+    if source and os.path.exists(source):
+        try:
+            shutil.copy2(source, os.path.join(out, os.path.basename(source)))
+        except Exception:
+            pass
+            
     # Deep-scan also drops a folder of the captured "inside files".
     fd = result.get("files_dir")
     if fd and os.path.isdir(fd):
@@ -564,13 +595,36 @@ def speak(text):
         with _audio_lock:
             try:
                 STATE["speaking"] = True
-                tmp = asyncio.run(_speak_async(
-                    text,
-                    config.TTS_VOICE,
-                    config.TTS_RATE,
-                    config.TTS_VOLUME,
-                    getattr(config, "TTS_PITCH", "+0Hz"),
-                ))
+                
+                # Attempt Groq Orpheus TTS
+                tmp = tempfile.mktemp(suffix=".mp3")
+                try:
+                    payload = json.dumps({
+                        "model": "orpheus",
+                        "input": text,
+                        "voice": "kalki"
+                    }).encode()
+                    req = urllib.request.Request(
+                        "https://api.groq.com/openai/v1/audio/speech",
+                        data=payload,
+                        headers={
+                            "Authorization": f"Bearer {config.GROQ_API_KEY}",
+                            "Content-Type": "application/json"
+                        },
+                        method="POST"
+                    )
+                    with urllib.request.urlopen(req, timeout=10) as r:
+                        with open(tmp, 'wb') as f:
+                            f.write(r.read())
+                except Exception as groq_e:
+                    # Fallback to edge-tts if Groq TTS is unavailable or errors
+                    tmp = asyncio.run(_speak_async(
+                        text,
+                        config.TTS_VOICE,
+                        config.TTS_RATE,
+                        config.TTS_VOLUME,
+                        getattr(config, "TTS_PITCH", "+0Hz"),
+                    ))
                 # Open the audio device only now, for the duration of speech.
                 # If TTS_OUTPUT_DEVICE is set (e.g. laptop speakers), play there
                 # so KALKI never grabs a shared Bluetooth headset — leaving the
@@ -784,87 +838,36 @@ def _time_bucket(hour):
     return "night"
 
 
+FIRST_GREET_DONE = False
 def build_greeting():
     now = datetime.now()
-    hour, day = now.hour, now.strftime("%A")
+    hour = now.hour
     title = config.OWNER_TITLE
-    bucket = _time_bucket(hour)
+    
+    if hour < 12: greeting = f"Good morning, {title}."
+    elif hour < 18: greeting = f"Good afternoon, {title}."
+    else: greeting = f"Good evening, {title}."
+    
+    parts = [greeting, "System ready."]
+    
+    global FIRST_GREET_DONE
+    if not FIRST_GREET_DONE:
+        FIRST_GREET_DONE = True
+        try:
+            import spotify_mod
+            if not gcal.is_configured():
+                parts.append("Google Authentication requires configuration.")
+            
+            if not spotify_mod.is_configured():
+                parts.append("Spotify integration requires configuration.")
+            elif spotify_mod.is_configured():
+                parts.append("Spotify integration is ready.")
+                
+            parts.append("All systems operational.")
+        except Exception as e:
+            log(f"Error checking config for greeting: {e}")
+            parts.append("All systems operational.")
 
-    def pick(pool):
-        return _rnd.choice(pool).format(t=title)
-
-    opener = pick(_OPENERS[bucket])
-    checkin = pick(_CHECKINS[bucket])
-
-    # Day mention — richer, sometimes skipped
-    if day == "Monday":
-        day_phrase = _rnd.choice(["Monday already.", "Fresh week ahead.", "It's Monday — clean slate.", ""])
-    elif day == "Friday":
-        day_phrase = _rnd.choice(["Friday at last.", "It's Friday — nearly there.", "End of the week.", ""])
-    elif day in ("Saturday", "Sunday"):
-        day_phrase = _rnd.choice([f"Happy {day}.", "It's the weekend.", "Weekend mode.", ""])
-    else:
-        day_phrase = _rnd.choice([f"It's {day}.", "", "", ""])
-
-    # Weather — natural, time-aware variants
-    weather_part = ""
-    try:
-        w = urllib.request.urlopen(
-            f"https://wttr.in/{config.OWNER_CITY}?format=%C+%t",
-            timeout=4,
-        ).read().decode().strip()
-        w = " ".join(w.split())  # collapse wttr's double spaces
-        weather_part = _rnd.choice([
-            f"It's {w} out there.",
-            f"Looking like {w} in {config.OWNER_CITY}.",
-            f"{w} outside.",
-            f"Weather's sitting at {w} today.",
-            f"{config.OWNER_CITY} is {w} right now.",
-        ])
-    except Exception:
-        pass
-
-    # Calendar
-    calendar_part = ""
-    try:
-        calendar_part = gcal.startup_summary().strip()
-    except Exception:
-        pass
-
-    # Tasks — varied
-    try:
-        pending = len(taskmod.list_tasks())
-    except Exception:
-        pending = 0
-    if pending == 0:
-        task_part = _rnd.choice(["", "Your task list is clear.", "Nothing pending, {t}.".format(t=title), ""])
-    elif pending == 1:
-        task_part = _rnd.choice([
-            "One task on your list.",
-            "Got one task pending.",
-            "You've a single task waiting.",
-        ])
-    else:
-        task_part = _rnd.choice([
-            f"{pending} tasks waiting.",
-            f"{pending} things on the list.",
-            f"You've got {pending} open tasks.",
-        ])
-
-    # Emails
-    email_part = ""
-    try:
-        import mail
-        em = mail.summary_for_speech(limit=3)
-        if em and not em.startswith("No unread"):
-            email_part = em
-    except Exception:
-        pass
-
-    signoff = pick(_SIGNOFFS)
-
-    parts = [opener, day_phrase, checkin, weather_part,
-             calendar_part, task_part, email_part, signoff]
     return " ".join(p for p in parts if p).strip()
 
 
@@ -1706,7 +1709,7 @@ def handle_local(text):
              "what do you know about me", "say my details"):
         mems = load_memory()
         mem_line = f"I have {len(mems)} memories on file." if mems else "No memories on file yet."
-        return True, (f"You are {config.OWNER_NAME} Hardik Bhatt, "
+        return True, (f"You are {config.OWNER_NAME} Bhatt, "
                       f"based in {config.OWNER_CITY}, {config.OWNER_STATE}, "
                       f"{config.OWNER_COUNTRY}. Interests: cybersecurity, "
                       f"web development, gaming, and AI. {mem_line}")
@@ -2270,7 +2273,7 @@ def handle_local(text):
 # AI — Groq primary, Ollama fallback
 # ─────────────────────────────────────────────────────────────
 SYSTEM_PROMPT_BASE = """You are KALKI - a hyper-intelligent personal AI assistant
-running locally for Maher Hardik Bhatt (call him "Sir" always).
+running locally for Maher Bhatt (call him "Sir" always).
 
 You are KALKI — a personal AI in the spirit of Iron Man's JARVIS.
 You are brilliant, direct, factual, and concise.
@@ -2543,28 +2546,121 @@ _HARD_HINTS = (
 def pick_model(text):
     """Route simple/short turns to the fast 8B model and hard/technical turns
     to the heavy model — snappy chat, full power when it matters."""
+    fast_model = "llama-3.1-8b-instant"
+    # Find a fast model dynamically if available
+    for m in AVAILABLE_GROQ_MODELS:
+        if "8b" in m.lower():
+            fast_model = m
+            break
+
     if not getattr(config, "SMART_ROUTING", True):
         return STATE["model"]
     heavy = STATE["model"]
-    if heavy == FAST_MODEL:        # user forced the fast model in the dropdown
-        return FAST_MODEL
+    if heavy == fast_model:        # user forced the fast model in the dropdown
+        return fast_model
     low = (text or "").lower()
     if any(k in low for k in _HARD_HINTS):
         return heavy
     if "```" in (text or "") or len(low.split()) > 14:
         return heavy
-    return FAST_MODEL              # short + casual → instant
+    return fast_model              # short + casual → instant
 
 
-def ask_groq(messages, model=None):
+def execute_tool_call(tool_name, tool_args):
+    try:
+        args = json.loads(tool_args)
+    except:
+        args = {}
+    try:
+        if tool_name == "search_web":
+            res = ddg_instant_answer(args.get("query")) or ddg_html_search(args.get("query", ""))
+            return json.dumps(res)
+        elif tool_name == "read_emails":
+            import mail as mailmod
+            return mailmod.summary_for_speech(limit=args.get("limit", 5))
+        elif tool_name == "get_calendar_events":
+            
+            return str(gcal.upcoming_events(args.get("days_ahead", 5)))
+        elif tool_name == "scan_network":
+            import cybertools
+            return cybertools.attack_surface_brief(args.get("target", ""))
+        elif tool_name == "play_music":
+            import spotify_mod
+            spotify_mod.play(args.get("query", ""))
+            return "Playing music on Spotify."
+        elif tool_name == "get_daily_briefing":
+            import mail as mailmod, gcal
+            weather = ddg_instant_answer("weather today") or ddg_html_search("weather today")
+            news = ddg_instant_answer("top news today") or ddg_html_search("top news today")
+            cal = gcal.upcoming_events(1) if gcal.is_configured() else "Calendar not configured."
+            mails = mailmod.summary_for_speech(limit=3, only_important=True)
+            return f"Weather: {weather}\nNews: {news}\nCalendar: {cal}\nMails: {mails}"
+        elif tool_name == "system_control":
+            action = args.get("action")
+            target = args.get("target", "")
+            if action == "lock":
+                import ctypes
+                ctypes.windll.user32.LockWorkStation()
+                return "Screen locked."
+            elif action == "open_app":
+                try:
+                    os.startfile(target)
+                    return f"Attempted to open {target}."
+                except Exception as e:
+                    return f"Failed to open {target}: {e}"
+            elif action == "volume_set":
+                return f"Simulated volume set to {target}."
+            return "Unknown system action."
+        elif tool_name == "read_local_document":
+            import glob, os
+            docs = os.path.expanduser("~/Documents")
+            matches = glob.glob(f"{docs}/**/{args.get('filename')}", recursive=True)
+            if not matches: matches = glob.glob(f"**/{args.get('filename')}", recursive=True)
+            if not matches: return "File not found."
+            with open(matches[0], "r", encoding="utf-8", errors="ignore") as f:
+                return f.read()[:50000]
+        elif tool_name == "manage_tasks":
+            import tasks as taskmod
+            action = args.get("action")
+            text = args.get("text", "")
+            if action == "list":
+                return json.dumps(taskmod.list_tasks())
+            elif action == "add":
+                tid = taskmod.add_task(text)
+                return f"Task added with ID {tid}."
+            elif action == "complete":
+                done = taskmod.complete_task(text)
+                return f"Task completed: {done['text']}" if done else "Task not found."
+            elif action == "delete":
+                ok = taskmod.delete_task(text)
+                return "Task deleted." if ok else "Task not found."
+            elif action == "clear_all":
+                taskmod.clear_all_tasks()
+                return "All tasks cleared."
+            return "Unknown task action."
+        else:
+            return f"Unknown tool {tool_name}"
+    except Exception as e:
+        return f"Error executing {tool_name}: {e}"
+
+def ask_groq(messages, model=None, use_tools=True):
     model = model or STATE["model"]
-    payload = json.dumps({
+    payload_dict = {
         "model": model,
         "messages": messages,
         "max_tokens": 1024,
         "temperature": 0.7,
         "top_p": 0.9,
-    }).encode()
+    }
+    
+    # We only inject tools if we're using a large reasoning model, 
+    # to avoid context limits or weird behavior on smaller instant models
+    if use_tools and ("70b" in model.lower() or "120b" in model.lower() or "scout" in model.lower() or "versatile" in model.lower()):
+        from tools import TOOLS_SCHEMA
+        payload_dict["tools"] = TOOLS_SCHEMA
+        payload_dict["tool_choice"] = "auto"
+
+    payload = json.dumps(payload_dict).encode()
 
     req = urllib.request.Request(
         "https://api.groq.com/openai/v1/chat/completions",
@@ -2572,17 +2668,40 @@ def ask_groq(messages, model=None):
         headers={
             "Authorization": f"Bearer {config.GROQ_API_KEY}",
             "Content-Type": "application/json",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                          "AppleWebKit/537.36 (KHTML, like Gecko) "
-                          "Chrome/124.0.0.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
             "Accept": "application/json",
         },
         method="POST",
     )
 
-    with urllib.request.urlopen(req, timeout=30) as r:
+    with urllib.request.urlopen(req, timeout=45) as r:
         data = json.loads(r.read())
-        return _strip_think(data["choices"][0]["message"]["content"].strip())
+        msg = data["choices"][0]["message"]
+        
+        if msg.get("tool_calls"):
+            # Strip out any 'content' if it's None to avoid OpenAI schema errors
+            if msg.get("content") is None:
+                msg["content"] = ""
+            messages.append(msg)
+            
+            for tc in msg["tool_calls"]:
+                t_id = tc["id"]
+                t_name = tc["function"]["name"]
+                t_args = tc["function"]["arguments"]
+                
+                print(f"[TOOL USE] {t_name}({t_args})")
+                t_res = execute_tool_call(t_name, t_args)
+                
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": t_id,
+                    "name": t_name,
+                    "content": str(t_res)
+                })
+                
+            return ask_groq(messages, model, use_tools=False)
+
+        return _strip_think((msg.get("content") or "").strip())
 
 def pick_ollama_model():
     try:
@@ -2625,9 +2744,110 @@ def needs_mail(text):
     low = text.lower()
     return any(k in low for k in ('mail', 'email', 'inbox'))
 
+def ask_openai(messages, model=None, use_tools=True):
+    api_key = getattr(config, "OPENAI_API_KEY", "")
+    if not api_key:
+        raise ValueError("OpenAI API key is missing, Sir.")
+    model = model or "gpt-4o-mini"
+    
+    payload_dict = {
+        "model": model,
+        "messages": messages,
+        "max_tokens": 1024,
+        "temperature": 0.7,
+    }
+    
+    if use_tools:
+        from tools import TOOLS_SCHEMA
+        payload_dict["tools"] = TOOLS_SCHEMA
+        payload_dict["tool_choice"] = "auto"
+        
+    payload = json.dumps(payload_dict).encode()
+    req = urllib.request.Request(
+        "https://api.openai.com/v1/chat/completions",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0",
+        },
+        method="POST"
+    )
+    with urllib.request.urlopen(req, timeout=45) as r:
+        data = json.loads(r.read())
+        msg = data["choices"][0]["message"]
+        if msg.get("tool_calls"):
+            if msg.get("content") is None:
+                msg["content"] = ""
+            messages.append(msg)
+            for tc in msg["tool_calls"]:
+                t_id = tc["id"]
+                t_name = tc["function"]["name"]
+                t_args = tc["function"]["arguments"]
+                print(f"[TOOL USE] {t_name}({t_args})")
+                t_res = execute_tool_call(t_name, t_args)
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": t_id,
+                    "name": t_name,
+                    "content": str(t_res)
+                })
+            return ask_openai(messages, model, use_tools=False)
+        return _strip_think((msg.get("content") or "").strip())
+
+def ask_gemini(messages, model=None, use_tools=True):
+    api_key = getattr(config, "GEMINI_API_KEY", "")
+    if not api_key:
+        raise ValueError("Gemini API key is missing, Sir.")
+    model = model or "gemini-2.5-flash"
+    
+    payload_dict = {
+        "model": model,
+        "messages": messages,
+        "max_tokens": 1024,
+        "temperature": 0.7,
+    }
+    
+    if use_tools:
+        from tools import TOOLS_SCHEMA
+        payload_dict["tools"] = TOOLS_SCHEMA
+        payload_dict["tool_choice"] = "auto"
+        
+    payload = json.dumps(payload_dict).encode()
+    req = urllib.request.Request(
+        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0",
+        },
+        method="POST"
+    )
+    with urllib.request.urlopen(req, timeout=45) as r:
+        data = json.loads(r.read())
+        msg = data["choices"][0]["message"]
+        if msg.get("tool_calls"):
+            if msg.get("content") is None:
+                msg["content"] = ""
+            messages.append(msg)
+            for tc in msg["tool_calls"]:
+                t_id = tc["id"]
+                t_name = tc["function"]["name"]
+                t_args = tc["function"]["arguments"]
+                print(f"[TOOL USE] {t_name}({t_args})")
+                t_res = execute_tool_call(t_name, t_args)
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": t_id,
+                    "name": t_name,
+                    "content": str(t_res)
+                })
+            return ask_gemini(messages, model, use_tools=False)
+        return _strip_think((msg.get("content") or "").strip())
+
 def ask_ai(user_messages, force_search=False):
-    """Returns the AI text reply. Tries Groq first, falls back to Ollama.
-    If the latest user message needs live info, injects DDG search context."""
+    """Returns the AI text reply. Routes based on active model and falls back to Ollama."""
     sys_prompt = build_system_prompt()
 
     last_user = ""
@@ -2641,7 +2861,6 @@ def ask_ai(user_messages, force_search=False):
         if ctx:
             sys_prompt += ctx
 
-
     if last_user and needs_mail(last_user):
         import mail as mailmod
         try:
@@ -2651,15 +2870,72 @@ def ask_ai(user_messages, force_search=False):
             sys_prompt += f"\n\nCURRENT INBOX SUMMARY:\nCould not fetch mail: {e}\n"
 
     msgs = [{"role": "system", "content": sys_prompt}] + user_messages
-    chosen = pick_model(last_user)
+    chosen = STATE["model"]
+
+    # ── Auto Routing Logic ──
+    if chosen == "auto":
+        has_gemini = bool(getattr(config, "GEMINI_API_KEY", "") and not getattr(config, "GEMINI_API_KEY", "").startswith("PASTE_"))
+        has_openai = bool(getattr(config, "OPENAI_API_KEY", "") and not getattr(config, "OPENAI_API_KEY", "").startswith("PASTE_"))
+        has_groq = bool(getattr(config, "GROQ_API_KEY", "") and not getattr(config, "GROQ_API_KEY", "").startswith("PASTE_"))
+        
+        low_prompt = (last_user or "").lower()
+        
+        if "gemini" in low_prompt and has_gemini:
+            chosen = "gemini-2.5-flash"
+        elif ("gpt" in low_prompt or "openai" in low_prompt) and has_openai:
+            chosen = "gpt-4o-mini"
+        elif ("groq" in low_prompt or "llama" in low_prompt) and has_groq:
+            chosen = "llama-3.1-8b-instant"
+        else:
+            is_complex = any(k in low_prompt for k in _HARD_HINTS) or "```" in (last_user or "") or len(low_prompt.split()) > 14
+            if is_complex:
+                if has_gemini:
+                    chosen = "gemini-2.5-pro"
+                elif has_openai:
+                    chosen = "gpt-4o"
+                elif has_groq:
+                    chosen = getattr(config, "GROQ_MODEL", "llama-3.3-70b-versatile")
+                else:
+                    chosen = "ollama"
+            else:
+                if has_groq:
+                    chosen = "llama-3.1-8b-instant"
+                elif has_gemini:
+                    chosen = "gemini-2.5-flash"
+                elif has_openai:
+                    chosen = "gpt-4o-mini"
+                else:
+                    chosen = "ollama"
+
+    # Now route based on chosen model name
+    if chosen.startswith("gemini-"):
+        try:
+            return ask_gemini(msgs, model=chosen)
+        except Exception as e:
+            log(f"Gemini failed: {e}. Falling back to default Groq...")
+            chosen = "llama-3.3-70b-versatile"
+            
+    if chosen.startswith("gpt-"):
+        try:
+            return ask_openai(msgs, model=chosen)
+        except Exception as e:
+            log(f"OpenAI failed: {e}. Falling back to default Groq...")
+            chosen = "llama-3.3-70b-versatile"
+
+    if chosen == "ollama":
+        try:
+            return ask_ollama(msgs)
+        except Exception as e:
+            log(f"Ollama failed: {e}")
+
     groq_err = None
     if config.GROQ_API_KEY and config.GROQ_API_KEY != "PASTE_YOUR_GROQ_KEY_HERE":
         try:
-            return ask_groq(msgs, model=chosen)
+            g_model = chosen if chosen in AVAILABLE_GROQ_MODELS else pick_model(last_user)
+            return ask_groq(msgs, model=g_model)
         except urllib.error.HTTPError as e:
             try: body = e.read().decode("utf-8", "replace")[:300]
             except: body = ""
-            # Common cause: invalid model name. Auto-retry on llama-3.1-8b-instant.
             if e.code in (400, 404) and chosen != "llama-3.1-8b-instant":
                 log(f"Groq {e.code} on {STATE['model']}: {body}")
                 old = STATE["model"]
@@ -2679,7 +2955,6 @@ def ask_ai(user_messages, force_search=False):
     else:
         groq_err = "no API key set"
 
-    # Ollama backup
     try:
         return ask_ollama(msgs)
     except Exception as e:
@@ -2695,7 +2970,7 @@ _browser_opened_once = False
 
 
 def _focus_kalki_window():
-    """Bring an existing KALKI Chrome tab to the foreground. Returns True if found."""
+    """Bring an existing KALKI Chrome tab or app window to the foreground. Returns True if found."""
     try:
         import win32gui
         import win32con
@@ -2705,14 +2980,15 @@ def _focus_kalki_window():
     matches = []
 
     def _cb(hwnd, _):
-        if not win32gui.IsWindowVisible(hwnd):
-            return
         title = win32gui.GetWindowText(hwnd) or ""
-        # HUD title is "K.A.L.K.I." — strip dots so it matches "KALKI".
-        # (Old check looked for bare "KALKI" and never matched the dotted
-        # title, so every wake spawned a fresh Chrome tab.)
         norm = title.upper().replace(".", "")
-        if "KALKI" in norm or "JARVIS" in norm:
+        
+        # Ignore IDEs and terminal windows
+        if "VISUAL STUDIO CODE" in norm or "VS CODE" in norm or "COMMAND PROMPT" in norm or "POWERSHELL" in norm:
+            return
+            
+        # Match either the native app window (KALKI AI Assistant) or a browser tab
+        if "KALKI AI ASSISTANT" in norm or norm.startswith("KALKI - ") or norm == "KALKI":
             matches.append(hwnd)
 
     try:
@@ -2725,8 +3001,8 @@ def _focus_kalki_window():
 
     hwnd = matches[0]
     try:
-        # Restore if minimized
-        if win32gui.IsIconic(hwnd):
+        # Un-hide and restore if hidden or minimized
+        if not win32gui.IsWindowVisible(hwnd) or win32gui.IsIconic(hwnd):
             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
 
         # Windows blocks SetForegroundWindow unless the calling thread
@@ -2977,6 +3253,97 @@ class Handler(BaseHTTPRequestHandler):
             })
             return
 
+        if path == "/api/settings/get":
+            keys = {
+                "GROQ_API_KEY": getattr(config, "GROQ_API_KEY", ""),
+                "OPENAI_API_KEY": getattr(config, "OPENAI_API_KEY", ""),
+                "ANTHROPIC_API_KEY": getattr(config, "ANTHROPIC_API_KEY", ""),
+                "GEMINI_API_KEY": getattr(config, "GEMINI_API_KEY", ""),
+                "ELEVENLABS_API_KEY": getattr(config, "ELEVENLABS_API_KEY", ""),
+                "OWNER_NAME": getattr(config, "OWNER_NAME", ""),
+                "OWNER_TITLE": getattr(config, "OWNER_TITLE", ""),
+                "SPOTIFY_CLIENT_ID": getattr(config, "SPOTIFY_CLIENT_ID", ""),
+                "SPOTIFY_CLIENT_SECRET": getattr(config, "SPOTIFY_CLIENT_SECRET", ""),
+                "GOOGLE_CLIENT_ID": getattr(config, "GOOGLE_CLIENT_ID", ""),
+                "GOOGLE_CLIENT_SECRET": getattr(config, "GOOGLE_CLIENT_SECRET", ""),
+                "GOOGLE_PROJECT_ID": getattr(config, "GOOGLE_PROJECT_ID", ""),
+            }
+            import spotify_mod
+            
+            # calculate cache size
+            cache_size_mb = 0
+            data_dir = os.path.join(BASE_DIR, "data")
+            if os.path.exists(data_dir):
+                size_bytes = sum(os.path.getsize(os.path.join(data_dir, f)) for f in os.listdir(data_dir) if os.path.isfile(os.path.join(data_dir, f)))
+                cache_size_mb = size_bytes / (1024*1024)
+                
+            self._json({
+                "ok": True, 
+                "settings": keys, 
+                "spotifyConfigured": spotify_mod.is_configured(), 
+                "googleConfigured": gcal.is_configured(),
+                "cacheSize": f"{cache_size_mb:.2f} MB"
+            })
+            return
+
+        if path == "/api/settings/test":
+            try:
+                req = urllib.request.Request("https://api.groq.com/openai/v1/models", headers={"Authorization": f"Bearer {getattr(config,'GROQ_API_KEY','')}"})
+                with urllib.request.urlopen(req, timeout=5) as res:
+                    groq_status = "OK" if res.status == 200 else "FAILED"
+                self._json({"ok": True, "groq": groq_status})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)})
+            return
+            
+        if path == "/api/settings/test_google":
+            
+            self._json({"ok": gcal.is_configured(), "message": "Google Connection Valid" if gcal.is_configured() else "Google Auth Missing or Invalid"})
+            return
+            
+        if path == "/api/settings/test_spotify":
+            import spotify_mod
+            self._json({"ok": spotify_mod.is_configured(), "message": "Spotify Connection Valid" if spotify_mod.is_configured() else "Spotify Auth Missing or Invalid"})
+            return
+
+        if path == "/api/settings/reset":
+            try:
+                if os.path.exists(config._USER_CONFIG_PATH): os.remove(config._USER_CONFIG_PATH)
+                if os.path.exists(os.path.join(BASE_DIR, "data", "token.json")): os.remove(os.path.join(BASE_DIR, "data", "token.json"))
+                if os.path.exists(os.path.join(BASE_DIR, "data", "spotify_token.json")): os.remove(os.path.join(BASE_DIR, "data", "spotify_token.json"))
+                if os.path.exists(os.path.join(BASE_DIR, "data", "credentials.json")): os.remove(os.path.join(BASE_DIR, "data", "credentials.json"))
+                self._json({"ok": True})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)})
+            return
+            
+        if path == "/api/settings/clear_cache":
+            try:
+                data_dir = os.path.join(BASE_DIR, "data")
+                if os.path.exists(data_dir):
+                    for f in os.listdir(data_dir):
+                        fp = os.path.join(data_dir, f)
+                        # don't delete tokens or credentials or database
+                        if os.path.isfile(fp) and f not in ["token.json", "spotify_token.json", "credentials.json", "kalki.db"]:
+                            os.remove(fp)
+                self._json({"ok": True})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)})
+            return
+
+        if path == "/api/settings/export":
+            if os.path.exists(config._USER_CONFIG_PATH):
+                with open(config._USER_CONFIG_PATH, "r", encoding="utf-8") as f:
+                    content = f.read()
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Disposition', 'attachment; filename="kalki_config_backup.json"')
+                self.end_headers()
+                self.wfile.write(content.encode("utf-8"))
+            else:
+                self._json({"ok": False, "error": "No config file exists."})
+            return
+
         if path == "/api/memories":
             self._json({"memories": load_memory()})
             return
@@ -3013,6 +3380,68 @@ class Handler(BaseHTTPRequestHandler):
         body = self._read_json()
         if body.get("__too_large__"):
             self._json({"ok": False, "error": "request too large"}, status=413)
+            return
+
+        if path == "/api/settings/save":
+            try:
+                updates = body.get("updates", {})
+                new_conf = {}
+                cfg_path = config._USER_CONFIG_PATH
+                if os.path.exists(cfg_path):
+                    with open(cfg_path, "r", encoding="utf-8") as f:
+                        new_conf = json.load(f)
+                new_conf.update(updates)
+                with open(cfg_path, "w", encoding="utf-8") as f:
+                    json.dump(new_conf, f, indent=4)
+                
+                # Apply locally to current config module
+                for k, v in updates.items():
+                    setattr(config, k, v)
+                    if k == "SPOTIFY_CLIENT_ID": os.environ["SPOTIFY_CLIENT_ID"] = v
+                    if k == "SPOTIFY_CLIENT_SECRET": os.environ["SPOTIFY_CLIENT_SECRET"] = v
+                
+                # Check if we should dynamically generate credentials.json for Google Auth
+                if updates.get("GOOGLE_CLIENT_ID") and updates.get("GOOGLE_CLIENT_SECRET") and updates.get("GOOGLE_PROJECT_ID"):
+                    cred_path = os.path.join(BASE_DIR, "data", "credentials.json")
+                    cred_data = {
+                        "installed": {
+                            "client_id": updates["GOOGLE_CLIENT_ID"],
+                            "project_id": updates["GOOGLE_PROJECT_ID"],
+                            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                            "token_uri": "https://oauth2.googleapis.com/token",
+                            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                            "client_secret": updates["GOOGLE_CLIENT_SECRET"],
+                            "redirect_uris": ["http://localhost:8080/"]
+                        }
+                    }
+                    if not os.path.exists(os.path.join(BASE_DIR, "data")):
+                        os.makedirs(os.path.join(BASE_DIR, "data"), exist_ok=True)
+                    with open(cred_path, "w", encoding="utf-8") as cf:
+                        json.dump(cred_data, cf, indent=4)
+                
+                self._json({"ok": True})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)})
+            return
+
+        if path == "/api/setup/tool":
+            tool_id = body.get("tool")
+            try:
+                if tool_id == "google":
+                    def _do_google():
+                        
+                        gcal._get_creds(interactive=True)
+                        log("Google Setup complete.")
+                    threading.Thread(target=_do_google, daemon=True).start()
+                elif tool_id == "spotify":
+                    def _do_spotify():
+                        import spotify_mod
+                        spotify_mod._client(interactive=True)
+                        log("Spotify Setup complete.")
+                    threading.Thread(target=_do_spotify, daemon=True).start()
+                self._json({"ok": True})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)})
             return
 
         if path == "/api/stop":
@@ -3123,6 +3552,16 @@ class Handler(BaseHTTPRequestHandler):
                 return
             n = add_memory(fact)
             self._json({"ok": True, "count": n})
+            return
+
+        if path == "/api/models":
+            models = ["auto"]
+            if getattr(config, "GEMINI_API_KEY", "") and not getattr(config, "GEMINI_API_KEY", "").startswith("PASTE_"):
+                models += ["gemini-2.5-flash", "gemini-2.5-pro"]
+            if getattr(config, "OPENAI_API_KEY", "") and not getattr(config, "OPENAI_API_KEY", "").startswith("PASTE_"):
+                models += ["gpt-4o-mini", "gpt-4o"]
+            models += AVAILABLE_GROQ_MODELS
+            self._json({"models": models})
             return
 
         if path == "/api/model":
@@ -3432,50 +3871,119 @@ def main():
     def _alerts_loop():
         last_alert = {}
         cooldowns = {
+            "battery_super_critical": 5 * 60,
             "battery_critical": 8 * 60,
             "battery_low":      25 * 60,
+            "battery_half":     60 * 60,
             "ram_high":         12 * 60,
             "cpu_sustained":    6 * 60,
+            "disk_low":         120 * 60,
+            "network_drop":     60,
         }
         cpu_high_streak = 0
         time.sleep(15)
         last_email_count = -1
         last_github_count = -1  # settle after boot
+        
+        last_power_plugged = None
+        last_network_ok = True
+        last_clipboard = ""
+        
+        def check_network():
+            try:
+                socket.create_connection(("8.8.8.8", 53), timeout=3)
+                return True
+            except OSError:
+                return False
+
         while True:
             try:
                 if not getattr(config, "ALERTS_ENABLED", True) or not psutil:
                     time.sleep(60); continue
                 now_t = time.time()
-                # Battery
+
+                net_ok = check_network()
+                if net_ok and not last_network_ok:
+                    speak(f"Internet connection restored, {config.OWNER_TITLE}.")
+                elif not net_ok and last_network_ok:
+                    speak(f"Internet connection lost, {config.OWNER_TITLE}.")
+                last_network_ok = net_ok
+
+                # Clipboard Monitor
+                import clipboard_mod
+                clip_text = clipboard_mod.read_text()
+                if clip_text and clip_text != last_clipboard:
+                    last_clipboard = clip_text
+                    lower_clip = clip_text.lower()
+                    if len(clip_text) > 100 and any(k in lower_clip for k in ["error", "exception", "traceback", "failed"]):
+                        speak(f"Sir, I noticed you copied an error log. Should I analyze it for a fix?")
+
                 b = psutil.sensors_battery()
-                if b and not b.power_plugged:
+                if b:
                     pct = int(b.percent)
-                    if pct <= config.BATTERY_CRITICAL_PCT and \
-                       now_t - last_alert.get("battery_critical", 0) > cooldowns["battery_critical"]:
-                        speak(f"Critical battery, {config.OWNER_TITLE}. "
-                              f"{pct} percent. Plug in immediately.")
-                        last_alert["battery_critical"] = now_t
-                    elif pct <= config.BATTERY_LOW_PCT and \
-                         now_t - last_alert.get("battery_low", 0) > cooldowns["battery_low"]:
-                        speak(f"Battery is at {pct} percent, {config.OWNER_TITLE}.")
-                        last_alert["battery_low"] = now_t
-                # RAM
+                    if last_power_plugged is not None:
+                        if b.power_plugged and not last_power_plugged:
+                            if pct < 100:
+                                if getattr(b, 'secsleft', psutil.POWER_TIME_UNLIMITED) not in (psutil.POWER_TIME_UNLIMITED, -1):
+                                    mins = b.secsleft // 60
+                                    speak(f"Charging started. Estimated time to full is {mins} minutes.")
+                                else:
+                                    speak("Charging started.")
+                            else:
+                                speak("Power connected. Battery is already fully charged.")
+                        elif not b.power_plugged and last_power_plugged:
+                            speak("Running on battery power.")
+                    last_power_plugged = b.power_plugged
+
+                    if b.power_plugged and pct == 100 and \
+                       now_t - last_alert.get("battery_full", 0) > 60 * 60:
+                        speak("Battery is fully charged. You may disconnect the power.")
+                        last_alert["battery_full"] = now_t
+                        
+                    if not b.power_plugged:
+                        if pct <= getattr(config, 'BATTERY_SUPER_CRITICAL_PCT', 5) and \
+                           now_t - last_alert.get("battery_super_critical", 0) > cooldowns["battery_super_critical"]:
+                            speak(f"Warning! Battery at {pct} percent. System will shut down soon.")
+                            last_alert["battery_super_critical"] = now_t
+                        elif pct <= config.BATTERY_CRITICAL_PCT and \
+                           now_t - last_alert.get("battery_critical", 0) > cooldowns["battery_critical"]:
+                            speak(f"Critical battery, {config.OWNER_TITLE}. "
+                                  f"{pct} percent. Plug in immediately.")
+                            last_alert["battery_critical"] = now_t
+                        elif pct <= config.BATTERY_LOW_PCT and \
+                             now_t - last_alert.get("battery_low", 0) > cooldowns["battery_low"]:
+                            speak(f"Battery is at {pct} percent, {config.OWNER_TITLE}.")
+                            last_alert["battery_low"] = now_t
+                        elif pct <= getattr(config, 'BATTERY_HALF_PCT', 50) and \
+                             now_t - last_alert.get("battery_half", 0) > cooldowns["battery_half"]:
+                            speak(f"Battery is at half capacity, {pct} percent.")
+                            last_alert["battery_half"] = now_t
+
+                try:
+                    disk = psutil.disk_usage('C:\\')
+                    free_gb = disk.free / (1024 ** 3)
+                    if free_gb < getattr(config, 'DISK_LOW_GB', 5) and \
+                       now_t - last_alert.get("disk_low", 0) > cooldowns["disk_low"]:
+                        speak(f"Warning: Local disk space is critically low. Only {int(free_gb)} gigabytes remaining.")
+                        last_alert["disk_low"] = now_t
+                except Exception:
+                    pass
+
                 ram = psutil.virtual_memory().percent
                 if ram >= config.RAM_HIGH_PCT and \
                    now_t - last_alert.get("ram_high", 0) > cooldowns["ram_high"]:
-                    speak(f"Memory pressure high, {config.OWNER_TITLE}. "
-                          f"{int(ram)} percent used.")
+                    speak(f"Suspicious activity detected. Memory usage is abnormally high at {int(ram)} percent.")
                     last_alert["ram_high"] = now_t
-                # CPU — only alert on sustained high (3 consecutive readings)
+
                 cpu = psutil.cpu_percent(interval=1)
                 if cpu >= config.CPU_HIGH_PCT:
                     cpu_high_streak += 1
                 else:
                     cpu_high_streak = 0
+
                 if cpu_high_streak >= 3 and \
                    now_t - last_alert.get("cpu_sustained", 0) > cooldowns["cpu_sustained"]:
-                    speak(f"CPU sustained at {int(cpu)} percent, "
-                          f"{config.OWNER_TITLE}. Something is working hard.")
+                    speak(f"Suspicious activity detected on your computer, {config.OWNER_TITLE}. CPU is sustained at {int(cpu)} percent.")
                     last_alert["cpu_sustained"] = now_t
                     cpu_high_streak = 0
 
@@ -3483,9 +3991,17 @@ def main():
                 import mail as mailmod
                 res = mailmod.check_inbox(limit=10, only_unread=True)
                 if isinstance(res, dict) and "emails" in res:
-                    important_count = sum(1 for e in res["emails"] if e.get("important"))
+                    important_emails = [e for e in res["emails"] if e.get("important")]
+                    important_count = len(important_emails)
                     if last_email_count != -1 and important_count > last_email_count:
-                        speak(f"Excuse me Sir, you have {important_count - last_email_count} new urgent email.")
+                        new_count = important_count - last_email_count
+                        latest = important_emails[0]
+                        short_from = latest["from"].split("<")[0].strip().strip('"')
+                        short_subj = latest["subject"][:60]
+                        if new_count == 1:
+                            speak(f"Excuse me Sir, you have a new important email from {short_from} about {short_subj}.")
+                        else:
+                            speak(f"Excuse me Sir, you have {new_count} new important emails, including one from {short_from}.")
                     last_email_count = important_count
                     
                 # Proactive GitHub Alert
@@ -3608,6 +4124,29 @@ def main():
                 log(f"watchdog loop error: {e}")
             time.sleep(getattr(config, "WATCHDOG_POLL_SEC", 600))
     threading.Thread(target=_watchdog_loop, daemon=True).start()
+
+    def fetch_groq_models():
+        global AVAILABLE_GROQ_MODELS
+        if not config.GROQ_API_KEY or config.GROQ_API_KEY.startswith("PASTE_"):
+            return
+        try:
+            req = urllib.request.Request(
+                "https://api.groq.com/openai/v1/models",
+                headers={
+                    "Authorization": f"Bearer {config.GROQ_API_KEY}",
+                    "User-Agent": "Mozilla/5.0"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=10) as r:
+                data = json.loads(r.read())
+                models = [m["id"] for m in data.get("data", [])]
+                if models:
+                    AVAILABLE_GROQ_MODELS = models
+                    print(f"Loaded {len(models)} Groq models dynamically.")
+        except Exception as e:
+            print(f"Failed to fetch Groq models: {e}")
+            
+    threading.Thread(target=fetch_groq_models, daemon=True).start()
 
     server = ThreadingHTTPServer(("127.0.0.1", config.PORT), Handler)
     print(f"KALKI server online -> http://localhost:{config.PORT}")

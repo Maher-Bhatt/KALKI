@@ -6,7 +6,9 @@ Run: py -3.11 C:\\Kalki\\setup_spotify.py
 import os
 import sys
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.abspath(
+    sys.executable if getattr(sys, "frozen", False) else __file__
+))
 sys.path.insert(0, BASE_DIR)
 
 import config

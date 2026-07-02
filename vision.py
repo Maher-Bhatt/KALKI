@@ -15,7 +15,9 @@ import urllib.request
 from datetime import datetime
 from typing import Optional, Dict, Any
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.abspath(
+    sys.executable if getattr(sys, "frozen", False) else __file__
+))
 sys.path.insert(0, BASE_DIR)
 import config
 

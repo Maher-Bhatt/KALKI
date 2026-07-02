@@ -1,6 +1,6 @@
 """
-KALKI v5 — Silent Launcher
-==========================
+KALKI v1.00 PRO — Silent Launcher
+=================================
 
 This module serves as the entry point for the Jarvis (KALKI) application.
 It performs the following functions:
@@ -19,7 +19,9 @@ from datetime import datetime
 from typing import Optional, Any
 
 # Ensure we operate in the base directory where the script resides
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.abspath(
+    sys.executable if getattr(sys, "frozen", False) else __file__
+))
 os.chdir(BASE_DIR)
 sys.path.insert(0, BASE_DIR)
 
@@ -62,21 +64,30 @@ def find_pythonw() -> str:
     return sys.executable
 
 
-def spawn(script: str) -> subprocess.Popen:
-    """
-    Spawn a Python script as a background process using pythonw.exe.
-    
-    Args:
-        script (str): The filename of the Python script to execute (e.g., 'server.py').
+def find_service_exe(name: str) -> str:
+    # If running from source (unfrozen), we run `python name.py`
+    # If frozen, we map the script name to the PyInstaller EXE in the same folder
+    if getattr(sys, 'frozen', False):
+        mapping = {
+            "server.py": "KALKI_Server.exe",
+            "listener.py": "KALKI_Listener.exe",
+            "kalki_setup_wizard.py": "KALKI_Setup_Wizard.exe"
+        }
+        exe_name = mapping.get(name, name.replace(".py", ".exe"))
+        return os.path.join(BASE_DIR, exe_name)
+    else:
+        return os.path.join(BASE_DIR, name)
 
-    Returns:
-        subprocess.Popen: The process object of the spawned script.
-    """
-    pyw = find_pythonw()
-    # 0x08000000 is the Windows CREATE_NO_WINDOW flag
+def spawn(script: str) -> subprocess.Popen:
     cflags = 0x08000000 if os.name == "nt" else 0
+    
+    if getattr(sys, 'frozen', False):
+        cmd = [find_service_exe(script)]
+    else:
+        cmd = [sys.executable, find_service_exe(script)]
+        
     return subprocess.Popen(
-        [pyw, os.path.join(BASE_DIR, script)],
+        cmd,
         cwd=BASE_DIR,
         creationflags=cflags,
         stdout=subprocess.DEVNULL,
@@ -101,9 +112,11 @@ def register_registry(enabled: bool = True) -> bool:
         log(f"winreg unavailable: {e}")
         return False
         
-    pyw = find_pythonw()
-    launcher = os.path.abspath(__file__)
-    cmd = f'"{pyw}" "{launcher}"'
+    if getattr(sys, 'frozen', False):
+        cmd = f'"{sys.executable}" --tray'
+    else:
+        launcher = os.path.abspath(__file__)
+        cmd = f'"{sys.executable}" "{launcher}"'
     
     try:
         key = winreg.OpenKey(

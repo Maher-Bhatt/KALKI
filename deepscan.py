@@ -21,6 +21,14 @@ from datetime import datetime
 from typing import Dict, Any, List, Tuple, Optional
 
 import webscan
+import sys
+
+BASE_DIR = os.path.dirname(os.path.abspath(
+    sys.executable if getattr(sys, "frozen", False) else __file__
+))
+
+if getattr(sys, "frozen", False):
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = os.path.join(BASE_DIR, "browsers")
 
 SCANS_DIR = "data/scans"
 

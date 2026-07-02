@@ -1,9 +1,9 @@
 @echo off
-title KALKI v5
+title KALKI v1 PRO
 color 0B
 echo.
 echo ============================================================
-echo   KALKI v5 - Starting
+echo   KALKI v1 PRO - Starting
 echo ============================================================
 echo.
 echo Starting KALKI server...

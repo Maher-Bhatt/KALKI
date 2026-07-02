@@ -1,5 +1,5 @@
 """
-KALKI v5 — Wake Word Listener
+KALKI v1.00 PRO — Wake Word Listener
 Always-on system mic. Captures wake word, then the follow-up command.
 NEVER calls AI itself — POSTs to /api/wake (greeting/Chrome) or /api/chat
 (voice command). The browser tab is purely a display.
@@ -13,7 +13,9 @@ import json
 import urllib.request
 from datetime import datetime
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.abspath(
+    sys.executable if getattr(sys, "frozen", False) else __file__
+))
 os.chdir(BASE_DIR)
 sys.path.insert(0, BASE_DIR)
 
@@ -46,8 +48,12 @@ WAKE_WORDS = [w.lower() for w in config.WAKE_WORDS]
 # Common Google STT mishearings of "Kalki".
 # NOTE: only Kalki-like tokens that are whole words (matched with \b), so they
 # never fire inside ordinary speech. Avoid bare substrings like "cal".
-WAKE_FUZZY = ["kalki", "kalka", "kalkee", "kalky", "kal ki",
-              "calki", "kalgi", "khalki", "hey kalki", "ok kalki"]
+WAKE_FUZZY = [
+    "kalki", "kalka", "kalkee", "kalky", "kal ki", "calki", "kalgi", "khalki",
+    "hey kalki", "ok kalki", "hi kalki", "hello kalki", "ykal ki", "calkey",
+    "kalkie", "calkie", "call key", "colky", "colkey", "calky", "hawkey", "hockey",
+    "cal key", "calkee"
+]
 
 
 def _post(endpoint, body=None, timeout=15):
@@ -273,6 +279,19 @@ def run_vosk(dev_index):
             kw["input_device_index"] = dev_index
         return pa.open(**kw)
 
+    def close_vosk_stream():
+        nonlocal stream
+        if stream is not None:
+            try:
+                stream.stop_stream()
+            except Exception:
+                pass
+            try:
+                stream.close()
+            except Exception:
+                pass
+            stream = None
+
     try:
         stream = open_stream()
     except Exception as e:
@@ -299,20 +318,42 @@ def run_vosk(dev_index):
         try:
             # Release the mic while paused so other apps can use it.
             if is_paused():
-                try:
-                    stream.stop_stream()
-                except Exception:
-                    pass
+                if stream is not None:
+                    try:
+                        stream.stop_stream()
+                    except Exception:
+                        pass
+                    try:
+                        stream.close()
+                    except Exception:
+                        pass
+                    stream = None
                 if time.time() > paused_logged:
                     log("listener paused — mic released")
                     paused_logged = time.time() + 30
                 time.sleep(1.5)
                 continue
+
+            if stream is None:
+                try:
+                    stream = open_stream()
+                    rec = vosk.KaldiRecognizer(model, RATE)
+                    log("listener resumed — mic re-opened")
+                except Exception as e:
+                    log(f"failed to reopen stream: {e}")
+                    time.sleep(2)
+                    continue
+
             if not stream.is_active():
                 try:
                     stream.start_stream()
                 except Exception:
-                    stream = open_stream(); rec = vosk.KaldiRecognizer(model, RATE)
+                    try:
+                        stream.close()
+                    except Exception:
+                        pass
+                    stream = open_stream()
+                    rec = vosk.KaldiRecognizer(model, RATE)
 
             data = stream.read(CHUNK, exception_on_overflow=False)
 
@@ -335,15 +376,26 @@ def run_vosk(dev_index):
 
             inline = extract_inline(phrase)
             if inline:
+                close_vosk_stream()
                 post_chat_voice(inline)
-                wait_until_silent(max_wait=8.0)
-                time.sleep(0.3)
+                wait_until_silent(max_wait=12.0)
                 continue
 
             # wake only → greet, then capture the follow-up command
+            close_vosk_stream()
             post_wake("")
             wait_until_silent(max_wait=4.0)
+            
+            # Reopen stream to listen for follow-up command
+            try:
+                stream = open_stream()
+                rec = vosk.KaldiRecognizer(model, RATE)
+            except Exception as e:
+                log(f"failed to reopen stream for follow-up: {e}")
+                continue
+                
             follow = next_final(timeout=6)
+            close_vosk_stream()
             if not follow:
                 log("no follow-up command within window")
                 continue
@@ -352,7 +404,6 @@ def run_vosk(dev_index):
                 post_stop(); continue
             post_chat_voice(follow)
             wait_until_silent(max_wait=12.0)
-            time.sleep(0.3)
 
         except KeyboardInterrupt:
             log("listener stopped by user")
@@ -441,26 +492,21 @@ def main():
     while True:
         try:
             # Pause → stop the stream entirely so the mic is fully released.
-            if is_paused():
+            # We do this BOTH for manual pause AND when KALKI is speaking (to avoid feedback loops).
+            if is_paused() or is_speaking():
                 if not paused:
                     try: stop_bg(wait_for_stop=False)
                     except Exception: pass
                     paused = True
                     _drain()
-                    log("listener paused — mic released")
-                time.sleep(1.0)
+                    log("listener paused or speaking — mic released")
+                time.sleep(0.5)
                 continue
             if paused:
                 stop_bg = recognizer.listen_in_background(
                     mic, _bg_callback, phrase_time_limit=6)
                 paused = False
                 log("listener resumed")
-
-            # Drop anything captured while KALKI is speaking (its own voice).
-            if is_speaking():
-                _drain()
-                time.sleep(0.1)
-                continue
 
             try:
                 phrase = phrases.get(timeout=1.0)
@@ -473,30 +519,40 @@ def main():
             if not contains_wake(phrase):
                 continue
 
+            # Stop background listener immediately before processing
+            if not paused:
+                try: stop_bg(wait_for_stop=False)
+                except Exception: pass
+                paused = True
+                log("stopping background listener for processing")
+
             inline = extract_inline(phrase)
             if inline:
                 post_chat_voice(inline)
-                wait_until_silent(max_wait=8.0)
-                _drain()
-                continue
+                wait_until_silent(max_wait=12.0)
+            else:
+                # wake only → greet, then capture the follow-up command
+                post_wake("")
+                wait_until_silent(max_wait=4.0)
+                
+                log("waiting for follow-up command...")
+                follow = listen_once(recognizer, mic, phrase_time_limit=6, timeout=5.0)
+                if follow:
+                    log(f"follow-up: {follow}")
+                    if contains_stop(follow):
+                        post_stop()
+                    else:
+                        post_chat_voice(follow)
+                        wait_until_silent(max_wait=12.0)
+                else:
+                    log("no follow-up command within window")
 
-            # wake only → greet, then capture the follow-up command
-            post_wake("")
-            wait_until_silent(max_wait=4.0)
+            # Restart background listener
             _drain()
-            try:
-                follow = phrases.get(timeout=6.0)
-            except _queue.Empty:
-                follow = None
-            if not follow:
-                log("no follow-up command within window")
-                continue
-            log(f"follow-up: {follow}")
-            if contains_stop(follow):
-                post_stop(); continue
-            post_chat_voice(follow)
-            wait_until_silent(max_wait=12.0)
-            _drain()
+            stop_bg = recognizer.listen_in_background(
+                mic, _bg_callback, phrase_time_limit=6)
+            paused = False
+            log("restarting background listener")
 
         except KeyboardInterrupt:
             try: stop_bg(wait_for_stop=False)
