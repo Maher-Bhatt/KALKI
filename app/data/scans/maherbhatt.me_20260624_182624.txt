@@ -1,0 +1,41 @@
+================================================================
+KALKI WEB SCAN REPORT
+Target : https://maherbhatt.me
+Time   : 2026-06-24T18:26:24
+Note   : Authorized, non-destructive assessment. Findings only.
+Source : captured -> C:\Jarvis\data\scans\maherbhatt.me_20260624_182615_source.txt
+================================================================
+SUMMARY: 3 HIGH, 2 MEDIUM, 3 LOW
+INFO   : present -> /robots.txt, /sitemap.xml, /.well-known/security.txt
+
+[1] HIGH  —  Missing HSTS header
+     What : No Strict-Transport-Security — connection can be downgraded to HTTP.
+     Fix  : Add: Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+[2] HIGH  —  Exposed .env file
+     What : https://maherbhatt.me/.env returned 200 with matching content.
+     Fix  : Remove the file from the web root or block access.
+
+[3] HIGH  —  Exposed environment sample
+     What : https://maherbhatt.me/.env.example returned 200 with matching content.
+     Fix  : Remove the file from the web root or block access.
+
+[4] MEDIUM  —  Missing Content-Security-Policy
+     What : No CSP — increases XSS and injection blast radius.
+     Fix  : Define a restrictive CSP, e.g. default-src 'self'.
+
+[5] MEDIUM  —  Missing X-Frame-Options
+     What : Page can be framed — clickjacking risk.
+     Fix  : Add: X-Frame-Options: DENY (or CSP frame-ancestors 'none').
+
+[6] LOW  —  Missing X-Content-Type-Options
+     What : MIME-sniffing not disabled.
+     Fix  : Add: X-Content-Type-Options: nosniff
+
+[7] LOW  —  Missing Referrer-Policy
+     What : Referrer may leak to third parties.
+     Fix  : Add: Referrer-Policy: strict-origin-when-cross-origin
+
+[8] LOW  —  Missing Permissions-Policy
+     What : Browser features not restricted.
+     Fix  : Add a Permissions-Policy limiting camera/mic/geolocation.

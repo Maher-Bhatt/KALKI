@@ -1,0 +1,16 @@
+{
+  "localStorage": "{}",
+  "sessionStorage": "{}",
+  "cookies": [
+    {
+      "name": "ASP.NET_SessionId",
+      "value": "hnwcfaa4nyys1fbccyvomsiw",
+      "domain": "ums.itmbu.ac.in",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    }
+  ]
+}

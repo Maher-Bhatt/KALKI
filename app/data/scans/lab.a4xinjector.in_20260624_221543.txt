@@ -1,0 +1,41 @@
+================================================================
+KALKI WEB SCAN REPORT
+Target : https://lab.a4xinjector.in
+Time   : 2026-06-24T22:15:43
+Note   : Authorized, non-destructive assessment. Findings only.
+Source : captured -> C:\Jarvis\data\scans\lab.a4xinjector.in_20260624_221538_source.txt
+================================================================
+SUMMARY: 1 HIGH, 2 MEDIUM, 4 LOW, 1 INFO
+INFO   : present -> /robots.txt
+
+[1] HIGH  —  Missing HSTS header
+     What : No Strict-Transport-Security — connection can be downgraded to HTTP.
+     Fix  : Add: Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+[2] MEDIUM  —  Missing Content-Security-Policy
+     What : No CSP — increases XSS and injection blast radius.
+     Fix  : Define a restrictive CSP, e.g. default-src 'self'.
+
+[3] MEDIUM  —  Missing X-Frame-Options
+     What : Page can be framed — clickjacking risk.
+     Fix  : Add: X-Frame-Options: DENY (or CSP frame-ancestors 'none').
+
+[4] LOW  —  Missing X-Content-Type-Options
+     What : MIME-sniffing not disabled.
+     Fix  : Add: X-Content-Type-Options: nosniff
+
+[5] LOW  —  Missing Referrer-Policy
+     What : Referrer may leak to third parties.
+     Fix  : Add: Referrer-Policy: strict-origin-when-cross-origin
+
+[6] LOW  —  Missing Permissions-Policy
+     What : Browser features not restricted.
+     Fix  : Add a Permissions-Policy limiting camera/mic/geolocation.
+
+[7] LOW  —  Technology disclosed via X-Powered-By
+     What : X-Powered-By: Next.js
+     Fix  : Remove the X-Powered-By header.
+
+[8] INFO  —  Crawled internal pages
+     What : Checked 4: content?id=QXTM_Dtd3AfrfQZAGaTlcu5rOjDE65MDMN_iLTcURAA-1782319531.6486316-1.2.1.1-4K99m2qM5W6y4U2zGv4_fjlR2eUJ97yUEIJmI6q.EMY, /, login, register
+     Fix  : Review linked pages for the same issues.

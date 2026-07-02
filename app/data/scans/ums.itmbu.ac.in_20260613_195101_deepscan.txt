@@ -1,0 +1,32 @@
+==================================================================
+KALKI DEEP SCAN (DevTools-level) REPORT
+Target : https://ums.itmbu.ac.in/Login.aspx
+Time   : 2026-06-13T19:51:01
+Files  : 25 loaded resources captured -> data/scans\ums.itmbu.ac.in_20260613_195101_inspect
+Note   : Authorized, non-destructive. Loaded + read, not attacked.
+==================================================================
+SUMMARY: 2 MEDIUM, 2 LOW, 2 INFO
+
+[1] MEDIUM  —  Missing Content-Security-Policy
+     What : No CSP — bigger XSS blast radius.
+     Fix  : Define a restrictive CSP.
+
+[2] MEDIUM  —  Missing X-Frame-Options
+     What : Clickjacking risk.
+     Fix  : Add X-Frame-Options: DENY or CSP frame-ancestors.
+
+[3] LOW  —  Server version disclosed
+     What : Server: Microsoft-IIS/10.0
+     Fix  : Suppress version banners.
+
+[4] LOW  —  Form has no obvious CSRF token
+     What : 1 form(s), no csrf/token hidden field seen.
+     Fix  : Add an anti-CSRF token to state-changing forms.
+
+[5] INFO  —  Third-party scripts
+     What : 2 external script host(s): www.google.com, www.gstatic.com
+     Fix  : Each can read the whole page — vet every one.
+
+[6] INFO  —  Input surface mapped
+     What : 1 form(s), 15 input field(s): __VIEWSTATE, __VIEWSTATEGENERATOR, __VIEWSTATEENCRYPTED, hfWidth, hfHeight, hfLoginMethod, hfIsStaffLoginWithUserNameOTP, hfIsStudentLoginWithUserNameOTP, hfIsForgotPassword, rblRole, rblRole, txtUsername
+     Fix  : Validate and sanitize each input server-side.
