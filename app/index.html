@@ -594,6 +594,9 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
   animation: blink .8s steps(1) infinite;
 }
 @keyframes blink{ 50% { opacity:0 } }
+/* =========================================================================
+   RESPONSIVE SCALING - Moved to fluid JS engine at the bottom of the file
+   ========================================================================= */
 </style>
 </head>
 <body class="mode-idle">
@@ -2243,6 +2246,20 @@ setTimeout(()=>addLine("Double-click screen to lock/unlock HUD manually.","kalki
 if (STATE.busyMode) {
   fetch("/api/listener/pause", {method:"POST", headers:{"Content-Type":"application/json"}, body:"{}"}).catch(()=>{});
 }
+// -------------------------------------------------------------------------
+// FLUID ADAPTIVE UI SCALER
+// -------------------------------------------------------------------------
+function adaptUI() {
+  const baseW = 2560; // 2K Design Base Width
+  const baseH = 1440; // 2K Design Base Height
+  let scale = Math.min(window.innerWidth / baseW, window.innerHeight / baseH);
+  if (scale > 1) scale = 1; // Don't scale up past 100%, only shrink for smaller laptops
+  
+  // Apply zoom for chromium/webkit
+  document.documentElement.style.zoom = scale;
+}
+window.addEventListener('resize', adaptUI);
+adaptUI();
 </script>
 </body>
 </html>

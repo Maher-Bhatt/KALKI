@@ -503,9 +503,11 @@ def main():
                 time.sleep(0.5)
                 continue
             if paused:
+                _drain()
                 stop_bg = recognizer.listen_in_background(
                     mic, _bg_callback, phrase_time_limit=6)
                 paused = False
+                _drain()
                 log("listener resumed")
 
             try:

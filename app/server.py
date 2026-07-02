@@ -659,6 +659,9 @@ def speak(text):
                         os.unlink(tmp)
                     except Exception:
                         pass
+                # Echo Protection Delay: Wait 600ms before releasing the speaking lock
+                # so the microphone doesn't pick up room reverb/echo of the TTS.
+                time.sleep(0.6)
                 STATE["speaking"] = False
 
     threading.Thread(target=_run, daemon=True).start()
