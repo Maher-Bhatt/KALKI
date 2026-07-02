@@ -42,6 +42,10 @@ def main():
         if script == "kalki_setup_wizard.py":
             cmd.append("--collect-all=customtkinter")
             cmd.append("--collect-all=pystray")
+        
+        if script == "listener.py":
+            cmd.append("--hidden-import=pyaudio")
+            cmd.append("--collect-all=speech_recognition")
             
         cmd.append(script)
         run_cmd(" ".join(cmd))
