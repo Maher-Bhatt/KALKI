@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['setup_google.py'],
+    ['..\\setup_google.py'],
     pathex=[],
     binaries=[],
     datas=[],
@@ -32,7 +32,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['assets\\kalki_icon.ico'],
+    icon=['C:\\Users\\maher\\Music\\KALKI application\\assets\\kalki_icon.ico'],
 )
 coll = COLLECT(
     exe,

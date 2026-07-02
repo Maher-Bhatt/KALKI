@@ -9,7 +9,7 @@ datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
-    ['main_app.py'],
+    ['..\\main_app.py'],
     pathex=[],
     binaries=binaries,
     datas=datas,
@@ -39,7 +39,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['assets\\kalki_icon.ico'],
+    icon=['C:\\Users\\maher\\Music\\KALKI application\\assets\\kalki_icon.ico'],
 )
 coll = COLLECT(
     exe,

@@ -31,7 +31,7 @@ def main():
             "--onedir",
             "--clean",
             f"--name={name}",
-            f"--icon=assets/kalki_icon.ico",
+            f"--icon=\"{os.path.abspath('assets/kalki_icon.ico')}\"",
             "--specpath=build_tools",
         ]
         

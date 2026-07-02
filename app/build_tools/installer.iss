@@ -12,8 +12,8 @@ DefaultDirName={localappdata}\Programs\KALKI
 DefaultGroupName={#MyAppName}
 PrivilegesRequired=lowest
 OutputBaseFilename=KALKI_Setup
-LicenseFile=LICENSE
-SetupIconFile=assets\kalki_icon.ico
+LicenseFile=..\LICENSE
+SetupIconFile=..\assets\kalki_icon.ico
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -25,18 +25,18 @@ Name: "deepscan"; Description: "Deep website scanner (Playwright + Chromium, ~30
 
 [Files]
 ; The 4 EXEs
-Source: "dist\KALKI\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
-Source: "dist\KALKI_Setup_Wizard\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
-Source: "dist\KALKI_Server\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
-Source: "dist\KALKI_Listener\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
-Source: "dist\KALKI_Setup_Google\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
-Source: "dist\KALKI_Setup_Spotify\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
-Source: "browsers\*"; DestDir: "{app}\browsers"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
+Source: "..\dist\KALKI\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
+Source: "..\dist\KALKI_Setup_Wizard\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
+Source: "..\dist\KALKI_Server\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
+Source: "..\dist\KALKI_Listener\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
+Source: "..\dist\KALKI_Setup_Google\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
+Source: "..\dist\KALKI_Setup_Spotify\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
+Source: "..\browsers\*"; DestDir: "{app}\browsers"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
 
 ; Assets and structure
-Source: "assets\*"; DestDir: "{app}\assets"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
-Source: "index.html"; DestDir: "{app}"; Flags: ignoreversion; Components: core
-Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion; Components: core
+Source: "..\assets\*"; DestDir: "{app}\assets"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
+Source: "..\index.html"; DestDir: "{app}"; Flags: ignoreversion; Components: core
+Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion; Components: core
 
 [Dirs]
 Name: "{app}\data"; Components: core
