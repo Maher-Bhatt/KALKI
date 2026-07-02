@@ -6,7 +6,7 @@
   <h2>A Windows-native, voice-first AI assistant inspired by J.A.R.V.I.S.</h2>
 
   <p>
-    <img src="https://img.shields.io/badge/release-v5.1-6c757d?style=flat-square" alt="release">
+    <img src="https://img.shields.io/badge/release-v1.0.0_PRO-6c757d?style=flat-square" alt="release">
     <img src="https://img.shields.io/badge/platform-Windows_10%2B-8a8276?style=flat-square" alt="platform">
     <img src="https://img.shields.io/badge/brain-Groq_%2B_LLaMA-c4a065?style=flat-square" alt="tech">
   </p>
@@ -42,6 +42,20 @@ KALKI is an autonomous personal assistant built from scratch in Python and a sin
 <div align="center">
   <img src="screenshots/kalki-standby.png" width="48%" alt="Standby">
   <img src="screenshots/kalki-listening.png" width="48%" alt="Listening">
+</div>
+
+<br>
+
+<div align="center">
+  <img src="screenshots/hud_tactical.png" width="48%" alt="Tactical Ops">
+  <img src="screenshots/hud_models.png" width="48%" alt="Neural Models">
+</div>
+
+<br>
+
+<div align="center">
+  <img src="screenshots/settings_general.png" width="48%" alt="General Settings">
+  <img src="screenshots/settings_integrations.png" width="48%" alt="Integrations">
 </div>
 
 ## Tech stack
