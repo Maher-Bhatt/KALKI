@@ -186,7 +186,17 @@ C:\Kalki\
 
 ## Setup
 
-### Requirements
+### Method 1: The Installer (Recommended)
+The easiest way to get KALKI running is to use the standalone installer. This avoids installing Python and running commands manually.
+1. Go to the [Releases](https://github.com/Maher-Bhatt/KALKI/releases) page.
+2. Download `KALKI_Setup.exe` (v5.1.0 or latest).
+3. Run the installer and follow the Setup Wizard. 
+
+---
+
+### Method 2: Manual Installation (For developers)
+
+#### Requirements
 - **Windows 10/11**
 - **Python 3.11** — install from [python.org](https://www.python.org/downloads/release/python-3119/) and tick **"Add Python to PATH"**
 - A **microphone**
@@ -194,7 +204,7 @@ C:\Kalki\
 
 ---
 
-### Step 1 — Get your free Groq API key
+#### Step 1 — Get your free Groq API key
 
 KALKI's brain runs on [Groq](https://console.groq.com) (free, very fast LLaMA inference).
 
@@ -206,7 +216,7 @@ KALKI's brain runs on [Groq](https://console.groq.com) (free, very fast LLaMA in
 
 ---
 
-### Step 2 — Clone & configure
+#### Step 2 — Clone & configure
 
 ```bat
 git clone https://github.com/Maher-Bhatt/KALKI.git C:\Kalki

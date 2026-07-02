@@ -50,6 +50,3 @@ Thumbs.db
 build/
 dist/
 *.tmp
-
-user_config.json
-
