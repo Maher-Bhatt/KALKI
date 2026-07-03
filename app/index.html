@@ -3,7 +3,7 @@
 <head>
 <!--
 ====================================================================
-KALKI v1.0.6 PRO — Frontend User Interface
+KALKI v1.0.7 PRO — Frontend User Interface
 ====================================================================
 Architecture:
 - Pure HTML/CSS/JS (Zero external dependencies or frameworks).
@@ -629,7 +629,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
     <div>OPER <span class="v" id="topOwner">Sir</span></div>
     <div>LOC <span class="v" id="topLoc">—</span></div>
     <div>MODE <span class="v cy" id="topMode">SYSTEM</span></div>
-    <div>SYS <span class="v" id="topSys">v1.0.6 PRO</span></div>
+    <div>SYS <span class="v" id="topSys">v1.0.7 PRO</span></div>
     <div>NET <span class="v ok" id="topNet">ONLINE</span></div>
     <div><span class="v cy" id="topClock">00:00:00</span></div>
     <div style="cursor:pointer; border:0.1rem solid var(--frame); padding:0.2rem 0.8rem; border-radius:0.3rem;" id="topSettingsBtn">⚙ SETTINGS</div>
@@ -751,7 +751,10 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
   <div class="modal-content" style="background:#0a0a0c; border:0.1rem solid var(--accent); width:80rem; height:60rem; display:flex; flex-direction:column;">
     <div style="display:flex; justify-content:space-between; align-items:center; padding:1.5rem 2rem; border-bottom:0.1rem solid #333;">
       <div style="font-size:2rem; color:var(--accent); font-weight:bold;">KALKI CONFIGURATION</div>
-      <button class="qbtn" id="closeSettingsBtn" style="background:transparent; color:var(--text-dim); border:none; cursor:pointer; font-size:1.8rem;">✕</button>
+      <div>
+        <a href="https://youtu.be/vbUOy8oMqOM" target="_blank" style="color:var(--cyan); margin-right:2rem; font-size:1.2rem; text-decoration:none;">📺 Watch Setup Tutorial</a>
+        <button class="qbtn" id="closeSettingsBtn" style="background:transparent; color:var(--text-dim); border:none; cursor:pointer; font-size:1.8rem;">✕</button>
+      </div>
     </div>
     <div id="settingsNotice" style="display:none; padding:0.8rem; margin:1rem 2rem; font-size:1.2rem; font-weight:bold; text-align:center; border:0.1rem solid;"></div>
     
@@ -781,6 +784,21 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
           <div style="margin-bottom:1.5rem;">
             <label style="display:block; font-size:1.2rem; color:var(--text-dim);">OWNER TITLE</label>
             <input type="text" id="set_owner_title" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
+          </div>
+          <div style="margin-bottom:1.5rem;">
+            <label style="display:block; font-size:1.2rem; color:var(--text-dim);">LOCATION (CITY, STATE, COUNTRY)</label>
+            <div style="display:flex; gap:1rem; margin-top:0.3rem;">
+              <input type="text" id="set_owner_city" placeholder="City" style="flex:1; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem;">
+              <input type="text" id="set_owner_state" placeholder="State" style="flex:1; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem;">
+              <input type="text" id="set_owner_country" placeholder="Country" style="flex:1; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem;">
+            </div>
+          </div>
+          <div style="margin-bottom:1.5rem;">
+            <label style="display:block; font-size:1.2rem; color:var(--text-dim);">GMAIL ADDRESS & APP PASSWORD</label>
+            <div style="display:flex; gap:1rem; margin-top:0.3rem;">
+              <input type="text" id="set_email_address" placeholder="example@gmail.com" style="flex:1; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem;">
+              <input type="password" id="set_email_app_password" placeholder="16-char App Password" style="flex:1; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem;">
+            </div>
           </div>
           <div style="margin-bottom:1.5rem;">
             <label style="display:block; font-size:1.2rem; color:var(--text-dim);">THEME / MODE</label>
@@ -828,11 +846,34 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
             </details>
           </div>
           
+          <div style="border:0.1rem solid #333; background:#111; padding:1.5rem; margin-bottom:2rem;">
+            <h4 style="margin-bottom:1rem; display:flex; justify-content:space-between;">
+              <span>GITHUB & SHODAN</span>
+            </h4>
+            <div style="margin-bottom:1rem;">
+              <label style="display:flex; justify-content:space-between; font-size:1.1rem; color:var(--text-dim);">
+                <span>GITHUB TOKEN</span>
+                <a href="https://github.com/settings/tokens" target="_blank" style="color:var(--cyan); text-decoration:none;">Get Token</a>
+              </label>
+              <input type="password" id="set_github_token" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
+            </div>
+            <div style="margin-bottom:1rem;">
+              <label style="display:flex; justify-content:space-between; font-size:1.1rem; color:var(--text-dim);">
+                <span>SHODAN API KEY</span>
+                <a href="https://account.shodan.io/" target="_blank" style="color:var(--cyan); text-decoration:none;">Get Key</a>
+              </label>
+              <input type="password" id="set_shodan_api_key" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
+            </div>
+          </div>
+          
           <div style="border:0.1rem solid #333; background:#111; padding:1.5rem;">
             <h4 style="margin-bottom:1rem; display:flex; justify-content:space-between;">
               <span>SPOTIFY</span>
               <span id="lbl_spotify_status" style="color:var(--orange); font-size:1.2rem;">[NOT CONFIGURED]</span>
             </h4>
+            <p style="font-size:1.1rem; color:var(--text-dim); margin-bottom:1rem;">
+              <a href="https://developer.spotify.com/dashboard" target="_blank" style="color:var(--cyan); text-decoration:none;">Open Spotify Developer Dashboard →</a>
+            </p>
             <details style="margin-top:1rem;">
               <summary style="cursor:pointer; color:var(--accent); font-weight:bold; font-size:1.1rem;">Configure Spotify Integration</summary>
               <div style="margin-top:1rem; padding-left:1rem; border-left:0.1rem solid #333;">
@@ -846,7 +887,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
                 </div>
                 <div style="margin-bottom:1rem;">
                   <label style="font-size:1.1rem; color:var(--text-dim);">REDIRECT URI</label>
-                  <input type="text" id="set_spotify_redirect_uri" value="http://localhost:8888/callback" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
+                  <input type="text" id="set_spotify_redirect_uri" value="http://127.0.0.1:8889/callback" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;" readonly>
                 </div>
                 <div style="display:flex; justify-content:space-between; margin-top:1.5rem;">
                   <button class="qbtn" id="runSpotifySetup" style="width:48%; background:#222; border:0.1rem solid #444; color:var(--text); padding:0.6rem; cursor:pointer;">MANUAL LINK (OAUTH)</button>
@@ -915,7 +956,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
           <h3 style="margin-bottom:1.5rem; color:var(--accent);">SYSTEM DIAGNOSTICS</h3>
           
           <table style="width:100%; font-size:1.2rem; margin-bottom:2rem; border-collapse:collapse;">
-            <tr><td style="padding:0.8rem; border-bottom:0.1rem solid #333; color:var(--text-dim);">Core Version</td><td style="padding:0.8rem; border-bottom:0.1rem solid #333; text-align:right;">v1.0.6</td></tr>
+            <tr><td style="padding:0.8rem; border-bottom:0.1rem solid #333; color:var(--text-dim);">Core Version</td><td style="padding:0.8rem; border-bottom:0.1rem solid #333; text-align:right;">v1.0.7</td></tr>
             <tr><td style="padding:0.8rem; border-bottom:0.1rem solid #333; color:var(--text-dim);">Runtime</td><td style="padding:0.8rem; border-bottom:0.1rem solid #333; text-align:right;">Python 3.12 (Local)</td></tr>
             <tr><td style="padding:0.8rem; border-bottom:0.1rem solid #333; color:var(--text-dim);">Cache Storage</td><td style="padding:0.8rem; border-bottom:0.1rem solid #333; text-align:right;" id="lbl_cache_size">0.0 MB</td></tr>
           </table>
@@ -978,7 +1019,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
     </div>
     
     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem;">
-      <span style="color:var(--text-dim); font-size:0.95rem; font-family:'JetBrains Mono', monospace;">KALKI SECURE UPLINK v1.0.6</span>
+      <span style="color:var(--text-dim); font-size:0.95rem; font-family:'JetBrains Mono', monospace;">KALKI SECURE UPLINK v1.0.7</span>
       <button class="qbtn" id="acknowledgeErrBtn" style="border:0.1rem solid var(--red); color:var(--red); padding:0.6rem 2rem; font-size:1.1rem; background:rgba(255,0,0,0.1);">ACKNOWLEDGE</button>
     </div>
   </div>
@@ -1730,6 +1771,13 @@ async function openSettingsModal() {
     if(d.ok) {
       $("set_owner_name").value = d.settings.OWNER_NAME || "";
       $("set_owner_title").value = d.settings.OWNER_TITLE || "";
+      $("set_owner_city").value = d.settings.OWNER_CITY || "";
+      $("set_owner_state").value = d.settings.OWNER_STATE || "";
+      $("set_owner_country").value = d.settings.OWNER_COUNTRY || "";
+      $("set_email_address").value = d.settings.EMAIL_ADDRESS || "";
+      $("set_email_app_password").value = d.settings.EMAIL_APP_PASSWORD || "";
+      $("set_github_token").value = d.settings.GITHUB_TOKEN || "";
+      $("set_shodan_api_key").value = d.settings.SHODAN_API_KEY || "";
       $("set_groq_key").value = (d.settings.GROQ_API_KEY === "PASTE_YOUR_GROQ_KEY_HERE") ? "" : d.settings.GROQ_API_KEY;
       $("set_openai_key").value = d.settings.OPENAI_API_KEY || "";
       $("set_anthropic_key").value = d.settings.ANTHROPIC_API_KEY || "";
@@ -1774,6 +1822,13 @@ $("saveSettingsBtn").addEventListener("click", async () => {
   const updates = {
     OWNER_NAME: $("set_owner_name").value,
     OWNER_TITLE: $("set_owner_title").value,
+    OWNER_CITY: $("set_owner_city").value,
+    OWNER_STATE: $("set_owner_state").value,
+    OWNER_COUNTRY: $("set_owner_country").value,
+    EMAIL_ADDRESS: $("set_email_address").value,
+    EMAIL_APP_PASSWORD: $("set_email_app_password").value,
+    GITHUB_TOKEN: $("set_github_token").value,
+    SHODAN_API_KEY: $("set_shodan_api_key").value,
     GROQ_API_KEY: $("set_groq_key").value,
     OPENAI_API_KEY: $("set_openai_key").value,
     ANTHROPIC_API_KEY: $("set_anthropic_key").value,

@@ -7,7 +7,7 @@
   <em>Inspired by J.A.R.V.I.S. • Powered by Groq LLaMA • Engineered for power users & developers.</em>
 
   <p>
-    <img src="https://img.shields.io/badge/release-v1.0.6-00c8ff?style=for-the-badge&logo=github" alt="release">
+    <img src="https://img.shields.io/badge/release-v1.0.7-00c8ff?style=for-the-badge&logo=github" alt="release">
     <img src="https://img.shields.io/badge/platform-Windows_10%2B-0078d4?style=for-the-badge&logo=windows" alt="platform">
     <img src="https://img.shields.io/badge/brain-Groq_LLaMA_3.3-ff6b35?style=for-the-badge&logo=meta" alt="brain">
     <img src="https://img.shields.io/badge/engine-Python_3.11+-3776AB?style=for-the-badge&logo=python" alt="python">
@@ -17,27 +17,26 @@
   </p>
 
   <h3><a href="https://github.com/Maher-Bhatt/KALKI/releases/latest">⬇️ Download KALKI_Setup.exe (Latest Release)</a></h3>
+  <h4>📺 <a href="https://youtu.be/vbUOy8oMqOM" target="_blank">Watch the Setup Tutorial</a></h4>
 </div>
 
 ---
 
-## 📢 What's New in v1.0.6 — Intelligence & Automation Update
+## 📢 What's New in v1.0.7 — Setup & Intelligence Overhaul
 
-> KALKI v1.0.6 introduces a massive overhaul to AI reasoning, including live URL reading, functional dynamic modes (CTF & Gaming), proactive morning scheduling, attitude enforcement, and a fix for the rapid-mic-toggle bug.
+> KALKI v1.0.7 fixes the microphone background listening engine and introduces a massive redesign to the setup wizard and settings UI, making API integrations and OAuth dead simple.
 
 <details>
 <summary><strong>🔥 Click to expand full changelog</strong></summary>
 
 | Feature | Description |
 |:---|:---|
-| **🌐 Live Web Browsing** | KALKI can now actively fetch and read the contents of any URL you send it to solve problems using live context. |
-| **💻 CTF Mode Overhaul** | CTF mode now triggers an unrestricted "Hacker Mindset" prompt, making KALKI aggressively use its tools to solve challenges instead of just opening tabs. |
-| **🎮 Functional Gaming Mode** | Gaming mode automatically kills background hogs (Chrome, VS Code) and opens Windows Quiet Moments settings. |
-| **📅 Proactive Morning Briefing** | On first wake before 12 PM, KALKI briefs you and asks for your day's priorities, automatically generating Tasks and Reminders. |
-| **🛡️ Attitude Enforcement** | Be nice. Excessive rudeness prompts KALKI to roast you and physically lock your Windows screen via `system_control`. |
-| **💾 Persistent Setup** | `user_config.json` is now stored securely in `%APPDATA%`, preventing data wipe during background app updates. |
-| **🎤 Zero Mic Dropping** | Fixed a regression where background listening rapidly toggled during TTS response, causing dropped words and failed confirmations. |
-| **📊 Dev Diagnostics** | `Ctrl+Shift+D` reveals real-time FPS, Memory, DPR, UI Scale, Audio Latency. |
+| **🎤 Background Mic Fix** | Completely rewrote the mic lifecycle — heartbeat monitoring, crash recovery, and dead-thread detection keep the mic alive reliably. |
+| **🧙 Setup Wizard Redesign** | YouTube tutorial, Spotify/Google credential fields, step-by-step help guides, and all API key inputs in one place. |
+| **⚙️ Settings Overhaul** | Missing fields added (Location, Email, GitHub, Shodan), direct links to developer dashboards, fixed redirect URI bugs. |
+| **📅 Morning Briefing** | Greetings now include real calendar events and unread email counts. |
+| **📺 YouTube Tutorial** | Setup video embedded in wizard and settings for easy onboarding. |
+| **💾 Config Persistence** | All API keys safely stored in %APPDATA%/KALKI/ — never lost on update. |
 
 </details>
 

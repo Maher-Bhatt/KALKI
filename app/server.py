@@ -846,6 +846,15 @@ def build_greeting():
         except Exception as e:
             log(f"Error checking config for greeting: {e}")
             parts.append("All core systems operational.")
+            
+        # Add morning briefing (calendar + unread emails)
+        if hour < 12:
+            try:
+                briefing = gcal.startup_summary()
+                if briefing:
+                    parts.append(briefing.strip())
+            except Exception as e:
+                log(f"Greeting briefing error: {e}")
     else:
         wake_pool = [
             f"Online. How can I help you, {title}?",

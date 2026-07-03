@@ -478,7 +478,12 @@ def main():
     # discarded so we never accidentally transcribe KALKI's own speech.
     _mic_muted = _threading.Event()
 
+    # Heartbeat: tracks the last time the background callback was invoked.
+    # If the daemon thread dies silently, we detect it here.
+    _last_callback_time = [time.time()]
+
     def _bg_callback(rec, audio):
+        _last_callback_time[0] = time.time()
         # If muted (KALKI speaking / listener paused), silently drop frames.
         if _mic_muted.is_set():
             return
@@ -500,13 +505,64 @@ def main():
         except _queue.Empty:
             pass
 
-    # ONE persistent mic stream — never destroyed, never recreated.
-    # This avoids the OS-level mic handle bug where the stream refuses
-    # to reopen after being closed on certain Windows audio drivers.
-    stop_bg = recognizer.listen_in_background(mic, _bg_callback, phrase_time_limit=6)
+    def _start_bg():
+        """Start the background listening thread. Returns the stop callable."""
+        nonlocal mic, recognizer
+        try:
+            stopper = recognizer.listen_in_background(
+                mic, _bg_callback, phrase_time_limit=6)
+            _last_callback_time[0] = time.time()
+            log("background listener thread started")
+            return stopper
+        except Exception as e:
+            log(f"listen_in_background failed: {e}")
+            return None
+
+    stop_bg = _start_bg()
+    if stop_bg is None:
+        log("FATAL: could not start background listener")
+        return
+
+    HEARTBEAT_TIMEOUT = 30  # seconds — if no callback for this long, restart
+    _last_heartbeat_log = 0
 
     while True:
         try:
+            now = time.time()
+
+            # ── Heartbeat: log proof-of-life every 60 seconds ──
+            if now - _last_heartbeat_log > 60:
+                _last_heartbeat_log = now
+                age = now - _last_callback_time[0]
+                log(f"heartbeat OK (last callback {age:.0f}s ago, muted={_mic_muted.is_set()})")
+
+            # ── Dead-thread detection ──
+            # If the background thread hasn't called back in HEARTBEAT_TIMEOUT
+            # seconds AND we are NOT muted, the thread probably died.
+            if (not _mic_muted.is_set()
+                    and now - _last_callback_time[0] > HEARTBEAT_TIMEOUT):
+                log("WARNING: background listener thread appears dead — restarting")
+                try:
+                    stop_bg(wait_for_stop=False)
+                except Exception:
+                    pass
+                stop_bg = _start_bg()
+                if stop_bg is None:
+                    log("FATAL: could not restart background listener")
+                    time.sleep(5)
+                    # Try once more with a fresh mic
+                    try:
+                        mic = sr.Microphone(device_index=dev_index)
+                    except Exception:
+                        mic = sr.Microphone()
+                    stop_bg = _start_bg()
+                    if stop_bg is None:
+                        log("FATAL: giving up on background listener")
+                        return
+                _drain()
+                continue
+
+            # ── Mute/unmute based on server state ──
             should_mute = is_paused() or is_speaking()
 
             if should_mute:
@@ -519,6 +575,7 @@ def main():
 
             if _mic_muted.is_set():
                 _mic_muted.clear()
+                _last_callback_time[0] = time.time()  # reset heartbeat on unmute
                 _drain()
                 log("listener unmuted — accepting audio")
 
@@ -541,14 +598,14 @@ def main():
                 # wake only → greet, then capture the follow-up command
                 post_wake("")
                 wait_until_silent(max_wait=4.0)
-                
+
                 log("waiting for follow-up command...")
                 _drain()
                 try:
                     follow = phrases.get(timeout=6.0)
                 except _queue.Empty:
                     follow = None
-                
+
                 if follow:
                     log(f"follow-up: {follow}")
                     if contains_stop(follow):
@@ -572,4 +629,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        log(f"FATAL CRASH: {e}")
+        import traceback
+        log(traceback.format_exc())
+

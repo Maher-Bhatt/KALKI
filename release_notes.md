@@ -1,3 +1,22 @@
+# 🚀 KALKI v1.0.7 — Setup & Intelligence Overhaul
+
+**Release Date:** July 4, 2026  
+**Build:** Production  
+**Installer:** `KALKI_Setup.exe`
+
+---
+
+## 🔥 v1.0.7 Patch Notes
+
+- **Background Mic Fix:** Completely rewrote the mic lifecycle with heartbeat monitoring, automatic crash recovery, and dead-thread detection. The mic now stays alive reliably.
+- **Setup Wizard Redesign:** Added YouTube tutorial link, Spotify/Google credential fields, step-by-step help guides, and all API key inputs.
+- **Settings Page Overhaul:** Added missing fields (Location, Email, GitHub, Shodan), Spotify/Google setup guides with direct links, and fixed redirect URI mismatches.
+- **Morning Briefing:** Greetings now include real calendar events and unread email counts from `gcal.startup_summary()`.
+- **YouTube Tutorial:** Embedded setup video link in both the wizard and web settings.
+- **Config Persistence:** All API keys safely stored in `%APPDATA%/KALKI/` — never lost on update.
+
+---
+
 # 🚀 KALKI v1.0.6 — Intelligence & Automation Update
 
 **Release Date:** July 3, 2026  
