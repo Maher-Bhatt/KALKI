@@ -471,16 +471,24 @@ def main():
     log(f"listening (continuous, wake words: {WAKE_WORDS})")
 
     import queue as _queue
+    import threading as _threading
     phrases = _queue.Queue()
 
+    # A flag the callback checks — when set, audio frames are silently
+    # discarded so we never accidentally transcribe KALKI's own speech.
+    _mic_muted = _threading.Event()
+
     def _bg_callback(rec, audio):
-        if is_speaking():
+        # If muted (KALKI speaking / listener paused), silently drop frames.
+        if _mic_muted.is_set():
             return
         try:
             txt = rec.recognize_google(audio)
         except Exception:
             return
-        if is_speaking():
+        # Double-check after the network round-trip — KALKI may have started
+        # speaking while we were waiting for Google's response.
+        if _mic_muted.is_set():
             return
         if txt:
             phrases.put(txt)
@@ -492,35 +500,27 @@ def main():
         except _queue.Empty:
             pass
 
-    # ONE persistent mic stream (no 6s open/close cycling that makes a
-    # multipoint Bluetooth headset re-switch every few seconds).
+    # ONE persistent mic stream — never destroyed, never recreated.
+    # This avoids the OS-level mic handle bug where the stream refuses
+    # to reopen after being closed on certain Windows audio drivers.
     stop_bg = recognizer.listen_in_background(mic, _bg_callback, phrase_time_limit=6)
-    paused = False
 
     while True:
         try:
-            should_pause = is_paused() or is_speaking()
-            
-            # Pause → stop the stream entirely so the mic is fully released.
-            # We do this for manual pause or when KALKI is speaking (to avoid feedback loops).
-            if should_pause:
-                if not paused:
-                    try: stop_bg(wait_for_stop=False)
-                    except Exception: pass
-                    paused = True
-                    _drain()
-                    log(f"listener paused (paused={is_paused()}, speaking={is_speaking()}) — mic released")
-                time.sleep(0.5)
-                continue
-                
-            if paused:
-                _drain()
-                stop_bg = recognizer.listen_in_background(
-                    mic, _bg_callback, phrase_time_limit=6)
-                paused = False
-                _drain()
-                log("listener resumed")
+            should_mute = is_paused() or is_speaking()
 
+            if should_mute:
+                if not _mic_muted.is_set():
+                    _mic_muted.set()
+                    _drain()
+                    log(f"listener muted (paused={is_paused()}, speaking={is_speaking()})")
+                time.sleep(0.3)
+                continue
+
+            if _mic_muted.is_set():
+                _mic_muted.clear()
+                _drain()
+                log("listener unmuted — accepting audio")
 
             try:
                 phrase = phrases.get(timeout=1.0)
