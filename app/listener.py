@@ -92,12 +92,18 @@ def post_stop():
     _post("/api/stop")
 
 
+LAST_STATUS = {"speaking": False, "listenerPaused": False}
+
 def _status():
+    global LAST_STATUS
     try:
         with urllib.request.urlopen(f"{SERVER}/api/status", timeout=2) as r:
-            return json.loads(r.read())
+            data = json.loads(r.read())
+            if isinstance(data, dict):
+                LAST_STATUS = data
+            return LAST_STATUS
     except Exception:
-        return {}
+        return LAST_STATUS
 
 
 def is_speaking():
@@ -473,9 +479,13 @@ def main():
     phrases = _queue.Queue()
 
     def _bg_callback(rec, audio):
+        if is_speaking():
+            return
         try:
             txt = rec.recognize_google(audio)
         except Exception:
+            return
+        if is_speaking():
             return
         if txt:
             phrases.put(txt)
@@ -513,9 +523,15 @@ def main():
                 _drain()
                 log("listener resumed")
 
-            if is_speaking():
-                _drain()
-                time.sleep(0.2)
+            should_pause = is_paused() or is_speaking()
+            if should_pause:
+                if not paused:
+                    try: stop_bg(wait_for_stop=False)
+                    except Exception: pass
+                    paused = True
+                    _drain()
+                    log(f"listener paused (paused={is_paused()}, speaking={is_speaking()}) — mic released")
+                time.sleep(0.3)
                 continue
 
             try:

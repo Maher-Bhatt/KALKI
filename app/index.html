@@ -1031,6 +1031,7 @@ const $ = id => document.getElementById(id);
 const STATE = {
   mode: "idle", history: [],
   micActive: false,
+  speakingPause: false,
   busyMode: localStorage.getItem("busyMode") === "true",
   freqData: new Uint8Array(72),
   timeData: new Uint8Array(1024),
@@ -1160,8 +1161,23 @@ async function refreshStatus(){
         }
       }
 
-      if (d.speaking) setMode("speaking");
-      else if (STATE.mode === "speaking" || STATE.mode === "busy") setMode(STATE.micActive ? "listening" : "idle");
+      if (d.speaking) {
+        setMode("speaking");
+        if (STATE.micActive && !STATE.speakingPause) {
+          STATE.speakingPause = true;
+          if (recognizer) { try { recognizer.stop(); } catch(e){} }
+        }
+      } else {
+        if (STATE.speakingPause) {
+          STATE.speakingPause = false;
+          if (STATE.micActive && recognizer) {
+            try { recognizer.start(); } catch(e){}
+          }
+        }
+        if (STATE.mode === "speaking" || STATE.mode === "busy") {
+          setMode(STATE.micActive ? "listening" : "idle");
+        }
+      }
       $("topNet").textContent  = "ONLINE"; $("topNet").className = "v ok";
 
       const pbtn = $("pauseListenerBtn");
@@ -1602,7 +1618,7 @@ if (SR){
     if (txt) send(txt);
   };
   recognizer.onerror = ()=>{};
-  recognizer.onend = ()=>{ if (STATE.micActive){ try{recognizer.start()}catch(e){} } };
+  recognizer.onend = ()=>{ if (STATE.micActive && !STATE.speakingPause && !STATE.busyMode){ try{recognizer.start()}catch(e){} } };
 }
 let audioCtx=null, analyser=null, micSrc=null, micStream=null;
 async function enableMic(){

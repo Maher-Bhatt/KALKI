@@ -63,7 +63,7 @@ def main():
             "--onedir",
             "--clean",
             f"--name={name}",
-            f"--icon=\"{os.path.abspath('assets/kalki_icon.ico')}\"",
+            f"--icon=\"{os.path.abspath('../assets/kalki_icon.ico')}\"",
             f"--version-file=\"{version_info_path}\"",
             "--specpath=build_tools",
         ]
