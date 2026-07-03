@@ -21,9 +21,9 @@
 
 ---
 
-## 📢 What's New in v1.0.4 — Mood Engine & Stability Update
+## 📢 What's New in v1.0.5 — Microphone Patch & Stability Update
 
-> KALKI v1.0.4 introduces the **Mood Swing Engine**, enhanced greeting personalization, dynamic hardware detection, Firebase cloud sync, Sentry error monitoring, and dozens of stability improvements.
+> KALKI v1.0.5 introduces a flawless auto-toggling microphone release mechanism, the **Mood Swing Engine**, enhanced greeting personalization, Firebase cloud sync, and dozens of stability improvements.
 
 <details>
 <summary><strong>🔥 Click to expand full changelog</strong></summary>
