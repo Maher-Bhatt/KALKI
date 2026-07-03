@@ -1,16 +1,82 @@
-﻿# 🚀 KALKI v1.0.1: Adaptive UI & Core Stability Update
+# 🚀 KALKI v1.0.4 — Mood Engine & Stability Update
 
-This update introduces major quality-of-life improvements to KALKI's core functionality, focusing on cross-device UI compatibility and audio pipeline stability. 
+**Release Date:** July 3, 2026  
+**Build:** Production  
+**Installer:** `KALKI_Setup.exe`
 
-## ✨ Key Enhancements
+---
 
-### 🖥️ Adaptive Fluid UI Scaling
-*   **Resolution Agnostic Engine:** KALKI's interface now dynamically scales and perfectly aligns across all monitor resolutions. 
-*   **1080p Support:** The HUD components will no longer overlap or appear oversized on 1920x1080 laptop screens, while preserving the premium aesthetic for 2K/4K displays.
+## 🔥 New Features
 
-### 🎙️ Audio Pipeline Optimization
-*   **Echo Feedback Loop Eliminated:** Implemented intelligent audio draining and state tracking in the speech-to-text pipeline. KALKI will no longer trigger its own microphone loop or confuse its own Voice-Over output with a user command.
-*   **Optimized Wake Word Integration:** Enhanced local wake word detection for improved "Hi KALKI" responsiveness.
+### 🎭 Mood Swing Engine (Persistent)
+- KALKI now detects your mood from your language and **matches your energy exactly**
+- Use aggressive or vulgar language → KALKI mirrors your tone, roasts back harder, uses strong language freely
+- **Persistent moods**: Aggressive mode stays active for **5+ exchanges** — no more random de-escalation after one message
+- KALKI will **never** say "let's keep things respectful" or "I don't want to fight" while you're bantering
+- Automatically cools down after 5 clean exchanges
 
-## 🛠️ Installation
-Download the \KALKI_Setup.exe\ below and run the installer. The setup wizard will automatically update your existing installation. 
+### 👋 Dynamic Greeting System
+- Every boot generates a **unique, multi-line greeting** assembled from randomized pools
+- Time-of-day aware: different pools for morning, afternoon, evening, and night
+- Personalized with owner name and title
+- Contextual sign-offs that vary each session
+- Two greetings almost never sound the same
+
+### 🖥️ Dynamic Hardware Detection
+- System specs (CPU model, GPU name, RAM size) are **auto-detected at runtime**
+- No more hardcoded "RTX 5060 / 32GB RAM" — every user sees their actual hardware
+- Works across all supported NVIDIA, AMD, and Intel GPUs
+
+### ☁️ Firebase Cloud Sync
+- Configuration and session data sync to Firebase Realtime Database
+- Cross-device persistence and cloud backup capability
+- Secured with Firebase Admin SDK service account authentication
+
+### 🐛 Sentry Error Monitoring
+- Production-grade crash reporting and performance monitoring
+- Every unhandled exception captured with full stack traces and system context
+- Automatic breadcrumb collection for debugging
+
+### 📐 Core Architecture Refactor
+- New `core/` Python package isolating global state management
+- `core/state.py` — Centralized state machine
+- `core/telemetry.py` — System metrics collection
+- `core/cloud_sync.py` — Firebase sync engine
+- `core/updater.py` — Auto-update checker
+
+---
+
+## 🛠️ Improvements
+
+- **Base prompt personality**: Changed from "strictly professional" to "adaptable to user's mood" — enables natural mood matching
+- **Abuse restriction softened**: KALKI can now match aggressive banter energy instead of being forced to stay calm
+- **Greeting diversity**: 8+ opener variants, 5+ sign-offs, weather-aware, day-aware
+- **Adaptive Display Engine 2.0**: Constraint-based layout with dynamic REM scaling for any resolution
+- **Zero Echo Audio Pipeline**: Aggressive pyaudio buffer flushing eliminates voice feedback loops
+- **Developer Diagnostics**: `Ctrl+Shift+D` reveals real-time FPS, Memory, DPR, UI Scale, Audio Latency
+- **Professional Windows Build**: Executables carry proper KALKI Technologies publisher metadata
+
+---
+
+## 📦 Installation
+
+1. Download `KALKI_Setup.exe` from this release
+2. Run the installer — it handles everything automatically
+3. Get a free API key from [Groq Console](https://console.groq.com)
+4. Launch KALKI and say **"Hi KALKI"**
+
+---
+
+## 💻 System Requirements
+
+| Component | Cloud Mode (Min) | Local Mode (Recommended) |
+|:---|:---|:---|
+| **OS** | Windows 10/11 64-bit | Windows 10/11 64-bit |
+| **CPU** | Intel i3 / Ryzen 3 | Intel i5 / Ryzen 5+ |
+| **RAM** | 4 GB | 16 GB+ |
+| **GPU** | Not required | RTX 3060+ / RX 6600+ (8GB VRAM) |
+| **Storage** | 2 GB SSD | 15 GB+ NVMe SSD |
+
+---
+
+**Full Changelog:** [v1.0.3...v1.0.4](https://github.com/Maher-Bhatt/KALKI/compare/v1.0.3...v1.0.4)
