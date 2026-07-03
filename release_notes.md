@@ -1,4 +1,4 @@
-# 🚀 KALKI v1.0.4 — Mood Engine & Stability Update
+# 🚀 KALKI v1.0.5 — Microphone Hardware Toggle Patch
 
 **Release Date:** July 3, 2026  
 **Build:** Production  
@@ -6,7 +6,14 @@
 
 ---
 
-## 🔥 New Features
+## 🔥 v1.0.5 Patch Notes
+
+- **Microphone Auto-Toggle Fix:** KALKI now automatically and cleanly releases the OS microphone hardware whenever it starts speaking (TTS), turning the microphone icon completely off. The HUD microphone button visually syncs with this behavior. 
+- **Auto-Updater Fix:** Bumped internal version tracking to ensure seamless future over-the-air (OTA) updates.
+
+---
+
+## 🚀 v1.0.4 — Mood Engine & Stability Update
 
 ### 🎭 Mood Swing Engine (Persistent)
 - KALKI now detects your mood from your language and **matches your energy exactly**
