@@ -19,6 +19,10 @@ Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayIcon={app}\{#MyAppExeName}
+CloseApplications=force
+CloseApplicationsFilter=*.exe
+RestartApplications=yes
+
 
 [Components]
 Name: "core"; Description: "KALKI Core (required)"; Types: full compact custom; Flags: fixed
@@ -68,19 +72,4 @@ Type: filesandordirs; Name: "{app}\data"
 Type: filesandordirs; Name: "{app}\browsers"
 Type: filesandordirs; Name: "{app}"
 
-[Code]
-function InitializeSetup(): Boolean;
-var
-  ResultCode: Integer;
-begin
-  // Forcefully kill all KALKI processes before attempting to overwrite files
-  Exec(ExpandConstant('{cmd}'), '/C taskkill /F /IM KALKI.exe /T', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  Exec(ExpandConstant('{cmd}'), '/C taskkill /F /IM KALKI_Server.exe /T', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  Exec(ExpandConstant('{cmd}'), '/C taskkill /F /IM KALKI_Listener.exe /T', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  Exec(ExpandConstant('{cmd}'), '/C taskkill /F /IM KALKI_Setup_Wizard.exe /T', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  
-  // Give the OS a second to release the file handles
-  Sleep(1000);
-  
-  Result := True;
-end;
+
