@@ -322,8 +322,8 @@ def run_vosk(dev_index):
     paused_logged = 0
     while True:
         try:
-            # Release the mic while paused so other apps can use it.
-            if is_paused():
+            # Release the mic while paused or speaking so other apps can use it.
+            if is_paused() or is_speaking():
                 if stream is not None:
                     try:
                         stream.stop_stream()
@@ -363,13 +363,8 @@ def run_vosk(dev_index):
 
             data = stream.read(CHUNK, exception_on_overflow=False)
 
-            # Aggressively drain buffer while speaking to prevent lag/echo loops
-            if is_speaking():
-                avail = stream.get_read_available()
-                if avail > 0:
-                    stream.read(avail, exception_on_overflow=False)
-                rec.Reset() if hasattr(rec, "Reset") else None
-                continue
+            # Note: the stream is completely closed above when is_speaking() is true,
+            # so we don't need to manually drain the buffer here anymore.
 
             if not rec.AcceptWaveform(data):
                 continue

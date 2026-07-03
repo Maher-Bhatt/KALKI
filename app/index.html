@@ -1165,13 +1165,18 @@ async function refreshStatus(){
         setMode("speaking");
         if (STATE.micActive && !STATE.speakingPause) {
           STATE.speakingPause = true;
+          if ($("micBtn")) $("micBtn").classList.remove("active");
           if (recognizer) { try { recognizer.stop(); } catch(e){} }
+          disableMic();
         }
       } else {
         if (STATE.speakingPause) {
           STATE.speakingPause = false;
-          if (STATE.micActive && recognizer) {
-            try { recognizer.start(); } catch(e){}
+          if (STATE.micActive) {
+            if ($("micBtn")) $("micBtn").classList.add("active");
+            enableMic().then(() => {
+              if (recognizer) { try { recognizer.start(); } catch(e){} }
+            });
           }
         }
         if (STATE.mode === "speaking" || STATE.mode === "busy") {
