@@ -3873,6 +3873,13 @@ def main():
         print(f"Port {config.PORT} already in use - another KALKI server is running.")
         sys.exit(0)
 
+    # Start auto-updater daemon
+    try:
+        import core.updater as updater
+        updater.start_update_daemon()
+    except Exception as e:
+        print(f"Failed to start auto-updater: {e}")
+
     # Startup greeting (no API)
     if config.GREET_ON_START:
         def _greet():
