@@ -3,7 +3,7 @@
 <head>
 <!--
 ====================================================================
-KALKI v1.0.4 PRO — Frontend User Interface
+KALKI v1.0.6 PRO — Frontend User Interface
 ====================================================================
 Architecture:
 - Pure HTML/CSS/JS (Zero external dependencies or frameworks).
@@ -59,6 +59,7 @@ html,body{
   background:var(--bg);
   color:var(--text);
   font-family:"Inter", sans-serif;
+  font-size: max(14px, 0.9vw);
   letter-spacing:0.05rem;
   user-select:none;
   transition: background .8s ease;
@@ -628,7 +629,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
     <div>OPER <span class="v" id="topOwner">Sir</span></div>
     <div>LOC <span class="v" id="topLoc">—</span></div>
     <div>MODE <span class="v cy" id="topMode">SYSTEM</span></div>
-    <div>SYS <span class="v" id="topSys">v1.0.4 PRO</span></div>
+    <div>SYS <span class="v" id="topSys">v1.0.6 PRO</span></div>
     <div>NET <span class="v ok" id="topNet">ONLINE</span></div>
     <div><span class="v cy" id="topClock">00:00:00</span></div>
     <div style="cursor:pointer; border:0.1rem solid var(--frame); padding:0.2rem 0.8rem; border-radius:0.3rem;" id="topSettingsBtn">⚙ SETTINGS</div>
@@ -799,26 +800,32 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
               <span>GOOGLE WORKSPACE</span>
               <span id="lbl_google_status" style="color:var(--orange); font-size:1.2rem;">[NOT CONFIGURED]</span>
             </h4>
-            <div style="margin-bottom:1rem;">
-              <label style="font-size:1.1rem; color:var(--text-dim);">CLIENT ID</label>
-              <input type="text" id="set_google_client_id" placeholder="Enter Google Client ID" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
-            </div>
-            <div style="margin-bottom:1rem;">
-              <label style="font-size:1.1rem; color:var(--text-dim);">CLIENT SECRET</label>
-              <input type="password" id="set_google_client_secret" placeholder="Enter Google Client Secret" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
-            </div>
-            <div style="margin-bottom:1rem;">
-              <label style="font-size:1.1rem; color:var(--text-dim);">PROJECT ID</label>
-              <input type="text" id="set_google_project_id" placeholder="kalki-agent" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
-            </div>
-            <div style="margin-bottom:1rem;">
-              <label style="font-size:1.1rem; color:var(--text-dim);">REDIRECT URI</label>
-              <input type="text" id="set_google_redirect_uri" value="http://localhost:8080/" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
-            </div>
-            <div style="display:flex; justify-content:space-between; margin-top:1.5rem;">
-              <button class="qbtn" id="runGoogleSetup" style="width:48%; background:#222; border:0.1rem solid #444; color:var(--text); padding:0.6rem; cursor:pointer;">MANUAL LINK (OAUTH)</button>
-              <button class="qbtn" id="testGoogleBtn" style="width:48%; background:#1a1a1a; border:0.1rem solid var(--lime); color:var(--lime); padding:0.6rem; cursor:pointer;">TEST CONNECTION</button>
-            </div>
+            <p style="font-size:1.1rem; color:var(--text-dim); margin-bottom:1rem;">To configure basic email, use the initial Setup Wizard to add an App Password.</p>
+            <details style="margin-top:1rem;">
+              <summary style="cursor:pointer; color:var(--accent); font-weight:bold; font-size:1.1rem;">Advanced Calendar Integration (OAuth)</summary>
+              <div style="margin-top:1rem; padding-left:1rem; border-left:0.1rem solid #333;">
+                <div style="margin-bottom:1rem;">
+                  <label style="font-size:1.1rem; color:var(--text-dim);">CLIENT ID</label>
+                  <input type="text" id="set_google_client_id" placeholder="Enter Google Client ID" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
+                </div>
+                <div style="margin-bottom:1rem;">
+                  <label style="font-size:1.1rem; color:var(--text-dim);">CLIENT SECRET</label>
+                  <input type="password" id="set_google_client_secret" placeholder="Enter Google Client Secret" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
+                </div>
+                <div style="margin-bottom:1rem;">
+                  <label style="font-size:1.1rem; color:var(--text-dim);">PROJECT ID</label>
+                  <input type="text" id="set_google_project_id" placeholder="kalki-agent" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
+                </div>
+                <div style="margin-bottom:1rem;">
+                  <label style="font-size:1.1rem; color:var(--text-dim);">REDIRECT URI</label>
+                  <input type="text" id="set_google_redirect_uri" value="http://localhost:8080/" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-top:1.5rem;">
+                  <button class="qbtn" id="runGoogleSetup" style="width:48%; background:#222; border:0.1rem solid #444; color:var(--text); padding:0.6rem; cursor:pointer;">MANUAL LINK (OAUTH)</button>
+                  <button class="qbtn" id="testGoogleBtn" style="width:48%; background:#1a1a1a; border:0.1rem solid var(--lime); color:var(--lime); padding:0.6rem; cursor:pointer;">TEST CONNECTION</button>
+                </div>
+              </div>
+            </details>
           </div>
           
           <div style="border:0.1rem solid #333; background:#111; padding:1.5rem;">
@@ -826,22 +833,27 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
               <span>SPOTIFY</span>
               <span id="lbl_spotify_status" style="color:var(--orange); font-size:1.2rem;">[NOT CONFIGURED]</span>
             </h4>
-            <div style="margin-bottom:1rem;">
-              <label style="font-size:1.1rem; color:var(--text-dim);">CLIENT ID</label>
-              <input type="text" id="set_spotify_id" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
-            </div>
-            <div style="margin-bottom:1rem;">
-              <label style="font-size:1.1rem; color:var(--text-dim);">CLIENT SECRET</label>
-              <input type="password" id="set_spotify_secret" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
-            </div>
-            <div style="margin-bottom:1rem;">
-              <label style="font-size:1.1rem; color:var(--text-dim);">REDIRECT URI</label>
-              <input type="text" id="set_spotify_redirect_uri" value="http://localhost:8888/callback" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
-            </div>
-            <div style="display:flex; justify-content:space-between; margin-top:1.5rem;">
-              <button class="qbtn" id="runSpotifySetup" style="width:48%; background:#222; border:0.1rem solid #444; color:var(--text); padding:0.6rem; cursor:pointer;">MANUAL LINK (OAUTH)</button>
-              <button class="qbtn" id="testSpotifyBtn" style="width:48%; background:#1a1a1a; border:0.1rem solid var(--lime); color:var(--lime); padding:0.6rem; cursor:pointer;">TEST CONNECTION</button>
-            </div>
+            <details style="margin-top:1rem;">
+              <summary style="cursor:pointer; color:var(--accent); font-weight:bold; font-size:1.1rem;">Configure Spotify Integration</summary>
+              <div style="margin-top:1rem; padding-left:1rem; border-left:0.1rem solid #333;">
+                <div style="margin-bottom:1rem;">
+                  <label style="font-size:1.1rem; color:var(--text-dim);">CLIENT ID</label>
+                  <input type="text" id="set_spotify_id" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
+                </div>
+                <div style="margin-bottom:1rem;">
+                  <label style="font-size:1.1rem; color:var(--text-dim);">CLIENT SECRET</label>
+                  <input type="password" id="set_spotify_secret" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
+                </div>
+                <div style="margin-bottom:1rem;">
+                  <label style="font-size:1.1rem; color:var(--text-dim);">REDIRECT URI</label>
+                  <input type="text" id="set_spotify_redirect_uri" value="http://localhost:8888/callback" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-top:1.5rem;">
+                  <button class="qbtn" id="runSpotifySetup" style="width:48%; background:#222; border:0.1rem solid #444; color:var(--text); padding:0.6rem; cursor:pointer;">MANUAL LINK (OAUTH)</button>
+                  <button class="qbtn" id="testSpotifyBtn" style="width:48%; background:#1a1a1a; border:0.1rem solid var(--lime); color:var(--lime); padding:0.6rem; cursor:pointer;">TEST CONNECTION</button>
+                </div>
+              </div>
+            </details>
           </div>
         </div>
         
@@ -850,33 +862,46 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
           <h3 style="margin-bottom:1.5rem; color:var(--accent);">API MANAGEMENT</h3>
           <p style="font-size:1.1rem; color:var(--text-dim); margin-bottom:1.5rem;">Credentials are stored securely in local cache. Blank fields will use system defaults.</p>
           
-          <div style="margin-bottom:1.5rem;">
-            <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--text-dim);">
-              <span>GROQ API KEY (MAIN INFERENCE)</span><span id="lbl_groq_status" style="color:var(--text-dim)">[UNVERIFIED]</span>
+          <div style="margin-bottom:1.5rem; background:rgba(0, 255, 170, 0.05); padding:1rem; border-left:0.2rem solid var(--accent);">
+            <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--accent); font-weight:bold;">
+              <span>PRIMARY AI (REQUIRED): GROQ API KEY</span>
+              <a href="https://console.groq.com/" target="_blank" style="color:var(--cyan); text-decoration:none; font-size:1rem;">Get Key Here ↗</a>
+              <span id="lbl_groq_status" style="color:var(--text-dim)">[UNVERIFIED]</span>
             </label>
-            <input type="password" id="set_groq_key" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
+            <input type="password" id="set_groq_key" style="width:100%; background:#000; color:var(--text); border:0.1rem solid var(--accent); padding:0.8rem; margin-top:0.5rem;">
           </div>
+          
+          <details style="margin-bottom:1.5rem;">
+            <summary style="cursor:pointer; color:var(--text-dim); font-weight:bold; font-size:1.1rem; padding:0.5rem; background:#111; border:0.1rem solid #333;">Alternative Models (Optional)</summary>
+            <div style="padding:1rem; border:0.1rem solid #333; border-top:none; background:#0a0a0c;">
+              <div style="margin-bottom:1.5rem;">
+                <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--text-dim);">
+                  <span>OPENAI API KEY</span>
+                  <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--text-dim); text-decoration:underline; font-size:0.9rem;">Get Key Here</a>
+                </label>
+                <input type="password" id="set_openai_key" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
+              </div>
+              <div style="margin-bottom:1.5rem;">
+                <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--text-dim);">
+                  <span>ANTHROPIC API KEY</span>
+                  <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--text-dim); text-decoration:underline; font-size:0.9rem;">Get Key Here</a>
+                </label>
+                <input type="password" id="set_anthropic_key" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
+              </div>
+              <div style="margin-bottom:1.5rem;">
+                <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--text-dim);">
+                  <span>GEMINI API KEY</span>
+                  <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--text-dim); text-decoration:underline; font-size:0.9rem;">Get Key Here</a>
+                </label>
+                <input type="password" id="set_gemini_key" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
+              </div>
+            </div>
+          </details>
+
           <div style="margin-bottom:1.5rem;">
             <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--text-dim);">
-              <span>OPENAI API KEY</span>
-            </label>
-            <input type="password" id="set_openai_key" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
-          </div>
-          <div style="margin-bottom:1.5rem;">
-            <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--text-dim);">
-              <span>ANTHROPIC API KEY</span>
-            </label>
-            <input type="password" id="set_anthropic_key" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
-          </div>
-          <div style="margin-bottom:1.5rem;">
-            <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--text-dim);">
-              <span>GEMINI API KEY</span>
-            </label>
-            <input type="password" id="set_gemini_key" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
-          </div>
-          <div style="margin-bottom:1.5rem;">
-            <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--text-dim);">
-              <span>ELEVENLABS API KEY</span>
+              <span>ELEVENLABS API KEY (Optional Voice)</span>
+              <a href="https://elevenlabs.io/" target="_blank" style="color:var(--text-dim); text-decoration:underline; font-size:0.9rem;">Get Key Here</a>
             </label>
             <input type="password" id="set_elevenlabs_key" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
           </div>
@@ -890,7 +915,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
           <h3 style="margin-bottom:1.5rem; color:var(--accent);">SYSTEM DIAGNOSTICS</h3>
           
           <table style="width:100%; font-size:1.2rem; margin-bottom:2rem; border-collapse:collapse;">
-            <tr><td style="padding:0.8rem; border-bottom:0.1rem solid #333; color:var(--text-dim);">Core Version</td><td style="padding:0.8rem; border-bottom:0.1rem solid #333; text-align:right;">v1.0.4</td></tr>
+            <tr><td style="padding:0.8rem; border-bottom:0.1rem solid #333; color:var(--text-dim);">Core Version</td><td style="padding:0.8rem; border-bottom:0.1rem solid #333; text-align:right;">v1.0.6</td></tr>
             <tr><td style="padding:0.8rem; border-bottom:0.1rem solid #333; color:var(--text-dim);">Runtime</td><td style="padding:0.8rem; border-bottom:0.1rem solid #333; text-align:right;">Python 3.12 (Local)</td></tr>
             <tr><td style="padding:0.8rem; border-bottom:0.1rem solid #333; color:var(--text-dim);">Cache Storage</td><td style="padding:0.8rem; border-bottom:0.1rem solid #333; text-align:right;" id="lbl_cache_size">0.0 MB</td></tr>
           </table>
@@ -953,7 +978,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
     </div>
     
     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem;">
-      <span style="color:var(--text-dim); font-size:0.95rem; font-family:'JetBrains Mono', monospace;">KALKI SECURE UPLINK v1.0.4</span>
+      <span style="color:var(--text-dim); font-size:0.95rem; font-family:'JetBrains Mono', monospace;">KALKI SECURE UPLINK v1.0.6</span>
       <button class="qbtn" id="acknowledgeErrBtn" style="border:0.1rem solid var(--red); color:var(--red); padding:0.6rem 2rem; font-size:1.1rem; background:rgba(255,0,0,0.1);">ACKNOWLEDGE</button>
     </div>
   </div>

@@ -7,6 +7,7 @@ import re
 import subprocess
 import webbrowser
 
+ACTIVE_STATE = None
 
 # Action chain definitions. Each step is a (action, *args) tuple.
 # Actions are interpreted by `run_mode` below.
@@ -18,11 +19,14 @@ MODES = {
         ("speak", "Study mode engaged, Sir. Lo-fi playing, Code is open. Focus."),
     ],
     "gaming mode": [
+        ("set_state", "gaming"),
         ("open_app", "steam"),
         ("open_app", "discord"),
         ("set_volume", 70),
         ("kill_app", "chrome"),
-        ("speak", "Gaming rig ready, Sir. Background apps cleared."),
+        ("kill_app", "code"),
+        ("run_cmd", "powershell -Command \"Start-Process ms-settings:quietmoments\""),
+        ("speak", "Gaming rig ready, Sir. Background apps cleared and settings open for Do Not Disturb."),
     ],
     "shutdown routine": [
         ("kill_app", "chrome"),
@@ -43,11 +47,16 @@ MODES = {
         ("speak", "Good morning, Sir. Calendar and Gmail open."),
     ],
     "ctf mode": [
+        ("set_state", "ctf"),
         ("open_app", "code"),
         ("open_app", "terminal"),
-        ("open_url", "https://www.exploit-db.com"),
-        ("open_url", "https://gtfobins.github.io"),
-        ("speak", "CTF mode active, Sir. Code, terminal, and references ready."),
+        ("speak", "CTF mode active, Sir. Neural net unconstrained. I am ready to solve challenges."),
+    ],
+    "developer mode": [
+        ("set_state", "dev"),
+        ("open_app", "code"),
+        ("open_app", "terminal"),
+        ("speak", "Developer mode active, Sir. IDE and terminal standing by."),
     ],
 }
 
@@ -81,6 +90,7 @@ MODE_ALIASES = {
                          "capture the flag", "cyber mode", "hacking mode",
                          "set up mode", "ceftc mode", "ceeteeef",
                          "ctf time", "ctf session"],
+    "developer mode":   ["developer mode", "dev mode", "coding mode"],
 }
 
 
@@ -176,6 +186,15 @@ def run_mode(mode_name, *, speak_fn=None, set_volume_fn=None,
                 if speak_fn:
                     speak_fn(args[0])
                 log.append(f"said: {args[0][:30]}")
+                
+            elif action == "set_state":
+                global ACTIVE_STATE
+                ACTIVE_STATE = args[0]
+                log.append(f"state set to {args[0]}")
+                
+            elif action == "run_cmd":
+                subprocess.Popen(args[0], shell=True)
+                log.append(f"ran command {args[0][:20]}")
 
             else:
                 log.append(f"unknown action {action}")

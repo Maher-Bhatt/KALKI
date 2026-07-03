@@ -7,7 +7,7 @@ import tempfile
 import subprocess
 
 REPO = "Maher-Bhatt/KALKI"
-CURRENT_VERSION = "v1.0.5"
+CURRENT_VERSION = "v1.0.6"
 
 def check_for_updates():
     """
@@ -59,11 +59,11 @@ def download_and_run_update(download_url, version):
         subprocess.Popen([installer_path], creationflags=cflags)
         
         # Shut down current instance so installer can overwrite files
-        sys.exit(0)
+        os._exit(0)
     except Exception as e:
         print(f"[UPDATER] Failed to apply update: {e}")
 
-def start_update_daemon():
+def start_update_daemon(on_update_found=None):
     """
     Starts a background thread that checks for updates on boot.
     """
@@ -71,6 +71,8 @@ def start_update_daemon():
         has_update, latest, url = check_for_updates()
         if has_update and url:
             print(f"[UPDATER] Found new version: {latest}. Initiating download...")
+            if on_update_found:
+                on_update_found(latest)
             download_and_run_update(url, latest)
             
     threading.Thread(target=daemon, daemon=True).start()

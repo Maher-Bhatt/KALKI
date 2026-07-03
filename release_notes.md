@@ -1,4 +1,24 @@
-# 🚀 KALKI v1.0.5 — Microphone Hardware Toggle Patch
+# 🚀 KALKI v1.0.6 — Intelligence & Automation Update
+
+**Release Date:** July 3, 2026  
+**Build:** Production  
+**Installer:** `KALKI_Setup.exe`
+
+---
+
+## 🔥 v1.0.6 Patch Notes
+
+- **Live Web Browsing:** KALKI can now actively fetch and read the contents of any URL you send it to solve problems using live context.
+- **CTF Mode Overhaul:** CTF mode now triggers an unrestricted "Hacker Mindset" prompt, making KALKI aggressively use its tools to solve challenges instead of just opening tabs.
+- **Functional Gaming Mode:** Gaming mode automatically kills background hogs (Chrome, VS Code) and opens Windows Quiet Moments settings.
+- **Proactive Morning Briefing:** On first wake before 12 PM, KALKI briefs you and asks for your day's priorities, automatically generating Tasks and Reminders.
+- **Attitude Enforcement:** Be nice. Excessive rudeness prompts KALKI to roast you and physically lock your Windows screen via `system_control`.
+- **Persistent Setup:** `user_config.json` is now stored securely in `%APPDATA%`, preventing data wipe during background app updates.
+- **Zero Mic Dropping:** Fixed a regression where background listening rapidly toggled during TTS response, causing dropped words and failed confirmations.
+
+---
+
+## 🚀 KALKI v1.0.5 — Microphone Hardware Toggle Patch
 
 **Release Date:** July 3, 2026  
 **Build:** Production  

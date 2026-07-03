@@ -8,7 +8,9 @@ from tkinter import messagebox
 BASE_DIR = os.path.dirname(os.path.abspath(
     sys.executable if getattr(sys, "frozen", False) else __file__
 ))
-_USER_CONFIG_PATH = os.path.join(BASE_DIR, "user_config.json")
+USER_DATA_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI")
+os.makedirs(USER_DATA_DIR, exist_ok=True)
+_USER_CONFIG_PATH = os.path.join(USER_DATA_DIR, "user_config.json")
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -74,10 +76,23 @@ class KalkiSetupWizard(ctk.CTk):
         self.email_entry = self.create_input("Gmail Address:", self.config_data.get("EMAIL_ADDRESS", ""))
         self.email_pass_entry = self.create_input("16-char App Password:", self.config_data.get("EMAIL_APP_PASSWORD", ""), is_password=True)
         
+        email_help = ctk.CTkLabel(self.scrollable_frame, text="How to get an App Password?", text_color="cyan", cursor="hand2")
+        email_help.pack(anchor="w", padx=20)
+        email_help.bind("<Button-1>", lambda e: messagebox.showinfo("Gmail App Password", "1. Turn on 2-Step Verification in Google Account.\n2. Go to Security > App passwords.\n3. Create app 'KALKI' and generate 16-digit code."))
+        
         # 5. Integrations
         ctk.CTkLabel(self.scrollable_frame, text="5. Integrations (Optional)", font=ctk.CTkFont(size=16, weight="bold")).pack(anchor="w", pady=(15,0))
         self.github_entry = self.create_input("GitHub Token:", self.config_data.get("GITHUB_TOKEN", ""), is_password=True)
+        
+        gh_help = ctk.CTkLabel(self.scrollable_frame, text="How to get GitHub Token?", text_color="cyan", cursor="hand2")
+        gh_help.pack(anchor="w", padx=20)
+        gh_help.bind("<Button-1>", lambda e: messagebox.showinfo("GitHub Token", "1. GitHub Settings > Developer settings.\n2. Personal access tokens > Generate new token.\n3. Select 'repo' scope and generate."))
+        
         self.shodan_entry = self.create_input("Shodan API Key:", self.config_data.get("SHODAN_API_KEY", ""), is_password=True)
+
+        sh_help = ctk.CTkLabel(self.scrollable_frame, text="How to get Shodan Key?", text_color="cyan", cursor="hand2")
+        sh_help.pack(anchor="w", padx=20)
+        sh_help.bind("<Button-1>", lambda e: messagebox.showinfo("Shodan API Key", "1. Create free account at shodan.io\n2. View your Account page to copy the API Key."))
         
         # Oauth Integrations Buttons
         btn_frame = ctk.CTkFrame(self.scrollable_frame, fg_color="transparent")
@@ -103,6 +118,7 @@ class KalkiSetupWizard(ctk.CTk):
         
     def run_script(self, script_name):
         # script_name is either 'setup_google' or 'setup_spotify'
+        cflags = subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0
         if getattr(sys, 'frozen', False):
             # Map script name to EXE name
             exe_map = {
@@ -112,9 +128,9 @@ class KalkiSetupWizard(ctk.CTk):
             exe_name = exe_map.get(script_name, f"{script_name}.exe")
             target = os.path.join(BASE_DIR, exe_name)
             if os.path.exists(target):
-                subprocess.Popen([target])
+                subprocess.Popen([target], creationflags=cflags)
         else:
-            subprocess.Popen([sys.executable, os.path.join(BASE_DIR, f"{script_name}.py")])
+            subprocess.Popen([sys.executable, os.path.join(BASE_DIR, f"{script_name}.py")], creationflags=cflags)
             
     def save_config(self):
         groq_key = self.groq_entry.get().strip()

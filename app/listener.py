@@ -499,17 +499,20 @@ def main():
 
     while True:
         try:
+            should_pause = is_paused() or is_speaking()
+            
             # Pause → stop the stream entirely so the mic is fully released.
-            # We do this for manual pause. When KALKI is speaking, we just drain the queue (to avoid feedback loops).
-            if is_paused():
+            # We do this for manual pause or when KALKI is speaking (to avoid feedback loops).
+            if should_pause:
                 if not paused:
                     try: stop_bg(wait_for_stop=False)
                     except Exception: pass
                     paused = True
                     _drain()
-                    log("listener paused — mic released")
+                    log(f"listener paused (paused={is_paused()}, speaking={is_speaking()}) — mic released")
                 time.sleep(0.5)
                 continue
+                
             if paused:
                 _drain()
                 stop_bg = recognizer.listen_in_background(
@@ -518,16 +521,6 @@ def main():
                 _drain()
                 log("listener resumed")
 
-            should_pause = is_paused() or is_speaking()
-            if should_pause:
-                if not paused:
-                    try: stop_bg(wait_for_stop=False)
-                    except Exception: pass
-                    paused = True
-                    _drain()
-                    log(f"listener paused (paused={is_paused()}, speaking={is_speaking()}) — mic released")
-                time.sleep(0.3)
-                continue
 
             try:
                 phrase = phrases.get(timeout=1.0)

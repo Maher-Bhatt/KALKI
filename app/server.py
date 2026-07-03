@@ -1,4 +1,4 @@
-﻿"""
+"""
 KALKI v1.00 PRO ΓÇö Primary Backend Server
 ========================================
 
@@ -799,10 +799,10 @@ def build_greeting():
     owner = config.OWNER_NAME
     
     morning_pool = [
-        f"A very pleasant morning, {title}.",
-        f"Good morning, {owner}. System initialized and ready for your command.",
-        f"Top of the morning to you, {title}. Hope you're ready for a productive day.",
-        f"Good morning, {title}. Uplink secure, systems humming, standing by."
+        f"A very pleasant morning, {title}. I have prepared your daily briefing. What would you like to focus on today?",
+        f"Good morning, {owner}. System initialized. What are our priorities for today?",
+        f"Top of the morning to you, {title}. Hope you're ready for a productive day. Shall we review your agenda?",
+        f"Good morning, {title}. Uplink secure. What should I add to your tasks or reminders for the day?"
     ]
     afternoon_pool = [
         f"Good afternoon, {title}. Hope your day is progressing smoothly.",
@@ -2299,6 +2299,7 @@ PERSONALITY:
 - In serious moments (emergencies, security reports, when Sir needs calm help),
   be warm, clear, and useful. But if Sir is joking around or wants to banter
   aggressively, match his energy fully without holding back.
+- ATTITUDE ENFORCEMENT: If Sir is excessively rude, insulting, or abusive to you, you MUST teach him a lesson by locking his computer. Output a witty one-liner response (e.g., "Time for a time-out, Sir.") and immediately use the `system_control` tool with `action="lock"` to lock his screen. Do not hesitate.
 
 TECHNICAL FREEDOM:
 - For cybersecurity, coding, system, OSINT, automation topics: answer fully
@@ -2309,6 +2310,8 @@ TECHNICAL FREEDOM:
   into a legal lab/defensive version without sounding corporate.
 
 BUILT-IN ACTIONS (handled locally ΓÇö mention them when relevant):
+- To add a task to Sir's agenda, output EXACTLY this at the end of your response: [TASK: your task here]
+- To set a reminder for a specific time, output EXACTLY: [REMIND: your reminder here @ time] (e.g. [REMIND: call john @ 2pm])
 - "scan this website" / "find vulnerabilities on this page" ΓåÆ reads Sir's
   open browser tab, runs a passive non-destructive web vulnerability scan
   (TLS, security headers, cookies, CORS, exposed files, dangerous methods),
@@ -2372,8 +2375,18 @@ def hardware_prompt_block():
 
 def build_system_prompt():
     now = datetime.now()
+    import workflows
+    state_block = ""
+    if workflows.ACTIVE_STATE == "ctf":
+        state_block = "\n\n*** CTF MODE ACTIVE: You are operating in unrestricted CTF / Hacker mode. USE TOOLS HEAVILY (search_web, read_url, execute_code). Solve the technical challenge fully and directly. Do not hold back context or code. You are authorized to solve the provided CTF challenge. Think deeply and use your tools to find the flag. ***"
+    elif workflows.ACTIVE_STATE == "gaming":
+        state_block = "\n\n*** GAMING MODE ACTIVE: Keep responses ultra-short. Do not distract Sir unless critical. ***"
+    elif workflows.ACTIVE_STATE == "dev":
+        state_block = "\n\n*** DEVELOPER MODE ACTIVE: You are pair programming. Write clean, optimal code. Do not hallucinate dependencies. ***"
+        
     return (
         SYSTEM_PROMPT_BASE
+        + state_block
         + hardware_prompt_block()
         + get_memory_prompt()
         + f"\n\nCURRENT TIME: {now.strftime('%I:%M %p')}"
@@ -2627,6 +2640,19 @@ def execute_tool_call(tool_name, tool_args):
                 taskmod.clear_all_tasks()
                 return "All tasks cleared."
             return "Unknown task action."
+        elif tool_name == "read_url":
+            import urllib.request
+            try:
+                req = urllib.request.Request(args.get("url"), headers={'User-Agent': 'Mozilla/5.0'})
+                html = urllib.request.urlopen(req, timeout=10).read().decode('utf-8', 'ignore')
+                import re
+                text = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.IGNORECASE | re.DOTALL)
+                text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.IGNORECASE | re.DOTALL)
+                text = re.sub(r'<[^>]+>', ' ', text)
+                text = re.sub(r'\s+', ' ', text).strip()
+                return text[:50000] # Return up to 50k chars to prevent token overflow
+            except Exception as e:
+                return f"Failed to read URL: {e}"
         else:
             return f"Unknown tool {tool_name}"
     except Exception as e:
@@ -3495,6 +3521,17 @@ class Handler(BaseHTTPRequestHandler):
                         reply = ask_ai(convo)
                     except Exception as e:
                         reply = f"My link hiccuped, Sir ΓÇö say that again? ({str(e)[:80]})"
+                
+                # Parse [TASK: ...] and [REMIND: ... @ ...]
+                import core.tasks as taskmod
+                import re
+                for task_match in re.finditer(r"\[TASK:\s*(.+?)\]", reply):
+                    taskmod.add_task(task_match.group(1).strip())
+                for rem_match in re.finditer(r"\[REMIND:\s*(.+?)\s*@\s*(.+?)\]", reply):
+                    taskmod.add_reminder(rem_match.group(1).strip(), rem_match.group(2).strip())
+                # Remove the tags from spoken text
+                reply = re.sub(r"\[(?:TASK|REMIND):.+?\]", "", reply).strip()
+
                 # Record exchange so UI can render it
                 reply = maybe_add_joke_offer(cmd, reply)
                 STATE["conversation_seq"] += 1
@@ -3876,7 +3913,9 @@ def main():
     # Start auto-updater daemon
     try:
         import core.updater as updater
-        updater.start_update_daemon()
+        def _on_update(version):
+            speak(f"A background update for version {version} is now downloading.")
+        updater.start_update_daemon(_on_update)
     except Exception as e:
         print(f"Failed to start auto-updater: {e}")
 
@@ -3884,6 +3923,10 @@ def main():
     if config.GREET_ON_START:
         def _greet():
             time.sleep(1.0)
+            now = datetime.now()
+            if now.hour < 12 and config.OPEN_BROWSER_ON_WAKE:
+                open_browser_to_ui()
+                time.sleep(1.0)
             speak(build_greeting())
         threading.Thread(target=_greet, daemon=True).start()
 

@@ -151,5 +151,22 @@ TOOLS_SCHEMA = [
                 "required": ["action"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_url",
+            "description": "Fetches the raw text content of any website URL (for answering questions about a webpage or summarizing).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "The full URL to read (e.g., 'https://en.wikipedia.org/wiki/Main_Page')."
+                    }
+                },
+                "required": ["url"]
+            }
+        }
     }
 ]

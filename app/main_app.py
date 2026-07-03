@@ -33,7 +33,8 @@ def add_to_startup():
 BASE_DIR = os.path.dirname(os.path.abspath(
     sys.executable if getattr(sys, "frozen", False) else __file__
 ))
-USER_CONFIG_PATH = os.path.join(BASE_DIR, "user_config.json")
+USER_DATA_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI")
+USER_CONFIG_PATH = os.path.join(USER_DATA_DIR, "user_config.json")
 
 def get_exe_path(name):
     if getattr(sys, "frozen", False):
