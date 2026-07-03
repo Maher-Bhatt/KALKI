@@ -8,6 +8,7 @@
 
 ## 🔥 v1.0.7 Patch Notes
 
+- **Installer Hotfix:** Resolved the `Access is Denied` update error by enabling native `CloseApplications=force` inside the Inno Setup script to gracefully close KALKI during OTA updates.
 - **Background Mic Fix:** Completely rewrote the mic lifecycle with heartbeat monitoring, automatic crash recovery, and dead-thread detection. The mic now stays alive reliably.
 - **Setup Wizard Redesign:** Added YouTube tutorial link, Spotify/Google credential fields, step-by-step help guides, and all API key inputs.
 - **Settings Page Overhaul:** Added missing fields (Location, Email, GitHub, Shodan), Spotify/Google setup guides with direct links, and fixed redirect URI mismatches.
