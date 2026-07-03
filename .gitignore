@@ -49,13 +49,14 @@ Thumbs.db
 *.swo
 .spyderproject
 .claude/
+.ruff_cache/
 
 # ── Build / temp ──
 build/
 dist/
 *.tmp
 Output/
-build_tools/Output/
+app/build_tools/Output/
 *.spec
 
 # ── Node ──
@@ -67,3 +68,6 @@ browsers/
 
 # ── Sync helpers ──
 sync_to_github.py
+
+# ── Data directory (runtime only) ──
+data/
