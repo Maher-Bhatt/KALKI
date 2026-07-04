@@ -187,7 +187,8 @@ def listen_once(recognizer, mic, phrase_time_limit=4, timeout=None):
         with mic as source:
             audio = recognizer.listen(
                 source, timeout=timeout, phrase_time_limit=phrase_time_limit)
-        return recognizer.recognize_google(audio)
+        lang = getattr(config, "STT_LANGUAGE", "en-US")
+        return recognizer.recognize_google(audio, language=lang)
     except sr.WaitTimeoutError:
         return None
     except sr.UnknownValueError:
@@ -509,7 +510,8 @@ def main():
         if _mic_muted.is_set():
             return
         try:
-            txt = rec.recognize_google(audio)
+            lang = getattr(config, "STT_LANGUAGE", "en-US")
+            txt = rec.recognize_google(audio, language=lang)
         except Exception:
             return
         # Double-check after the network round-trip — KALKI may have started

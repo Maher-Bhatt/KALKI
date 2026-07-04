@@ -83,6 +83,7 @@ LISTEN_MODE = "always"
 STT_AVOID_BLUETOOTH = True
 STT_INPUT_DEVICE    = "microsoft sound mapper - input"   # name substring to force a device, else auto
 STT_ENGINE          = "auto"          # auto | vosk (offline) | google (cloud)
+STT_LANGUAGE        = "en-IN"         # Google STT language. Default en-IN for Indian English/Hinglish.
 VOSK_MODEL_PATH     = "data/vosk-model"
 
 # ── STARTUP ─────────────────────────────────────────────────
