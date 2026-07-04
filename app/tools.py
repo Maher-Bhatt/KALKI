@@ -168,5 +168,35 @@ TOOLS_SCHEMA = [
                 "required": ["url"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_routine",
+            "description": "Creates a new custom voice routine/mode for KALKI. Parses user instructions into a list of actions.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "The name of the routine (e.g., 'workout mode', 'reading time')."
+                    },
+                    "actions": {
+                        "type": "array",
+                        "items": {
+                            "type": "array",
+                            "items": {"type": "string"}
+                        },
+                        "description": "List of actions. Each action is a tuple/list: [action_name, arg1, arg2]. Valid actions: open_app (arg: app_name), open_url (arg: url), set_volume (arg: 0-100), kill_app (arg: app_name), run_cmd (arg: cmd), lock_pc, speak (arg: text)."
+                    },
+                    "aliases": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "A list of spoken phrases that should trigger this routine."
+                    }
+                },
+                "required": ["name", "actions"]
+            }
+        }
     }
 ]

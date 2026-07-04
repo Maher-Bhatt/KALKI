@@ -2669,6 +2669,15 @@ def execute_tool_call(tool_name, tool_args):
                 taskmod.clear_all_tasks()
                 return "All tasks cleared."
             return "Unknown task action."
+        elif tool_name == "create_routine":
+            import workflows
+            name = args.get("name")
+            actions = args.get("actions", [])
+            aliases = args.get("aliases", [])
+            if not name or not actions:
+                return "Failed: name and actions are required."
+            workflows.add_custom_routine(name, actions, aliases)
+            return f"Custom routine '{name}' saved with {len(actions)} actions."
         elif tool_name == "read_url":
             import urllib.request
             try:

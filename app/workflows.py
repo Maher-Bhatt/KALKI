@@ -4,10 +4,14 @@ KALKI workflow modes — single-phrase action chains.
 
 import os
 import re
+import json
 import subprocess
 import webbrowser
 
 ACTIVE_STATE = None
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CUSTOM_ROUTINES_PATH = os.path.join(BASE_DIR, "data", "custom_routines.json")
 
 # Action chain definitions. Each step is a (action, *args) tuple.
 # Actions are interpreted by `run_mode` below.
@@ -93,6 +97,45 @@ MODE_ALIASES = {
     "developer mode":   ["developer mode", "dev mode", "coding mode"],
 }
 
+def load_custom_routines():
+    if os.path.exists(CUSTOM_ROUTINES_PATH):
+        try:
+            with open(CUSTOM_ROUTINES_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                for mode, details in data.items():
+                    # details contains "actions" and "aliases"
+                    MODES[mode] = [tuple(action) for action in details.get("actions", [])]
+                    MODE_ALIASES[mode] = details.get("aliases", [])
+        except Exception as e:
+            print(f"Error loading custom routines: {e}")
+
+load_custom_routines()
+
+def add_custom_routine(name, actions, aliases=None):
+    """Save a custom routine dynamically."""
+    name = name.lower().strip()
+    if not aliases:
+        aliases = []
+    
+    data = {}
+    if os.path.exists(CUSTOM_ROUTINES_PATH):
+        try:
+            with open(CUSTOM_ROUTINES_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            pass
+            
+    data[name] = {
+        "actions": actions,
+        "aliases": aliases
+    }
+    
+    os.makedirs(os.path.dirname(CUSTOM_ROUTINES_PATH), exist_ok=True)
+    with open(CUSTOM_ROUTINES_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
+        
+    MODES[name] = [tuple(action) for action in actions]
+    MODE_ALIASES[name] = aliases
 
 def find_mode(text):
     """Match a mode from natural-language text. Handles mishearings."""
