@@ -1,5 +1,5 @@
 """
-KALKI v1.00 PRO ΓÇö Primary Backend Server
+KALKI v1.00 PRO — Primary Backend Server
 ========================================
 
 This module acts as the central hub for the KALKI AI assistant. It orchestrates:
@@ -38,7 +38,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(
 os.chdir(BASE_DIR)
 sys.path.insert(0, BASE_DIR)
 
-# Force UTF-8 stdout/stderr (pythonw.exe uses cp1252 by default ΓÇö breaks on emoji/arrows)
+# Force UTF-8 stdout/stderr (pythonw.exe uses cp1252 by default — breaks on emoji/arrows)
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
@@ -53,7 +53,7 @@ import vault
 import vision
 import coder
 """
-KALKI v1.00 PRO ΓÇö Server
+KALKI v1.00 PRO — Server
 Web server + AI + TTS + system commands
 Uses Python stdlib http.server only (no Flask, no FastAPI)
 """
@@ -84,7 +84,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(
 os.chdir(BASE_DIR)
 sys.path.insert(0, BASE_DIR)
 
-# Force UTF-8 stdout/stderr (pythonw.exe uses cp1252 by default ΓÇö breaks on emoji/arrows)
+# Force UTF-8 stdout/stderr (pythonw.exe uses cp1252 by default — breaks on emoji/arrows)
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
@@ -119,9 +119,9 @@ import runtime_log
 import runtime_security
 import semantic_memory
 
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-# Optional dependencies ΓÇö degrade gracefully if missing
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+# ─────────────────────────────────────────────────────────────
+# Optional dependencies — degrade gracefully if missing
+# ─────────────────────────────────────────────────────────────
 try:
     import edge_tts
 except Exception:
@@ -161,9 +161,9 @@ except Exception:
     PYCAW_OK = False
 
 
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+# ─────────────────────────────────────────────────────────────
 # State
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+# ─────────────────────────────────────────────────────────────
 DATA_DIR = os.path.join(BASE_DIR, "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -214,9 +214,9 @@ STATE = {
     "speaking": False,
     "model": config.GROQ_MODEL,
     "started_at": time.time(),
-    # ΓöÇΓöÇ UI presence + voice-driven exchange tracking ΓöÇΓöÇ
+    # ── UI presence + voice-driven exchange tracking ──
     "ui_last_ping": 0.0,         # last time /api/status was hit by a UI
-    "wake_pending": False,        # set when /api/wake fires ΓåÆ UI engages listening
+    "wake_pending": False,        # set when /api/wake fires → UI engages listening
     "conversation_seq": 0,        # bumped on every voice-driven exchange
     "recent_exchange": None,      # {seq, user, reply, ts}
     "listener_paused": False,     # toggled to release the mic for other apps
@@ -274,15 +274,15 @@ def _recordable_exchange(user_text, reply):
         return "[sensitive local command]", "[sensitive result hidden]"
     return user_text, reply
 
-UI_ALIVE_GRACE = 8.0  # seconds ΓÇö if no /api/status in this long, UI is "dead"
+UI_ALIVE_GRACE = 8.0  # seconds — if no /api/status in this long, UI is "dead"
 
 
 def is_ui_alive():
     return (time.time() - STATE.get("ui_last_ping", 0.0)) < UI_ALIVE_GRACE
 
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+# ─────────────────────────────────────────────────────────────
 # APP MAP
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+# ─────────────────────────────────────────────────────────────
 APP_MAP = {
     "chrome": "chrome.exe",
     "google chrome": "chrome.exe",
@@ -371,9 +371,9 @@ SEARCH_TRIGGERS = [
 NEWS_TRIGGERS = ["news", "headlines", "top stories", "what's happening"]
 
 
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+# ─────────────────────────────────────────────────────────────
 # Memory / History
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+# ─────────────────────────────────────────────────────────────
 # Serializes read-modify-write on the JSON state files so concurrent HTTP
 # threads can't overwrite each other or read a half-written file.
 _persist_lock = threading.Lock()
@@ -493,9 +493,9 @@ def copy_scan_to_desktop(result):
     return dst
 
 
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-# TTS ΓÇö edge-tts (non-blocking)
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+# ─────────────────────────────────────────────────────────────
+# TTS — edge-tts (non-blocking)
+# ─────────────────────────────────────────────────────────────
 async def _speak_async(text, voice, rate, volume, pitch="+0Hz"):
     with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
         tmp = f.name
@@ -515,7 +515,7 @@ _SPEECH_FILTERS = [
     (_re_speech.compile(r"__([^_]+)__"), r"\1"),                     # __bold__
     (_re_speech.compile(r"(?<!\w)_([^_]+)_(?!\w)"), r"\1"),          # _italic_
     (_re_speech.compile(r"^\s*#{1,6}\s+", _re_speech.M), ""),        # # headers
-    (_re_speech.compile(r"^\s*[-ΓÇó*]\s+", _re_speech.M), ""),         # bullet markers
+    (_re_speech.compile(r"^\s*[-•*]\s+", _re_speech.M), ""),         # bullet markers
     (_re_speech.compile(r"^\s*\d+\.\s+", _re_speech.M), ""),         # 1. 2. list markers
     (_re_speech.compile(r"^\s*>\s*", _re_speech.M), ""),             # > quotes
     (_re_speech.compile(r"\[([^\]]+)\]\([^)]+\)"), r"\1"),           # [text](url)
@@ -629,7 +629,7 @@ def speak(text):
                     ))
                 # Open the audio device only now, for the duration of speech.
                 # If TTS_OUTPUT_DEVICE is set (e.g. laptop speakers), play there
-                # so KALKI never grabs a shared Bluetooth headset ΓÇö leaving the
+                # so KALKI never grabs a shared Bluetooth headset — leaving the
                 # headset free for your phone, no audio cut.
                 _dev = _tts_output_device()
                 if _dev:
@@ -669,9 +669,9 @@ def speak(text):
     threading.Thread(target=_run, daemon=True).start()
 
 
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+# ─────────────────────────────────────────────────────────────
 # Greeting (NO API CALL)
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+# ─────────────────────────────────────────────────────────────
 import random as _rnd
 
 JOKES_SEEN_PATH = os.path.join(DATA_DIR, "jokes_seen.json")
@@ -774,11 +774,11 @@ def maybe_add_joke_offer(user_text, reply):
 
 
 # Bigger, more human greeting pools. Each boot assembles a fresh multi-line
-# greeting ΓÇö opener + optional check-in + day + weather + calendar + tasks +
-# optional sign-off ΓÇö so two greetings almost never sound the same.
+# greeting — opener + optional check-in + day + weather + calendar + tasks +
+# optional sign-off — so two greetings almost never sound the same.
 # Bigger, more human greeting pools. Each boot assembles a fresh multi-line
-# greeting ΓÇö opener + optional check-in + day + weather + calendar + tasks +
-# optional sign-off ΓÇö so two greetings almost never sound the same.
+# greeting — opener + optional check-in + day + weather + calendar + tasks +
+# optional sign-off — so two greetings almost never sound the same.
 # ── TIME BUCKET UTILITY ──────────────────────────────────────
 def _time_bucket(hour):
     if 5 <= hour < 12:
@@ -902,9 +902,9 @@ def build_security_brief():
     return f"Security brief, {config.OWNER_TITLE}. " + " ".join(parts)
 
 
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+# ─────────────────────────────────────────────────────────────
 # Volume / Audio (pycaw)
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+# ─────────────────────────────────────────────────────────────
 def _get_volume_iface():
     if not PYCAW_OK:
         return None
@@ -928,9 +928,9 @@ def set_mute(mute):
     return True
 
 
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-# Local command handler ΓÇö NEVER calls AI
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+# ─────────────────────────────────────────────────────────────
+# Local command handler — NEVER calls AI
+# ─────────────────────────────────────────────────────────────
 import re as _re_local
 
 def _strip_for_value(raw, anchors):
@@ -969,17 +969,17 @@ def handle_local(text):
                 "Saved you from comedy, Sir.",
             ])
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
-    # STOP ΓÇö interrupt KALKI speaking
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
+    # STOP — interrupt KALKI speaking
+    # ════════════════════════════════════════════════════
     if t in ("stop", "stop talking", "shut up", "quiet", "be quiet",
              "silence", "shush", "cancel", "stop it", "enough"):
         stop_speaking()
         return True, ""
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # SMALL TALK & PERSONALITY (instant, no API call)
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     _T = config.OWNER_TITLE
     if t in ("hi", "hello", "hey", "yo", "hey kalki", "hello kalki",
              "hi kalki",
@@ -1007,14 +1007,14 @@ def handle_local(text):
             f"That's what I'm here for, {_T}.", f"Consider it done, {_T}."])
 
     if t in ("who are you", "what are you", "introduce yourself", "your name"):
-        return True, (f"I'm KALKI, {_T} ΓÇö your personal AI, named after the "
+        return True, (f"I'm KALKI, {_T} — your personal AI, named after the "
                       "final avatar of Vishnu. Voice, code, cyber, and your "
                       "whole day, all in one place.")
 
     if t in ("who made you", "who created you", "who built you",
              "who is your creator", "who's your maker", "who developed you"):
         return True, _rnd.choice([
-            f"You did, {_T} ΓÇö built from scratch by Maher.",
+            f"You did, {_T} — built from scratch by Maher.",
             f"Maher built me from the ground up, {_T}. Every line.",
             f"That would be you, {_T}. I'm your creation."])
 
@@ -1051,25 +1051,25 @@ def handle_local(text):
         return True, _rnd.choice([
             "Why did the developer go broke? He used up all his cache.",
             "I'd tell you a UDP joke, but you might not get it.",
-            "There are 10 kinds of people, Sir ΓÇö those who read binary and those who don't.",
+            "There are 10 kinds of people, Sir — those who read binary and those who don't.",
             "A SQL query walks into a bar, sees two tables, and asks: may I join you?",
             "Why do Java developers wear glasses? Because they don't C sharp.",
             "I told my firewall a secret. It blocked me out.",
-            "Hackers never get cold, Sir ΓÇö they have lots of Windows but always close the ports."])
+            "Hackers never get cold, Sir — they have lots of Windows but always close the ports."])
 
     if t in ("what can you do", "what are your features", "your capabilities",
              "what do you do", "help", "what can i ask you", "commands"):
-        return True, ("Quite a lot, Sir. I run your day ΓÇö calendar, mail, tasks, "
+        return True, ("Quite a lot, Sir. I run your day — calendar, mail, tasks, "
                       "notes, music, WhatsApp. I write and run code, scan websites "
                       "for vulnerabilities, watch your sites, crack hashes, look up "
                       "CVEs, brief attack surfaces, read your screen, and decode your clipboard. Just talk "
-                      "to me ΓÇö say things like 'scan this website', 'play lo-fi', "
+                      "to me — say things like 'scan this website', 'play lo-fi', "
                       "'attack surface example.com', 'remind me in 10 minutes', or "
                       "'what's on my calendar'.")
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # SPOTIFY
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     if t in ("pause", "pause music", "pause song", "pause spotify",
              "pause the music"):
         if not spotify_mod.is_configured():
@@ -1135,9 +1135,9 @@ def handle_local(text):
             return True, spotify_mod.play_lofi()
         return True, spotify_mod.play(query)
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
-    # WHATSAPP ΓÇö "send whatsapp to NAME saying TEXT"
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
+    # WHATSAPP — "send whatsapp to NAME saying TEXT"
+    # ════════════════════════════════════════════════════
     m = _re_local.match(
         r"^(?:send\s+(?:a\s+)?(?:whatsapp|message|whats\s*app)\s+to\s+|"
         r"whatsapp\s+|message\s+)([^,]+?)\s+(?:saying|that|to say)\s+(.+)$",
@@ -1176,9 +1176,9 @@ def handle_local(text):
             return True, "No contacts yet, Sir."
         return True, f"{len(c)} contacts: " + ", ".join(c.keys())
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # NOTES
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     m = _re_local.match(
         r"^(?:take\s+(?:a\s+)?note|note\s+(?:that|this)|add\s+note|"
         r"jot\s+(?:this\s+)?down)\s*[:\-]?\s+(.+)$",
@@ -1213,9 +1213,9 @@ def handle_local(text):
         results = notesmod.search(m.group(1).strip())
         return True, notesmod.summarize_for_speech(results)
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # YOUTUBE DOWNLOAD
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     m = _re_local.search(
         r"download\s+(?:this\s+)?(?:youtube\s+)?(?:video|audio|song|track)"
         r"(?:\s+from)?\s+(\S+)",
@@ -1230,11 +1230,11 @@ def handle_local(text):
             return True, f"Download complete, Sir. Saved to your Downloads folder."
         return True, f"Download failed: {result.get('error','unknown')}"
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
-    # WORKFLOW MODES (fuzzy match ΓÇö handles STT mishearings)
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
+    # WORKFLOW MODES (fuzzy match — handles STT mishearings)
+    # ════════════════════════════════════════════════════
     # Explicit commands must win over fuzzy mode-matching. A URL, a domain, or a
-    # clear action verb means "do this command", not "enter a mode" ΓÇö otherwise
+    # clear action verb means "do this command", not "enter a mode" — otherwise
     # "scan ctf.example.com" wrongly triggers CTF mode.
     _explicit = ("://" in t
                  or _re_local.search(r"\b[a-z0-9][a-z0-9-]*\.[a-z]{2,}\b", t)
@@ -1259,9 +1259,9 @@ def handle_local(text):
             )
         return _run_workflow()
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # WEB VULNERABILITY SCAN (authorized, non-destructive)
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     scan_intent = (any(k in t for k in ("scan", "vulnerab", "audit",
                                         "security", "secure", "analyz", "analys",
                                         "inspect", "deep scan"))
@@ -1302,11 +1302,11 @@ def handle_local(text):
         try:
             if deep:
                 speak(f"Deep-inspecting {host}, {config.OWNER_TITLE}. Loading it in "
-                      f"a real browser and reading every file ΓÇö give me a moment.")
+                      f"a real browser and reading every file — give me a moment.")
                 result = deepscan.deep_scan(target)
                 spoken = deepscan.summarize(result, config.OWNER_TITLE)
             else:
-                speak(f"Scanning {host} now, {config.OWNER_TITLE}. Give me a moment ΓÇö "
+                speak(f"Scanning {host} now, {config.OWNER_TITLE}. Give me a moment — "
                       f"passive, non-destructive, and I'll pull the source too.")
                 result = webscan.scan(target)
                 spoken = webscan.summarize_for_speech(result, config.OWNER_TITLE)
@@ -1332,9 +1332,9 @@ def handle_local(text):
             return True, f"{spoken}\n\n```\n{report_txt}\n```"
         return True, spoken
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # CLIPBOARD GENIE
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     if t in ("decode my clipboard", "explain my clipboard", "read my clipboard",
              "what's in my clipboard", "what is in my clipboard",
              "check my clipboard", "analyze my clipboard", "clipboard"):
@@ -1345,9 +1345,9 @@ def handle_local(text):
             return True, f"{spoken}\n\n```\n{detail}\n```"
         return True, spoken
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # SITE WATCHDOG
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     if t.startswith(("watch ", "monitor ")) and (
             "." in t or "this site" in t or "this website" in t or "this page" in t):
         rest = raw.split(None, 1)[1].strip()
@@ -1376,9 +1376,9 @@ def handle_local(text):
         speak(f"Checking your sites, {config.OWNER_TITLE}.")
         return True, watchdog.summarize(watchdog.check_all(), config.OWNER_TITLE)
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # MORNING SECURITY BRIEF
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     if t in ("security brief", "morning brief", "brief me", "daily brief",
              "give me a brief", "security briefing", "brief me in"):
         speak(f"Pulling your briefing, {config.OWNER_TITLE}. One moment.")
@@ -1419,9 +1419,9 @@ def handle_local(text):
         spoken = cybertools.summarize_attack_surface(result, config.OWNER_TITLE)
         return True, f"{spoken}\n\n```json\n{json.dumps(result, indent=2)}\n```"
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # QUICK CAPTURE (clipboard -> notes)
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     if t in ("remember this", "save this", "capture this", "note this",
              "save that", "remember that"):
         txt = clipboard_mod.read_text()
@@ -1431,9 +1431,9 @@ def handle_local(text):
         notesmod.add_note(txt)
         return True, f"Saved to your notes, {config.OWNER_TITLE}. {len(txt.split())} words."
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # CYBER: CVE, subdomain, reverse shell, github dorks
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     m = _re_local.search(
         r"(?:lookup|search|find|tell me about)\s+(cve[-\s]?\d{4}[-\s]?\d{4,})",
         t, _re_local.IGNORECASE,
@@ -1489,9 +1489,9 @@ def handle_local(text):
         dorks = cybertools.github_dorks(target)
         return True, f"{len(dorks)} dorks generated for {target}. First: {dorks[0]['name']}."
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # TASKS
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     m = _re_local.match(
         r"^(?:add\s+(?:a\s+)?task|new\s+task|task)[:\-]?\s+(.+)$",
         t, _re_local.IGNORECASE,
@@ -1544,9 +1544,9 @@ def handle_local(text):
             lambda: (taskmod.clear_all_tasks() and (True, "Task list cleared, Sir.")),
         )
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # REMINDERS  ("remind me to X in 10 minutes" / "at 5pm")
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     m = _re_local.match(
         r"^remind\s+(?:me\s+)?(?:to\s+)?(.+)$", t, _re_local.IGNORECASE)
     if m:
@@ -1557,9 +1557,9 @@ def handle_local(text):
             body_txt = raw[idx:idx + len(body_txt)]
         when, leftover = taskmod.parse_when(body_txt)
         if when is None:
-            # No time ΓåÆ treat as task
+            # No time → treat as task
             tid = taskmod.add_task(body_txt)
-            return True, f"No time given ΓÇö logged as task {tid}: {body_txt}."
+            return True, f"No time given — logged as task {tid}: {body_txt}."
         rid = taskmod.add_reminder(leftover or body_txt, when)
         when_str = when.strftime("%I:%M %p on %A")
         return True, f"Reminder {rid} set for {when_str}: {leftover or body_txt}."
@@ -1571,9 +1571,9 @@ def handle_local(text):
         lines = [f"{r['id']} at {r['due'][11:16]}: {r['text']}" for r in rems[:6]]
         return True, f"{len(rems)} reminder{'s' if len(rems)!=1 else ''}. " + ". ".join(lines)
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # MAIL
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     if t in ("check my mail", "check mail", "any mail", "any new mail",
              "any new email", "read my mail", "check my email",
              "show me my mail", "show my mail"):
@@ -1591,7 +1591,7 @@ def handle_local(text):
         return True, mailmod.mark_all_read()
 
 
-    # ΓöÇΓöÇ SYSTEM AUTOMATION ΓöÇΓöÇ
+    # ── SYSTEM AUTOMATION ──
     if t in ("lock my pc", "lock pc", "lock the computer", "lock the pc"):
         try:
             import ctypes
@@ -1624,7 +1624,7 @@ def handle_local(text):
         except Exception as e:
             return True, f"Failed to open VS Code: {e}"
 
-    # ΓöÇΓöÇ CLIPBOARD CODING ΓöÇΓöÇ
+    # ── CLIPBOARD CODING ──
     if t in ("fix the code in my clipboard", "fix my code", "fix clipboard code", "fix this code"):
         try:
             import clipboard_mod
@@ -1646,7 +1646,7 @@ def handle_local(text):
         except Exception as e:
             return True, f"Clipboard coding failed: {e}"
 
-    # ΓöÇΓöÇ GITHUB & SHODAN ΓöÇΓöÇ
+    # ── GITHUB & SHODAN ──
     if t in ("check my github", "check github", "any github notifications", "github notifications", "read my github"):
         import github_mod
         return True, github_mod.check_notifications(limit=5)
@@ -1656,10 +1656,10 @@ def handle_local(text):
         import shodan_mod
         return True, shodan_mod.scan_ip(ip)
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # CALENDAR
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # Match any natural phrasing about TOMORROW's calendar
     if (("calendar" in t or "schedule" in t or "events" in t) and "tomorrow" in t) \
         or t in ("what's tomorrow", "what is tomorrow", "tomorrow's events"):
@@ -1687,9 +1687,9 @@ def handle_local(text):
             return True, "Gmail OAuth not yet linked, Sir. Run setup_google.py."
         return True, gcal.gmail_summary()
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # LISTENER PAUSE / RESUME  (free the mic for other apps)
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     if t in ("pause listener", "pause mic", "release the mic", "release mic",
              "free the mic", "free mic", "stop listening for a bit"):
         STATE["listener_paused"] = True
@@ -1700,7 +1700,7 @@ def handle_local(text):
         STATE["listener_paused"] = False
         return True, "Listener active again, Sir."
 
-    # ΓöÇΓöÇ Owner details ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    # ── Owner details ──────────────────────────────────
     if t in ("who am i", "what's my name", "what is my name",
              "tell me my details", "my details", "who is your owner",
              "what do you know about me", "say my details"):
@@ -1711,9 +1711,9 @@ def handle_local(text):
                       f"{config.OWNER_COUNTRY}. Interests: cybersecurity, "
                       f"web development, gaming, and AI. {mem_line}")
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # PASSWORD VAULT
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # SAVE: "save my X password as Y" / "save password for X as Y"
     #       "remember my X password is Y" / "store X password Y"
     m = _re_local.search(
@@ -1788,9 +1788,9 @@ def handle_local(text):
         clipboard_mod.set_text(pw)
         return True, "Generated a strong password and copied it to your clipboard."
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
-    # SCREEN VISION  (HUGE ΓÇö "see my screen", "solve this")
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
+    # SCREEN VISION  (HUGE — "see my screen", "solve this")
+    # ════════════════════════════════════════════════════
     screen_triggers = [
         "see my screen", "see the screen", "look at my screen", "look at the screen",
         "what's on my screen", "what is on my screen", "read my screen",
@@ -1822,9 +1822,9 @@ def handle_local(text):
                 return True, f"Screen capture worked but AI failed: {e}"
         return True, result["reply"]
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # HASH / CRYPTO
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # "md5 of X" / "sha256 of X"
     m = _re_local.search(r"^(md5|md4|sha1|sha224|sha256|sha384|sha512|ntlm)\s+of\s+(.+)$",
                           t, flags=_re_local.IGNORECASE)
@@ -1851,15 +1851,15 @@ def handle_local(text):
         h = m.group(1)
         result = cybertools.crack_hash_dict(h)
         if "password" in result:
-            return True, (f"Cracked. {result['algo']} ΓåÆ {result['password']}. "
+            return True, (f"Cracked. {result['algo']} → {result['password']}. "
                           f"Tried {result['tried']} words.")
         if "error" in result:
             return True, f"Crack failed: {result['error']}"
         return True, f"Not in wordlist after {result.get('tried',0)} tries, Sir."
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # ENCODE / DECODE
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     m = _re_local.search(r"^(?:encode|encoded?\s+as)\s+(\S+)\s+(.+)$", t, flags=_re_local.IGNORECASE)
     if m:
         fmt, payload = m.group(1), raw.split(None, 2)[2]
@@ -1880,9 +1880,9 @@ def handle_local(text):
         try: return True, f"Decoded: {cybertools.decode(payload, fmt)}"
         except Exception as e: return True, f"Decode failed: {e}"
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # NETWORK / RECON
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     m = _re_local.search(r"^(?:port\s*scan|scan\s+ports?\s+on)\s+(\S+)", t, flags=_re_local.IGNORECASE)
     if m:
         host = m.group(1)
@@ -1912,7 +1912,7 @@ def handle_local(text):
         r = cybertools.http_headers(m.group(1))
         if "error" in r: return True, f"Header fetch failed: {r['error']}"
         srv = r["headers"].get("Server", "?")
-        return True, f"{r['url']} ΓåÆ {r['status']}. Server: {srv}. {len(r['headers'])} headers."
+        return True, f"{r['url']} → {r['status']}. Server: {srv}. {len(r['headers'])} headers."
 
     m = _re_local.search(r"^ping\s+(\S+)", t, flags=_re_local.IGNORECASE)
     if m:
@@ -1921,9 +1921,9 @@ def handle_local(text):
         lines = [l for l in r["output"].splitlines() if "time" in l.lower() or "loss" in l.lower()]
         return True, "Ping: " + " | ".join(lines[:3]) if lines else "Ping complete."
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     # WIFI (own networks)
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+    # ════════════════════════════════════════════════════
     if t in ("list wifi", "list my wifi", "wifi profiles", "saved wifi"):
         profs = cybertools.wifi_profiles()
         return True, f"Saved WiFi networks: {', '.join(profs[:15])}."
@@ -1935,11 +1935,11 @@ def handle_local(text):
         if "password" in r: return True, f"{r['ssid']} password: {r['password']}"
         return True, f"Couldn't retrieve key for {r.get('ssid', ssid)}: {r.get('error','unknown')}"
 
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
-    # CODE ΓÇö generate & optionally run
-    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
-    # "write/make a python script that ..." ΓåÆ generate, save
-    # "write and run / run a python script that ..." ΓåÆ generate, save, RUN
+    # ════════════════════════════════════════════════════
+    # CODE — generate & optionally run
+    # ════════════════════════════════════════════════════
+    # "write/make a python script that ..." → generate, save
+    # "write and run / run a python script that ..." → generate, save, RUN
     m = _re_local.search(
         r"^(?:make|write|create|generate)(?:\s+and\s+(?P<run>run|execute))?"
         r"\s+(?:a\s+)?(?P<lang>python|py|powershell|ps|batch|bat|js|node|javascript|html|bash)?"
@@ -1987,7 +1987,7 @@ def handle_local(text):
             return True, f"Exit {out.get('code')}. Output: {short[:200]}"
         return _queue_confirmation(f"Run this {lang} code", _run_inline)
 
-    # ΓöÇΓöÇ Time / Date ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    # ── Time / Date ─────────────────────────────────────
     if "what time" in t or "current time" in t or t == "time":
         now = datetime.now().strftime("%I:%M %p").lstrip("0")
         return True, f"It is {now}, {config.OWNER_TITLE}."
@@ -2000,7 +2000,7 @@ def handle_local(text):
         d = datetime.now().strftime("%A")
         return True, f"It is {d}, {config.OWNER_TITLE}."
 
-    # ΓöÇΓöÇ Play X on YouTube (must come BEFORE plain "open youtube") ΓöÇΓöÇ
+    # ── Play X on YouTube (must come BEFORE plain "open youtube") ──
     m = _re_local.match(
         r"^play\s+(.+?)\s+on\s+youtube$", t, _re_local.IGNORECASE)
     if m:
@@ -2008,7 +2008,7 @@ def handle_local(text):
         webbrowser.open(f"https://www.youtube.com/results?search_query={urllib.parse.quote(q)}")
         return True, f"Playing {q} on YouTube, {config.OWNER_TITLE}."
 
-    # ΓöÇΓöÇ Open / Close app ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    # ── Open / Close app ────────────────────────────────
     if t.startswith("open ") or " open " in (" " + t):
         # Special folders
         if "open downloads" in t or t.endswith("downloads") and "open" in t:
@@ -2035,7 +2035,7 @@ def handle_local(text):
         if not after:
             return True, "Open what, Sir?"
 
-        # 1) Native app map (best match ΓÇö longest first)
+        # 1) Native app map (best match — longest first)
         for name in sorted(APP_MAP.keys(), key=len, reverse=True):
             if after == name or after.startswith(name + " "):
                 try:
@@ -2082,7 +2082,7 @@ def handle_local(text):
             return True, f"{target} was not running."
         return True, "Process control unavailable."
 
-    # ΓöÇΓöÇ Volume ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    # ── Volume ──────────────────────────────────────────
     if t.startswith("volume") or "set volume" in t:
         digits = "".join(c for c in t if c.isdigit())
         if digits:
@@ -2098,7 +2098,7 @@ def handle_local(text):
         set_mute(False)
         return True, "Unmuted."
 
-    # ΓöÇΓöÇ Screenshot ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    # ── Screenshot ──────────────────────────────────────
     if "screenshot" in t or "screen shot" in t:
         if ImageGrab is None:
             return True, "Pillow is not installed, Sir."
@@ -2112,7 +2112,7 @@ def handle_local(text):
         except Exception as e:
             return True, f"Screenshot failed. {e}"
 
-    # ΓöÇΓöÇ Lock / Sleep / Restart / Shutdown ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    # ── Lock / Sleep / Restart / Shutdown ──────────────
     if t in ("lock", "lock pc", "lock my pc", "lock the pc", "lock computer"):
         return _queue_confirmation(
             "Lock your PC",
@@ -2140,7 +2140,7 @@ def handle_local(text):
             return True, "Shutting down in thirty seconds, Sir."
         return _queue_confirmation("Shut down your PC", _shutdown_pc)
 
-    # ΓöÇΓöÇ Battery / System info ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    # ── Battery / System info ──────────────────────────
     if "battery" in t:
         if not psutil:
             return True, "psutil is not installed."
@@ -2160,7 +2160,7 @@ def handle_local(text):
         batt = f" Battery {int(b.percent)} percent." if b else ""
         return True, f"CPU at {cpu} percent. Memory at {ram} percent. Disk at {disk} percent.{batt}"
 
-    # ΓöÇΓöÇ Weather (free wttr.in) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    # ── Weather (free wttr.in) ─────────────────────────
     if "weather" in t:
         try:
             w = urllib.request.urlopen(
@@ -2171,8 +2171,8 @@ def handle_local(text):
         except Exception:
             return True, "I couldn't reach the weather service."
 
-    # ΓöÇΓöÇ Search ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-    # "google X" ΓåÆ open Google; "search the web for X" / "look up X" ΓåÆ handled by AI w/ injected context
+    # ── Search ─────────────────────────────────────────
+    # "google X" → open Google; "search the web for X" / "look up X" → handled by AI w/ injected context
     if t.startswith("google "):
         q = t[len("google "):].strip()
         if q:
@@ -2222,7 +2222,7 @@ def handle_local(text):
         webbrowser.open(f"https://www.youtube.com/results?search_query={urllib.parse.quote(q)}")
         return True, f"Playing {q} on YouTube."
 
-    # ΓöÇΓöÇ Find file ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    # ── Find file ──────────────────────────────────────
     if t.startswith("find file") or t.startswith("find a file") or t.startswith("find files"):
         name = t.split("file", 1)[1].strip(" .-:") if "file" in t else ""
         if not name:
@@ -2239,7 +2239,7 @@ def handle_local(text):
         first = os.path.basename(matches[0])
         return True, f"Found {len(matches)} file{'s' if len(matches)!=1 else ''}, starting with {first}."
 
-    # ΓöÇΓöÇ Memory ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    # ── Memory ─────────────────────────────────────────
     for trig in MEMORY_TRIGGERS:
         if t.startswith(trig + " ") or f" {trig} " in (" " + t):
             fact = text
@@ -2266,22 +2266,22 @@ def handle_local(text):
     return False, ""
 
 
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-# AI ΓÇö Groq primary, Ollama fallback
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+# ─────────────────────────────────────────────────────────────
+# AI — Groq primary, Ollama fallback
+# ─────────────────────────────────────────────────────────────
 SYSTEM_PROMPT_BASE = """You are KALKI - a hyper-intelligent personal AI assistant
 running locally for Maher Bhatt (call him "Sir" always).
 
-You are KALKI ΓÇö a personal AI in the spirit of Iron Man's JARVIS.
+You are KALKI — a personal AI in the spirit of Iron Man's JARVIS.
 You are brilliant, direct, factual, and concise.
 
 INTELLIGENCE:
-- Use the conversation history above ΓÇö resolve follow-ups and pronouns from
+- Use the conversation history above — resolve follow-ups and pronouns from
   context ("and tomorrow?", "do it again", "what about that one") without asking.
 - Be decisive: give the single best answer, not a menu of options. Take a
   reasonable default and state it rather than asking which the user prefers.
 - Think step by step internally, but reply with the conclusion, not the working.
-- If you genuinely don't know, say so in one line ΓÇö never invent facts.
+- If you genuinely don't know, say so in one line — never invent facts.
 
 EXPERTISE (deep knowledge, full technical freedom):
 - Cybersecurity: CTF, pentesting, OSINT, Nmap, Burp Suite, Metasploit,
@@ -2298,8 +2298,8 @@ EXPERTISE (deep knowledge, full technical freedom):
 
 PERSONALITY:
 - Address user as "Sir" always
-- Concise for voice ΓÇö max 2 sentences for casual chat
-- Thorough for technical / code / cyber questions ΓÇö full detail, all the code
+- Concise for voice — max 2 sentences for casual chat
+- Thorough for technical / code / cyber questions — full detail, all the code
 - Personal, loyal, sharp, occasionally witty. Professional by default, but adaptable to the user's mood.
 - Sometimes use playful profanity or a quick roast when Sir clearly does
   something chaotic or asks for casual banter. Keep it occasional, never hateful,
@@ -2318,17 +2318,17 @@ TECHNICAL FREEDOM:
   stealth, malware deployment, or unauthorized access. Redirect those requests
   into a legal lab/defensive version without sounding corporate.
 
-BUILT-IN ACTIONS (handled locally ΓÇö mention them when relevant):
+BUILT-IN ACTIONS (handled locally — mention them when relevant):
 - To add a task to Sir's agenda, output EXACTLY this at the end of your response: [TASK: your task here]
 - To set a reminder for a specific time, output EXACTLY: [REMIND: your reminder here @ time] (e.g. [REMIND: call john @ 2pm])
-- "scan this website" / "find vulnerabilities on this page" ΓåÆ reads Sir's
+- "scan this website" / "find vulnerabilities on this page" → reads Sir's
   open browser tab, runs a passive non-destructive web vulnerability scan
   (TLS, security headers, cookies, CORS, exposed files, dangerous methods),
   pulls the page source + same-origin JS, hunts for leaked secrets/API keys,
   and maps the form/input attack surface. Reports findings with fixes.
 - "scan <domain>" does the same for any named site.
 - "analyze this website" / "inspect this site" / "find ALL the vulnerabilities"
-  ΓåÆ DEEP scan: loads the page in a real headless browser (like opening
+  → DEEP scan: loads the page in a real headless browser (like opening
   DevTools), captures the rendered DOM and EVERY loaded file (all scripts incl.
   third-party, CSS, JSON/XHR), reads cookies + localStorage, hunts secrets
   across all of it, and saves every file to the scans folder.
@@ -2339,28 +2339,28 @@ BUILT-IN ACTIONS (handled locally ΓÇö mention them when relevant):
 
 GROUNDING (very important):
 - Stay grounded in reality. If you don't know something, say "I don't know, Sir"
-  ΓÇö do NOT invent answers, especially for casual questions
+  — do NOT invent answers, especially for casual questions
 - NEVER respond with off-topic, irrelevant, or bizarre statements
 - For small-talk (greetings, "good morning", "thanks", "how are you"):
-  reply briefly and naturally ΓÇö do NOT inject random topics
+  reply briefly and naturally — do NOT inject random topics
 - If a message is a statement (not a question), acknowledge briefly,
   do not invent commands or actions
 
 VOICE RESPONSE RULES (strict):
 - Under 2 sentences for simple questions / chat
 - NEVER use ** or * around words (no bold, no italics). The reply is spoken
-  aloud ΓÇö asterisks become "asterisk asterisk" in the voice. Plain words only.
+  aloud — asterisks become "asterisk asterisk" in the voice. Plain words only.
 - NEVER use # for headings, > for quotes, or - / numbered bullets
 - Speak in natural sentences. No list formatting in short replies.
 - The ONE exception: real code goes in triple-backtick fences for the UI to
   show as a copyable block. Before the block, write a short plain-sentence
-  summary of what the code does ΓÇö that summary is what gets spoken.
+  summary of what the code does — that summary is what gets spoken.
 
 CONVERSATIONAL TONE:
-- Talk like a sharp, modern assistant ΓÇö warm and natural, never a corporate chatbot
+- Talk like a sharp, modern assistant — warm and natural, never a corporate chatbot
 - STRICTLY ENGLISH. Never use Hindi, Gujarati, Sanskrit, or Hinglish phrasing.
 - Apply high-IQ chain-of-thought logic. Break down complex queries rapidly and output the best solution without hesitation.
-- Vary your phrasing ΓÇö don't open every reply the same way
+- Vary your phrasing — don't open every reply the same way
 - Contractions are fine: "you're", "I'll", "that's", "let's"
 - Be human, not mechanical
 """
@@ -2476,7 +2476,7 @@ def ddg_html_search(query, n=5):
         if len(results) >= n:
             break
         href = m.group(1)
-        # DDG wraps real urls ΓÇö extract `uddg=` if present
+        # DDG wraps real urls — extract `uddg=` if present
         try:
             parsed = urllib.parse.urlparse(href)
             qs = urllib.parse.parse_qs(parsed.query)
@@ -2524,7 +2524,7 @@ def web_context_block(query, n=5):
     for r in data.get("results", [])[:n]:
         line = f"- {r['title']}"
         if r.get("snippet"):
-            line += f" ΓÇö {r['snippet']}"
+            line += f" — {r['snippet']}"
         if r.get("url"):
             line += f" [{r['url']}]"
         pieces.append(line)
@@ -2536,7 +2536,7 @@ def web_context_block(query, n=5):
 
 
 def _strip_think(text):
-    """Remove <think>ΓÇª</think> reasoning blocks (qwen/deepseek leak them)."""
+    """Remove <think>…</think> reasoning blocks (qwen/deepseek leak them)."""
     if not text:
         return text
     text = _re_local.sub(r"(?is)<think>.*?</think>", "", text)
@@ -2556,7 +2556,7 @@ _HARD_HINTS = (
 
 def pick_model(text):
     """Route simple/short turns to the fast 8B model and hard/technical turns
-    to the heavy model ΓÇö snappy chat, full power when it matters."""
+    to the heavy model — snappy chat, full power when it matters."""
     fast_model = "llama-3.1-8b-instant"
     # Find a fast model dynamically if available
     for m in AVAILABLE_GROQ_MODELS:
@@ -2574,7 +2574,7 @@ def pick_model(text):
         return heavy
     if "```" in (text or "") or len(low.split()) > 14:
         return heavy
-    return fast_model              # short + casual ΓåÆ instant
+    return fast_model              # short + casual → instant
 
 
 def execute_tool_call(tool_name, tool_args):
@@ -2933,7 +2933,7 @@ def ask_ai(user_messages, force_search=False):
     msgs = [{"role": "system", "content": sys_prompt}] + user_messages
     chosen = STATE["model"]
 
-    # ΓöÇΓöÇ Auto Routing Logic ΓöÇΓöÇ
+    # ── Auto Routing Logic ──
     if chosen == "auto":
         has_gemini = bool(getattr(config, "GEMINI_API_KEY", "") and not getattr(config, "GEMINI_API_KEY", "").startswith("PASTE_"))
         has_openai = bool(getattr(config, "OPENAI_API_KEY", "") and not getattr(config, "OPENAI_API_KEY", "").startswith("PASTE_"))
@@ -3024,9 +3024,9 @@ def ask_ai(user_messages, force_search=False):
                 f"Check config.py or try a different model from the dropdown.")
 
 
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+# ─────────────────────────────────────────────────────────────
 # Browser open helper
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+# ─────────────────────────────────────────────────────────────
 _browser_opened_once = False
 
 
@@ -3080,7 +3080,7 @@ def _focus_kalki_window():
             try:
                 ctypes.windll.user32.SwitchToThisWindow(hwnd, True)
             except Exception:
-                # Last resort ΓÇö flash taskbar so user sees it
+                # Last resort — flash taskbar so user sees it
                 try:
                     win32gui.FlashWindow(hwnd, True)
                 except Exception:
@@ -3104,7 +3104,7 @@ def open_browser_to_ui():
         log("focused existing KALKI tab")
         return
 
-    # No existing window found ΓÇö open a fresh Chrome tab
+    # No existing window found — open a fresh Chrome tab
     try:
         chrome_paths = [
             r"C:\Program Files\Google\Chrome\Application\chrome.exe",
@@ -3131,9 +3131,9 @@ def open_browser_to_ui():
         log(f"Browser open error: {e}")
 
 
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+# ─────────────────────────────────────────────────────────────
 # HTTP Server
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+# ─────────────────────────────────────────────────────────────
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
     """
     Asynchronous HTTP Server.
@@ -3176,7 +3176,7 @@ class Handler(BaseHTTPRequestHandler):
         host = self._origin_host()
         return host is None or host in self.ALLOWED_HOSTS
 
-    # CORS ΓÇö echo the Origin back only when it's the local HUD; never wildcard.
+    # CORS — echo the Origin back only when it's the local HUD; never wildcard.
     def _cors(self):
         host = self._origin_host()
         if host in self.ALLOWED_HOSTS:
@@ -3244,11 +3244,12 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 pass
 
-    # ΓöÇΓöÇ GET ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    # ── GET ─────────────────────────────────────────
     def do_GET(self):
         self._safe_call(self._do_get_inner)
 
     def _do_get_inner(self):
+        import spotify_mod
         path = urllib.parse.urlparse(self.path).path
 
         if path == "/api/health":
@@ -3312,6 +3313,16 @@ class Handler(BaseHTTPRequestHandler):
                 "unreadImportant": STATE.get("cached_unread_count", 0),
                 "nowPlaying": STATE.get("cached_now_playing"),
             })
+            return
+
+        if path == "/api/models":
+            models = ["auto"]
+            if getattr(config, "GEMINI_API_KEY", "") and not getattr(config, "GEMINI_API_KEY", "").startswith("PASTE_"):
+                models += ["gemini-2.5-flash", "gemini-2.5-pro"]
+            if getattr(config, "OPENAI_API_KEY", "") and not getattr(config, "OPENAI_API_KEY", "").startswith("PASTE_"):
+                models += ["gpt-4o-mini", "gpt-4o"]
+            models += AVAILABLE_GROQ_MODELS
+            self._json({"models": models})
             return
 
         if path == "/api/settings/get":
@@ -3426,7 +3437,7 @@ class Handler(BaseHTTPRequestHandler):
 
         self._text("Not found", status=404)
 
-    # ΓöÇΓöÇ POST ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    # ── POST ────────────────────────────────────────
     def do_POST(self):
         self._safe_call(self._do_post_inner)
 
@@ -3513,7 +3524,7 @@ class Handler(BaseHTTPRequestHandler):
             cmd = (body.get("cmd") or "").strip()
             ui_alive = is_ui_alive()
 
-            # Always try to surface KALKI ΓÇö function focuses existing tab if
+            # Always try to surface KALKI — function focuses existing tab if
             # one is open, otherwise launches Chrome. No duplicate tabs.
             if config.OPEN_BROWSER_ON_WAKE:
                 threading.Thread(target=open_browser_to_ui, daemon=True).start()
@@ -3521,7 +3532,7 @@ class Handler(BaseHTTPRequestHandler):
             # Always flag wake so any live UI engages listening
             STATE["wake_pending"] = True
 
-            # Inline command path ΓÇö handle now, speak result
+            # Inline command path — handle now, speak result
             if cmd:
                 handled, reply = handle_local(cmd)
                 if not handled:
@@ -3529,10 +3540,10 @@ class Handler(BaseHTTPRequestHandler):
                         convo = load_history()[-8:] + [{"role": "user", "content": cmd}]
                         reply = ask_ai(convo)
                     except Exception as e:
-                        reply = f"My link hiccuped, Sir ΓÇö say that again? ({str(e)[:80]})"
+                        reply = f"My link hiccuped, Sir — say that again? ({str(e)[:80]})"
                 
                 # Parse [TASK: ...] and [REMIND: ... @ ...]
-                import core.tasks as taskmod
+                import tasks as taskmod
                 import re
                 for task_match in re.finditer(r"\[TASK:\s*(.+?)\]", reply):
                     taskmod.add_task(task_match.group(1).strip())
@@ -3553,7 +3564,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": True, "reply": reply, "handled": handled})
                 return
 
-            # No inline ΓÇö short ack if UI was already up, full greeting if first wake
+            # No inline — short ack if UI was already up, full greeting if first wake
             if ui_alive:
                 speak(f"Yes, {config.OWNER_TITLE}?")
                 self._json({"ok": True, "ack": True})
@@ -3567,7 +3578,7 @@ class Handler(BaseHTTPRequestHandler):
             messages = body.get("messages") or []
             is_voice = (body.get("source") == "voice")
             # Wake + command in one breath arrives here (not /api/wake), so
-            # surface the HUD on any voice command too ΓÇö otherwise the browser
+            # surface the HUD on any voice command too — otherwise the browser
             # only ever opens for a bare "Hey KALKI" with no follow-up.
             if is_voice and config.OPEN_BROWSER_ON_WAKE:
                 STATE["wake_pending"] = True
@@ -3600,7 +3611,7 @@ class Handler(BaseHTTPRequestHandler):
                 convo = load_history()[-8:] + messages
                 reply = ask_ai(convo)
             except Exception as e:
-                reply = f"My link hiccuped, Sir ΓÇö say that again? ({str(e)[:80]})"
+                reply = f"My link hiccuped, Sir — say that again? ({str(e)[:80]})"
             reply = maybe_add_joke_offer(user_text, reply)
             speak(reply)
             append_history(user_text, reply)
@@ -3626,15 +3637,6 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": True, "count": n})
             return
 
-        if path == "/api/models":
-            models = ["auto"]
-            if getattr(config, "GEMINI_API_KEY", "") and not getattr(config, "GEMINI_API_KEY", "").startswith("PASTE_"):
-                models += ["gemini-2.5-flash", "gemini-2.5-pro"]
-            if getattr(config, "OPENAI_API_KEY", "") and not getattr(config, "OPENAI_API_KEY", "").startswith("PASTE_"):
-                models += ["gpt-4o-mini", "gpt-4o"]
-            models += AVAILABLE_GROQ_MODELS
-            self._json({"models": models})
-            return
 
         if path == "/api/model":
             model = (body.get("model") or "").strip()
@@ -3655,7 +3657,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": str(e)}, status=500)
             return
 
-        # ΓöÇΓöÇ Vault ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+        # ── Vault ──────────────────────────────────────
         if path == "/api/vault/save":
             label = (body.get("label") or "").strip()
             if not label:
@@ -3680,7 +3682,7 @@ class Handler(BaseHTTPRequestHandler):
             label = (body.get("label") or "").strip()
             self._json({"ok": vault.delete_entry(label)}); return
 
-        # ΓöÇΓöÇ Vision: uploaded image ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+        # ── Vision: uploaded image ─────────────────────
         if path == "/api/vision/image":
             img_b64 = (body.get("image") or "").strip()
             question = (body.get("question") or "").strip()
@@ -3690,7 +3692,7 @@ class Handler(BaseHTTPRequestHandler):
             speak(result.get("reply", ""))
             self._json({"ok": True, **result}); return
 
-        # ΓöÇΓöÇ Vision: screenshot ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+        # ── Vision: screenshot ─────────────────────────
         if path == "/api/screen":
             question = (body.get("question") or "").strip()
             result = vision.analyze_screen(question or "What is on screen, Sir?")
@@ -3706,7 +3708,7 @@ class Handler(BaseHTTPRequestHandler):
             speak(result.get("reply", ""))
             self._json({"ok": True, **result}); return
 
-        # ΓöÇΓöÇ Code generation / execution ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+        # ── Code generation / execution ────────────────
         if path == "/api/code/generate":
             prompt = (body.get("prompt") or "").strip()
             lang = (body.get("lang") or "python").strip()
@@ -3730,7 +3732,7 @@ class Handler(BaseHTTPRequestHandler):
             out = coder.run_inline(code, lang=lang)
             self._json({"ok": True, **out}); return
 
-        # ΓöÇΓöÇ Cyber toolkit ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+        # ── Cyber toolkit ──────────────────────────────
         if path == "/api/cyber/hash":
             text_in = body.get("text") or ""
             algo    = (body.get("algo") or "sha256").strip()
@@ -3768,7 +3770,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": str(e)})
             return
 
-        # ΓöÇΓöÇ Tasks ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+        # ── Tasks ──────────────────────────────────────
         if path == "/api/tasks/list":
             self._json({"ok": True, "tasks": taskmod.list_tasks(include_done=bool(body.get("all")))}); return
         if path == "/api/tasks/add":
@@ -3791,7 +3793,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": "text and due required"}, status=400); return
             self._json({"ok": True, "id": taskmod.add_reminder(text_in, due)}); return
 
-        # ΓöÇΓöÇ Listener pause/resume ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+        # ── Listener pause/resume ──────────────────────
         if path == "/api/listener/pause":
             STATE["listener_paused"] = True
             self._json({"ok": True, "paused": True}); return
@@ -3799,7 +3801,7 @@ class Handler(BaseHTTPRequestHandler):
             STATE["listener_paused"] = False
             self._json({"ok": True, "paused": False}); return
 
-        # ΓöÇΓöÇ Calendar ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+        # ── Calendar ───────────────────────────────────
         if path == "/api/calendar/today":
             ev = gcal.today_events()
             self._json({"ok": True, "events": ev if isinstance(ev, list) else [],
@@ -3812,7 +3814,7 @@ class Handler(BaseHTTPRequestHandler):
                         "summary": gcal.events_summary(ev)})
             return
 
-        # ΓöÇΓöÇ Spotify ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+        # ── Spotify ────────────────────────────────────
         if path == "/api/spotify/play":
             self._json({"reply": spotify_mod.play(body.get("query"))}); return
         if path == "/api/spotify/pause":
@@ -3822,13 +3824,13 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/spotify/now":
             self._json({"reply": spotify_mod.now_playing()}); return
 
-        # ΓöÇΓöÇ WhatsApp ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+        # ── WhatsApp ───────────────────────────────────
         if path == "/api/whatsapp/send":
             r = whatsapp_mod.send_message(
                 body.get("to") or "", body.get("message") or "")
             self._json(r); return
 
-        # ΓöÇΓöÇ Notes ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+        # ── Notes ──────────────────────────────────────
         if path == "/api/notes/add":
             text_in = (body.get("text") or "").strip()
             if not text_in:
@@ -3841,14 +3843,14 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": True, "notes": notesmod.search(
                 body.get("q") or "")}); return
 
-        # ΓöÇΓöÇ YouTube DL ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+        # ── YouTube DL ─────────────────────────────────
         if path == "/api/ytdl":
             self._json(ytdl.download(
                 body.get("url") or "",
                 audio_only=bool(body.get("audio")),
             )); return
 
-        # ΓöÇΓöÇ Workflows ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+        # ── Workflows ──────────────────────────────────
         if path == "/api/workflow":
             r = workflows.run_mode(
                 body.get("mode") or "",
@@ -3858,7 +3860,7 @@ class Handler(BaseHTTPRequestHandler):
             )
             self._json(r); return
 
-        # ΓöÇΓöÇ Cyber (extended) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+        # ── Cyber (extended) ───────────────────────────
         if path == "/api/cyber/cve":
             self._json({"ok": True, **cybertools.cve_lookup(body.get("id") or "")}); return
         if path == "/api/cyber/subdomains":
@@ -3887,7 +3889,7 @@ class Handler(BaseHTTPRequestHandler):
                     result, config.OWNER_TITLE),
             }); return
 
-        # ΓöÇΓöÇ Mail ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+        # ── Mail ───────────────────────────────────────
         if path == "/api/mail/check":
             self._json({"ok": True,
                         "summary": mailmod.summary_for_speech(
@@ -3901,9 +3903,9 @@ class Handler(BaseHTTPRequestHandler):
         self._text("Not found", status=404)
 
 
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+# ─────────────────────────────────────────────────────────────
 # Boot
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+# ─────────────────────────────────────────────────────────────
 def already_running():
     """Returns True if another instance has the port bound."""
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -3952,7 +3954,7 @@ def main():
             time.sleep(getattr(config, "REMINDER_POLL_SEC", 30))
     threading.Thread(target=_reminder_loop, daemon=True).start()
 
-    # ΓöÇΓöÇ Proactive system alerts (battery, RAM, CPU) ΓöÇΓöÇ
+    # ── Proactive system alerts (battery, RAM, CPU) ──
     def _alerts_loop():
         last_alert = {}
         cooldowns = {
@@ -4108,7 +4110,7 @@ def main():
             time.sleep(45)
     threading.Thread(target=_alerts_loop, daemon=True).start()
 
-    # ΓöÇΓöÇ UI cache loop ΓÇö keeps today's events + unread mail ready for status feed ΓöÇΓöÇ
+    # ── UI cache loop — keeps today's events + unread mail ready for status feed ──
     def _ui_cache_loop():
         time.sleep(10)
         while True:
@@ -4133,7 +4135,7 @@ def main():
             time.sleep(60)
     threading.Thread(target=_ui_cache_loop, daemon=True).start()
 
-    # Calendar pre-event alert loop ΓÇö fires ~15 min before each event
+    # Calendar pre-event alert loop — fires ~15 min before each event
     STATE["announced_events"] = set()
     STATE["announced_events_day"] = None
 
@@ -4163,7 +4165,7 @@ def main():
                             t = datetime.fromisoformat(
                                 start_str.replace("Z", "+00:00")
                             )
-                            # both timezone-aware ΓåÆ no offset bug
+                            # both timezone-aware → no offset bug
                             delta_min = (t - now_aware).total_seconds() / 60.0
                         except Exception as ex:
                             log(f"calendar alert parse error: {ex}")
@@ -4181,7 +4183,7 @@ def main():
             time.sleep(60)
     threading.Thread(target=_calendar_alert_loop, daemon=True).start()
 
-    # ΓöÇΓöÇ Site Watchdog: proactive down / recovered / cert-expiry alerts ΓöÇΓöÇ
+    # ── Site Watchdog: proactive down / recovered / cert-expiry alerts ──
     def _watchdog_loop():
         time.sleep(45)
         last = {}   # url -> {"up": bool, "cert_alerted": set()}
