@@ -26,78 +26,78 @@ Architecture:
 
 
 :root{
-  --bg: #0a0a0a;
-  --bg-elev: #111111;
-  --bg-panel: rgba(15, 15, 15, 0.9);
-  --text: #ffffff;
-  --text-dim: #888888;
-  --frame: #333333;
-  --frame-strong: #666666;
-  --accent: #ffffff;
-  --accent-glow: transparent;
-  --accent-soft: rgba(255, 255, 255, 0.1);
-  --lime: #ffffff;
-  --orange: #ff9900;
-  --red: #cccccc;
+  --bg: #05050a;
+  --bg-elev: #0a0a14;
+  --bg-panel: rgba(10, 10, 20, 0.6);
+  --text: #f0f0f5;
+  --text-dim: #a0a0b5;
+  --frame: rgba(255, 255, 255, 0.08);
+  --frame-strong: rgba(255, 255, 255, 0.15);
+  --accent: #00e5ff;
+  --accent-glow: rgba(0, 229, 255, 0.2);
+  --accent-soft: rgba(0, 229, 255, 0.1);
+  --lime: #00ff88;
+  --orange: #ffaa00;
+  --red: #ff3366;
 }
 
-
 /* state-driven accents */
-body.mode-idle      { --accent: #ffffff; --accent-glow:transparent; --accent-soft:rgba(255,255,255,0.05); }
-body.mode-listening { --accent: #ffffff; --accent-glow:rgba(255,255,255,0.2); --accent-soft:rgba(255,255,255,0.1); }
-body.mode-thinking  { --accent: #ffffff; --accent-glow:transparent; --accent-soft:rgba(255,255,255,0.05); }
-body.mode-speaking  { --accent: #ffffff; --accent-glow:transparent; --accent-soft:rgba(255,255,255,0.1); }
-
-body.mode-listening { --accent: #ffffff; --accent-glow:transparent; --accent-soft:rgba(255,153,51,0.2); }
-body.mode-thinking  { --accent: #ffffff; --accent-glow:transparent; --accent-soft:rgba(255,255,255,0.15); }
-body.mode-speaking  { --accent: #ffffff; --accent-glow:transparent; --accent-soft:rgba(255,107,0,0.2); }
-body.mode-busy      { --accent: #ff4444; --accent-glow:rgba(255,68,68,0.2); --accent-soft:rgba(255,68,68,0.1); }
+body.mode-idle      { --accent: #00e5ff; --accent-glow:transparent; --accent-soft:rgba(0,229,255,0.05); }
+body.mode-listening { --accent: #ffaa00; --accent-glow:rgba(255,170,0,0.3); --accent-soft:rgba(255,170,0,0.15); }
+body.mode-thinking  { --accent: #b055ff; --accent-glow:rgba(176,85,255,0.2); --accent-soft:rgba(176,85,255,0.1); }
+body.mode-speaking  { --accent: #00e5ff; --accent-glow:rgba(0,229,255,0.3); --accent-soft:rgba(0,229,255,0.15); }
+body.mode-busy      { --accent: #ff3366; --accent-glow:rgba(255,51,102,0.3); --accent-soft:rgba(255,51,102,0.15); }
 
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{
   width:100%;height:100%;overflow:hidden;
   background:var(--bg);
   color:var(--text);
-  font-family:"Inter", sans-serif;
+  font-family:"Inter", -apple-system, sans-serif;
   font-size: max(14px, 0.9vw);
-  letter-spacing:0.05rem;
+  letter-spacing:0.03rem;
   user-select:none;
   transition: background .8s ease;
 }
 
 body::before{
   content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
-  background: #0a0a0a;
+  background: radial-gradient(ellipse at top, #0f111a 0%, var(--bg) 100%);
 }
 @keyframes bgSpin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
-/* Gentle center ambient light, not a blinding glow */
+/* Gentle center ambient light */
 body::after{
   content:"";position:fixed;inset:0;z-index:1;pointer-events:none;
-  background: radial-gradient(circle at 50% 50%, var(--accent-soft) 0%, transparent 60%);
-  transition: background .8s ease;
-  opacity: 0.6;
+  background: radial-gradient(circle at 50% 50%, var(--accent-soft) 0%, transparent 50%);
+  transition: background 1s ease;
+  opacity: 0.8;
 }
 
 /* ❖ HUD side panels ❖ */
 .hud {
   position:fixed; z-index:15;
-  border: 0.1rem solid var(--frame);
+  border: 1px solid var(--frame);
   background: var(--bg-panel);
-  backdrop-filter: blur(1.6rem); -webkit-backdrop-filter: blur(1.6rem);
-  padding:1.5rem 1.7rem; font-size:1.2rem;
-  border-radius: 0.6rem;
-  box-shadow: 0 0.4rem 2rem rgba(0,0,0,0.5);
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  padding:1.5rem 1.7rem; font-size:1.1rem;
+  border-radius: 1rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
 }
-
+.hud:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  border-color: var(--frame-strong);
+}
 
 .hud.left { top:11.5rem; left:2.4rem; width:28rem; max-height: calc(100vh - 17rem); overflow-y:auto; }
 .hud.right{ top:11.5rem; right:2.4rem; width:26rem; max-height: calc(100vh - 23rem); overflow-y:auto; }
 .hud.left::-webkit-scrollbar{ width:0.4rem; }
-.hud.left::-webkit-scrollbar-thumb{ background:#ffffff; }
+.hud.left::-webkit-scrollbar-thumb{ background:var(--frame-strong); border-radius: 1rem; }
 .hud.right::-webkit-scrollbar{ width:0.4rem; }
 .hud.right::-webkit-scrollbar-thumb{ background:#ffffff; }
 .hud .title {
@@ -106,14 +106,15 @@ body::after{
   font-size:1.2rem;letter-spacing:0.1rem;
   padding-bottom:0.3rem;border-bottom:0.1rem solid rgba(255,153,51,0.3);
   margin-bottom:0.8rem;
-}/* -- Top bar ---------------------------------------- */
+/* -- Top bar ---------------------------------------- */
 .topbar{
   position:fixed;top:0;left:0;right:0;height:6.4rem;z-index:20;
   display:flex;align-items:center;justify-content:space-between;
   padding:0 2.8rem;
-  border-bottom: 0.1rem solid var(--frame);
-  background: rgba(10,10,10,0.9);
-  backdrop-filter: blur(1.2rem); -webkit-backdrop-filter: blur(1.2rem);
+  border-bottom: 1px solid var(--frame);
+  background: var(--bg-panel);
+  backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
 .brand{display:flex;align-items:center;gap:1.4rem}
 .brand-mark{
@@ -153,14 +154,19 @@ body::after{
 /* ── Status badge (formerly pill) ───────────────────────────────── */
 .pill {
   color:#ffffff;
-  border: 0.1rem solid #ffffff;
-  border-radius: 2rem;
-  background: rgba(10,10,10,0.85);
-  backdrop-filter: blur(0.8rem); -webkit-backdrop-filter: blur(0.8rem);
+  border: 1px solid var(--frame-strong);
+  border-radius: 3rem;
+  background: rgba(15,15,25,0.7);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
   text-transform:uppercase; z-index:25; font-weight:600;
-  box-shadow: 0 0.4rem 1.2rem rgba(0,0,0,0.6);
-  font-family:"Inter", sans-serif;
-  transition: border-color .5s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4), inset 0 0 20px rgba(255,255,255,0.02);
+  font-family:"Inter", -apple-system, sans-serif;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.pill:hover {
+  transform: scale(1.05);
+  background: rgba(25,25,35,0.8);
+  border-color: var(--accent);
 }
 .pill .dot{
   display:inline-block;width:0.6rem;height:0.6rem;border-radius:50%;
@@ -170,15 +176,19 @@ body::after{
 
 /* ── Panel Borders ───────────────────────────── */
 .panel{
-  background:var(--bg-panel);
-  border: 0.1rem solid var(--frame);
-  border-radius: 0.8rem; /* Elegant slightly rounded corners */
+  background: var(--bg-panel);
+  border: 1px solid var(--frame);
+  border-radius: 1.2rem;
   padding:2rem;
-  box-shadow: 0 0.8rem 3.2rem rgba(0,0,0,0.5), inset 0 0 0 0.1rem rgba(212,175,55,0.1);
-  backdrop-filter: blur(1.2rem); -webkit-backdrop-filter: blur(1.2rem);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.05);
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
   display:flex;flex-direction:column;gap:1.6rem;
   position:relative;
   overflow:hidden;
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+.panel:hover {
+  border-color: var(--frame-strong);
 }
 /* Traditional corner flourishes for panels */
 .panel::before, .panel::after {
