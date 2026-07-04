@@ -12,6 +12,9 @@ import os
 # the secret never lives in a file. The env var wins if set.
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "PASTE_YOUR_GROQ_KEY_HERE")
 
+MANAGED_AI_ENABLED = False
+MANAGED_AI_URL = "http://api.kalki-managed.com/v1/chat/completions"
+
 # ── OWNER ───────────────────────────────────────────────────
 OWNER_NAME    = "YourName"
 OWNER_TITLE   = "Sir"          # or whatever KALKI should call you

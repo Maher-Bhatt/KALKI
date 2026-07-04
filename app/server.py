@@ -2807,17 +2807,20 @@ def ask_groq(messages, model=None, use_tools=True):
 
     payload = json.dumps(payload_dict).encode()
 
-    req = urllib.request.Request(
-        "https://api.groq.com/openai/v1/chat/completions",
-        data=payload,
-        headers={
-            "Authorization": f"Bearer {config.GROQ_API_KEY}",
-            "Content-Type": "application/json",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-            "Accept": "application/json",
-        },
-        method="POST",
-    )
+    api_url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "Accept": "application/json",
+    }
+    
+    if getattr(config, "MANAGED_AI_ENABLED", False) and (not config.GROQ_API_KEY or config.GROQ_API_KEY == "PASTE_YOUR_GROQ_KEY_HERE"):
+        api_url = getattr(config, "MANAGED_AI_URL", "http://api.kalki-managed.com/v1/chat/completions")
+        # No Authorization header needed for the placeholder managed AI backend
+    else:
+        headers["Authorization"] = f"Bearer {config.GROQ_API_KEY}"
+
+    req = urllib.request.Request(api_url, data=payload, headers=headers, method="POST")
 
     with urllib.request.urlopen(req, timeout=45) as r:
         data = json.loads(r.read())

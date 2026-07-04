@@ -107,9 +107,13 @@ class KalkiSetupWizard(ctk.CTk):
 
         # Step 3: Core AI
         f3 = ctk.CTkFrame(self.main_container, fg_color="transparent")
-        self._section_heading(f3, "3. Core AI (Groq API Key)")
-        self._help_text(f3, "Required. Powers KALKI's brain. Free tier available.")
-        self.groq_entry = self._create_input(f3, "Groq API Key:", self.config_data.get("GROQ_API_KEY", ""), is_password=True)
+        self._section_heading(f3, "3. Core AI")
+        self._help_text(f3, "Provide a free Groq API key, or use Managed AI Mode.")
+        self.managed_ai_var = ctk.BooleanVar(value=self.config_data.get("MANAGED_AI_ENABLED", False))
+        self.managed_ai_cb = ctk.CTkCheckBox(f3, text="Use Managed AI (Zero API Key required, proxied through our server)", variable=self.managed_ai_var)
+        self.managed_ai_cb.pack(fill="x", padx=20, pady=5)
+        
+        self.groq_entry = self._create_input(f3, "Or bring your own Groq API Key:", self.config_data.get("GROQ_API_KEY", ""), is_password=True)
         self._link(f3, "Get free key at console.groq.com", "https://console.groq.com")
         self.steps.append(f3)
 
@@ -168,8 +172,8 @@ class KalkiSetupWizard(ctk.CTk):
     def next_step(self):
         if self.current_step == 3:
             groq_key = self.groq_entry.get().strip()
-            if not groq_key:
-                messagebox.showerror("Validation Error", "Groq API Key is required to run KALKI.")
+            if not groq_key and not self.managed_ai_var.get():
+                messagebox.showerror("Validation Error", "Groq API Key is required (unless Managed AI is enabled).")
                 return
 
         if self.current_step < len(self.steps) - 1:
@@ -226,6 +230,7 @@ class KalkiSetupWizard(ctk.CTk):
             "OWNER_CITY": self.city_entry.get(),
             "OWNER_STATE": self.state_entry.get(),
             "OWNER_COUNTRY": self.country_entry.get(),
+            "MANAGED_AI_ENABLED": self.managed_ai_var.get(),
             "GROQ_API_KEY": self.groq_entry.get().strip(),
             "EMAIL_ADDRESS": self.email_entry.get(),
             "EMAIL_APP_PASSWORD": self.email_pass_entry.get(),
