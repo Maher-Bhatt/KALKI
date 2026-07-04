@@ -122,6 +122,10 @@ class KalkiSetupWizard(ctk.CTk):
         self.email_pass_entry = self._create_input(f4, "16-char App Password:", self.config_data.get("EMAIL_APP_PASSWORD", ""), is_password=True)
         self._link(f4, "How to get a Gmail App Password?", "https://support.google.com/accounts/answer/185833")
 
+        self.telegram_bot_entry = self._create_input(f4, "Telegram Bot Token:", self.config_data.get("TELEGRAM_BOT_TOKEN", ""), is_password=True)
+        self.telegram_user_entry = self._create_input(f4, "Telegram User ID:", self.config_data.get("TELEGRAM_USER_ID", ""))
+        self._link(f4, "Get a bot token via @BotFather on Telegram", "https://core.telegram.org/bots#how-do-i-create-a-bot")
+
         self.github_entry = self._create_input(f4, "GitHub Token:", self.config_data.get("GITHUB_TOKEN", ""), is_password=True)
         self.shodan_entry = self._create_input(f4, "Shodan API Key:", self.config_data.get("SHODAN_API_KEY", ""), is_password=True)
         
@@ -234,6 +238,8 @@ class KalkiSetupWizard(ctk.CTk):
             "ANTHROPIC_API_KEY": self.anthropic_entry.get(),
             "GEMINI_API_KEY": self.gemini_entry.get(),
             "ELEVENLABS_API_KEY": self.elevenlabs_entry.get(),
+            "TELEGRAM_BOT_TOKEN": self.telegram_bot_entry.get(),
+            "TELEGRAM_USER_ID": self.telegram_user_entry.get(),
         })
 
         with open(_USER_CONFIG_PATH, "w", encoding="utf-8") as f:

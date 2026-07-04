@@ -4325,6 +4325,12 @@ def main():
         core.productivity.start_tracking()
     except Exception as e:
         log(f"Failed to start productivity tracker: {e}")
+        
+    try:
+        import core.telegram_mod
+        core.telegram_mod.start_telegram_bot()
+    except Exception as e:
+        log(f"Failed to start telegram bot: {e}")
 
     import hardware_detect
     hw = hardware_detect.detect_hardware()
