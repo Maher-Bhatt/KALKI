@@ -1313,7 +1313,7 @@ async function refreshStatus(){
     $("topNet").textContent="OFFLINE"; $("topNet").className="v bad";
     if (!STATE.networkAlerted) {
       STATE.networkAlerted = true;
-      triggerSystemError("uplink", "server_offline_timeout", "Uplink to local python assistant server failed. The server is not responding to health pings.", "Make sure to run start_jarvis.bat first.");
+      triggerSystemError("uplink", "server_offline_timeout", "Uplink to local python assistant server failed. The server is not responding to health pings.", "Make sure the server is running. If this is your first time, run 'python kalki_setup_wizard.py' first to initialize your configuration.");
     }
   }
 }
