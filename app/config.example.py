@@ -94,6 +94,12 @@ OPEN_BROWSER_ON_WAKE = True
 MEMORY_FILE  = "data/memory.json"
 HISTORY_FILE = "data/history.json"
 
+# ── VISION RECALL ───────────────────────────────────────────
+# Takes periodic screenshots and runs local OCR for semantic search.
+# Disabled by default for privacy. Requires pytesseract.
+VISION_RECALL_ENABLED = False
+VISION_RETENTION_DAYS = 7
+
 # ── EMAIL (optional, IMAP route — Gmail App Password) ───────
 # OAuth Gmail is set up separately via setup_google.py.
 # Leave blank to disable IMAP.

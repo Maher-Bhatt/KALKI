@@ -4444,6 +4444,12 @@ def main():
     except Exception as e:
         log(f"Failed to start telegram bot: {e}")
 
+    try:
+        import core.vision_memory
+        core.vision_memory.start_vision_memory()
+    except Exception as e:
+        log(f"Failed to start vision memory: {e}")
+
     import hardware_detect
     hw = hardware_detect.detect_hardware()
     config.HARDWARE_PROFILE = hw

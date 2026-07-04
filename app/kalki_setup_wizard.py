@@ -153,6 +153,16 @@ class KalkiSetupWizard(ctk.CTk):
         self.elevenlabs_entry = self._create_input(f5, "ElevenLabs API Key:", self.config_data.get("ELEVENLABS_API_KEY", ""), is_password=True)
         self.steps.append(f5)
 
+        # Step 6: Vision Recall (Opt-in)
+        f6 = ctk.CTkFrame(self.main_container, fg_color="transparent")
+        self._section_heading(f6, "6. Vision Memory (Privacy First)")
+        self._help_text(f6, "If enabled, KALKI takes periodic screenshots and uses local OCR to make your screen history searchable.\nData never leaves your PC.")
+        self.vision_var = ctk.BooleanVar(value=self.config_data.get("VISION_RECALL_ENABLED", False))
+        self.vision_cb = ctk.CTkCheckBox(f6, text="Enable Vision Recall (Local OCR)", variable=self.vision_var)
+        self.vision_cb.pack(fill="x", padx=20, pady=5)
+        self.vision_retention_entry = self._create_input(f6, "Retention Days (e.g., 7):", str(self.config_data.get("VISION_RETENTION_DAYS", 7)))
+        self.steps.append(f6)
+
     def show_step(self, index):
         for i, step in enumerate(self.steps):
             if i == index:
@@ -245,6 +255,8 @@ class KalkiSetupWizard(ctk.CTk):
             "ELEVENLABS_API_KEY": self.elevenlabs_entry.get(),
             "TELEGRAM_BOT_TOKEN": self.telegram_bot_entry.get(),
             "TELEGRAM_USER_ID": self.telegram_user_entry.get(),
+            "VISION_RECALL_ENABLED": self.vision_var.get(),
+            "VISION_RETENTION_DAYS": int(self.vision_retention_entry.get() or 7),
         })
 
         with open(_USER_CONFIG_PATH, "w", encoding="utf-8") as f:
