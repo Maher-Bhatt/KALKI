@@ -3358,6 +3358,23 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 self._text(f"index.html missing: {e}", status=500)
             return
+            
+        if path == "/api/dashboard":
+            try:
+                import core.productivity
+                with core.productivity._lock:
+                    prod_data = core.productivity._load_data()
+                
+                dashboard_data = {
+                    "productivity": prod_data,
+                    "uptimeSec": int(time.time() - STATE["started_at"]),
+                    "state": STATE.get("workflow", STATE.get("current_routine", "idle")),
+                    "memCount": len(load_memory())
+                }
+                self._json({"ok": True, "data": dashboard_data})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)})
+            return
 
         if path == "/api/status":
             # Mark UI alive
