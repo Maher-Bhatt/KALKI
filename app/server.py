@@ -834,6 +834,16 @@ def build_greeting():
         parts.append("System check completed.")
         try:
             import spotify_mod
+            import mail
+            
+            unread = mail.get_unread_count()
+            if unread > 0:
+                parts.append(f"You have {unread} important unread email{'s' if unread != 1 else ''}.")
+                
+            events = gcal.today_events()
+            if events:
+                parts.append(f"You have {len(events)} calendar event{'s' if len(events) != 1 else ''} scheduled for today.")
+                
             failures = []
             if not gcal.is_configured():
                 failures.append("Google Calendar")
@@ -3144,6 +3154,16 @@ class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
     allow_reuse_address = True
 
 
+_cpu_cache = {"value": 0.0, "ts": 0.0}
+
+def get_cpu_percent_cached():
+    now = time.time()
+    if now - _cpu_cache["ts"] > 0.9:
+        _cpu_cache["value"] = psutil.cpu_percent(interval=None)
+        _cpu_cache["ts"] = now
+    return _cpu_cache["value"]
+
+
 class Handler(BaseHTTPRequestHandler):
     """
     Primary Request Handler for the KALKI API.
@@ -3248,15 +3268,6 @@ class Handler(BaseHTTPRequestHandler):
     # ── GET ─────────────────────────────────────────
     def do_GET(self):
         self._safe_call(self._do_get_inner)
-
-_cpu_cache = {"value": 0.0, "ts": 0.0}
-
-def get_cpu_percent_cached():
-    now = time.time()
-    if now - _cpu_cache["ts"] > 0.9:
-        _cpu_cache["value"] = psutil.cpu_percent(interval=None)
-        _cpu_cache["ts"] = now
-    return _cpu_cache["value"]
 
     def _do_get_inner(self):
         import spotify_mod

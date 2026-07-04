@@ -48,6 +48,18 @@ def _connect():
     return M
 
 
+def get_unread_count():
+    try:
+        m = _connect()
+        m.select("inbox")
+        status, msgs = m.search(None, "UNSEEN")
+        if status == "OK":
+            return len(msgs[0].split())
+        return 0
+    except Exception:
+        return 0
+
+
 def check_inbox(limit=10, only_unread=True):
     try:
         M = _connect()
