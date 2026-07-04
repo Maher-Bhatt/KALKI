@@ -854,6 +854,15 @@ def build_greeting():
                 parts.append(f"Notice: {', '.join(failures)} settings require alignment.")
             else:
                 parts.append("All primary sync systems operational.")
+                
+            try:
+                import core.productivity
+                prod_summary = core.productivity.get_daily_summary()
+                if prod_summary:
+                    parts.append(prod_summary)
+            except Exception as pe:
+                log(f"Error fetching productivity summary: {pe}")
+                
         except Exception as e:
             log(f"Error checking config for greeting: {e}")
             parts.append("All core systems operational.")
@@ -4269,6 +4278,12 @@ def main():
             print(f"Failed to fetch Groq models: {e}")
             
     threading.Thread(target=fetch_groq_models, daemon=True).start()
+
+    try:
+        import core.productivity
+        core.productivity.start_tracking()
+    except Exception as e:
+        log(f"Failed to start productivity tracker: {e}")
 
     import hardware_detect
     hw = hardware_detect.detect_hardware()
