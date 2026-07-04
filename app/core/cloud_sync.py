@@ -33,7 +33,7 @@ def init_cloud_sync(config):
 
 def sync_memory_to_cloud(user_id, local_memory_path):
     """
-    Push local memory array to Firestore document asynchronously.
+    Push local memory array to Firestore document asynchronously with encryption.
     """
     if not _db:
         return
@@ -43,8 +43,11 @@ def sync_memory_to_cloud(user_id, local_memory_path):
             with open(local_memory_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 
+            import vault
+            encrypted_data = vault._enc(json.dumps(data))
+                
             doc_ref = _db.collection('users').document(user_id).collection('data').document('memory')
-            doc_ref.set({"facts": data})
+            doc_ref.set({"facts": encrypted_data})
         except Exception as e:
             print(f"[CLOUD SYNC] Memory push failed: {e}")
             
@@ -52,7 +55,7 @@ def sync_memory_to_cloud(user_id, local_memory_path):
 
 def sync_history_to_cloud(user_id, local_history_path):
     """
-    Push local chat history array to Firestore asynchronously.
+    Push local chat history array to Firestore asynchronously with encryption.
     """
     if not _db:
         return
@@ -62,10 +65,50 @@ def sync_history_to_cloud(user_id, local_history_path):
             with open(local_history_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 
-            # Truncate to last 50 for cloud size limits
+            import vault
+            encrypted_data = vault._enc(json.dumps(data[-50:]))
+                
             doc_ref = _db.collection('users').document(user_id).collection('data').document('history')
-            doc_ref.set({"messages": data[-50:]})
+            doc_ref.set({"messages": encrypted_data})
         except Exception as e:
             print(f"[CLOUD SYNC] History push failed: {e}")
             
     threading.Thread(target=_sync, daemon=True).start()
+
+def restore_memory_from_cloud(user_id, local_memory_path):
+    if not _db:
+        return False
+    try:
+        doc = _db.collection('users').document(user_id).collection('data').document('memory').get()
+        if doc.exists:
+            import vault
+            enc = doc.to_dict().get("facts", "")
+            if enc:
+                dec = vault._dec(enc)
+                if dec:
+                    data = json.loads(dec)
+                    with open(local_memory_path, 'w', encoding='utf-8') as f:
+                        json.dump(data, f, indent=4)
+                    return True
+    except Exception as e:
+        print(f"[CLOUD SYNC] Memory restore failed: {e}")
+    return False
+
+def restore_history_from_cloud(user_id, local_history_path):
+    if not _db:
+        return False
+    try:
+        doc = _db.collection('users').document(user_id).collection('data').document('history').get()
+        if doc.exists:
+            import vault
+            enc = doc.to_dict().get("messages", "")
+            if enc:
+                dec = vault._dec(enc)
+                if dec:
+                    data = json.loads(dec)
+                    with open(local_history_path, 'w', encoding='utf-8') as f:
+                        json.dump(data, f, indent=4)
+                    return True
+    except Exception as e:
+        print(f"[CLOUD SYNC] History restore failed: {e}")
+    return False

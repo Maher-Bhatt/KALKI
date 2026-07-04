@@ -3560,6 +3560,22 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": str(e)})
             return
 
+        if path == "/api/cloud_restore":
+            try:
+                from core import cloud_sync
+                uid = getattr(config, "OWNER_NAME", "default_user")
+                
+                m1 = cloud_sync.restore_memory_from_cloud(uid, os.path.join(BASE_DIR, "data", "memory.json"))
+                m2 = cloud_sync.restore_history_from_cloud(uid, os.path.join(BASE_DIR, "data", "history.json"))
+                
+                if m1 or m2:
+                    self._json({"ok": True, "message": "Restore successful."})
+                else:
+                    self._json({"ok": False, "error": "No cloud backups found or restore failed."})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)})
+            return
+
         if path == "/api/stop":
             ok = stop_speaking()
             self._json({"ok": ok}); return

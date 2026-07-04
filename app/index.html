@@ -965,6 +965,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
           <div style="display:flex; flex-direction:column; gap:1rem;">
             <button class="qbtn" id="exportSettingsBtn" style="background:#222; border:0.1rem solid #444; color:var(--text); padding:0.8rem; cursor:pointer; text-align:left;">EXPORT SETTINGS (JSON)</button>
             <button class="qbtn" id="importSettingsBtn" style="background:#222; border:0.1rem solid #444; color:var(--text); padding:0.8rem; cursor:pointer; text-align:left;">IMPORT SETTINGS</button>
+            <button class="qbtn" id="restoreSettingsBtn" style="background:#1f3d52; border:0.1rem solid #2b5672; color:var(--cyan); padding:0.8rem; cursor:pointer; text-align:left; margin-top:1rem;">RESTORE CLOUD BACKUP</button>
             <button class="qbtn" id="clearCacheBtn" style="background:#222; border:0.1rem solid #444; color:var(--text); padding:0.8rem; cursor:pointer; text-align:left;">CLEAR LOCAL CACHE</button>
             <button class="qbtn" id="resetSettingsBtn" style="background:#1a0000; border:0.1rem solid var(--red); color:var(--red); padding:0.8rem; cursor:pointer; text-align:left; margin-top:1rem;">RESTORE DEFAULT FACTORY SETTINGS</button>
           </div>
@@ -1941,7 +1942,19 @@ $("exportSettingsBtn").addEventListener("click", () => {
 });
 
 $("importSettingsBtn").addEventListener("click", () => {
-  showNotice("Import not yet implemented in UI, manually replace .env", true);
+    alert("Import settings logic not connected yet.");
+});
+
+$("restoreSettingsBtn").addEventListener("click", async () => {
+    if(!confirm("Restore memory and history from cloud? Local files will be overwritten.")) return;
+    try {
+        let res = await fetch("/api/cloud_restore", { method: "POST", headers: {"Content-Type":"application/json"}, body: "{}" });
+        let data = await res.json();
+        if(data.ok) alert(data.message || "Restore successful.");
+        else alert("Restore failed: " + data.error);
+    } catch(e) {
+        alert("Error: " + e);
+    }
 });
 
 $("modalToggleAssistantBtn").addEventListener("click", async () => {
