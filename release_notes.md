@@ -1,3 +1,16 @@
+# 🚀 KALKI v1.0.9 — Setup Loop Hotfix
+
+**Release Date:** July 5, 2026  
+**Build:** Production  
+
+---
+
+## 🔥 v1.0.9 Patch Notes
+
+- **Setup Loop Fix:** Fixed a regression where the setup wizard wrote the `setup_complete.marker` to the installation directory (`data/`) while the main application checked for it in the user's roaming AppData directory (`%APPDATA%/KALKI/`). Both now correctly use `%APPDATA%/KALKI/`.
+
+---
+
 # 🚀 KALKI v1.0.8 — Remediation & Stability Update
 
 **Release Date:** July 5, 2026  
