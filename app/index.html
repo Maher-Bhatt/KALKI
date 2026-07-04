@@ -1845,14 +1845,22 @@ $("saveSettingsBtn").addEventListener("click", async () => {
     GOOGLE_PROJECT_ID: $("set_google_project_id").value
   };
   try {
-    await fetch("/api/settings/save", {
+    const resp = await fetch("/api/settings/save", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({updates})
     });
+    const result = await resp.json();
+    if (!resp.ok || result.ok === false) {
+      showNotice("Save failed: " + (result.error || resp.statusText), true);
+      return;
+    }
     showNotice("Configuration saved successfully!");
+    // These previously only ran on their own timers
+    if (typeof fetchModels === "function") await fetchModels();
+    if (typeof refreshStatus === "function") await refreshStatus();
   } catch(e) {
-    showNotice("Failed to save settings.", true);
+    showNotice("Save failed: " + e.message, true);
   }
 });
 
