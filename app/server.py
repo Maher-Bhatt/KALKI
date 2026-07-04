@@ -3337,6 +3337,35 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/" or path == "/index.html":
             try:
+                crash_log_path = os.path.join(BASE_DIR, "data", "crash.log")
+                if os.path.exists(crash_log_path):
+                    with open(crash_log_path, "r", encoding="utf-8") as f:
+                        crash_details = f.read()
+                    html = f"""<!DOCTYPE html><html><head><title>KALKI Recovery</title><style>
+                    body {{ background: #111; color: #fff; font-family: monospace; padding: 2rem; }}
+                    button {{ background: #2da44e; color: #fff; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; }}
+                    </style></head><body>
+                    <h1>KALKI Safe Mode</h1>
+                    <p style="color:#ff5555;">System recovered from a critical error.</p>
+                    <pre style="background:#000; padding:1rem; border:1px solid #333; overflow-x:auto;">{crash_details}</pre>
+                    <button onclick="fetch('/api/recovery/clear', {{method:'POST'}}).then(()=>location.reload())">Clear Log & Reboot</button>
+                    </body></html>"""
+                    self._text(html.encode("utf-8"), ctype="text/html; charset=utf-8")
+                    return
+                
+                lock_path = os.path.join(BASE_DIR, "data", "updating.lock")
+                if os.path.exists(lock_path):
+                    if time.time() - os.path.getmtime(lock_path) < 300:
+                        html = """<!DOCTYPE html><html><head><title>KALKI Updating</title>
+                        <meta http-equiv="refresh" content="3">
+                        <style>body { background: #111; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; }</style>
+                        </head><body><h2>KALKI is updating... Please wait.</h2></body></html>"""
+                        self._text(html.encode("utf-8"), ctype="text/html; charset=utf-8")
+                        return
+                    else:
+                        try: os.remove(lock_path)
+                        except: pass
+
                 with open(os.path.join(BASE_DIR, "index.html"), "rb") as f:
                     self._text(f.read(), ctype="text/html; charset=utf-8")
             except Exception as e:
@@ -3578,6 +3607,14 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/listener_state":
             STATE["listener_mic_muted"] = bool(body.get("muted"))
+            self._json({"ok": True})
+            return
+
+        if path == "/api/recovery/clear":
+            try:
+                os.remove(os.path.join(BASE_DIR, "data", "crash.log"))
+            except:
+                pass
             self._json({"ok": True})
             return
 
