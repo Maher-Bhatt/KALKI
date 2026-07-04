@@ -583,9 +583,43 @@ def _tts_output_device():
             log(f"TTS output device lookup failed: {e}")
     return _TTS_DEV
 
+def is_urgent(text):
+    text_lower = text.lower()
+    # 1. Zero-delay keywords
+    if any(k in text_lower for k in ["urgent", "emergency", "asap", "boss", "critical", "down"]):
+        return True
+    
+    # 2. Fast LLM check if uncertain
+    try:
+        payload = {
+            "model": "llama3-8b-8192",
+            "messages": [{"role": "user", "content": f"Is this notification urgent (e.g., meeting starting, server down) or low-priority (e.g., newsletter, casual message)? Reply with ONLY the word 'URGENT' or 'LOW'. Notification: {text}"}],
+            "temperature": 0.0,
+            "max_tokens": 10
+        }
+        req = urllib.request.Request(
+            "https://api.groq.com/openai/v1/chat/completions",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {config.GROQ_API_KEY}"},
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=3) as res:
+            ans = json.loads(res.read().decode("utf-8"))
+            reply = ans["choices"][0]["message"]["content"].strip().upper()
+            if "URGENT" in reply:
+                return True
+    except:
+        pass
+    return False
 
-def speak(text):
+
+def speak(text, is_notification=False):
     """Non-blocking TTS using edge-tts neural voice. Markdown stripped first."""
+    if is_notification and (STATE.get("gaming") or STATE.get("focus") or STATE.get("workflow") in ["gaming", "focus"]):
+        if not is_urgent(text):
+            log(f"Suppressed non-urgent notification due to DND: {text}")
+            return
+            
     text = clean_for_speech(text)
     if not text:
         return
@@ -4260,7 +4294,7 @@ def main():
                             mins = max(1, int(round(delta_min)))
                             speak(f"Reminder, {config.OWNER_TITLE}. "
                                   f"{title} starts in {mins} minute"
-                                  f"{'s' if mins != 1 else ''}.")
+                                  f"{'s' if mins != 1 else ''}.", is_notification=True)
                             log(f"calendar alert fired: {title} in {mins} min")
                             STATE["announced_events"].add(eid)
             except Exception as e:
@@ -4278,17 +4312,17 @@ def main():
                     url = r["url"]
                     prev = last.get(url, {"up": True, "cert_alerted": set()})
                     if not r["up"] and prev["up"]:
-                        speak(f"Alert, {config.OWNER_TITLE}. {r['host']} is down.")
+                        speak(f"Alert, {config.OWNER_TITLE}. {r['host']} is down.", is_notification=True)
                         log(f"watchdog: {r['host']} DOWN ({r.get('error')})")
                     elif r["up"] and not prev["up"]:
-                        speak(f"{r['host']} is back up, {config.OWNER_TITLE}.")
+                        speak(f"{r['host']} is back up, {config.OWNER_TITLE}.", is_notification=True)
                     alerted = set(prev.get("cert_alerted", set()))
                     cd = r.get("cert_days")
                     if cd is not None and cd >= 0:
                         for th in (2, 7, 14):
                             if cd <= th and th not in alerted:
                                 speak(f"Heads up, {config.OWNER_TITLE}. {r['host']} "
-                                      f"SSL certificate expires in {cd} days.")
+                                      f"SSL certificate expires in {cd} days.", is_notification=True)
                                 alerted.add(th)
                                 break
                     last[url] = {"up": r["up"], "cert_alerted": alerted}
