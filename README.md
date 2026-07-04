@@ -7,7 +7,7 @@
   <em>Inspired by J.A.R.V.I.S. • Powered by Groq LLaMA • Engineered for power users & developers.</em>
 
   <p>
-    <img src="https://img.shields.io/badge/release-v1.0.7-00c8ff?style=for-the-badge&logo=github" alt="release">
+    <img src="https://img.shields.io/badge/release-v2.0.0-00c8ff?style=for-the-badge&logo=github" alt="release">
     <img src="https://img.shields.io/badge/platform-Windows_10%2B-0078d4?style=for-the-badge&logo=windows" alt="platform">
     <img src="https://img.shields.io/badge/brain-Groq_LLaMA_3.3-ff6b35?style=for-the-badge&logo=meta" alt="brain">
     <img src="https://img.shields.io/badge/engine-Python_3.11+-3776AB?style=for-the-badge&logo=python" alt="python">
@@ -22,21 +22,25 @@
 
 ---
 
-## 📢 What's New in v1.0.7 — Setup & Intelligence Overhaul
+## 📢 What's New in v2.0 — The Automation Update
 
-> KALKI v1.0.7 fixes the microphone background listening engine and introduces a massive redesign to the setup wizard and settings UI, making API integrations and OAuth dead simple.
+> KALKI v2.0 completes the master roadmap, transforming KALKI from a read-only script into a true two-way, multimodal, and extensible AI platform.
 
 <details>
-<summary><strong>🔥 Click to expand full changelog</strong></summary>
+<summary><strong>🔥 Click to expand full v2.0 changelog</strong></summary>
 
 | Feature | Description |
 |:---|:---|
-| **🎤 Background Mic Fix** | Completely rewrote the mic lifecycle — heartbeat monitoring, crash recovery, and dead-thread detection keep the mic alive reliably. |
-| **🧙 Setup Wizard Redesign** | YouTube tutorial, Spotify/Google credential fields, step-by-step help guides, and all API key inputs in one place. |
-| **⚙️ Settings Overhaul** | Missing fields added (Location, Email, GitHub, Shodan), direct links to developer dashboards, fixed redirect URI bugs. |
-| **📅 Morning Briefing** | Greetings now include real calendar events and unread email counts. |
-| **📺 YouTube Tutorial** | Setup video embedded in wizard and settings for easy onboarding. |
-| **💾 Config Persistence** | All API keys safely stored in %APPDATA%/KALKI/ — never lost on update. |
+| **🔌 Plugin System** | Drop `.py` scripts into `app/plugins/` to instantly add new skills without editing core code. |
+| **📱 PWA Mobile App** | KALKI is now an installable web app! Load it on your phone over local Wi-Fi. |
+| **🧠 Local Vision Recall** | (Opt-in) Periodic screenshots + local OCR make your screen history searchable. |
+| **📨 Two-Way Gmail/Calendar** | Tell KALKI to send emails or schedule calendar events directly via voice. |
+| **🤖 Managed AI Mode** | Zero API key required! Beginners can check a box to proxy through KALKI's hosted backend. |
+| **🌐 Multi-Language STT** | Hinglish/Indian English (`en-IN`) is now natively supported via Google STT configuration. |
+| **🔕 Adaptive DND** | Suppresses non-urgent alerts when gaming or coding, using LLM priority heuristics. |
+| **📱 Telegram Control** | Chat with KALKI from your phone via a secure, allow-listed Telegram Bot. |
+| **📊 Usage Dashboard** | A beautiful glassmorphic overlay showing your daily screen time and memory node stats. |
+| **🎙️ Custom Routines** | Teach KALKI multi-step voice macros natively (e.g., "when I say Focus, play Spotify and open VS Code"). |
 
 </details>
 
@@ -133,12 +137,12 @@ KALKI lives on your machine, wakes on the command **"Hi KALKI"**, and manages yo
 | Integration | What It Does |
 |:---|:---|
 | **PC Control** | Lock screen, adjust volume, clear recycle bin, open apps via voice |
-| **Google Calendar** | View, create, and manage events via voice |
-| **Gmail** | Read inbox summaries, search emails, get notification alerts |
+| **Google Calendar** | View, **create, and manage** events via voice (Two-way!) |
+| **Gmail** | Read inbox summaries, search emails, **send replies** (Two-way!) |
 | **Spotify** | Play, pause, skip tracks, and control music hands-free |
-| **WhatsApp** | Send messages via browser automation |
+| **Telegram Remote** | Secure, 2-way remote control of KALKI via Telegram Bot |
 | **Reminders & Tasks** | Set, list, and manage reminders — synced to memory |
-| **Notes & Vault** | DPAPI-encrypted password vault and persistent note-taking |
+| **Vision Memory** | Searchable local OCR screen history (Privacy-first, opt-in) |
 
 </details>
 
@@ -268,7 +272,9 @@ KALKI/
 │   ├── server.py             # Main backend — AI routing, tools, API
 │   ├── listener.py           # Background speech recognition daemon
 │   ├── main_app.py           # Desktop window host (pywebview)
-│   ├── index.html            # HUD frontend — Canvas2D + Vanilla JS
+│   ├── index.html            # HUD frontend (Now a PWA!)
+│   ├── manifest.json         # PWA Manifest
+│   ├── service-worker.js     # PWA Service Worker
 │   ├── launcher.py           # Process orchestrator
 │   ├── config.example.py     # Template config file
 │   ├── requirements.txt      # Python dependencies
@@ -277,8 +283,11 @@ KALKI/
 │   │   ├── state.py          # Global state management
 │   │   ├── telemetry.py      # System metrics collection
 │   │   ├── cloud_sync.py     # Firebase sync engine
+│   │   ├── vision_memory.py  # Local OCR & Screen History
+│   │   ├── telegram_mod.py   # Two-way Telegram bot
 │   │   └── updater.py        # Auto-update checker
 │   │
+│   ├── plugins/              # 🔌 Drop-in extensible plugins folder!
 │   ├── cybertools.py         # CVE, ports, recon toolkit
 │   ├── webscan.py            # Web vulnerability scanner
 │   ├── deepscan.py           # Headless Chromium inspector

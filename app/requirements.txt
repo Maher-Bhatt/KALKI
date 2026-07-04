@@ -17,6 +17,7 @@ google-auth-oauthlib>=1.1.0
 google-auth-httplib2>=0.1.1
 pywhatkit>=5.4
 yt-dlp>=2024.0.0
+pyTelegramBotAPI>=4.15.0
 
 # Optional — offline wake word
 vosk>=0.3.45
