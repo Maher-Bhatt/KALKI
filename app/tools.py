@@ -51,6 +51,73 @@ TOOLS_SCHEMA = [
     {
         "type": "function",
         "function": {
+            "name": "send_email",
+            "description": "Sends an email to a specific address using SMTP.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "to_address": {
+                        "type": "string",
+                        "description": "The recipient's email address."
+                    },
+                    "subject": {
+                        "type": "string",
+                        "description": "The subject of the email."
+                    },
+                    "body": {
+                        "type": "string",
+                        "description": "The body content of the email."
+                    }
+                },
+                "required": ["to_address", "subject", "body"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_calendar_event",
+            "description": "Creates a new event in the user's primary Google Calendar.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "summary": {
+                        "type": "string",
+                        "description": "The title or summary of the event."
+                    },
+                    "start_time_iso": {
+                        "type": "string",
+                        "description": "The start time in ISO 8601 format (e.g., 2026-07-05T14:30:00Z)."
+                    },
+                    "duration_mins": {
+                        "type": "integer",
+                        "description": "The duration of the event in minutes. Defaults to 60."
+                    }
+                },
+                "required": ["summary", "start_time_iso"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_calendar_event",
+            "description": "Deletes an event from the user's primary Google Calendar by event ID.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "event_id": {
+                        "type": "string",
+                        "description": "The Google Calendar event ID to delete."
+                    }
+                },
+                "required": ["event_id"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "scan_network",
             "description": "Scans a target domain or IP for open ports, vulnerabilities, and attack surface.",
             "parameters": {

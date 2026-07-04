@@ -136,3 +136,30 @@ def mark_all_read():
     finally:
         try: M.logout()
         except Exception: pass
+
+def send_email(to_address, subject, body):
+    """Sends an email using SMTP."""
+    import smtplib
+    from email.message import EmailMessage
+    
+    if not (getattr(config, "EMAIL_ADDRESS", "") and getattr(config, "EMAIL_APP_PASSWORD", "")):
+        return "Email not configured. Set EMAIL_ADDRESS and EMAIL_APP_PASSWORD."
+        
+    msg = EmailMessage()
+    msg.set_content(body)
+    msg['Subject'] = subject
+    msg['From'] = config.EMAIL_ADDRESS
+    msg['To'] = to_address
+    
+    # Try to derive SMTP server from IMAP server (e.g. imap.gmail.com -> smtp.gmail.com)
+    smtp_server = getattr(config, "SMTP_SERVER", config.IMAP_SERVER.replace("imap", "smtp"))
+    smtp_port = getattr(config, "SMTP_PORT", 587)
+    
+    try:
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(config.EMAIL_ADDRESS, config.EMAIL_APP_PASSWORD)
+            server.send_message(msg)
+        return f"Email sent successfully to {to_address}."
+    except Exception as e:
+        return f"Failed to send email: {e}"

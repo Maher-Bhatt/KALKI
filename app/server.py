@@ -2666,9 +2666,15 @@ def execute_tool_call(tool_name, tool_args):
         elif tool_name == "read_emails":
             import mail as mailmod
             return mailmod.summary_for_speech(limit=args.get("limit", 5))
+        elif tool_name == "send_email":
+            import mail as mailmod
+            return mailmod.send_email(args.get("to_address"), args.get("subject"), args.get("body"))
         elif tool_name == "get_calendar_events":
-            
             return str(gcal.upcoming_events(args.get("days_ahead", 5)))
+        elif tool_name == "create_calendar_event":
+            return gcal.create_calendar_event(args.get("summary"), args.get("start_time_iso"), args.get("duration_mins", 60))
+        elif tool_name == "delete_calendar_event":
+            return gcal.delete_calendar_event(args.get("event_id"))
         elif tool_name == "scan_network":
             import cybertools
             return cybertools.attack_surface_brief(args.get("target", ""))

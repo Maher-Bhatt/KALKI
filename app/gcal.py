@@ -24,7 +24,7 @@ def _atomic_pickle_dump(obj, path):
 CRED_PATH  = None   # set by server.py / setup_google.py
 TOKEN_PATH = None
 SCOPES = [
-    "https://www.googleapis.com/auth/calendar.readonly",
+    "https://www.googleapis.com/auth/calendar",
     "https://www.googleapis.com/auth/gmail.readonly",
 ]
 
@@ -142,6 +142,35 @@ def tomorrow_events():
     except Exception as e:
         return {"error": str(e)}
 
+def create_calendar_event(summary, start_time_iso, duration_mins=60):
+    try:
+        svc = _service("calendar", "v3")
+        start = datetime.datetime.fromisoformat(start_time_iso.replace('Z', '+00:00'))
+        end = start + datetime.timedelta(minutes=duration_mins)
+        
+        event = {
+            'summary': summary,
+            'start': {
+                'dateTime': start.isoformat(),
+                'timeZone': 'UTC',
+            },
+            'end': {
+                'dateTime': end.isoformat(),
+                'timeZone': 'UTC',
+            },
+        }
+        event = svc.events().insert(calendarId='primary', body=event).execute()
+        return f"Event created: {event.get('htmlLink')}"
+    except Exception as e:
+        return f"Failed to create event: {e}"
+
+def delete_calendar_event(event_id):
+    try:
+        svc = _service("calendar", "v3")
+        svc.events().delete(calendarId='primary', eventId=event_id).execute()
+        return "Event deleted successfully."
+    except Exception as e:
+        return f"Failed to delete event: {e}"
 
 def events_in_window(minutes_ahead=16):
     """Events starting in the next N minutes (for reminder alerts).
