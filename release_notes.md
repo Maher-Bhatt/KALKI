@@ -1,3 +1,23 @@
+# 🚀 KALKI v1.0.8 — Remediation & Stability Update
+
+**Release Date:** July 5, 2026  
+**Build:** Production  
+**Installer:** `KALKI_Setup_Wizard.exe` / `KALKI_Setup.exe`
+
+---
+
+## 🔥 v1.0.8 Patch Notes
+
+- **Cloud Sync Security:** Rewrote cloud sync encryption using a portable, passphrase-based PBKDF2 + Fernet AES mechanism instead of DPAPI. Users must provide their `CLOUD_SYNC_PASSPHRASE` to restore or sync.
+- **Robust Updater UI:** Re-wired OTA downloads to stream progress chunks to the UI via `STATE_UPDATE_PROGRESS` and display a clear percentage inside the memory readout.
+- **Boot Interceptors:** Added a Safe Mode boot interceptor to cleanly display and clear `data/crash.log` without entering a crash loop. Added a "KALKI is Updating" splash screen when `updating.lock` exists.
+- **Setup Wizard Fixes:** The first-run state is now controlled by a dedicated `setup_complete.marker` rather than the fragile presence of a config file. Re-added missing Spotify, Calendar, and Telegram OAuth screens directly into the setup wizard flow.
+- **Dependency & Cleanup:** Purged corrupt root requirements files and ensured `wmi`, `customtkinter`, and `cryptography` are bundled.
+- **Dead Code Purge:** Cleaned out redundant header bloat and duplicate stub functions (`scan_computer`, `sync_to_cloud`) from the server core.
+- **Spotify Hotfix:** Properly wired the frontend "Reconnect" button to the `/api/setup/tool` handler for robust token refresh.
+
+---
+
 # 🚀 KALKI v1.0.7 — Setup & Intelligence Overhaul
 
 **Release Date:** July 4, 2026  
