@@ -15,6 +15,7 @@ Architecture:
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>K.A.L.K.I.</title>
+<link rel="manifest" href="/manifest.json">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
@@ -2647,6 +2648,14 @@ async function fetchDashboard() {
   } catch(e) {
     console.error("Dashboard fetch error", e);
   }
+}
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(reg => console.log('ServiceWorker registered:', reg.scope))
+      .catch(err => console.log('ServiceWorker error:', err));
+  });
 }
 </script>
 </body>

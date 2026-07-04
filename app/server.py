@@ -3397,6 +3397,22 @@ class Handler(BaseHTTPRequestHandler):
                 self._text(f"index.html missing: {e}", status=500)
             return
             
+        if path == "/manifest.json":
+            try:
+                with open(os.path.join(BASE_DIR, "manifest.json"), "rb") as f:
+                    self._text(f.read(), ctype="application/manifest+json; charset=utf-8")
+            except Exception:
+                self.send_response(404); self.end_headers()
+            return
+            
+        if path == "/service-worker.js":
+            try:
+                with open(os.path.join(BASE_DIR, "service-worker.js"), "rb") as f:
+                    self._text(f.read(), ctype="application/javascript; charset=utf-8")
+            except Exception:
+                self.send_response(404); self.end_headers()
+            return
+
         if path == "/api/dashboard":
             try:
                 import core.productivity
