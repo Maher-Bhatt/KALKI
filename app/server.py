@@ -380,6 +380,11 @@ def add_memory(fact):
             mems = []
         mems.append({"fact": fact, "date": datetime.now().strftime("%Y-%m-%d")})
         _atomic_write_json(MEMORY_PATH, mems)
+        try:
+            from core import cloud_sync
+            cloud_sync.sync_memory_to_cloud(getattr(config, "OWNER_NAME", "default_user"), MEMORY_PATH, getattr(config, "CLOUD_SYNC_PASSPHRASE", ""))
+        except Exception as e:
+            log(f"cloud memory sync failed: {e}")
         return len(mems)
 
 def get_memory_prompt():
@@ -412,6 +417,11 @@ def append_history(user_text, assistant_text):
         hist.append({"role": "user", "content": user_text})
         hist.append({"role": "assistant", "content": assistant_text})
         _atomic_write_json(HISTORY_PATH, hist[-config.MAX_HISTORY:])
+        try:
+            from core import cloud_sync
+            cloud_sync.sync_history_to_cloud(getattr(config, "OWNER_NAME", "default_user"), HISTORY_PATH, getattr(config, "CLOUD_SYNC_PASSPHRASE", ""))
+        except Exception as e:
+            log(f"cloud history sync failed: {e}")
 
 
 def _desktop_dir():
@@ -3638,8 +3648,19 @@ class Handler(BaseHTTPRequestHandler):
                 from core import cloud_sync
                 uid = getattr(config, "OWNER_NAME", "default_user")
                 
-                m1 = cloud_sync.restore_memory_from_cloud(uid, os.path.join(BASE_DIR, "data", "memory.json"))
-                m2 = cloud_sync.restore_history_from_cloud(uid, os.path.join(BASE_DIR, "data", "history.json"))
+                body = {}
+                if self.headers.get("Content-Length"):
+                    content_len = int(self.headers.get("Content-Length"))
+                    body_str = self.rfile.read(content_len).decode("utf-8", "ignore")
+                    if body_str:
+                        body = json.loads(body_str)
+                
+                passphrase = body.get("passphrase")
+                if not passphrase:
+                    passphrase = getattr(config, "CLOUD_SYNC_PASSPHRASE", "")
+                
+                m1 = cloud_sync.restore_memory_from_cloud(uid, os.path.join(BASE_DIR, "data", "memory.json"), passphrase)
+                m2 = cloud_sync.restore_history_from_cloud(uid, os.path.join(BASE_DIR, "data", "history.json"), passphrase)
                 
                 if m1 or m2:
                     self._json({"ok": True, "message": "Restore successful."})
@@ -4401,6 +4422,12 @@ def main():
         core.vision_memory.start_vision_memory()
     except Exception as e:
         log(f"Failed to start vision memory: {e}")
+
+    try:
+        from core import cloud_sync
+        cloud_sync.init_cloud_sync(config)
+    except Exception as e:
+        log(f"Failed to init cloud sync: {e}")
 
     import hardware_detect
     hw = hardware_detect.detect_hardware()

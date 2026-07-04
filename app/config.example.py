@@ -101,6 +101,11 @@ HISTORY_FILE = "data/history.json"
 VISION_RECALL_ENABLED = False
 VISION_RETENTION_DAYS = 7
 
+# ── CLOUD SYNC ──────────────────────────────────────────────
+# Set this once; you'll need to re-enter it on a new machine to restore your data. 
+# Not the same as your vault password — this one has to leave the machine.
+CLOUD_SYNC_PASSPHRASE = ""
+
 # ── EMAIL (optional, IMAP route — Gmail App Password) ───────
 # OAuth Gmail is set up separately via setup_google.py.
 # Leave blank to disable IMAP.

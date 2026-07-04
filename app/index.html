@@ -954,6 +954,13 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
 
           <div style="margin-bottom:1.5rem;">
             <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--text-dim);">
+              <span>CLOUD SYNC PASSPHRASE</span>
+            </label>
+            <input type="password" id="set_cloud_sync_passphrase" style="width:100%; background:#000; color:var(--text); border:0.1rem solid var(--accent); padding:0.8rem; margin-top:0.5rem;" placeholder="Leave blank if not using Cloud Sync">
+          </div>
+
+          <div style="margin-bottom:1.5rem;">
+            <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--text-dim);">
               <span>ELEVENLABS API KEY (Optional Voice)</span>
               <a href="https://elevenlabs.io/" target="_blank" style="color:var(--text-dim); text-decoration:underline; font-size:0.9rem;">Get Key Here</a>
             </label>
@@ -1810,6 +1817,7 @@ async function openSettingsModal() {
       $("set_anthropic_key").value = d.settings.ANTHROPIC_API_KEY || "";
       $("set_gemini_key").value = d.settings.GEMINI_API_KEY || "";
       $("set_elevenlabs_key").value = d.settings.ELEVENLABS_API_KEY || "";
+      $("set_cloud_sync_passphrase").value = d.settings.CLOUD_SYNC_PASSPHRASE || "";
       
       $("set_spotify_id").value = d.settings.SPOTIFY_CLIENT_ID || "";
       $("set_spotify_secret").value = d.settings.SPOTIFY_CLIENT_SECRET || "";
@@ -1861,6 +1869,7 @@ $("saveSettingsBtn").addEventListener("click", async () => {
     ANTHROPIC_API_KEY: $("set_anthropic_key").value,
     GEMINI_API_KEY: $("set_gemini_key").value,
     ELEVENLABS_API_KEY: $("set_elevenlabs_key").value,
+    CLOUD_SYNC_PASSPHRASE: $("set_cloud_sync_passphrase").value,
     SPOTIFY_CLIENT_ID: $("set_spotify_id").value,
     SPOTIFY_CLIENT_SECRET: $("set_spotify_secret").value,
     GOOGLE_CLIENT_ID: $("set_google_client_id").value,
@@ -1969,8 +1978,14 @@ $("importSettingsBtn").addEventListener("click", () => {
 
 $("restoreSettingsBtn").addEventListener("click", async () => {
     if(!confirm("Restore memory and history from cloud? Local files will be overwritten.")) return;
+    let passphrase = prompt("Enter your cloud sync passphrase (leave blank if already saved in settings):");
+    if (passphrase === null) return;
     try {
-        let res = await fetch("/api/cloud_restore", { method: "POST", headers: {"Content-Type":"application/json"}, body: "{}" });
+        let res = await fetch("/api/cloud_restore", { 
+            method: "POST", 
+            headers: {"Content-Type":"application/json"}, 
+            body: JSON.stringify({passphrase: passphrase}) 
+        });
         let data = await res.json();
         if(data.ok) alert(data.message || "Restore successful.");
         else alert("Restore failed: " + data.error);
