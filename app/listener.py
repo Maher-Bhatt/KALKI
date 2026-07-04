@@ -114,6 +114,27 @@ def is_paused():
     return _status().get("listenerPaused", False)
 
 
+def get_mute_decision():
+    """Single fetch, single decision. Replaces separate is_paused()/is_speaking() calls -
+    do not call _status() more than once per loop iteration for this check."""
+    st = _status()
+    return bool(st.get("listenerPaused", False) or st.get("speaking", False))
+
+
+def post_mic_state(muted: bool):
+    """Tell the server what the listener is actually doing, so the HUD
+    reflects ground truth instead of guessing independently."""
+    try:
+        data = json.dumps({"muted": muted}).encode("utf-8")
+        req = urllib.request.Request(
+            SERVER + "/api/listener_state", data=data,
+            headers={"Content-Type": "application/json"}, method="POST"
+        )
+        urllib.request.urlopen(req, timeout=2)
+    except Exception:
+        pass  # best-effort - if this fails, the HUD falls back to its old guess
+
+
 def server_alive():
     try:
         urllib.request.urlopen(f"{SERVER}/api/health", timeout=2).read()
@@ -323,7 +344,7 @@ def run_vosk(dev_index):
     while True:
         try:
             # Release the mic while paused or speaking so other apps can use it.
-            if is_paused() or is_speaking():
+            if get_mute_decision():
                 if stream is not None:
                     try:
                         stream.stop_stream()
@@ -563,18 +584,20 @@ def main():
                 continue
 
             # ── Mute/unmute based on server state ──
-            should_mute = is_paused() or is_speaking()
+            should_mute = get_mute_decision()
 
             if should_mute:
                 if not _mic_muted.is_set():
                     _mic_muted.set()
+                    post_mic_state(True)
                     _drain()
-                    log(f"listener muted (paused={is_paused()}, speaking={is_speaking()})")
+                    log("listener muted")
                 time.sleep(0.3)
                 continue
 
             if _mic_muted.is_set():
                 _mic_muted.clear()
+                post_mic_state(False)
                 _last_callback_time[0] = time.time()  # reset heartbeat on unmute
                 _drain()
                 log("listener unmuted — accepting audio")

@@ -220,6 +220,7 @@ STATE = {
     "conversation_seq": 0,        # bumped on every voice-driven exchange
     "recent_exchange": None,      # {seq, user, reply, ts}
     "listener_paused": False,     # toggled to release the mic for other apps
+    "listener_mic_muted": None,   # tracks actual hardware mic state from listener.py
     "last_joke_offer": 0.0,
     "joke_offer_pending": False,
     "mood_aggressive": False,
@@ -3248,6 +3249,15 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         self._safe_call(self._do_get_inner)
 
+_cpu_cache = {"value": 0.0, "ts": 0.0}
+
+def get_cpu_percent_cached():
+    now = time.time()
+    if now - _cpu_cache["ts"] > 0.9:
+        _cpu_cache["value"] = psutil.cpu_percent(interval=None)
+        _cpu_cache["ts"] = now
+    return _cpu_cache["value"]
+
     def _do_get_inner(self):
         import spotify_mod
         path = urllib.parse.urlparse(self.path).path
@@ -3277,7 +3287,7 @@ class Handler(BaseHTTPRequestHandler):
             batt_plugged = None
             if psutil:
                 try:
-                    cpu  = psutil.cpu_percent(interval=None)
+                    cpu  = get_cpu_percent_cached()
                     ram  = psutil.virtual_memory().percent
                     disk = psutil.disk_usage(os.path.abspath(os.sep)).percent
                     b = psutil.sensors_battery()
@@ -3307,6 +3317,7 @@ class Handler(BaseHTTPRequestHandler):
                 "conversationSeq": STATE.get("conversation_seq", 0),
                 "recentExchange": STATE.get("recent_exchange"),
                 "listenerPaused": STATE.get("listener_paused", False),
+                "listenerMicMuted": STATE.get("listener_mic_muted"),
                 "gcalConfigured": gcal.is_configured(),
                 "spotifyConfigured": spotify_mod.is_configured(),
                 "todayEvents": STATE.get("cached_today_events", []),
@@ -3452,6 +3463,11 @@ class Handler(BaseHTTPRequestHandler):
         body = self._read_json()
         if body.get("__too_large__"):
             self._json({"ok": False, "error": "request too large"}, status=413)
+            return
+
+        if path == "/api/listener_state":
+            STATE["listener_mic_muted"] = bool(body.get("muted"))
+            self._json({"ok": True})
             return
 
         if path == "/api/settings/save":

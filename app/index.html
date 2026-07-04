@@ -1251,10 +1251,14 @@ async function refreshStatus(){
       }
       $("topNet").textContent  = "ONLINE"; $("topNet").className = "v ok";
 
+      const micMuted = (d.listenerMicMuted !== null && d.listenerMicMuted !== undefined)
+          ? d.listenerMicMuted
+          : (d.speaking || d.listenerPaused);
+
       const pbtn = $("pauseListenerBtn");
-      if (d.listenerPaused){
-        pbtn.textContent = "MIC: PAUSED (click to resume)";
-        pbtn.dataset.paused = "1";
+      if (micMuted){
+        pbtn.textContent = d.listenerPaused ? "MIC: PAUSED (click to resume)" : "MIC: MUTED";
+        pbtn.dataset.paused = d.listenerPaused ? "1" : "0";
         pbtn.style.color = "var(--orange)";
         if (STATE.micActive) {
           STATE.micActive = false;
