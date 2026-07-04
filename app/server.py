@@ -3399,6 +3399,13 @@ class Handler(BaseHTTPRequestHandler):
                         batt_plugged = bool(b.power_plugged)
                 except Exception:
                     pass
+            up_prog = {"pct": 0, "active": False}
+            try:
+                import core.updater
+                up_prog = core.updater.STATE_UPDATE_PROGRESS
+            except Exception:
+                pass
+                
             self._json({
                 "online": True,
                 "model": STATE["model"],
@@ -3426,6 +3433,7 @@ class Handler(BaseHTTPRequestHandler):
                 "todayEvents": STATE.get("cached_today_events", []),
                 "unreadImportant": STATE.get("cached_unread_count", 0),
                 "nowPlaying": STATE.get("cached_now_playing"),
+                "updateProgress": up_prog,
             })
             return
 
@@ -4096,7 +4104,7 @@ def main():
         import core.updater as updater
         def _on_update(version):
             speak(f"A background update for version {version} is now downloading.")
-        updater.start_update_daemon(_on_update)
+        updater.start_update_daemon(BASE_DIR, _on_update)
     except Exception as e:
         print(f"Failed to start auto-updater: {e}")
 

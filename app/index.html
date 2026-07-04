@@ -1204,7 +1204,13 @@ async function refreshStatus(){
     $("sGroq").className     = "v " + (d.groqConfigured ? "ok" : "bad");
     $("sOllama").textContent = d.ollamaOnline ? "ONLINE" : "OFFLINE";
     $("sOllama").className   = "v " + (d.ollamaOnline ? "ok" : "warn");
-    $("sMem").textContent    = d.memCount;
+    if (d.updateProgress && d.updateProgress.active) {
+      $("sMem").textContent = `UPDATING ${d.updateProgress.pct}%`;
+      $("sMem").style.color = "var(--orange)";
+    } else {
+      $("sMem").textContent = d.memCount;
+      $("sMem").style.color = "";
+    }
     $("sUp").textContent     = fmtUptime(d.uptimeSec);
     $("topClock").textContent= d.timeFull || "";
     $("topOwner").textContent= d.owner || "Sir";

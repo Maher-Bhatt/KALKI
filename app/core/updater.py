@@ -41,7 +41,13 @@ def check_for_updates():
         print(f"[UPDATER] Failed to check for updates: {e}")
         return False, CURRENT_VERSION, None
 
-def download_and_run_update(download_url, version):
+STATE_UPDATE_PROGRESS = {"pct": 0, "active": False}
+
+def _progress_hook(block_num, block_size, total_size):
+    if total_size > 0:
+        STATE_UPDATE_PROGRESS["pct"] = min(100, int(block_num * block_size * 100 / total_size))
+
+def download_and_run_update(download_url, version, base_dir):
     """
     Downloads the new setup exe in the background and executes it.
     """
@@ -50,7 +56,16 @@ def download_and_run_update(download_url, version):
         temp_dir = tempfile.gettempdir()
         installer_path = os.path.join(temp_dir, f"KALKI_Setup_{version}.exe")
         
-        urllib.request.urlretrieve(download_url, installer_path)
+        STATE_UPDATE_PROGRESS["active"] = True
+        STATE_UPDATE_PROGRESS["pct"] = 0
+        urllib.request.urlretrieve(download_url, installer_path, reporthook=_progress_hook)
+        STATE_UPDATE_PROGRESS["pct"] = 100
+        
+        lock_path = os.path.join(base_dir, "data", "updating.lock")
+        import time
+        with open(lock_path, "w") as f:
+            f.write(str(time.time()))
+            
         print(f"[UPDATER] Download complete. Launching installer: {installer_path}")
         
         # Launch installer silently or normally depending on preference
@@ -61,9 +76,10 @@ def download_and_run_update(download_url, version):
         # Shut down current instance so installer can overwrite files
         os._exit(0)
     except Exception as e:
+        STATE_UPDATE_PROGRESS["active"] = False
         print(f"[UPDATER] Failed to apply update: {e}")
 
-def start_update_daemon(on_update_found=None):
+def start_update_daemon(base_dir, on_update_found=None):
     """
     Starts a background thread that checks for updates on boot.
     """
@@ -73,6 +89,6 @@ def start_update_daemon(on_update_found=None):
             print(f"[UPDATER] Found new version: {latest}. Initiating download...")
             if on_update_found:
                 on_update_found(latest)
-            download_and_run_update(url, latest)
+            download_and_run_update(url, latest, base_dir)
             
     threading.Thread(target=daemon, daemon=True).start()
