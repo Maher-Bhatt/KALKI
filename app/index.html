@@ -1650,7 +1650,10 @@ $("modelSel").addEventListener("change", async () => {
   pushStream("model switched -> " + $("modelSel").value, "hot");
 });
 
+let _fetchingModels = false;
 async function fetchModels() {
+  if (_fetchingModels) return;
+  _fetchingModels = true;
   try {
     const r = await fetch("/api/models");
     if (!r.ok) return;
@@ -1674,7 +1677,10 @@ async function fetchModels() {
         sel.value = STATE.model;
       }
     }
-  } catch(e) {}
+  } catch(e) {
+  } finally {
+    _fetchingModels = false;
+  }
 }
 setTimeout(fetchModels, 2000);
 setInterval(fetchModels, 60000); // Check for new models every minute
