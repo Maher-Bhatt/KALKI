@@ -2449,17 +2449,6 @@ def build_system_prompt():
         + f"\n\nCURRENT TIME: {now.strftime('%I:%M %p')}"
         + f"\nCURRENT DATE: {now.strftime('%A, %B %d, %Y')}"
     )
-def _http_get(url, timeout=5):
-    import urllib.request
-    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-    return urllib.request.urlopen(req, timeout=timeout).read().decode('utf-8', 'ignore')
-
-def needs_web(text):
-    return False
-
-def ddg_instant_answer(query):
-    return None
-
 
 import re as _re
 
