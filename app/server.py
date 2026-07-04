@@ -208,6 +208,30 @@ def update_location_from_ip():
 
 threading.Thread(target=update_location_from_ip, daemon=True).start()
 
+PLUGINS = {}
+def load_plugins():
+    global PLUGINS
+    plugins_dir = os.path.join(BASE_DIR, "app", "plugins")
+    if not os.path.exists(plugins_dir):
+        return
+    import importlib.util
+    for filename in os.listdir(plugins_dir):
+        if filename.endswith(".py") and not filename.startswith("__"):
+            filepath = os.path.join(plugins_dir, filename)
+            module_name = filename[:-3]
+            try:
+                spec = importlib.util.spec_from_file_location(module_name, filepath)
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                if hasattr(mod, "get_schema") and hasattr(mod, "execute"):
+                    schema = mod.get_schema()
+                    PLUGINS[schema["function"]["name"]] = mod
+                    log(f"Loaded plugin: {module_name}")
+            except Exception as e:
+                log(f"Failed to load plugin {filename}: {e}")
+
+load_plugins()
+
 AVAILABLE_GROQ_MODELS = []
 
 STATE = {
@@ -2754,6 +2778,8 @@ def execute_tool_call(tool_name, tool_args):
                 return text[:50000] # Return up to 50k chars to prevent token overflow
             except Exception as e:
                 return f"Failed to read URL: {e}"
+        elif tool_name in PLUGINS:
+            return str(PLUGINS[tool_name].execute(args))
         else:
             return f"Unknown tool {tool_name}"
     except Exception as e:
@@ -2773,7 +2799,10 @@ def ask_groq(messages, model=None, use_tools=True):
     # to avoid context limits or weird behavior on smaller instant models
     if use_tools and ("70b" in model.lower() or "120b" in model.lower() or "scout" in model.lower() or "versatile" in model.lower()):
         from tools import TOOLS_SCHEMA
-        payload_dict["tools"] = TOOLS_SCHEMA
+        all_schemas = list(TOOLS_SCHEMA)
+        for mod in PLUGINS.values():
+            all_schemas.append(mod.get_schema())
+        payload_dict["tools"] = all_schemas
         payload_dict["tool_choice"] = "auto"
 
     payload = json.dumps(payload_dict).encode()
