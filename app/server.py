@@ -3527,6 +3527,14 @@ def get_cpu_percent_cached():
                         spotify_mod._client(interactive=True)
                         log("Spotify Setup complete.")
                     threading.Thread(target=_do_spotify, daemon=True).start()
+                elif tool_id == "reconnect_spotify":
+                    def _do_reconnect_spotify():
+                        import spotify_mod
+                        if spotify_mod.CACHE_PATH and os.path.exists(spotify_mod.CACHE_PATH):
+                            os.remove(spotify_mod.CACHE_PATH)
+                        spotify_mod._client(interactive=True)
+                        log("Spotify Reconnect complete.")
+                    threading.Thread(target=_do_reconnect_spotify, daemon=True).start()
                 self._json({"ok": True})
             except Exception as e:
                 self._json({"ok": False, "error": str(e)})

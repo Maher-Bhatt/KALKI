@@ -47,6 +47,18 @@ def _safe(fn, *a, **kw):
     try:
         return fn(*a, **kw)
     except Exception as e:
+        if "403" in str(e) and CACHE_PATH and os.path.exists(CACHE_PATH):
+            try:
+                import json
+                with open(CACHE_PATH, "r") as f:
+                    cache_data = json.load(f)
+                cached_scopes = set(cache_data.get("scope", "").split())
+                current_scopes = set(SCOPES.split())
+                if not current_scopes.issubset(cached_scopes):
+                    os.remove(CACHE_PATH)
+                    return {"error": "Stale token scopes - cache deleted. Please Reconnect Spotify."}
+            except Exception:
+                pass
         return {"error": str(e)}
 
 
