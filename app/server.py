@@ -3585,6 +3585,22 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": str(e)})
             return
 
+        if path == "/api/meeting/start":
+            import core.meeting_mode
+            if core.meeting_mode.start_meeting():
+                self._json({"ok": True, "message": "Meeting recording started."})
+            else:
+                self._json({"ok": False, "error": "Already recording."})
+            return
+            
+        if path == "/api/meeting/stop":
+            import core.meeting_mode
+            if core.meeting_mode.stop_meeting():
+                self._json({"ok": True, "message": "Meeting recording stopped, processing action items."})
+            else:
+                self._json({"ok": False, "error": "Not recording."})
+            return
+
         if path == "/api/stop":
             ok = stop_speaking()
             self._json({"ok": ok}); return
