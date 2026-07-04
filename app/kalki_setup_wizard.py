@@ -265,6 +265,10 @@ class KalkiSetupWizard(ctk.CTk):
 
         with open(_USER_CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(self.config_data, f, indent=4)
+            
+        marker_path = os.path.join(BASE_DIR, "data", "setup_complete.marker")
+        with open(marker_path, "w", encoding="utf-8") as f:
+            f.write("Setup complete")
 
         self.destroy()
         

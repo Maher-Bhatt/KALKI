@@ -44,16 +44,8 @@ def get_exe_path(name):
         return f'{sys.executable} "{os.path.join(BASE_DIR, f"{name}.py")}"'
 
 def is_setup_complete():
-    if not os.path.exists(USER_CONFIG_PATH):
-        return False
-    try:
-        with open(USER_CONFIG_PATH, "r") as f:
-            config = json.load(f)
-            if not config.get("GROQ_API_KEY"):
-                return False
-    except:
-        return False
-    return True
+    marker_path = os.path.join(USER_DATA_DIR, "setup_complete.marker")
+    return os.path.exists(marker_path)
 
 def run_setup_wizard():
     setup_cmd = get_exe_path("KALKI_Setup_Wizard")
