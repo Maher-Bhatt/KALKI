@@ -1911,6 +1911,16 @@ $("runSpotifySetup").addEventListener("click", async () => {
   await fetch("/api/setup/tool", { method: "POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({tool:"spotify"}) });
 });
 
+$("reconnectSpotifyBtn").addEventListener("click", async () => {
+  if (!confirm("This will disconnect Spotify and require you to log in again. Continue?")) return;
+  showNotice("Reconnecting Spotify...", false);
+  await fetch("/api/setup/tool", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({tool: "reconnect_spotify"})
+  });
+});
+
 $("testSettingsBtn").addEventListener("click", async () => {
   try {
     showNotice("Testing connections...", false);
