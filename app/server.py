@@ -1048,10 +1048,33 @@ def handle_local(text):
     if t in ("how are you", "how are you doing", "how's it going",
              "how do you feel", "you good", "what's up", "whats up", "sup"):
         return True, _maybe_spicy(_rnd.choice([
-            f"Running clean and fast, {_T}. What's the mission?",
-            f"All systems green, {_T}. Point me at something.",
-            f"Sharp as ever, {_T}. You?",
-            f"Operational and a little bored, {_T}. Give me work."]))
+            "Operating at peak efficiency, Sir.",
+            "I'm perfectly fine. Thanks for asking.",
+            "All processes are stable, Sir.",
+        ]))
+
+    # ════════════════════════════════════════════════════
+    # T23: Guided Onboarding / Command Discovery
+    # ════════════════════════════════════════════════════
+    if t in ("what can you do", "help", "onboarding", "how to use you", "what are your features"):
+        try:
+            import tools
+            import workflows
+            
+            tool_names = [f["function"]["name"].replace("_", " ") for f in tools.TOOLS_SCHEMA]
+            mode_names = list(workflows.MODES.keys()) + list(workflows.get_custom_routines().keys())
+            
+            summary = (
+                "Here is what I can currently do, Sir. "
+                f"My AI brain can automatically use these tools: {', '.join(tool_names[:6])}, and more. "
+                "You can also say 'Create a routine' to teach me a new sequence of actions. "
+                f"Currently available workflow modes are: {', '.join(mode_names)}. "
+                "Just ask me naturally, and I will handle it."
+            )
+            return True, summary
+        except Exception as e:
+            return True, "I am a fully featured AI assistant, Sir. Just ask me to do something, and I will try my best."
+
 
     if t in ("thank you", "thanks", "thank you so much", "thanks kalki",
              "thx", "ty", "appreciate it", "good job", "well done", "nice",
