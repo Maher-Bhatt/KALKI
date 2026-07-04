@@ -4251,6 +4251,21 @@ def main():
             
     threading.Thread(target=fetch_groq_models, daemon=True).start()
 
+    import hardware_detect
+    hw = hardware_detect.detect_hardware()
+    config.HARDWARE_PROFILE = hw
+    cfg_path = getattr(config, "_USER_CONFIG_PATH", os.path.join(BASE_DIR, "data", "user_config.json"))
+    try:
+        user_cfg = {}
+        if os.path.exists(cfg_path):
+            with open(cfg_path, "r", encoding="utf-8") as f:
+                user_cfg = json.load(f)
+        user_cfg["HARDWARE_PROFILE"] = hw
+        with open(cfg_path, "w", encoding="utf-8") as f:
+            json.dump(user_cfg, f, indent=4)
+    except Exception as e:
+        print(f"Failed to save hardware profile: {e}")
+
     server = ThreadingHTTPServer(("127.0.0.1", config.PORT), Handler)
     print(f"KALKI server online -> http://localhost:{config.PORT}")
     try:
