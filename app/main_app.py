@@ -5,6 +5,18 @@ import time
 import subprocess
 import webview
 import psutil
+
+# --- Auto-bootstrap config.py from config.example.py on first run -----------
+# Without this, a fresh clone has no config.py (it's gitignored) and the
+# `import config` below throws ModuleNotFoundError before the Setup Wizard
+# (which is supposed to run first) ever gets a chance to start.
+_boot_dir = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, "frozen", False) else __file__))
+_cfg_path = os.path.join(_boot_dir, "config.py")
+_example_path = os.path.join(_boot_dir, "config.example.py")
+if not os.path.exists(_cfg_path) and os.path.exists(_example_path):
+    import shutil
+    shutil.copy(_example_path, _cfg_path)
+
 import config
 
 def add_to_startup():

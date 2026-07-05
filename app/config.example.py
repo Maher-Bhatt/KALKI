@@ -6,6 +6,15 @@
 
 import os
 
+# ── INTERNAL PATHS (do not change) ───────────────────────────
+# Where the Setup Wizard and hardware auto-detect persist their own data.
+# Keep this in sync with USER_DATA_DIR in main_app.py / kalki_setup_wizard.py —
+# without this, server.py's hardware-profile save falls back to a different,
+# unused path and never actually lines up with what the wizard writes.
+_USER_CONFIG_PATH = os.path.join(
+    os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "user_config.json"
+)
+
 # ── GROQ AI (required for the LLM brain) ────────────────────
 # Get a free key at https://console.groq.com
 # Best practice: set GROQ_API_KEY in your environment and leave this as-is, so

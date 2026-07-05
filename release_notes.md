@@ -1,9 +1,20 @@
-# 🚀 KALKI v1.0.10 — UX Fixes & Stability
+# 🚀 KALKI v1.0.11 — Startup Hotfix & Config Bootstrap
 
 **Release Date:** July 5, 2026  
 **Build:** Production  
 
 ---
+
+## 🔥 v1.0.11 Patch Notes
+
+- **Startup Hang Fix:** Fixed a fatal `SyntaxError` that caused the application to freeze on the boot splash screen by inserting a missing `</script>` tag in the dashboard HTML.
+- **Config Bootstrap:** Fresh installations no longer crash instantly due to a missing configuration file. The app now properly auto-copies the template `config.example.py` during initialization.
+- **Setup Wizard Pathing:** The Setup Wizard now correctly patches the active Python configuration variables instead of just writing to a disconnected JSON file.
+- **Legacy Cleanup:** Removed obsolete `.bat` files and duplicate config files from the repository root, ensuring a cleaner packaged application environment.
+
+---
+
+# 🚀 KALKI v1.0.10 — UX Fixes & Stability
 
 ## 🔥 v1.0.10 Patch Notes
 

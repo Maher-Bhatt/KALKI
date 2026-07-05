@@ -1,6 +1,8 @@
 import os
+import re
 import sys
 import json
+import shutil
 import webbrowser
 import subprocess
 import customtkinter as ctk
@@ -15,6 +17,49 @@ _USER_CONFIG_PATH = os.path.join(USER_DATA_DIR, "user_config.json")
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
+
+
+def _apply_to_config_py(updates: dict) -> None:
+    """
+    Write the wizard's collected values into config.py itself.
+
+    Previously this wizard only wrote to user_config.json, which nothing else
+    in the app ever reads — so finishing setup looked successful but silently
+    left config.py (what server.py/main_app.py actually import) untouched.
+    This patches config.py in place, line by line, so completing the wizard
+    actually configures the running app.
+
+    Blank string fields are skipped rather than written as "" so we don't
+    clobber values like GROQ_API_KEY's os.environ.get(...) fallback with an
+    empty literal when the user leaves that field blank on purpose.
+    """
+    cfg_path = os.path.join(BASE_DIR, "config.py")
+    example_path = os.path.join(BASE_DIR, "config.example.py")
+    if not os.path.exists(cfg_path):
+        if os.path.exists(example_path):
+            shutil.copy(example_path, cfg_path)
+        else:
+            return
+
+    with open(cfg_path, "r", encoding="utf-8") as f:
+        text = f.read()
+
+    appended = []
+    for key, value in updates.items():
+        if isinstance(value, str) and value == "":
+            continue
+        literal = repr(value)
+        pattern = re.compile(rf"^{re.escape(key)}\s*=.*$", re.MULTILINE)
+        if pattern.search(text):
+            text = pattern.sub(f"{key} = {literal}", text, count=1)
+        else:
+            appended.append(f"{key} = {literal}")
+
+    if appended:
+        text = text.rstrip("\n") + "\n\n# --- Added by KALKI Setup Wizard ---\n" + "\n".join(appended) + "\n"
+
+    with open(cfg_path, "w", encoding="utf-8") as f:
+        f.write(text)
 
 
 class KalkiSetupWizard(ctk.CTk):
@@ -265,7 +310,16 @@ class KalkiSetupWizard(ctk.CTk):
 
         with open(_USER_CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(self.config_data, f, indent=4)
-            
+
+        try:
+            _apply_to_config_py(self.config_data)
+        except Exception as e:
+            messagebox.showwarning(
+                "Partial save",
+                f"Your settings were saved, but config.py couldn't be updated automatically:\n{e}\n\n"
+                "You may need to paste your Groq key into config.py by hand."
+            )
+
         marker_path = os.path.join(USER_DATA_DIR, "setup_complete.marker")
         with open(marker_path, "w", encoding="utf-8") as f:
             f.write("Setup complete")

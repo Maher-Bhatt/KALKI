@@ -38,6 +38,13 @@ try:
 except Exception:
     pass
 
+# --- Auto-bootstrap config.py from config.example.py on first run -----------
+_cfg_path = os.path.join(BASE_DIR, "config.py")
+_example_path = os.path.join(BASE_DIR, "config.example.py")
+if not os.path.exists(_cfg_path) and os.path.exists(_example_path):
+    import shutil
+    shutil.copy(_example_path, _cfg_path)
+
 import config
 import github_mod
 import shodan_mod
