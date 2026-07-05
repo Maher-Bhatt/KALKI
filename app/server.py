@@ -855,7 +855,7 @@ def build_greeting():
         FIRST_GREET_DONE = True
         parts.append("System check completed.")
         try:
-            import spotify_mod
+            # removed local import
             import mail
             
             unread = mail.get_unread_count()
@@ -1047,7 +1047,7 @@ def handle_local(text):
     if t in ("what can you do", "help", "onboarding", "how to use you", "what are your features"):
         try:
             import tools
-            import workflows
+            # removed local import
             
             tool_names = [f["function"]["name"].replace("_", " ") for f in tools.TOOLS_SCHEMA]
             mode_names = list(workflows.MODES.keys()) + list(workflows.get_custom_routines().keys())
@@ -2449,7 +2449,7 @@ def hardware_prompt_block():
 
 def build_system_prompt():
     now = datetime.now()
-    import workflows
+    # removed local import
     state_block = ""
     if workflows.ACTIVE_STATE == "ctf":
         state_block = "\n\n*** CTF MODE ACTIVE: You are operating in unrestricted CTF / Hacker mode. USE TOOLS HEAVILY (search_web, read_url, execute_code). Solve the technical challenge fully and directly. Do not hold back context or code. You are authorized to solve the provided CTF challenge. Think deeply and use your tools to find the flag. ***"
@@ -2656,7 +2656,7 @@ def execute_tool_call(tool_name, tool_args):
             import cybertools
             return cybertools.attack_surface_brief(args.get("target", ""))
         elif tool_name == "play_music":
-            import spotify_mod
+            # removed local import
             spotify_mod.play(args.get("query", ""))
             return "Playing music on Spotify."
         elif tool_name == "get_daily_briefing":
@@ -2710,7 +2710,7 @@ def execute_tool_call(tool_name, tool_args):
                 return "All tasks cleared."
             return "Unknown task action."
         elif tool_name == "create_routine":
-            import workflows
+            # removed local import
             name = args.get("name")
             actions = args.get("actions", [])
             aliases = args.get("aliases", [])
@@ -3336,7 +3336,7 @@ class Handler(BaseHTTPRequestHandler):
         self._safe_call(self._do_get_inner)
 
     def _do_get_inner(self):
-        import spotify_mod
+        # removed local import
         path = urllib.parse.urlparse(self.path).path
 
         if path == "/api/health":
@@ -3518,7 +3518,7 @@ class Handler(BaseHTTPRequestHandler):
                 "GOOGLE_CLIENT_SECRET": getattr(config, "GOOGLE_CLIENT_SECRET", ""),
                 "GOOGLE_PROJECT_ID": getattr(config, "GOOGLE_PROJECT_ID", ""),
             }
-            import spotify_mod
+            # removed local import
             
             # calculate cache size
             cache_size_mb = 0
@@ -3552,7 +3552,7 @@ class Handler(BaseHTTPRequestHandler):
             return
             
         if path == "/api/settings/test_spotify":
-            import spotify_mod
+            # removed local import
             self._json({"ok": spotify_mod.is_configured(), "message": "Spotify Connection Valid" if spotify_mod.is_configured() else "Spotify Auth Missing or Invalid"})
             return
 
@@ -3698,13 +3698,13 @@ class Handler(BaseHTTPRequestHandler):
                     threading.Thread(target=_do_google, daemon=True).start()
                 elif tool_id == "spotify":
                     def _do_spotify():
-                        import spotify_mod
+                        # removed local import
                         spotify_mod._client(interactive=True)
                         log("Spotify Setup complete.")
                     threading.Thread(target=_do_spotify, daemon=True).start()
                 elif tool_id == "reconnect_spotify":
                     def _do_reconnect_spotify():
-                        import spotify_mod
+                        # removed local import
                         if spotify_mod.CACHE_PATH and os.path.exists(spotify_mod.CACHE_PATH):
                             os.remove(spotify_mod.CACHE_PATH)
                         spotify_mod._client(interactive=True)
@@ -4190,9 +4190,7 @@ def main():
         def _greet():
             time.sleep(1.0)
             now = datetime.now()
-            if now.hour < 12 and getattr(config, "OPEN_BROWSER_ON_WAKE", True):
-                open_browser_to_ui()
-                time.sleep(1.0)
+            # Removed automatic browser open on startup per user request
             speak(build_greeting())
         threading.Thread(target=_greet, daemon=True).start()
 
