@@ -3405,6 +3405,25 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": str(e)})
             return
 
+        if path == "/api/clipboard_response":
+            phrase = body.get("phrase", "").lower()
+            pending = STATE.pop("clipboard_prompt_pending", None)
+            
+            if pending:
+                if any(k in phrase for k in ["yes", "sure", "go ahead", "yeah", "please", "do it"]):
+                    speak("Analyzing...")
+                    import clipboard_mod
+                    # Handle asynchronously so we don't block the API
+                    def _analyze():
+                        res = clipboard_mod.analyze()
+                        if res:
+                            speak(res)
+                    threading.Thread(target=_analyze, daemon=True).start()
+                else:
+                    speak("Okay, ignored.")
+            self._json({"ok": True})
+            return
+
         if path == "/api/status":
             # Mark UI alive
             STATE["ui_last_ping"] = time.time()
@@ -3438,6 +3457,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json({
                 "online": True,
                 "model": STATE["model"],
+                "clipboardPromptPending": "clipboard_prompt_pending" in STATE,
                 "groqConfigured": bool(config.GROQ_API_KEY and config.GROQ_API_KEY != "PASTE_YOUR_GROQ_KEY_HERE"),
                 "ollamaOnline": ollama_ok,
                 "speaking": STATE["speaking"],
@@ -3741,7 +3761,7 @@ class Handler(BaseHTTPRequestHandler):
 
             # Always try to surface KALKI — function focuses existing tab if
             # one is open, otherwise launches Chrome. No duplicate tabs.
-            if config.OPEN_BROWSER_ON_WAKE:
+            if getattr(config, "OPEN_BROWSER_ON_WAKE", True):
                 threading.Thread(target=open_browser_to_ui, daemon=True).start()
 
             # Always flag wake so any live UI engages listening
@@ -3795,7 +3815,7 @@ class Handler(BaseHTTPRequestHandler):
             # Wake + command in one breath arrives here (not /api/wake), so
             # surface the HUD on any voice command too — otherwise the browser
             # only ever opens for a bare "Hey KALKI" with no follow-up.
-            if is_voice and config.OPEN_BROWSER_ON_WAKE:
+            if is_voice and getattr(config, "OPEN_BROWSER_ON_WAKE", True):
                 STATE["wake_pending"] = True
                 threading.Thread(target=open_browser_to_ui, daemon=True).start()
             user_text = ""
@@ -4136,6 +4156,19 @@ def main():
         print(f"Port {config.PORT} already in use - another KALKI server is running.")
         sys.exit(0)
 
+    try:
+        import re
+        tmpl_path = os.path.join(BASE_DIR, "config.example.py")
+        if os.path.exists(tmpl_path):
+            with open(tmpl_path, "r", encoding="utf-8") as f:
+                tmpl = f.read()
+            keys = set(re.findall(r'^([A-Z_][A-Z0-9_]*)\s*=', tmpl, re.MULTILINE))
+            missing = [k for k in keys if not hasattr(config, k)]
+            if missing:
+                log(f"WARNING: config.py is missing keys present in config.example.py: {missing}. Using defaults for these.")
+    except Exception as e:
+        log(f"config drift check failed: {e}")
+
     # Start auto-updater daemon
     try:
         import core.updater as updater
@@ -4150,7 +4183,7 @@ def main():
         def _greet():
             time.sleep(1.0)
             now = datetime.now()
-            if now.hour < 12 and config.OPEN_BROWSER_ON_WAKE:
+            if now.hour < 12 and getattr(config, "OPEN_BROWSER_ON_WAKE", True):
                 open_browser_to_ui()
                 time.sleep(1.0)
             speak(build_greeting())
@@ -4211,14 +4244,30 @@ def main():
                     speak(f"Internet connection lost, {config.OWNER_TITLE}.")
                 last_network_ok = net_ok
 
+                # Clipboard Monitor expiration check
+                if "clipboard_prompt_pending" in STATE:
+                    pending = STATE["clipboard_prompt_pending"]
+                    if time.time() - pending["ts"] > 10:
+                        del STATE["clipboard_prompt_pending"]
+                        STATE["wake_pending"] = False # Disengage UI mic
+
                 # Clipboard Monitor
                 import clipboard_mod
                 clip_text = clipboard_mod.read_text()
                 if clip_text and clip_text != last_clipboard:
                     last_clipboard = clip_text
                     lower_clip = clip_text.lower()
-                    if len(clip_text) > 100 and any(k in lower_clip for k in ["error", "exception", "traceback", "failed"]):
-                        speak(f"Sir, I noticed you copied an error log. Should I analyze it for a fix?")
+                    is_error_log = any(k in lower_clip for k in ["error", "exception", "traceback", "failed"])
+                    looks_like_code = any(k in clip_text for k in ["def ", "class ", "function ", "import ", "{", "};", "SELECT ", "<html"])
+                    if len(clip_text) > 150 and (is_error_log or looks_like_code):
+                        kind = "an error log" if is_error_log else "some code"
+                        STATE["clipboard_prompt_pending"] = {
+                            "kind": kind,
+                            "text": clip_text,
+                            "ts": time.time(),
+                        }
+                        speak(f"Sir, I noticed you copied {kind}. Should I analyze it?")
+                        STATE["wake_pending"] = True  # engage the mic for the reply
 
                 b = psutil.sensors_battery()
                 if b:

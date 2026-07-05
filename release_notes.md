@@ -1,9 +1,20 @@
-# 🚀 KALKI v1.0.9 — Setup Loop Hotfix
+# 🚀 KALKI v1.0.10 — UX Fixes & Stability
 
 **Release Date:** July 5, 2026  
 **Build:** Production  
 
 ---
+
+## 🔥 v1.0.10 Patch Notes
+
+- **Duplicate Instance Guard (U4):** Added strong mutex locking to prevent multiple independent instances from launching on startup, which caused double-triggering of microphones and port conflicts.
+- **Dashboard Layout Fix (U1):** Fixed a CSS syntax regression that caused system metrics to render incorrectly on a single line.
+- **Wake Focus Restoration (U2):** Fixed a missing config fallback that prevented the desktop window from jumping to the foreground when summoned by voice. Added proactive config drift alerts on startup.
+- **Clipboard Interactive Prompt (U3):** Broadened clipboard monitoring to detect code snippets and properly integrated the response listener. KALKI will now wait up to 10 seconds for a conversational "yes/no" before analyzing copied text.
+
+---
+
+# 🚀 KALKI v1.0.9 — Setup Loop Hotfix
 
 ## 🔥 v1.0.9 Patch Notes
 

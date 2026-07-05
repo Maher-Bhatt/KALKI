@@ -196,7 +196,7 @@ def acquire_single_instance() -> Optional[Any]:
         
         # Create a named mutex; if it already exists, win32api.GetLastError() 
         # will return ERROR_ALREADY_EXISTS.
-        handle = win32event.CreateMutex(None, False, "Global\\KALKI_v5_launcher")
+        handle = win32event.CreateMutex(None, False, "Global\\KALKI_App_Instance")
         if win32api.GetLastError() == winerror.ERROR_ALREADY_EXISTS:
             return None
         return handle
@@ -221,9 +221,8 @@ def main() -> None:
         log("another launcher already running — exiting to avoid duplicate stack")
         return
 
-    if getattr(config, "AUTO_START", False):
-        register_registry(True)
-        register_startup_folder(True)
+    # Startup registration is handled entirely by main_app.py
+    # to avoid competing keys ("KALKI_v5" vs "KALKI").
 
     server_proc = spawn("server.py")
     log(f"server.py pid={server_proc.pid}")

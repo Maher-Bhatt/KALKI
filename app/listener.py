@@ -86,6 +86,10 @@ def post_chat_voice(text):
         timeout=45,
     )
 
+def post_clipboard_response(phrase):
+    log(f"CLIPBOARD RESPONSE -> '{phrase}'")
+    _post("/api/clipboard_response", {"phrase": phrase})
+
 
 def post_stop():
     log("STOP")
@@ -612,6 +616,13 @@ def main():
 
             if contains_stop(phrase):
                 post_stop(); continue
+                
+            st = _status()
+            if st.get("clipboardPromptPending"):
+                post_clipboard_response(phrase)
+                wait_until_silent(max_wait=12.0)
+                continue
+
             if not contains_wake(phrase):
                 continue
 

@@ -127,12 +127,31 @@ def setup_tray():
     tray = pystray.Icon("KALKI", image, "KALKI AI Assistant", menu)
     tray.run()
 
+def acquire_single_instance():
+    try:
+        import win32event
+        import win32api
+        import winerror
+        handle = win32event.CreateMutex(None, False, "Global\\KALKI_App_Instance")
+        if win32api.GetLastError() == winerror.ERROR_ALREADY_EXISTS:
+            return None
+        return handle
+    except ImportError:
+        return True  # pywin32 unavailable - don't block startup
+    except Exception:
+        return True
+
 def on_closing():
     print("Window close requested. Hiding to system tray instead...")
     window.hide()
     return False  # Prevent the window from actually being destroyed
 
 if __name__ == '__main__':
+    _lock = acquire_single_instance()
+    if _lock is None:
+        print("KALKI is already running - exiting to avoid a duplicate instance.")
+        sys.exit(0)
+
     # 1. First-time setup check
     if not is_setup_complete():
         print("Setup not complete. Launching Setup Wizard...")
