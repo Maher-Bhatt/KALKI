@@ -43,23 +43,37 @@ def _client(interactive=False):
     return spotipy.Spotify(auth_manager=auth)
 
 
+def _describe_403():
+    """Called from an except block for a Spotify 403. Clears a stale-scope
+    cache if that's the cause, otherwise explains the Premium requirement."""
+    if CACHE_PATH and os.path.exists(CACHE_PATH):
+        try:
+            import json
+            with open(CACHE_PATH, "r") as f:
+                cache_data = json.load(f)
+            cached_scopes = set(cache_data.get("scope", "").split())
+            current_scopes = set(SCOPES.split())
+            if not current_scopes.issubset(cached_scopes):
+                os.remove(CACHE_PATH)
+                return ("Your Spotify login was missing a permission KALKI now needs. "
+                        "I've cleared the old login — say the command again and it'll "
+                        "re-authorize (a browser tab will open once).")
+        except Exception:
+            pass
+    return ("Spotify returned 403 (forbidden) on that action. If your login already "
+            "has the right permissions, this almost always means playback control "
+            "needs Spotify Premium — free accounts can't be controlled through the "
+            "Web API. Recreating the app/keys won't fix that.")
+
+
 def _safe(fn, *a, **kw):
     try:
-        return fn(*a, **kw)
+        return True, fn(*a, **kw)
     except Exception as e:
-        if "403" in str(e) and CACHE_PATH and os.path.exists(CACHE_PATH):
-            try:
-                import json
-                with open(CACHE_PATH, "r") as f:
-                    cache_data = json.load(f)
-                cached_scopes = set(cache_data.get("scope", "").split())
-                current_scopes = set(SCOPES.split())
-                if not current_scopes.issubset(cached_scopes):
-                    os.remove(CACHE_PATH)
-                    return {"error": "Stale token scopes - cache deleted. Please Reconnect Spotify."}
-            except Exception:
-                pass
-        return {"error": str(e)}
+        msg = str(e)
+        if "403" in msg:
+            return False, _describe_403()
+        return False, f"Spotify error: {msg}"
 
 
 # ─── Device management ─────────────────────────────────
@@ -208,6 +222,8 @@ def play(query=None):
                     pass
                 _time.sleep(2.0)
                 continue
+            if "403" in msg:
+                return _describe_403()
             return f"Spotify error: {msg}"
 
 
@@ -218,60 +234,45 @@ def retry():
 
 def pause():
     sp = _client()
-    try:
-        sp.pause_playback()
-        return "Paused."
-    except Exception as e:
-        return f"Couldn't pause: {e}"
+    ok, result = _safe(sp.pause_playback)
+    return "Paused." if ok else result
 
 
 def next_track():
     sp = _client()
-    try:
-        sp.next_track()
-        return "Skipping."
-    except Exception as e:
-        return f"Couldn't skip: {e}"
+    ok, result = _safe(sp.next_track)
+    return "Skipping." if ok else result
 
 
 def prev_track():
     sp = _client()
-    try:
-        sp.previous_track()
-        return "Going back, Sir."
-    except Exception as e:
-        return f"Couldn't go back: {e}"
+    ok, result = _safe(sp.previous_track)
+    return "Going back, Sir." if ok else result
 
 
 def set_volume(percent):
     sp = _client()
-    try:
-        sp.volume(max(0, min(100, int(percent))))
-        return f"Spotify volume {int(percent)} percent."
-    except Exception as e:
-        return f"Couldn't set volume: {e}"
+    pct = max(0, min(100, int(percent)))
+    ok, result = _safe(sp.volume, pct)
+    return f"Spotify volume {pct} percent." if ok else result
 
 
 def now_playing():
     sp = _client()
-    try:
-        r = sp.current_playback()
-        if not r or not r.get("item"):
-            return "Nothing playing."
-        item = r["item"]
-        artists = ", ".join(a["name"] for a in item.get("artists", []))
-        return f"{item['name']} by {artists}."
-    except Exception as e:
-        return f"Spotify error: {e}"
+    ok, result = _safe(sp.current_playback)
+    if not ok:
+        return result
+    if not result or not result.get("item"):
+        return "Nothing playing."
+    item = result["item"]
+    artists = ", ".join(a["name"] for a in item.get("artists", []))
+    return f"{item['name']} by {artists}."
 
 
 def shuffle_on():
     sp = _client()
-    try:
-        sp.shuffle(True)
-        return "Shuffle on."
-    except Exception as e:
-        return f"Couldn't shuffle: {e}"
+    ok, result = _safe(sp.shuffle, True)
+    return "Shuffle on." if ok else result
 
 
 def play_lofi():

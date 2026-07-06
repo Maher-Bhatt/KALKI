@@ -164,13 +164,13 @@ TOOLS_SCHEMA = [
         "type": "function",
         "function": {
             "name": "system_control",
-            "description": "Controls the Windows operating system (lock screen, volume, open apps).",
+            "description": "Controls the Windows operating system (lock screen, sleep, restart, shutdown, volume, open apps). For sleep/restart/shutdown this only queues the action — it still requires the user to say 'confirm' before anything actually happens.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "action": {
                         "type": "string",
-                        "description": "The action to perform: 'lock', 'volume_set', or 'open_app'."
+                        "description": "The action to perform: 'lock', 'sleep', 'restart', 'shutdown', 'volume_set', or 'open_app'."
                     },
                     "target": {
                         "type": "string",

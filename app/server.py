@@ -147,6 +147,13 @@ def log(msg):
     runtime_log.append_log(LOG_PATH, str(msg))
 
 def update_location_from_ip():
+    # IP geolocation resolves to whatever city your ISP routes through (often
+    # the nearest big city, not your actual town), so it must never override
+    # a city the user actually configured — only fill the gap when blank.
+    configured_city = (getattr(config, "OWNER_CITY", "") or "").strip()
+    if configured_city and configured_city.lower() != "yourcity":
+        log(f"Using configured location: {configured_city} — skipping IP auto-detect.")
+        return
     try:
         import urllib.request, json
         req = urllib.request.Request("http://ip-api.com/json/", headers={'User-Agent': 'Mozilla/5.0'})
@@ -156,11 +163,25 @@ def update_location_from_ip():
                 config.OWNER_CITY = data.get("city", config.OWNER_CITY)
                 config.OWNER_STATE = data.get("regionName", config.OWNER_STATE)
                 config.OWNER_COUNTRY = data.get("country", config.OWNER_COUNTRY)
-                log(f"Auto-location updated: {config.OWNER_CITY}, {config.OWNER_STATE}, {config.OWNER_COUNTRY}")
+                log(f"Auto-location updated (no city configured): {config.OWNER_CITY}, {config.OWNER_STATE}, {config.OWNER_COUNTRY}")
     except Exception as e:
         log(f"Auto-location failed: {e}")
 
 threading.Thread(target=update_location_from_ip, daemon=True).start()
+
+def fetch_weather_line(timeout=5):
+    """Short wttr.in condition string for the configured city, or None on failure."""
+    try:
+        city = (getattr(config, "OWNER_CITY", "") or "").strip()
+        if not city:
+            return None
+        w = urllib.request.urlopen(
+            f"https://wttr.in/{urllib.parse.quote(city)}?format=3",
+            timeout=timeout,
+        ).read().decode().strip()
+        return w
+    except Exception:
+        return None
 
 PLUGINS = {}
 def load_plugins():
@@ -820,7 +841,7 @@ def build_greeting():
     hour = now.hour
     title = config.OWNER_TITLE
     owner = config.OWNER_NAME
-    
+
     morning_pool = [
         f"A very pleasant morning, {title}. I have prepared your daily briefing. What would you like to focus on today?",
         f"Good morning, {owner}. System initialized. What are our priorities for today?",
@@ -839,7 +860,7 @@ def build_greeting():
         f"Good evening, {title}. Systems active, standing by for night ops.",
         f"Good evening, {title}. Secure network active, awaiting your command."
     ]
-    
+
     import random as _rnd_greet
     if hour < 12:
         greeting = _rnd_greet.choice(morning_pool)
@@ -847,36 +868,53 @@ def build_greeting():
         greeting = _rnd_greet.choice(afternoon_pool)
     else:
         greeting = _rnd_greet.choice(evening_pool)
-        
+
     parts = [greeting]
-    
+
+    # Weather sets an actual "mood" for the greeting instead of a flat status
+    # line — a rainy morning reads differently than a clear one.
+    w = fetch_weather_line(timeout=3)
+    if w:
+        parts.append(f"Outside right now: {w}.")
+
     global FIRST_GREET_DONE
     if not FIRST_GREET_DONE:
         FIRST_GREET_DONE = True
         parts.append("System check completed.")
         try:
-            # removed local import
             import mail
-            
+
             unread = mail.get_unread_count()
-            if unread > 0:
-                parts.append(f"You have {unread} important unread email{'s' if unread != 1 else ''}.")
-                
             events = gcal.today_events()
-            if events:
-                parts.append(f"You have {len(events)} calendar event{'s' if len(events) != 1 else ''} scheduled for today.")
-                
+            n_events = len(events) if events else 0
+
+            # Tone follows how loaded the day actually is, rather than always
+            # reading the same regardless of what's ahead.
+            if unread > 0 and n_events >= 3:
+                parts.append(
+                    f"It's a full one — {n_events} calendar events and {unread} unread "
+                    f"important email{'s' if unread != 1 else ''}. I'd start with the inbox."
+                )
+            elif n_events >= 3:
+                parts.append(f"Busy day ahead — {n_events} calendar events on the books.")
+            elif unread > 0:
+                parts.append(f"You have {unread} important unread email{'s' if unread != 1 else ''}.")
+            elif n_events > 0:
+                parts.append(f"Light day — just {n_events} calendar event{'s' if n_events != 1 else ''} scheduled.")
+            else:
+                parts.append("Nothing on the calendar and inbox is quiet. Clear runway today.")
+
             failures = []
             if not gcal.is_configured():
                 failures.append("Google Calendar")
             if not spotify_mod.is_configured():
                 failures.append("Spotify")
-                
+
             if failures:
                 parts.append(f"Notice: {', '.join(failures)} settings require alignment.")
             else:
                 parts.append("All primary sync systems operational.")
-                
+
             try:
                 import core.productivity
                 prod_summary = core.productivity.get_daily_summary()
@@ -884,11 +922,11 @@ def build_greeting():
                     parts.append(prod_summary)
             except Exception as pe:
                 log(f"Error fetching productivity summary: {pe}")
-                
+
         except Exception as e:
             log(f"Error checking config for greeting: {e}")
             parts.append("All core systems operational.")
-            
+
         # Add morning briefing (calendar + unread emails)
         if hour < 12:
             try:
@@ -2178,14 +2216,26 @@ def handle_local(text):
             return True, f"Screenshot failed. {e}"
 
     # ── Lock / Sleep / Restart / Shutdown ──────────────
-    if t in ("lock", "lock pc", "lock my pc", "lock the pc", "lock computer"):
+    # Natural phrasing ("put my computer on sleep", "shut down my laptop")
+    # varies a lot more than a handful of exact phrases can cover. If none of
+    # these match, the message falls through to the chat LLM — which has no
+    # tool to actually run these, so it just talks about doing it. Matching
+    # on verb + PC-ish noun (or a bare one-word command) covers this properly.
+    _PC_NOUNS = ("pc", "computer", "laptop", "system", "machine")
+
+    def _power_cmd(t, verbs):
+        if t in verbs:
+            return True
+        return any(v in t for v in verbs) and any(n in t for n in _PC_NOUNS)
+
+    if _power_cmd(t, ("lock", "lock screen")):
         return _queue_confirmation(
             "Lock your PC",
             lambda: (ctypes.windll.user32.LockWorkStation()
                      and (True, "Locking your PC.")),
         )
 
-    if t == "sleep" or "put pc to sleep" in t:
+    if _power_cmd(t, ("sleep", "hibernate")):
         def _sleep_pc():
             subprocess.Popen([
                 "rundll32.exe", "powrprof.dll,SetSuspendState", "0,1,0"
@@ -2193,13 +2243,13 @@ def handle_local(text):
             return True, "Going to sleep."
         return _queue_confirmation("Put your PC to sleep", _sleep_pc)
 
-    if t == "restart" or "restart pc" in t or "restart computer" in t:
+    if _power_cmd(t, ("restart", "reboot")):
         def _restart_pc():
             subprocess.Popen(["shutdown.exe", "/r", "/t", "10"])
             return True, "Restarting in ten seconds, Sir."
         return _queue_confirmation("Restart your PC", _restart_pc)
 
-    if t == "shutdown" or "shut down" in t or "turn off pc" in t:
+    if _power_cmd(t, ("shutdown", "shut down", "turn off", "power off")):
         def _shutdown_pc():
             subprocess.Popen(["shutdown.exe", "/s", "/t", "30"])
             return True, "Shutting down in thirty seconds, Sir."
@@ -2227,14 +2277,10 @@ def handle_local(text):
 
     # ── Weather (free wttr.in) ─────────────────────────
     if "weather" in t:
-        try:
-            w = urllib.request.urlopen(
-                f"https://wttr.in/{config.OWNER_CITY}?format=3",
-                timeout=5,
-            ).read().decode().strip()
+        w = fetch_weather_line()
+        if w:
             return True, f"{w}, {config.OWNER_TITLE}."
-        except Exception:
-            return True, "I couldn't reach the weather service."
+        return True, "I couldn't reach the weather service."
 
     # ── Search ─────────────────────────────────────────
     # "google X" → open Google; "search the web for X" / "look up X" → handled by AI w/ injected context
@@ -2670,9 +2716,26 @@ def execute_tool_call(tool_name, tool_args):
             action = args.get("action")
             target = args.get("target", "")
             if action == "lock":
-                import ctypes
-                ctypes.windll.user32.LockWorkStation()
-                return "Screen locked."
+                return _queue_confirmation(
+                    "Lock your PC",
+                    lambda: (ctypes.windll.user32.LockWorkStation()
+                             and (True, "Locking your PC.")),
+                )[1]
+            elif action == "sleep":
+                def _sleep_pc():
+                    subprocess.Popen(["rundll32.exe", "powrprof.dll,SetSuspendState", "0,1,0"])
+                    return True, "Going to sleep."
+                return _queue_confirmation("Put your PC to sleep", _sleep_pc)[1]
+            elif action == "restart":
+                def _restart_pc():
+                    subprocess.Popen(["shutdown.exe", "/r", "/t", "10"])
+                    return True, "Restarting in ten seconds, Sir."
+                return _queue_confirmation("Restart your PC", _restart_pc)[1]
+            elif action == "shutdown":
+                def _shutdown_pc():
+                    subprocess.Popen(["shutdown.exe", "/s", "/t", "30"])
+                    return True, "Shutting down in thirty seconds, Sir."
+                return _queue_confirmation("Shut down your PC", _shutdown_pc)[1]
             elif action == "open_app":
                 try:
                     os.startfile(target)

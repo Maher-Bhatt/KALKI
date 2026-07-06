@@ -18,6 +18,47 @@ _USER_CONFIG_PATH = os.path.join(USER_DATA_DIR, "user_config.json")
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
+# Override the built-in "blue" theme's colors in place — this keeps every
+# other already-correct property (corner radius, border widths, disabled
+# states, etc.) from CTk's own theme and only swaps the colors, so nothing
+# is left half-defined. Matches the platinum/graphite palette in index.html
+# instead of CustomTkinter's default blue.
+_T = ctk.ThemeManager.theme
+_ACCENT_HOVER = "#7b838c"
+_ACCENT_DIM = "#5c6068"
+_BG = "#0c0c0d"
+_BG_ELEV = "#17171a"
+_BG_PANEL = "#1d1d21"
+_TEXT = "#eaeaee"
+
+_T["CTk"]["fg_color"] = ["#e8e8ea", _BG]
+_T["CTkToplevel"]["fg_color"] = ["#e8e8ea", _BG]
+_T["CTkFrame"]["fg_color"] = ["#dcdcdf", _BG_ELEV]
+_T["CTkFrame"]["top_fg_color"] = ["#d0d0d3", _BG_PANEL]
+_T["CTkFrame"]["border_color"] = ["#b0b0b5", "#2a2a2e"]
+_T["CTkButton"]["fg_color"] = ["#c4c9d1", _ACCENT_DIM]
+_T["CTkButton"]["hover_color"] = ["#aab0b8", _ACCENT_HOVER]
+_T["CTkButton"]["text_color"] = ["#111113", _TEXT]
+_T["CTkLabel"]["text_color"] = ["#111113", _TEXT]
+_T["CTkEntry"]["fg_color"] = ["#f2f2f3", _BG_PANEL]
+_T["CTkEntry"]["border_color"] = ["#b0b0b5", "#3a3a3f"]
+_T["CTkEntry"]["text_color"] = ["#111113", _TEXT]
+_T["CTkCheckBox"]["fg_color"] = ["#c4c9d1", _ACCENT_DIM]
+_T["CTkCheckBox"]["hover_color"] = ["#aab0b8", _ACCENT_HOVER]
+_T["CTkCheckBox"]["border_color"] = ["#8a8a90", "#5c6068"]
+_T["CTkCheckBox"]["checkmark_color"] = ["#111113", _TEXT]
+_T["CTkOptionMenu"]["fg_color"] = ["#c4c9d1", _ACCENT_DIM]
+_T["CTkOptionMenu"]["button_color"] = ["#aab0b8", _ACCENT_HOVER]
+_T["CTkOptionMenu"]["button_hover_color"] = ["#95999f", "#4a4d52"]
+_T["CTkOptionMenu"]["text_color"] = ["#111113", _TEXT]
+_T["CTkSegmentedButton"]["selected_color"] = ["#aab0b8", _ACCENT_DIM]
+_T["CTkSegmentedButton"]["selected_hover_color"] = ["#95999f", _ACCENT_HOVER]
+_T["CTkSegmentedButton"]["fg_color"] = ["#c4c4c8", "#2a2a2e"]
+_T["CTkSegmentedButton"]["unselected_color"] = ["#c4c4c8", "#2a2a2e"]
+_T["CTkSegmentedButton"]["text_color"] = ["#111113", _TEXT]
+_T["CTkProgressBar"]["progress_color"] = ["#8a8a90", "#9aa3ad"]
+_T["CTkScrollableFrame"]["label_fg_color"] = ["#d0d0d3", _BG_PANEL]
+
 
 def _apply_to_config_py(updates: dict) -> None:
     """
@@ -162,9 +203,50 @@ class KalkiSetupWizard(ctk.CTk):
         self._link(f3, "Get free key at console.groq.com", "https://console.groq.com")
         self.steps.append(f3)
 
+        # Step 3.5: Voice & Personality (previously only editable by hand in config.py)
+        fv = ctk.CTkFrame(self.main_container, fg_color="transparent")
+        self._section_heading(fv, "4. Voice & Personality")
+        self._help_text(fv, "How KALKI sounds and listens. These used to require editing config.py by hand.")
+
+        voice_frame = ctk.CTkFrame(fv, fg_color="transparent")
+        voice_frame.pack(fill="x", pady=5)
+        ctk.CTkLabel(voice_frame, text="Voice:", width=170, anchor="w").pack(side="left")
+        self.voice_options = {
+            "Brian (US, natural male — default)": "en-US-BrianMultilingualNeural",
+            "Andrew (US, natural male, newer)": "en-US-AndrewMultilingualNeural",
+            "Ryan (British, JARVIS-style butler)": "en-GB-RyanNeural",
+            "Thomas (British, formal butler)": "en-GB-ThomasNeural",
+            "Guy (US, standard male)": "en-US-GuyNeural",
+            "Tony (US, deep male)": "en-US-TonyNeural",
+        }
+        current_voice = self.config_data.get("TTS_VOICE", "en-US-BrianMultilingualNeural")
+        current_voice_label = next(
+            (label for label, val in self.voice_options.items() if val == current_voice),
+            "Brian (US, natural male — default)",
+        )
+        self.voice_var = ctk.StringVar(value=current_voice_label)
+        ctk.CTkOptionMenu(voice_frame, values=list(self.voice_options.keys()),
+                          variable=self.voice_var, width=280).pack(side="left", padx=10)
+
+        listen_frame = ctk.CTkFrame(fv, fg_color="transparent")
+        listen_frame.pack(fill="x", pady=(15, 5))
+        ctk.CTkLabel(listen_frame, text="Listen Mode:", width=170, anchor="w").pack(side="left")
+        self.listen_mode_var = ctk.StringVar(value=self.config_data.get("LISTEN_MODE", "always"))
+        ctk.CTkSegmentedButton(
+            listen_frame, values=["always", "push"], variable=self.listen_mode_var, width=280
+        ).pack(side="left", padx=10)
+        self._help_text(fv, "\"always\" = hands-free wake word (mic stays on). \"push\" = tap the "
+                             "mic button to talk — use this if you share a Bluetooth headset with "
+                             "your phone, since an always-on mic forces low-quality call mode on it.")
+
+        self.spice_var = ctk.BooleanVar(value=self.config_data.get("PERSONALITY_SPICE", True))
+        ctk.CTkCheckBox(fv, text="Personality spice (occasional witty/sarcastic replies)",
+                        variable=self.spice_var).pack(fill="x", padx=20, pady=(15, 5))
+        self.steps.append(fv)
+
         # Step 4: Integrations
         f4 = ctk.CTkScrollableFrame(self.main_container, fg_color="transparent")
-        self._section_heading(f4, "4. Integrations (Optional)")
+        self._section_heading(f4, "5. Integrations (Optional)")
         self._help_text(f4, "Connect Email, Google Calendar, Spotify, GitHub, and Shodan.")
         
         self.email_entry = self._create_input(f4, "Gmail Address:", self.config_data.get("EMAIL_ADDRESS", ""))
@@ -190,7 +272,7 @@ class KalkiSetupWizard(ctk.CTk):
 
         # Step 5: Optional API Keys
         f5 = ctk.CTkFrame(self.main_container, fg_color="transparent")
-        self._section_heading(f5, "5. Optional AI APIs")
+        self._section_heading(f5, "6. Optional AI APIs")
         self._help_text(f5, "Additional AI providers & voice synthesis. All optional.")
         self.openai_entry = self._create_input(f5, "OpenAI API Key:", self.config_data.get("OPENAI_API_KEY", ""), is_password=True)
         self.anthropic_entry = self._create_input(f5, "Anthropic API Key:", self.config_data.get("ANTHROPIC_API_KEY", ""), is_password=True)
@@ -200,7 +282,7 @@ class KalkiSetupWizard(ctk.CTk):
 
         # Step 6: Vision Recall & Cloud Sync
         f6 = ctk.CTkFrame(self.main_container, fg_color="transparent")
-        self._section_heading(f6, "6. Privacy & Backup")
+        self._section_heading(f6, "7. Privacy & Backup")
         self._help_text(f6, "Vision Memory: Periodically screenshots and OCRs your screen to make it searchable.\nData never leaves your PC.")
         self.vision_var = ctk.BooleanVar(value=self.config_data.get("VISION_RECALL_ENABLED", False))
         self.vision_cb = ctk.CTkCheckBox(f6, text="Enable Vision Recall (Local OCR)", variable=self.vision_var)
@@ -225,7 +307,7 @@ class KalkiSetupWizard(ctk.CTk):
         if index == len(self.steps) - 1:
             self.next_btn.configure(text="Finish & Start KALKI", fg_color="#2da44e", hover_color="#2c974b")
         else:
-            self.next_btn.configure(text="Next", fg_color=["#3a7ebf", "#1f538d"], hover_color=["#325882", "#14375e"])
+            self.next_btn.configure(text="Next", fg_color=["#c4c9d1", "#5c6068"], hover_color=["#aab0b8", "#7b838c"])
 
     def next_step(self):
         if self.current_step == 3:
@@ -290,6 +372,9 @@ class KalkiSetupWizard(ctk.CTk):
             "OWNER_COUNTRY": self.country_entry.get(),
             "MANAGED_AI_ENABLED": self.managed_ai_var.get(),
             "GROQ_API_KEY": self.groq_entry.get().strip(),
+            "TTS_VOICE": self.voice_options.get(self.voice_var.get(), "en-US-BrianMultilingualNeural"),
+            "LISTEN_MODE": self.listen_mode_var.get(),
+            "PERSONALITY_SPICE": self.spice_var.get(),
             "EMAIL_ADDRESS": self.email_entry.get(),
             "EMAIL_APP_PASSWORD": self.email_pass_entry.get(),
             "GITHUB_TOKEN": self.github_entry.get(),

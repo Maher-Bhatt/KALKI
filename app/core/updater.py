@@ -7,7 +7,7 @@ import tempfile
 import subprocess
 
 REPO = "Maher-Bhatt/KALKI"
-CURRENT_VERSION = "v1.0.13"
+CURRENT_VERSION = "v1.0.14"
 
 def check_for_updates():
     """

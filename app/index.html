@@ -3,7 +3,7 @@
 <head>
 <!--
 ====================================================================
-KALKI v1.0.13 PRO — Frontend User Interface
+KALKI v1.0.14 PRO — Frontend User Interface
 ====================================================================
 Architecture:
 - Pure HTML/CSS/JS (Zero external dependencies or frameworks).
@@ -27,27 +27,31 @@ Architecture:
 
 
 :root{
-  --bg: #05050a;
-  --bg-elev: #0a0a14;
-  --bg-panel: rgba(10, 10, 20, 0.6);
-  --text: #f0f0f5;
-  --text-dim: #a0a0b5;
+  --bg: #0c0c0d;
+  --bg-elev: #17171a;
+  --bg-panel: rgba(23, 23, 26, 0.6);
+  --text: #eaeaee;
+  --text-dim: #8b8b92;
   --frame: rgba(255, 255, 255, 0.08);
-  --frame-strong: rgba(255, 255, 255, 0.15);
-  --accent: #00e5ff;
-  --accent-glow: rgba(0, 229, 255, 0.2);
-  --accent-soft: rgba(0, 229, 255, 0.1);
-  --lime: #00ff88;
-  --orange: #ffaa00;
-  --red: #ff3366;
+  --frame-strong: rgba(255, 255, 255, 0.16);
+  --accent-bright: #c4c9d1;
+  --accent-deep: #5c6068;
+  --accent: #9aa3ad;
+  --accent-glow: rgba(154, 163, 173, 0.16);
+  --accent-soft: rgba(154, 163, 173, 0.08);
+  --bronze: #a9835c;
+  --lime: #7f9478;
+  --orange: #a9835c;
+  --red: #b5504a;
 }
 
 /* state-driven accents */
-body.mode-idle      { --accent: #00e5ff; --accent-glow:transparent; --accent-soft:rgba(0,229,255,0.05); }
-body.mode-listening { --accent: #ffaa00; --accent-glow:rgba(255,170,0,0.3); --accent-soft:rgba(255,170,0,0.15); }
-body.mode-thinking  { --accent: #b055ff; --accent-glow:rgba(176,85,255,0.2); --accent-soft:rgba(176,85,255,0.1); }
-body.mode-speaking  { --accent: #00e5ff; --accent-glow:rgba(0,229,255,0.3); --accent-soft:rgba(0,229,255,0.15); }
-body.mode-busy      { --accent: #ff3366; --accent-glow:rgba(255,51,102,0.3); --accent-soft:rgba(255,51,102,0.15); }
+body.mode-idle      { --accent: #9aa3ad; --accent-glow:transparent; --accent-soft:rgba(154,163,173,0.05); }
+body.mode-listening { --accent: #a9835c; --accent-glow:rgba(169,131,92,0.22); --accent-soft:rgba(169,131,92,0.1); }
+body.mode-thinking  { --accent: #7d7d94; --accent-glow:rgba(125,125,148,0.2); --accent-soft:rgba(125,125,148,0.1); }
+body.mode-speaking  { --accent: #c4c9d1; --accent-glow:rgba(196,201,209,0.24); --accent-soft:rgba(196,201,209,0.12); }
+body.mode-busy      { --accent: #b5504a; --accent-glow:rgba(181,80,74,0.25); --accent-soft:rgba(181,80,74,0.12); }
+
 
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{
@@ -139,7 +143,7 @@ body::after{
 .brand h1{
   font-family:"Inter", sans-serif;
   font-size:2.2rem;font-weight:700;letter-spacing:0.1rem;
-  background:linear-gradient(180deg, var(--gold-bright), var(--gold-deep));
+  background:linear-gradient(180deg, var(--accent-bright), var(--accent-deep));
   -webkit-background-clip:text;background-clip:text;color:transparent;
   text-shadow: 0 0.2rem 0.4rem rgba(0,0,0,0.5);
 }
@@ -407,9 +411,9 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
 .readout .line.user        { color:var(--text); }
 .readout .line.user::before{ background:#ffffff; box-shadow:0 0 0.8rem rgba(255,255,255,0.4); }
 .readout .line.kalki      { color:var(--text); }
-.readout .line.kalki::before{ background:var(--lime); box-shadow:0 0 0.8rem rgba(0,255,128,0.5); }
-.readout .line.error       { color:var(--red); border-color:rgba(255,51,68,0.45); }
-.readout .line.error::before{ background:var(--red); box-shadow:0 0 1rem rgba(255,51,68,0.55); }
+.readout .line.kalki::before{ background:var(--lime); box-shadow:0 0 0.8rem rgba(127,148,120,0.4); }
+.readout .line.error       { color:var(--red); border-color:rgba(181,80,74,0.4); }
+.readout .line.error::before{ background:var(--red); box-shadow:0 0 1rem rgba(181,80,74,0.45); }
 @keyframes lineIn{
   from { opacity:0; transform: translateY(0.6rem); }
   to   { opacity:1; transform: translateY(0); }
@@ -496,9 +500,9 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
   transition: all .2s;
 }
 .iconBtn:hover{ color:var(--accent); border-color:var(--accent); box-shadow:0 0 1.4rem var(--accent-glow); }
-#micBtn.active{ color:var(--lime); border-color:var(--lime); box-shadow:0 0 1.8rem rgba(0,255,128,0.55); }
-#stopBtn{color:var(--red);border-color:rgba(255,51,68,0.5)}
-#stopBtn:hover{color:#ff7080;border-color:var(--red);box-shadow:0 0 1.4rem rgba(255,51,68,0.5)}
+#micBtn.active{ color:var(--lime); border-color:var(--lime); box-shadow:0 0 1.8rem rgba(127,148,120,0.45); }
+#stopBtn{color:var(--red);border-color:rgba(181,80,74,0.4)}
+#stopBtn:hover{color:#d97060;border-color:var(--red);box-shadow:0 0 1.4rem rgba(181,80,74,0.4)}
 
 /* ── Drag-and-drop overlay ─────────────────────── */
 #dropZone{
@@ -559,7 +563,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
   position:fixed;inset:0;z-index:60;
   background: #0a0a0a;
   display:flex;flex-direction:column;justify-content:center;align-items:center;
-  font-family:"JetBrains Mono", monospace;color:var(--gold-bright);
+  font-family:"JetBrains Mono", monospace;color:var(--accent-bright);
   letter-spacing:0;font-size:1.2rem;
   transition: opacity .8s;
 }
@@ -641,7 +645,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
     <div>OPER <span class="v" id="topOwner">Sir</span></div>
     <div>LOC <span class="v" id="topLoc">—</span></div>
     <div>MODE <span class="v cy" id="topMode">SYSTEM</span></div>
-    <div>SYS <span class="v" id="topSys">v1.0.13 PRO</span></div>
+    <div>SYS <span class="v" id="topSys">v1.0.14 PRO</span></div>
     <div>NET <span class="v ok" id="topNet">ONLINE</span></div>
     <div><span class="v cy" id="topClock">00:00:00</span></div>
     <div style="cursor:pointer; border:0.1rem solid var(--frame); padding:0.2rem 0.8rem; border-radius:0.3rem;" id="topSettingsBtn">⚙ SETTINGS</div>
@@ -977,7 +981,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
           <h3 style="margin-bottom:1.5rem; color:var(--accent);">SYSTEM DIAGNOSTICS</h3>
           
           <table style="width:100%; font-size:1.2rem; margin-bottom:2rem; border-collapse:collapse;">
-            <tr><td style="padding:0.8rem; border-bottom:0.1rem solid #333; color:var(--text-dim);">Core Version</td><td style="padding:0.8rem; border-bottom:0.1rem solid #333; text-align:right;">v1.0.13</td></tr>
+            <tr><td style="padding:0.8rem; border-bottom:0.1rem solid #333; color:var(--text-dim);">Core Version</td><td style="padding:0.8rem; border-bottom:0.1rem solid #333; text-align:right;">v1.0.14</td></tr>
             <tr><td style="padding:0.8rem; border-bottom:0.1rem solid #333; color:var(--text-dim);">Runtime</td><td style="padding:0.8rem; border-bottom:0.1rem solid #333; text-align:right;">Python 3.12 (Local)</td></tr>
             <tr><td style="padding:0.8rem; border-bottom:0.1rem solid #333; color:var(--text-dim);">Cache Storage</td><td style="padding:0.8rem; border-bottom:0.1rem solid #333; text-align:right;" id="lbl_cache_size">0.0 MB</td></tr>
           </table>
@@ -1004,9 +1008,9 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
 <div id="systemErrorModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(10,2,2,0.85); z-index:10000; justify-content:center; align-items:center; font-family:var(--mono);">
   <style>
   @keyframes pulseGlow {
-    0% { box-shadow: 0 0 1rem rgba(255, 68, 68, 0.4); }
-    50% { box-shadow: 0 0 3rem rgba(255, 68, 68, 0.8); }
-    100% { box-shadow: 0 0 1rem rgba(255, 68, 68, 0.4); }
+    0% { box-shadow: 0 0 1rem rgba(181,80,74,0.4); }
+    50% { box-shadow: 0 0 3rem rgba(181,80,74,0.7); }
+    100% { box-shadow: 0 0 1rem rgba(181,80,74,0.4); }
   }
   @keyframes blinker {
     50% { opacity: 0.3; }
@@ -1027,12 +1031,12 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
       </div>
     </div>
     
-    <div style="border-top:0.1rem solid rgba(255,51,68,0.3); border-bottom:0.1rem solid rgba(255,51,68,0.3); padding:1.5rem 0; display:flex; flex-direction:column; gap:1rem; font-size: 1.2rem;">
+    <div style="border-top:0.1rem solid rgba(181,80,74,0.3); border-bottom:0.1rem solid rgba(181,80,74,0.3); padding:1.5rem 0; display:flex; flex-direction:column; gap:1rem; font-size: 1.2rem;">
       <div style="display:flex; justify-content:space-between;"><span style="color:var(--text-dim);">SUBSYSTEM:</span><span id="errSubsystem" style="color:#ffffff; font-weight:bold; font-family:'JetBrains Mono', monospace;">UNKNOWN</span></div>
       <div style="display:flex; justify-content:space-between;"><span style="color:var(--text-dim);">STATUS CODE:</span><span id="errCode" style="color:var(--orange); font-family:'JetBrains Mono', monospace;">500_INTERNAL_FAIL</span></div>
       <div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.5rem;">
         <span style="color:var(--text-dim);">ERROR DETAILS:</span>
-        <div id="errMessage" style="background:rgba(0,0,0,0.5); border:0.1rem solid rgba(255,51,68,0.2); padding:1rem; border-radius:0.4rem; color:#ffffff; font-family:'JetBrains Mono', monospace; font-size:1.1rem; line-height:1.4; word-break:break-all; max-height:15rem; overflow-y:auto;">An unexpected system-level interruption has occurred.</div>
+        <div id="errMessage" style="background:rgba(0,0,0,0.5); border:0.1rem solid rgba(181,80,74,0.2); padding:1rem; border-radius:0.4rem; color:#ffffff; font-family:'JetBrains Mono', monospace; font-size:1.1rem; line-height:1.4; word-break:break-all; max-height:15rem; overflow-y:auto;">An unexpected system-level interruption has occurred.</div>
       </div>
       <div id="errActionContainer" style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.5rem;">
         <span style="color:var(--text-dim);">RECOMMENDED ACTION:</span>
@@ -1041,7 +1045,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
     </div>
     
     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem;">
-      <span style="color:var(--text-dim); font-size:0.95rem; font-family:'JetBrains Mono', monospace;">KALKI SECURE UPLINK v1.0.13</span>
+      <span style="color:var(--text-dim); font-size:0.95rem; font-family:'JetBrains Mono', monospace;">KALKI SECURE UPLINK v1.0.14</span>
       <button class="qbtn" id="acknowledgeErrBtn" style="border:0.1rem solid var(--red); color:var(--red); padding:0.6rem 2rem; font-size:1.1rem; background:rgba(255,0,0,0.1);">ACKNOWLEDGE</button>
     </div>
   </div>
@@ -2583,7 +2587,7 @@ function updateDashboard(statusData) {
 
 <!-- DASHBOARD MODAL -->
 <div id="dashboardModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center;">
-  <div class="modal-content" style="background:#0a0a0c; border:1px solid var(--orange); width:70rem; height:50rem; display:flex; flex-direction:column; border-radius:1rem; box-shadow:0 12px 40px rgba(0,0,0,0.5), inset 0 0 20px rgba(255,170,0,0.1); backdrop-filter:blur(24px);">
+  <div class="modal-content" style="background:#17171a; border:1px solid var(--accent-deep); width:70rem; height:50rem; display:flex; flex-direction:column; border-radius:1rem; box-shadow:0 12px 40px rgba(0,0,0,0.5), inset 0 0 20px rgba(154,163,173,0.08); backdrop-filter:blur(24px);">
     <div style="display:flex; justify-content:space-between; align-items:center; padding:1.5rem 2rem; border-bottom:1px solid #333;">
       <div style="font-size:2rem; color:var(--orange); font-weight:bold; font-family:'Inter', sans-serif;">SYSTEM TELEMETRY</div>
       <button class="qbtn" id="closeDashboardBtn" style="background:transparent; color:var(--text-dim); border:none; cursor:pointer; font-size:1.8rem;">✕</button>
@@ -2652,27 +2656,50 @@ async function fetchDashboard() {
       
       const prod = json.data.productivity || {};
       const today = new Date().toISOString().split('T')[0];
-      const todayData = prod[today] || {};
-      
+      const todayRaw = prod[today] || {};
+      // Legacy fallback: old versions stored a flat {category: seconds} dict
+      // with no per-app detail. New format nests categories + category_apps.
+      const categories = todayRaw.categories || todayRaw;
+      const categoryApps = todayRaw.category_apps || {};
+
       const container = document.getElementById('dashProd');
       container.innerHTML = '';
-      
-      const totalSec = Object.values(todayData).reduce((a, b) => a + b, 0);
-      
-      if(Object.keys(todayData).length === 0) {
+
+      const totalSec = Object.values(categories).reduce((a, b) => a + b, 0);
+      const barColors = {
+        "Coding": "#9aa3ad", "Terminal / DevOps": "#7d7d94", "Browsing": "#a9835c",
+        "Communication": "#7f9478", "Media / Music": "#c4c9d1", "Gaming": "#b5504a",
+        "Office / Docs": "#8b8b92", "Design / Media Creation": "#9aa3ad",
+        "File Management": "#5c6068", "Other": "#5c6068",
+      };
+
+      if (Object.keys(categories).length === 0 || totalSec === 0) {
         container.innerHTML = '<div style="color:var(--text-dim)">No data recorded yet today.</div>';
       } else {
-        for(const [cat, secs] of Object.entries(todayData)) {
+        for (const [cat, secs] of Object.entries(categories).sort((a, b) => b[1] - a[1])) {
           const pct = ((secs / totalSec) * 100).toFixed(1);
+          const barColor = barColors[cat] || "var(--accent)";
+          const appsInCat = categoryApps[cat] || {};
+          const topApps = Object.entries(appsInCat).sort((a, b) => b[1] - a[1]).slice(0, 3);
+          // Named apps matter most for "Other" (that used to be an opaque
+          // bucket) but showing them everywhere makes the whole panel
+          // legible instead of just six vague labels.
+          const appLine = topApps.length
+            ? `<div style="font-size:0.85rem; color:var(--text-dim); margin-top:0.2rem;">${
+                topApps.map(([a, s]) => `${a} (${formatTime(s)})`).join(' &middot; ')
+              }</div>`
+            : '';
           const div = document.createElement('div');
+          div.style.marginBottom = '0.9rem';
           div.innerHTML = `
-            <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
               <span>${cat.toUpperCase()}</span>
               <span>${formatTime(secs)} (${pct}%)</span>
             </div>
             <div style="width:100%; background:#222; height:8px; border-radius:4px;">
-              <div style="width:${pct}%; background:var(--orange); height:100%; border-radius:4px;"></div>
+              <div style="width:${pct}%; background:${barColor}; height:100%; border-radius:4px;"></div>
             </div>
+            ${appLine}
           `;
           container.appendChild(div);
         }
