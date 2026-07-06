@@ -1,3 +1,73 @@
+# 🚀 KALKI v1.0.16 — Fresh Install Bootstrapping Fix
+
+**Release Date:** July 6, 2026  
+**Build:** Production  
+
+---
+
+## 🔥 v1.0.16 Patch Notes
+
+- **Fresh Install Crash (`ModuleNotFoundError`):** Fixed a major issue where fresh installations of the packaged app would crash instantly on boot. The installer now packages and deploys `config.example.py` correctly, allowing the app to successfully bootstrap `config.py` on its first launch.
+- **Start Menu Pathing:** Fully hardened the `sys.path` and working directory anchors to resolve execution failures when launched from shortcuts.
+
+---
+
+# 🚀 KALKI v1.0.15 — Start Menu Launch Fix
+
+**Release Date:** July 6, 2026  
+**Build:** Production  
+
+---
+
+## 🔥 v1.0.15 Patch Notes
+
+- **Start Menu Pathing Error (`ModuleNotFoundError`):** Fixed a critical pathing bug where launching KALKI from a shortcut (like the Start Menu or Desktop) would fail to find `config.py` and immediately crash. The application now properly sets its working directory and `sys.path` to its installation folder on boot, regardless of how it was launched.
+
+---
+
+# 🚀 KALKI v1.0.14 — Massive UX Overhaul & Deep Productivity Tracking
+
+**Release Date:** July 6, 2026  
+**Build:** Production  
+
+---
+
+## 🔥 v1.0.14 Patch Notes
+
+- **Platinum Aesthetic Overhaul:** Entire UI shifted from high-contrast neons to a much sleeker, premium "Platinum & Bronze" aesthetic (`#9aa3ad`, `#a9835c`).
+- **Granular App-Level Productivity:** `productivity.py` no longer relies on window titles. It now tracks the actual underlying `.exe` processes (e.g. `chrome.exe`, `cursor.exe`, `discord.exe`). The dashboard now graphs exact time spent per application within each overarching category.
+- **Dynamic Morning Briefings:** KALKI now fetches real-time weather via `wttr.in` and injects it into your morning greeting. It also intelligently changes its greeting tone based on how heavy your calendar and inbox loads are.
+- **Voice & Personality GUI Configuration:** The Setup Wizard (`KALKI_Setup_Wizard.exe`) now includes a dedicated "Voice & Personality" tab letting you change TTS Voices, Listen Mode, and Personality Spice without manually editing config files.
+
+---
+
+# 🚀 KALKI v1.0.13 — Hotfix for UnboundLocalError & AI Hang
+
+**Release Date:** July 5, 2026  
+**Build:** Production  
+
+---
+
+## 🔥 v1.0.13 Patch Notes
+
+- **UnboundLocalError Fix:** Resolved a critical python scoping crash in `server.py` that occurred when requesting email summaries or morning briefings, causing the AI brain to hang indefinitely.
+- **Auto-Update Stability:** Improved validation for OTA updates and remote registry values.
+
+---
+
+# 🚀 KALKI v1.0.12 — Chrome Startup Auto-Launch Patch
+
+**Release Date:** July 5, 2026  
+**Build:** Production  
+
+---
+
+## 🔥 v1.0.12 Patch Notes
+
+- **Chrome Startup Patch:** Removed the aggressive browser auto-launch mechanism during morning startup checks. KALKI now runs silently in the background tray and only opens a browser window when specifically summoned or requested.
+
+---
+
 # 🚀 KALKI v1.0.11 — Startup Hotfix & Config Bootstrap
 
 **Release Date:** July 5, 2026  
