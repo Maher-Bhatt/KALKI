@@ -7,13 +7,11 @@
   <em>Inspired by J.A.R.V.I.S. • Powered by Groq LLaMA • Engineered for power users & developers.</em>
 
   <p>
-    <img src="https://img.shields.io/badge/release-v2.0.0-00c8ff?style=for-the-badge&logo=github" alt="release">
+    <img src="https://img.shields.io/badge/release-v1.0.15-00c8ff?style=for-the-badge&logo=github" alt="release">
     <img src="https://img.shields.io/badge/platform-Windows_10%2B-0078d4?style=for-the-badge&logo=windows" alt="platform">
     <img src="https://img.shields.io/badge/brain-Groq_LLaMA_3.3-ff6b35?style=for-the-badge&logo=meta" alt="brain">
     <img src="https://img.shields.io/badge/engine-Python_3.11+-3776AB?style=for-the-badge&logo=python" alt="python">
     <img src="https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge" alt="license">
-    <img src="https://img.shields.io/badge/monitoring-Sentry-362d59?style=for-the-badge&logo=sentry" alt="sentry">
-    <img src="https://img.shields.io/badge/cloud-Firebase-FFCA28?style=for-the-badge&logo=firebase" alt="firebase">
   </p>
 
   <h3><a href="https://github.com/Maher-Bhatt/KALKI/releases/latest">⬇️ Download KALKI_Setup.exe (Latest Release)</a></h3>
@@ -22,25 +20,23 @@
 
 ---
 
-## 📢 What's New in v2.0 — The Automation Update
+## 📢 What's New in the Latest Updates (v1.0.15)
 
-> KALKI v2.0 completes the master roadmap, transforming KALKI from a read-only script into a true two-way, multimodal, and extensible AI platform.
+> KALKI has evolved into a true two-way, multimodal AI platform with a stunning premium UI and deeper OS-level integrations.
 
-<details>
-<summary><strong>🔥 Click to expand full v2.0 changelog</strong></summary>
+<details open>
+<summary><strong>🔥 Latest Features & Upgrades</strong></summary>
 
 | Feature | Description |
 |:---|:---|
+| **💎 Platinum & Bronze UI** | The HUD has been completely redesigned with a premium `#9aa3ad` and `#a9835c` graphite aesthetic, ditching the old neon colors for a professional, glassmorphic look. |
+| **📈 Process-Level Productivity** | The productivity tracker now uses `psutil` to track exact `.exe` times (e.g., `chrome.exe` vs `code.exe`) rather than relying on easily spoofed window titles. |
+| **🌦️ Dynamic Morning Briefings** | KALKI fetches real-time weather via `wttr.in` and actively reads your calendar/inbox load to dynamically adjust its morning greeting tone. |
+| **⚙️ GUI Setup Wizard** | The `KALKI_Setup_Wizard` now includes a full configuration tab to select TTS Voices, adjust Listen Modes, and toggle Personality Spice without touching any config files! |
 | **🔌 Plugin System** | Drop `.py` scripts into `app/plugins/` to instantly add new skills without editing core code. |
 | **📱 PWA Mobile App** | KALKI is now an installable web app! Load it on your phone over local Wi-Fi. |
 | **🧠 Local Vision Recall** | (Opt-in) Periodic screenshots + local OCR make your screen history searchable. |
 | **📨 Two-Way Gmail/Calendar** | Tell KALKI to send emails or schedule calendar events directly via voice. |
-| **🤖 Managed AI Mode** | Zero API key required! Beginners can check a box to proxy through KALKI's hosted backend. |
-| **🌐 Multi-Language STT** | Hinglish/Indian English (`en-IN`) is now natively supported via Google STT configuration. |
-| **🔕 Adaptive DND** | Suppresses non-urgent alerts when gaming or coding, using LLM priority heuristics. |
-| **📱 Telegram Control** | Chat with KALKI from your phone via a secure, allow-listed Telegram Bot. |
-| **📊 Usage Dashboard** | A beautiful glassmorphic overlay showing your daily screen time and memory node stats. |
-| **🎙️ Custom Routines** | Teach KALKI multi-step voice macros natively (e.g., "when I say Focus, play Spotify and open VS Code"). |
 
 </details>
 
@@ -102,7 +98,7 @@ KALKI lives on your machine, wakes on the command **"Hi KALKI"**, and manages yo
 | **Persistent Moods** | Aggressive mode stays active for 5+ exchanges — no random de-escalation |
 | **Roast-Back Engine** | If you roast KALKI, it fires back harder |
 | **Adaptive Tone** | Professional by default, adjusts to match your energy exactly |
-| **Dynamic Greetings** | Randomized, time-aware greetings — never the same message twice |
+| **Dynamic Greetings** | Randomized, time-aware, weather-aware greetings — never the same message twice |
 
 </details>
 
@@ -158,32 +154,6 @@ KALKI lives on your machine, wakes on the command **"Hi KALKI"**, and manages yo
 | **Diagnostics Overlay** | `Ctrl+Shift+D` reveals FPS, memory, DPR, scale metrics |
 
 </details>
-
----
-
-## 📸 Visual Showcase
-
-<div align="center">
-  <img src="screenshots/poster_features.png" width="48%" alt="Feature Overview">
-  <img src="screenshots/poster_logo.png" width="48%" alt="KALKI Logo">
-</div>
-<br>
-
-<div align="center">
-  <img src="screenshots/kalki-hud.png" width="98%" alt="KALKI HUD — Main Interface">
-</div>
-<br>
-
-<div align="center">
-  <img src="screenshots/hud_tactical.png" width="48%" alt="Tactical Cybersecurity Ops">
-  <img src="screenshots/hud_models.png" width="48%" alt="Neural Model Selection">
-</div>
-<br>
-
-<div align="center">
-  <img src="screenshots/settings_general.png" width="48%" alt="Settings — General">
-  <img src="screenshots/settings_integrations.png" width="48%" alt="Settings — Integrations">
-</div>
 
 ---
 
@@ -266,7 +236,7 @@ KALKI separates its **Brain** (Python backend) from its **Body** (JS HUD) — th
 KALKI/
 ├── 📄 README.md              # You are here
 ├── 📄 LICENSE                 # MIT License
-├── 📄 release_notes.md       # v1.0.4 changelog
+├── 📄 release_notes.md       # changelogs
 │
 ├── 📁 app/                   # ← All source code lives here
 │   ├── server.py             # Main backend — AI routing, tools, API
@@ -283,6 +253,7 @@ KALKI/
 │   │   ├── state.py          # Global state management
 │   │   ├── telemetry.py      # System metrics collection
 │   │   ├── cloud_sync.py     # Firebase sync engine
+│   │   ├── productivity.py   # Process-level time tracking
 │   │   ├── vision_memory.py  # Local OCR & Screen History
 │   │   ├── telegram_mod.py   # Two-way Telegram bot
 │   │   └── updater.py        # Auto-update checker
@@ -310,7 +281,7 @@ KALKI/
 
 1. **Fork** this repository
 2. **Clone** your fork locally
-3. Copy `app/config.example.py` → `app/config.py` and fill in your API keys
+3. Run the setup wizard to generate `app/config.py`
 4. Install dependencies: `pip install -r app/requirements.txt`
 5. Run: `python app/launcher.py`
 6. Submit a **Pull Request**
