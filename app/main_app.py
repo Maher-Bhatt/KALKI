@@ -17,6 +17,9 @@ if not os.path.exists(_cfg_path) and os.path.exists(_example_path):
     import shutil
     shutil.copy(_example_path, _cfg_path)
 
+os.chdir(_boot_dir)
+sys.path.insert(0, _boot_dir)
+
 import config
 
 def add_to_startup():
