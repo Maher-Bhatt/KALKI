@@ -1,5 +1,5 @@
 #define MyAppName "KALKI"
-#define MyAppVersion "1.0.15"
+#define MyAppVersion "1.0.16"
 #define MyAppPublisher "KALKI Technologies"
 #define MyAppExeName "KALKI.exe"
 
@@ -41,6 +41,7 @@ Source: "..\..\browsers\*"; DestDir: "{app}\browsers"; Flags: ignoreversion recu
 ; Assets and structure
 Source: "..\..\assets\*"; DestDir: "{app}\assets"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
 Source: "..\index.html"; DestDir: "{app}"; Flags: ignoreversion; Components: core
+Source: "..\config.example.py"; DestDir: "{app}"; Flags: ignoreversion; Components: core
 Source: "..\..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion; Components: core
 
 [Dirs]

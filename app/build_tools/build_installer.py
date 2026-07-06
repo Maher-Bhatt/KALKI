@@ -18,8 +18,8 @@ def main():
     with open(version_info_path, "w", encoding="utf-8") as f:
         f.write("""VSVersionInfo(
   ffi=FixedFileInfo(
-    filevers=(1, 0, 15, 0),
-    prodvers=(1, 0, 15, 0),
+    filevers=(1, 0, 16, 0),
+    prodvers=(1, 0, 16, 0),
     mask=0x3f,
     flags=0x0,
     OS=0x40004,
@@ -34,12 +34,12 @@ def main():
         '040904B0',
         [StringStruct('CompanyName', 'KALKI Technologies'),
         StringStruct('FileDescription', 'KALKI AI Desktop Assistant'),
-        StringStruct('FileVersion', '1.0.15'),
+        StringStruct('FileVersion', '1.0.16'),
         StringStruct('InternalName', 'kalki_assistant'),
         StringStruct('LegalCopyright', '© 2026 KALKI Technologies. All rights reserved.'),
         StringStruct('OriginalFilename', 'KALKI.exe'),
         StringStruct('ProductName', 'KALKI AI Assistant'),
-        StringStruct('ProductVersion', '1.0.15')])
+        StringStruct('ProductVersion', '1.0.16')])
       ]), 
     VarFileInfo([VarStruct('Translation', [1033, 1200])])
   ]
@@ -82,6 +82,14 @@ def main():
             
         cmd.append(script)
         run_cmd(" ".join(cmd))
+        
+    # Copy config.example.py to build dist folders
+    import shutil
+    for folder in ["KALKI", "KALKI_Setup_Wizard", "KALKI_Server", "KALKI_Listener"]:
+        dest = os.path.join("dist", folder, "config.example.py")
+        if os.path.exists(os.path.join("dist", folder)):
+            shutil.copy("config.example.py", dest)
+            print(f"Copied config.example.py to {dest}")
         
     print("\n--- Compiling Inno Setup Installer ---")
     inno_paths = [
