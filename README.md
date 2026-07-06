@@ -7,7 +7,7 @@
   <em>Inspired by J.A.R.V.I.S. • Powered by Groq LLaMA • Engineered for power users & developers.</em>
 
   <p>
-    <img src="https://img.shields.io/badge/release-v1.0.16-00c8ff?style=for-the-badge&logo=github" alt="release">
+    <img src="https://img.shields.io/badge/release-v1.0.18-00c8ff?style=for-the-badge&logo=github" alt="release">
     <img src="https://img.shields.io/badge/platform-Windows_10%2B-0078d4?style=for-the-badge&logo=windows" alt="platform">
     <img src="https://img.shields.io/badge/brain-Groq_LLaMA_3.3-ff6b35?style=for-the-badge&logo=meta" alt="brain">
     <img src="https://img.shields.io/badge/engine-Python_3.11+-3776AB?style=for-the-badge&logo=python" alt="python">
@@ -20,7 +20,7 @@
 
 ---
 
-## 📢 What's New in the Latest Updates (v1.0.16)
+## 📢 What's New in the Latest Updates (v1.0.18)
 
 > KALKI has evolved into a true two-way, multimodal AI platform with a stunning premium UI and deeper OS-level integrations.
 
@@ -29,14 +29,13 @@
 
 | Feature | Description |
 |:---|:---|
-| **💎 Platinum & Bronze UI** | The HUD has been completely redesigned with a premium `#9aa3ad` and `#a9835c` graphite aesthetic, ditching the old neon colors for a professional, glassmorphic look. |
-| **📈 Process-Level Productivity** | The productivity tracker now uses `psutil` to track exact `.exe` times (e.g., `chrome.exe` vs `code.exe`) rather than relying on easily spoofed window titles. |
-| **🌦️ Dynamic Morning Briefings** | KALKI fetches real-time weather via `wttr.in` and actively reads your calendar/inbox load to dynamically adjust its morning greeting tone. |
-| **⚙️ GUI Setup Wizard** | The `KALKI_Setup_Wizard` now includes a full configuration tab to select TTS Voices, adjust Listen Modes, and toggle Personality Spice without touching any config files! |
-| **🔌 Plugin System** | Drop `.py` scripts into `app/plugins/` to instantly add new skills without editing core code. |
-| **📱 PWA Mobile App** | KALKI is now an installable web app! Load it on your phone over local Wi-Fi. |
-| **🧠 Local Vision Recall** | (Opt-in) Periodic screenshots + local OCR make your screen history searchable. |
-| **📨 Two-Way Gmail/Calendar** | Tell KALKI to send emails or schedule calendar events directly via voice. |
+| **☁️ Native Claude Support** | Implemented native Anthropic Claude completions (`ask_anthropic` and `ask_anthropic_stream`) with direct SSE token streaming. |
+| **⚙️ 12-Tab Settings Board** | Redesigned configurations board with 12 tabs to map role models (Chat, Vision, Coding, Voice), toggle alerts/telemetry, and manage backups. |
+| **🔒 Secure API Key Vault** | Integrated hardware-bound Windows DPAPI and native keyring storage so API secrets are encrypted and persistent across updates. |
+| **🧠 Semantic Memory Bank** | Added a fully interactive memory manager in the settings panel to inspect, store, or delete long-term facts. |
+| **📁 One-Click Local Backup** | Safeguard configurations, memories, and productivity history into secure encrypted ZIP files with full restore. |
+| **⚡ Real-Time Streaming** | Chat completions now stream tokens directly into the chat interface via Server-Sent Events (SSE), achieving sub-second response times. |
+| **Restored shortcuts** | mutex-backed launchers restore active instances, and input parameters are guarded to prevent OS crashes. |
 
 </details>
 

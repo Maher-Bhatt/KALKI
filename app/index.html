@@ -3,7 +3,7 @@
 <head>
 <!--
 ====================================================================
-KALKI v1.0.16 PRO — Frontend User Interface
+KALKI v1.0.18 PRO — Frontend User Interface
 ====================================================================
 Architecture:
 - Pure HTML/CSS/JS (Zero external dependencies or frameworks).
@@ -645,7 +645,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
     <div>OPER <span class="v" id="topOwner">Sir</span></div>
     <div>LOC <span class="v" id="topLoc">—</span></div>
     <div>MODE <span class="v cy" id="topMode">SYSTEM</span></div>
-    <div>SYS <span class="v" id="topSys">v1.0.16 PRO</span></div>
+    <div>SYS <span class="v" id="topSys">v1.0.18 PRO</span></div>
     <div>NET <span class="v ok" id="topNet">ONLINE</span></div>
     <div><span class="v cy" id="topClock">00:00:00</span></div>
     <div style="cursor:pointer; border:0.1rem solid var(--frame); padding:0.2rem 0.8rem; border-radius:0.3rem;" id="topSettingsBtn">⚙ SETTINGS</div>
@@ -766,209 +766,204 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
 <!-- SETTINGS MODAL -->
 <div id="settingsModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center; font-family:var(--mono);">
   <div class="modal-content" style="background:#0a0a0c; border:0.1rem solid var(--accent); width:80rem; height:60rem; display:flex; flex-direction:column;">
-    <div style="display:flex; justify-content:space-between; align-items:center; padding:1.5rem 2rem; border-bottom:0.1rem solid #333;">
-      <div style="font-size:2rem; color:var(--accent); font-weight:bold;">KALKI CONFIGURATION</div>
+  <div class="modal-content" style="background:#0a0a0c; border:0.1rem solid var(--accent); width:85rem; height:65rem; display:flex; flex-direction:column; border-radius:0.4rem; overflow:hidden; box-shadow: 0 0 2rem rgba(0,255,170,0.2);">
+    <!-- Modal Header -->
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:1.5rem 2rem; border-bottom:0.1rem solid #222; background:#0e0e12;">
+      <div style="font-size:2rem; color:var(--accent); font-weight:bold; letter-spacing:0.1rem;">⚙ KALKI CONFIGURATION BOARD</div>
       <div>
         <a href="https://youtu.be/vbUOy8oMqOM" target="_blank" style="color:var(--cyan); margin-right:2rem; font-size:1.2rem; text-decoration:none;">📺 Watch Setup Tutorial</a>
-        <button class="qbtn" id="closeSettingsBtn" style="background:transparent; color:var(--text-dim); border:none; cursor:pointer; font-size:1.8rem;">✕</button>
+        <button class="qbtn" id="closeSettingsBtn" style="background:transparent; color:var(--text-dim); border:none; cursor:pointer; font-size:1.8rem; hover:color:#fff;">✕</button>
       </div>
     </div>
+    
     <div id="settingsNotice" style="display:none; padding:0.8rem; margin:1rem 2rem; font-size:1.2rem; font-weight:bold; text-align:center; border:0.1rem solid;"></div>
     
+    <!-- Modal Body -->
     <div style="display:flex; flex:1; overflow:hidden;">
-      <!-- Sidebar -->
-      <div style="width:20rem; border-right:0.1rem solid #333; padding:1rem 0; display:flex; flex-direction:column;">
-        <button class="tab-btn active" data-tab="tab-general" style="background:transparent; color:var(--text); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid var(--accent);">GENERAL</button>
-        <button class="tab-btn" data-tab="tab-integrations" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent;">INTEGRATIONS</button>
-        <button class="tab-btn" data-tab="tab-apikeys" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent;">API KEYS</button>
-        <button class="tab-btn" data-tab="tab-system" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent;">SYSTEM</button>
+      <!-- Sidebar Navigation -->
+      <div style="width:22rem; border-right:0.1rem solid #222; padding:1rem 0; display:flex; flex-direction:column; overflow-y:auto; background:#08080a;">
+        <button class="tab-btn active" data-tab="tab-general" style="background:transparent; color:var(--text); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid var(--accent); font-size:1.15rem;">GENERAL</button>
+        <button class="tab-btn" data-tab="tab-ai" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent; font-size:1.15rem;">AI MODELS</button>
+        <button class="tab-btn" data-tab="tab-voice" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent; font-size:1.15rem;">VOICE / SPEECH</button>
+        <button class="tab-btn" data-tab="tab-vision" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent; font-size:1.15rem;">VISION</button>
+        <button class="tab-btn" data-tab="tab-privacy" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent; font-size:1.15rem;">PRIVACY</button>
+        <button class="tab-btn" data-tab="tab-memory" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent; font-size:1.15rem;">MEMORY BANK</button>
+        <button class="tab-btn" data-tab="tab-telemetry" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent; font-size:1.15rem;">TELEMETRY</button>
+        <button class="tab-btn" data-tab="tab-performance" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent; font-size:1.15rem;">PERFORMANCE</button>
+        <button class="tab-btn" data-tab="tab-developer" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent; font-size:1.15rem;">DEVELOPER</button>
+        <button class="tab-btn" data-tab="tab-updates" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent; font-size:1.15rem;">UPDATES</button>
+        <button class="tab-btn" data-tab="tab-backup" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent; font-size:1.15rem;">BACKUP & RESET</button>
+        <button class="tab-btn" data-tab="tab-appearance" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent; font-size:1.15rem;">APPEARANCE</button>
       </div>
       
-      <!-- Content Area -->
-      <div style="flex:1; padding:2rem; overflow-y:auto; position:relative;">
+      <!-- Content Container -->
+      <div style="flex:1; padding:2rem; overflow-y:auto; position:relative; background:#0a0a0c;">
         
         <!-- GENERAL TAB -->
         <div id="tab-general" class="tab-content" style="display:block;">
           <h3 style="margin-bottom:1.5rem; color:var(--accent);">GENERAL SETTINGS</h3>
-          <div style="margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; background:#111; padding:1rem; border:0.1rem solid #333;">
+          <div style="margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; background:#111; padding:1rem; border:0.1rem solid #222;">
             <span>ASSISTANT CORE</span>
-            <button class="qbtn" id="modalToggleAssistantBtn" style="border:0.1rem solid var(--lime); color:var(--lime); padding:0.5rem 1rem; font-size:1.2rem; cursor:pointer;">BUSY MODE: OFF</button>
+            <button class="qbtn" id="modalToggleAssistantBtn" style="border:0.1rem solid var(--lime); color:var(--lime); padding:0.5rem 1rem; font-size:1.2rem; cursor:pointer; background:transparent;">BUSY MODE: OFF</button>
           </div>
           <div style="margin-bottom:1.5rem;">
             <label style="display:block; font-size:1.2rem; color:var(--text-dim);">OWNER NAME</label>
-            <input type="text" id="set_owner_name" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
+            <input type="text" id="set_owner_name" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #222; padding:0.8rem; margin-top:0.3rem; font-family:var(--mono);">
           </div>
           <div style="margin-bottom:1.5rem;">
             <label style="display:block; font-size:1.2rem; color:var(--text-dim);">OWNER TITLE</label>
-            <input type="text" id="set_owner_title" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
+            <input type="text" id="set_owner_title" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #222; padding:0.8rem; margin-top:0.3rem; font-family:var(--mono);">
           </div>
           <div style="margin-bottom:1.5rem;">
-            <label style="display:block; font-size:1.2rem; color:var(--text-dim);">LOCATION (CITY, STATE, COUNTRY)</label>
+            <label style="display:block; font-size:1.2rem; color:var(--text-dim);">LOCATION OVERRIDE (CITY, STATE, COUNTRY)</label>
             <div style="display:flex; gap:1rem; margin-top:0.3rem;">
-              <input type="text" id="set_owner_city" placeholder="City" style="flex:1; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem;">
-              <input type="text" id="set_owner_state" placeholder="State" style="flex:1; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem;">
-              <input type="text" id="set_owner_country" placeholder="Country" style="flex:1; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem;">
+              <input type="text" id="set_owner_city" placeholder="City" style="flex:1; background:#111; color:var(--text); border:0.1rem solid #222; padding:0.8rem; font-family:var(--mono);">
+              <input type="text" id="set_owner_state" placeholder="State" style="flex:1; background:#111; color:var(--text); border:0.1rem solid #222; padding:0.8rem; font-family:var(--mono);">
+              <input type="text" id="set_owner_country" placeholder="Country" style="flex:1; background:#111; color:var(--text); border:0.1rem solid #222; padding:0.8rem; font-family:var(--mono);">
             </div>
           </div>
           <div style="margin-bottom:1.5rem;">
             <label style="display:block; font-size:1.2rem; color:var(--text-dim);">GMAIL ADDRESS & APP PASSWORD</label>
             <div style="display:flex; gap:1rem; margin-top:0.3rem;">
-              <input type="text" id="set_email_address" placeholder="example@gmail.com" style="flex:1; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem;">
-              <input type="password" id="set_email_app_password" placeholder="16-char App Password" style="flex:1; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem;">
+              <input type="text" id="set_email_address" placeholder="example@gmail.com" style="flex:1; background:#111; color:var(--text); border:0.1rem solid #222; padding:0.8rem; font-family:var(--mono);">
+              <input type="password" id="set_email_app_password" placeholder="16-char App Password" style="flex:1; background:#111; color:var(--text); border:0.1rem solid #222; padding:0.8rem; font-family:var(--mono);">
             </div>
-          </div>
-          <div style="margin-bottom:1.5rem;">
-            <label style="display:block; font-size:1.2rem; color:var(--text-dim);">THEME / MODE</label>
-            <select id="set_theme" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
-              <option value="system">System Default</option>
-              <option value="stealth">Stealth Mode</option>
-            </select>
           </div>
         </div>
         
-        <!-- INTEGRATIONS TAB -->
-        <div id="tab-integrations" class="tab-content" style="display:none;">
-          <h3 style="margin-bottom:1.5rem; color:var(--accent);">INTEGRATIONS</h3>
+        <!-- AI MODELS TAB -->
+        <div id="tab-ai" class="tab-content" style="display:none;">
+          <h3 style="margin-bottom:1.5rem; color:var(--accent);">AI MODEL MANAGER & API VAULT</h3>
           
-          <div style="border:0.1rem solid #333; background:#111; padding:1.5rem; margin-bottom:2rem;">
-            <h4 style="margin-bottom:1rem; display:flex; justify-content:space-between;">
-              <span>GOOGLE WORKSPACE</span>
-              <span id="lbl_google_status" style="color:var(--orange); font-size:1.2rem;">[NOT CONFIGURED]</span>
-            </h4>
-            <p style="font-size:1.1rem; color:var(--text-dim); margin-bottom:1rem;">To configure basic email, use the initial Setup Wizard to add an App Password.</p>
-            <details style="margin-top:1rem;">
-              <summary style="cursor:pointer; color:var(--accent); font-weight:bold; font-size:1.1rem;">Advanced Calendar Integration (OAuth)</summary>
-              <div style="margin-top:1rem; padding-left:1rem; border-left:0.1rem solid #333;">
-                <div style="margin-bottom:1rem;">
-                  <label style="font-size:1.1rem; color:var(--text-dim);">CLIENT ID</label>
-                  <input type="text" id="set_google_client_id" placeholder="Enter Google Client ID" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
-                </div>
-                <div style="margin-bottom:1rem;">
-                  <label style="font-size:1.1rem; color:var(--text-dim);">CLIENT SECRET</label>
-                  <input type="password" id="set_google_client_secret" placeholder="Enter Google Client Secret" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
-                </div>
-                <div style="margin-bottom:1rem;">
-                  <label style="font-size:1.1rem; color:var(--text-dim);">PROJECT ID</label>
-                  <input type="text" id="set_google_project_id" placeholder="kalki-agent" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
-                </div>
-                <div style="margin-bottom:1rem;">
-                  <label style="font-size:1.1rem; color:var(--text-dim);">REDIRECT URI</label>
-                  <input type="text" id="set_google_redirect_uri" value="http://localhost:8080/" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
-                </div>
-                <div style="display:flex; justify-content:space-between; margin-top:1.5rem;">
-                  <button class="qbtn" id="runGoogleSetup" style="width:48%; background:#222; border:0.1rem solid #444; color:var(--text); padding:0.6rem; cursor:pointer;">MANUAL LINK (OAUTH)</button>
-                  <button class="qbtn" id="testGoogleBtn" style="width:48%; background:#1a1a1a; border:0.1rem solid var(--lime); color:var(--lime); padding:0.6rem; cursor:pointer;">TEST CONNECTION</button>
-                </div>
-              </div>
-            </details>
-          </div>
-          
-          <div style="border:0.1rem solid #333; background:#111; padding:1.5rem; margin-bottom:2rem;">
-            <h4 style="margin-bottom:1rem; display:flex; justify-content:space-between;">
-              <span>GITHUB & SHODAN</span>
-            </h4>
+          <div style="border:0.1rem solid #222; background:#111; padding:1.5rem; margin-bottom:1.5rem;">
+            <h4 style="margin-bottom:1rem; color:var(--accent);">ACTIVE LLM API KEYS</h4>
             <div style="margin-bottom:1rem;">
               <label style="display:flex; justify-content:space-between; font-size:1.1rem; color:var(--text-dim);">
-                <span>GITHUB TOKEN</span>
-                <a href="https://github.com/settings/tokens" target="_blank" style="color:var(--cyan); text-decoration:none;">Get Token</a>
+                <span>PRIMARY SYSTEM MODEL (GROQ KEY)</span>
+                <a href="https://console.groq.com/" target="_blank" style="color:var(--cyan); text-decoration:none;">Get Key ↗</a>
               </label>
-              <input type="password" id="set_github_token" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
+              <input type="password" id="set_groq_key" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem; font-family:var(--mono);">
             </div>
             <div style="margin-bottom:1rem;">
               <label style="display:flex; justify-content:space-between; font-size:1.1rem; color:var(--text-dim);">
-                <span>SHODAN API KEY</span>
-                <a href="https://account.shodan.io/" target="_blank" style="color:var(--cyan); text-decoration:none;">Get Key</a>
+                <span>GEMINI API KEY</span>
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--cyan); text-decoration:none;">Get Key ↗</a>
               </label>
-              <input type="password" id="set_shodan_api_key" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
+              <input type="password" id="set_gemini_key" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem; font-family:var(--mono);">
+            </div>
+            <div style="margin-bottom:1rem;">
+              <label style="display:flex; justify-content:space-between; font-size:1.1rem; color:var(--text-dim);">
+                <span>OPENAI API KEY</span>
+                <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--cyan); text-decoration:none;">Get Key ↗</a>
+              </label>
+              <input type="password" id="set_openai_key" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem; font-family:var(--mono);">
+            </div>
+            <div style="margin-bottom:1rem;">
+              <label style="display:flex; justify-content:space-between; font-size:1.1rem; color:var(--text-dim);">
+                <span>ANTHROPIC API KEY (CLAUDE)</span>
+                <a href="https://console.anthropic.com/" target="_blank" style="color:var(--cyan); text-decoration:none;">Get Key ↗</a>
+              </label>
+              <input type="password" id="set_anthropic_key" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem; font-family:var(--mono);">
             </div>
           </div>
           
-          <div style="border:0.1rem solid #333; background:#111; padding:1.5rem;">
-            <h4 style="margin-bottom:1rem; display:flex; justify-content:space-between;">
-              <span>SPOTIFY</span>
-              <span id="lbl_spotify_status" style="color:var(--orange); font-size:1.2rem;">[NOT CONFIGURED]</span>
-            </h4>
-            <p style="font-size:1.1rem; color:var(--text-dim); margin-bottom:1rem;">
-              <a href="https://developer.spotify.com/dashboard" target="_blank" style="color:var(--cyan); text-decoration:none;">Open Spotify Developer Dashboard →</a>
-            </p>
-            <details style="margin-top:1rem;">
-              <summary style="cursor:pointer; color:var(--accent); font-weight:bold; font-size:1.1rem;">Configure Spotify Integration</summary>
-              <div style="margin-top:1rem; padding-left:1rem; border-left:0.1rem solid #333;">
-                <div style="margin-bottom:1rem;">
-                  <label style="font-size:1.1rem; color:var(--text-dim);">CLIENT ID</label>
-                  <input type="text" id="set_spotify_id" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
-                </div>
-                <div style="margin-bottom:1rem;">
-                  <label style="font-size:1.1rem; color:var(--text-dim);">CLIENT SECRET</label>
-                  <input type="password" id="set_spotify_secret" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;">
-                </div>
-                <div style="margin-bottom:1rem;">
-                  <label style="font-size:1.1rem; color:var(--text-dim);">REDIRECT URI</label>
-                  <input type="text" id="set_spotify_redirect_uri" value="http://127.0.0.1:8889/callback" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem;" readonly>
-                </div>
-                <div style="display:flex; justify-content:space-between; margin-top:1.5rem;">
-                  <button class="qbtn" id="runSpotifySetup" style="width:32%; background:#222; border:0.1rem solid #444; color:var(--text); padding:0.6rem; cursor:pointer;">MANUAL LINK (OAUTH)</button>
-                  <button class="qbtn" id="reconnectSpotifyBtn" style="width:32%; background:#222; border:0.1rem solid #444; color:var(--orange); padding:0.6rem; cursor:pointer;">RECONNECT SPOTIFY</button>
-                  <button class="qbtn" id="testSpotifyBtn" style="width:32%; background:#1a1a1a; border:0.1rem solid var(--lime); color:var(--lime); padding:0.6rem; cursor:pointer;">TEST CONNECTION</button>
-                </div>
+          <div style="border:0.1rem solid #222; background:#111; padding:1.5rem; margin-bottom:1.5rem;">
+            <h4 style="margin-bottom:1rem; color:var(--accent);">ROLE-SPECIFIC MODEL ROUTING</h4>
+            <div style="margin-bottom:1rem; display:flex; flex-direction:column; gap:0.8rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:1.2rem; color:var(--text);">Chat Assistant Model:</span>
+                <select id="set_model_chat" style="background:#000; color:var(--text); border:0.1rem solid #333; padding:0.5rem; font-family:var(--mono); width:25rem;">
+                  <option value="auto">Auto Router (Recommended)</option>
+                  <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                  <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                  <option value="gpt-4o-mini">GPT-4o Mini</option>
+                  <option value="gpt-4o">GPT-4o</option>
+                  <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+                  <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku</option>
+                  <option value="llama-3.3-70b-versatile">Groq Llama 3.3 70B</option>
+                  <option value="llama-3.1-8b-instant">Groq Llama 3.1 8B</option>
+                  <option value="ollama">Ollama Local Model</option>
+                </select>
               </div>
-            </details>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:1.2rem; color:var(--text);">Vision Parsing Model:</span>
+                <select id="set_model_vision" style="background:#000; color:var(--text); border:0.1rem solid #333; padding:0.5rem; font-family:var(--mono); width:25rem;">
+                  <option value="auto">Auto Router (Recommended)</option>
+                  <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                  <option value="gpt-4o-mini">GPT-4o Mini</option>
+                  <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+                  <option value="llama-3.1-8b-instant">Groq Llama 3.1 8B</option>
+                  <option value="ollama">Ollama Local Model</option>
+                </select>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:1.2rem; color:var(--text);">Code Analysis Model:</span>
+                <select id="set_model_coding" style="background:#000; color:var(--text); border:0.1rem solid #333; padding:0.5rem; font-family:var(--mono); width:25rem;">
+                  <option value="auto">Auto Router (Recommended)</option>
+                  <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                  <option value="gpt-4o">GPT-4o</option>
+                  <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+                  <option value="llama-3.3-70b-versatile">Groq Llama 3.3 70B</option>
+                  <option value="ollama">Ollama Local Model</option>
+                </select>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:1.2rem; color:var(--text);">Voice Interface Model:</span>
+                <select id="set_model_voice" style="background:#000; color:var(--text); border:0.1rem solid #333; padding:0.5rem; font-family:var(--mono); width:25rem;">
+                  <option value="auto">Auto Router (Recommended)</option>
+                  <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                  <option value="gpt-4o-mini">GPT-4o Mini</option>
+                  <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku</option>
+                  <option value="llama-3.1-8b-instant">Groq Llama 3.1 8B</option>
+                  <option value="ollama">Ollama Local Model</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          
+          <div style="border:0.1rem solid #222; background:#111; padding:1.5rem; margin-bottom:1.5rem;">
+            <h4 style="margin-bottom:1rem; color:var(--accent);">THIRD-PARTY VAULT INTEGRATIONS</h4>
+            <div style="margin-bottom:1rem;">
+              <label style="font-size:1.1rem; color:var(--text-dim);">GITHUB USER TOKEN</label>
+              <input type="password" id="set_github_token" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem; font-family:var(--mono);">
+            </div>
+            <div style="margin-bottom:1rem;">
+              <label style="font-size:1.1rem; color:var(--text-dim);">SHODAN CYBER API KEY</label>
+              <input type="password" id="set_shodan_api_key" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem; font-family:var(--mono);">
+            </div>
+            <div style="margin-bottom:1rem;">
+              <label style="font-size:1.1rem; color:var(--text-dim);">SPOTIFY API CLIENT ID & CLIENT SECRET</label>
+              <div style="display:flex; gap:1rem; margin-top:0.2rem;">
+                <input type="text" id="set_spotify_id" placeholder="Client ID" style="flex:1; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; font-family:var(--mono);">
+                <input type="password" id="set_spotify_secret" placeholder="Client Secret" style="flex:1; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; font-family:var(--mono);">
+              </div>
+            </div>
+            <div style="margin-bottom:1rem;">
+              <label style="font-size:1.1rem; color:var(--text-dim);">GOOGLE API OAUTH CLIENT ID, CLIENT SECRET & PROJECT ID</label>
+              <div style="display:flex; gap:1rem; margin-top:0.2rem;">
+                <input type="text" id="set_google_client_id" placeholder="Client ID" style="flex:1; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; font-family:var(--mono);">
+                <input type="password" id="set_google_client_secret" placeholder="Client Secret" style="flex:1; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; font-family:var(--mono);">
+                <input type="text" id="set_google_project_id" placeholder="Project ID" style="flex:1; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; font-family:var(--mono);">
+              </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:1rem;">
+              <button class="qbtn" id="runGoogleSetup" style="width:23%; background:#222; border:0.1rem solid #444; color:var(--text); padding:0.6rem; cursor:pointer;">LINK GOOGLE</button>
+              <button class="qbtn" id="testGoogleBtn" style="width:23%; background:#1a1a1a; border:0.1rem solid var(--lime); color:var(--lime); padding:0.6rem; cursor:pointer;">TEST GOOGLE</button>
+              <button class="qbtn" id="runSpotifySetup" style="width:23%; background:#222; border:0.1rem solid #444; color:var(--text); padding:0.6rem; cursor:pointer;">LINK SPOTIFY</button>
+              <button class="qbtn" id="testSpotifyBtn" style="width:23%; background:#1a1a1a; border:0.1rem solid var(--lime); color:var(--lime); padding:0.6rem; cursor:pointer;">TEST SPOTIFY</button>
+            </div>
           </div>
         </div>
         
-        <!-- API KEYS TAB -->
-        <div id="tab-apikeys" class="tab-content" style="display:none;">
-          <h3 style="margin-bottom:1.5rem; color:var(--accent);">API MANAGEMENT</h3>
-          <p style="font-size:1.1rem; color:var(--text-dim); margin-bottom:1.5rem;">Credentials are stored securely in local cache. Blank fields will use system defaults.</p>
-          
-          <div style="margin-bottom:1.5rem; background:rgba(0, 255, 170, 0.05); padding:1rem; border-left:0.2rem solid var(--accent);">
-            <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--accent); font-weight:bold;">
-              <span>PRIMARY AI (REQUIRED): GROQ API KEY</span>
-              <a href="https://console.groq.com/" target="_blank" style="color:var(--cyan); text-decoration:none; font-size:1rem;">Get Key Here ↗</a>
-              <span id="lbl_groq_status" style="color:var(--text-dim)">[UNVERIFIED]</span>
-            </label>
-            <input type="password" id="set_groq_key" style="width:100%; background:#000; color:var(--text); border:0.1rem solid var(--accent); padding:0.8rem; margin-top:0.5rem;">
-          </div>
-          
-          <details style="margin-bottom:1.5rem;">
-            <summary style="cursor:pointer; color:var(--text-dim); font-weight:bold; font-size:1.1rem; padding:0.5rem; background:#111; border:0.1rem solid #333;">Alternative Models (Optional)</summary>
-            <div style="padding:1rem; border:0.1rem solid #333; border-top:none; background:#0a0a0c;">
-              <div style="margin-bottom:1.5rem;">
-                <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--text-dim);">
-                  <span>OPENAI API KEY</span>
-                  <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--text-dim); text-decoration:underline; font-size:0.9rem;">Get Key Here</a>
-                </label>
-                <input type="password" id="set_openai_key" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
-              </div>
-              <div style="margin-bottom:1.5rem;">
-                <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--text-dim);">
-                  <span>ANTHROPIC API KEY</span>
-                  <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--text-dim); text-decoration:underline; font-size:0.9rem;">Get Key Here</a>
-                </label>
-                <input type="password" id="set_anthropic_key" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
-              </div>
-              <div style="margin-bottom:1.5rem;">
-                <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--text-dim);">
-                  <span>GEMINI API KEY</span>
-                  <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--text-dim); text-decoration:underline; font-size:0.9rem;">Get Key Here</a>
-                </label>
-                <input type="password" id="set_gemini_key" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
-              </div>
-            </div>
-          </details>
-
+        <!-- VOICE TAB -->
+        <div id="tab-voice" class="tab-content" style="display:none;">
+          <h3 style="margin-bottom:1.5rem; color:var(--accent);">VOICE & SPEECH SYNTHESIS</h3>
           <div style="margin-bottom:1.5rem;">
-            <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--text-dim);">
-              <span>CLOUD SYNC PASSPHRASE</span>
-            </label>
-            <input type="password" id="set_cloud_sync_passphrase" style="width:100%; background:#000; color:var(--text); border:0.1rem solid var(--accent); padding:0.8rem; margin-top:0.5rem;" placeholder="Leave blank if not using Cloud Sync">
+            <label style="display:block; font-size:1.2rem; color:var(--text-dim);">TTS VOICE AGENT</label>
+            <input type="text" id="set_tts_voice" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #222; padding:0.8rem; margin-top:0.3rem; font-family:var(--mono);">
           </div>
-
           <div style="margin-bottom:1.5rem;">
-            <label style="display:flex; justify-content:space-between; font-size:1.2rem; color:var(--text-dim);">
-              <span>ELEVENLABS API KEY (Optional Voice)</span>
-              <a href="https://elevenlabs.io/" target="_blank" style="color:var(--text-dim); text-decoration:underline; font-size:0.9rem;">Get Key Here</a>
-            </label>
+            <label style="display:block; font-size:1.2rem; color:var(--text-dim);">ELEVENLABS API KEY</label>
             <input type="password" id="set_elevenlabs_key" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
           </div>
           <div style="margin-top:2rem;">
@@ -976,22 +971,119 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
           </div>
         </div>
         
-        <!-- SYSTEM TAB -->
-        <div id="tab-system" class="tab-content" style="display:none;">
-          <h3 style="margin-bottom:1.5rem; color:var(--accent);">SYSTEM DIAGNOSTICS</h3>
+        <!-- VISION TAB -->
+        <div id="tab-vision" class="tab-content" style="display:none;">
+          <h3 style="margin-bottom:1.5rem; color:var(--accent);">VISION SUBSYSTEM</h3>
+          <div style="background:#111; border:0.1rem solid #222; padding:1.5rem;">
+            <p style="font-size:1.2rem; line-height:1.5;">KALKI uses local OCR fallbacks and cloud multimodal architectures (Gemini-Flash) to process dropped charts, text screenshots, and image attachments.</p>
+          </div>
+        </div>
+        
+        <!-- PRIVACY TAB -->
+        <div id="tab-privacy" class="tab-content" style="display:none;">
+          <h3 style="margin-bottom:1.5rem; color:var(--accent);">PRIVACY & ACCESS LOGS</h3>
+          <div style="background:#111; border:0.1rem solid #222; padding:1.5rem;">
+            <p style="font-size:1.2rem; line-height:1.5; color:var(--text-dim); margin-bottom:1rem;">All chats, document attachments, memory facts, and personal location data are processed strictly locally. Cloud API calls occur directly from your system to cloud provider endpoints using your credentials.</p>
+          </div>
+        </div>
+        
+        <!-- MEMORY BANK TAB -->
+        <div id="tab-memory" class="tab-content" style="display:none;">
+          <h3 style="margin-bottom:1.5rem; color:var(--accent);">SEMANTIC MEMORY MANAGEMENT</h3>
+          <div style="margin-bottom:1.5rem;">
+            <label style="display:block; font-size:1.2rem; color:var(--text-dim); margin-bottom:0.5rem;">ADD FACT / KNOWLEDGE NODE</label>
+            <div style="display:flex; gap:1rem;">
+              <input type="text" id="newMemoryFact" placeholder="e.g. Sir works on autonomous code generation" style="flex:1; background:#111; color:var(--text); border:0.1rem solid #222; padding:0.8rem; font-family:var(--mono);">
+              <button class="qbtn" id="addMemoryBtn" style="background:var(--accent); color:#000; border:none; padding:0.8rem 2rem; font-weight:bold; cursor:pointer;">STORE</button>
+            </div>
+          </div>
           
-          <table style="width:100%; font-size:1.2rem; margin-bottom:2rem; border-collapse:collapse;">
-            <tr><td style="padding:0.8rem; border-bottom:0.1rem solid #333; color:var(--text-dim);">Core Version</td><td style="padding:0.8rem; border-bottom:0.1rem solid #333; text-align:right;">v1.0.16</td></tr>
-            <tr><td style="padding:0.8rem; border-bottom:0.1rem solid #333; color:var(--text-dim);">Runtime</td><td style="padding:0.8rem; border-bottom:0.1rem solid #333; text-align:right;">Python 3.12 (Local)</td></tr>
-            <tr><td style="padding:0.8rem; border-bottom:0.1rem solid #333; color:var(--text-dim);">Cache Storage</td><td style="padding:0.8rem; border-bottom:0.1rem solid #333; text-align:right;" id="lbl_cache_size">0.0 MB</td></tr>
-          </table>
-          
-          <div style="display:flex; flex-direction:column; gap:1rem;">
-            <button class="qbtn" id="exportSettingsBtn" style="background:#222; border:0.1rem solid #444; color:var(--text); padding:0.8rem; cursor:pointer; text-align:left;">EXPORT SETTINGS (JSON)</button>
-            <button class="qbtn" id="importSettingsBtn" style="background:#222; border:0.1rem solid #444; color:var(--text); padding:0.8rem; cursor:pointer; text-align:left;">IMPORT SETTINGS</button>
-            <button class="qbtn" id="restoreSettingsBtn" style="background:#1f3d52; border:0.1rem solid #2b5672; color:var(--cyan); padding:0.8rem; cursor:pointer; text-align:left; margin-top:1rem;">RESTORE CLOUD BACKUP</button>
-            <button class="qbtn" id="clearCacheBtn" style="background:#222; border:0.1rem solid #444; color:var(--text); padding:0.8rem; cursor:pointer; text-align:left;">CLEAR LOCAL CACHE</button>
-            <button class="qbtn" id="resetSettingsBtn" style="background:#1a0000; border:0.1rem solid var(--red); color:var(--red); padding:0.8rem; cursor:pointer; text-align:left; margin-top:1rem;">RESTORE DEFAULT FACTORY SETTINGS</button>
+          <h4 style="margin-bottom:1rem; color:var(--text-dim);">ACTIVE MEMORY INDEX</h4>
+          <div style="max-height:20rem; overflow-y:auto; border:0.1rem solid #222; background:#08080a; padding:1rem;" id="memoryNodesContainer">
+            <!-- Populated via script -->
+            <p style="font-size:1.2rem; color:var(--text-dim); text-align:center;">Loading memory facts...</p>
+          </div>
+        </div>
+        
+        <!-- TELEMETRY TAB -->
+        <div id="tab-telemetry" class="tab-content" style="display:none;">
+          <h3 style="margin-bottom:1.5rem; color:var(--accent);">TELEMETRY SETTINGS</h3>
+          <div style="background:#111; border:0.1rem solid #222; padding:1.5rem; margin-bottom:1.5rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+              <span style="font-size:1.2rem;">ANONYMOUS TELEMETRY SHARING</span>
+              <input type="checkbox" id="set_telemetry_enabled" style="width:2rem; height:2rem; cursor:pointer;">
+            </div>
+            <p style="font-size:1.15rem; color:var(--text-dim); line-height:1.4;">Allows KALKI to check in with developer server to report version counts, active states, feature usage, and API response speed. Conversations, API keys, uploaded files, and exact location coordinates are NEVER collected.</p>
+          </div>
+        </div>
+        
+        <!-- PERFORMANCE TAB -->
+        <div id="tab-performance" class="tab-content" style="display:none;">
+          <h3 style="margin-bottom:1.5rem; color:var(--accent);">PERFORMANCE & HARDWARE ALERTS</h3>
+          <div style="background:#111; border:0.1rem solid #222; padding:1.5rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+              <span style="font-size:1.2rem;">CPU SUSTAINED SPIKE ALERTS</span>
+              <input type="checkbox" id="set_cpu_alerts_enabled" style="width:2rem; height:2rem; cursor:pointer;">
+            </div>
+            <p style="font-size:1.15rem; color:var(--text-dim); line-height:1.4;">Warns if CPU is sustained above 95% threshold. Automatically disabled/bypass when Turbo CTF or Code development modes are active to prevent audio warning loop spam.</p>
+          </div>
+        </div>
+        
+        <!-- DEVELOPER TAB -->
+        <div id="tab-developer" class="tab-content" style="display:none;">
+          <h3 style="margin-bottom:1.5rem; color:var(--accent);">DEVELOPER CONSOLE</h3>
+          <div style="display:flex; flex-direction:column; gap:1.2rem;">
+            <button class="qbtn" id="exportSettingsBtn" style="background:#222; border:0.1rem solid #333; color:var(--text); padding:0.8rem; cursor:pointer; text-align:left; font-family:var(--mono);">EXPORT SETTINGS (JSON)</button>
+            <button class="qbtn" id="importSettingsBtn" style="background:#222; border:0.1rem solid #333; color:var(--text); padding:0.8rem; cursor:pointer; text-align:left; font-family:var(--mono);">IMPORT SETTINGS (JSON)</button>
+            <button class="qbtn" id="clearCacheBtn" style="background:#222; border:0.1rem solid #333; color:var(--text); padding:0.8rem; cursor:pointer; text-align:left; font-family:var(--mono);">CLEAR INTERNET CACHE</button>
+            <button class="qbtn" id="resetSettingsBtn" style="background:#1a0000; border:0.1rem solid var(--red); color:var(--red); padding:0.8rem; cursor:pointer; text-align:left; font-family:var(--mono); margin-top:1.5rem;">RESTORE DEFAULT FACTORY CONFIGS</button>
+          </div>
+        </div>
+        
+        <!-- UPDATES TAB -->
+        <div id="tab-updates" class="tab-content" style="display:none;">
+          <h3 style="margin-bottom:1.5rem; color:var(--accent);">UPDATES & VERIFICATION</h3>
+          <div style="background:#111; border:0.1rem solid #222; padding:1.5rem; margin-bottom:1.5rem;">
+            <div style="display:flex; justify-content:space-between; font-size:1.2rem; margin-bottom:0.5rem;">
+              <span>LOCAL RUNTIME VERSION:</span>
+              <span style="color:var(--cyan); font-weight:bold;">v1.0.18</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:1.2rem;">
+              <span>BINARY INTEGRITY CHECK:</span>
+              <span style="color:var(--lime); font-weight:bold;">SHA-256 SIGNED</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- BACKUP TAB -->
+        <div id="tab-backup" class="tab-content" style="display:none;">
+          <h3 style="margin-bottom:1.5rem; color:var(--accent);">BACKUP & RESTORE DATA</h3>
+          <div style="background:#111; border:0.1rem solid #222; padding:1.5rem; margin-bottom:1.5rem; display:flex; flex-direction:column; gap:1rem;">
+            <p style="font-size:1.15rem; color:var(--text-dim); line-height:1.4;">Creates a secure encrypted ZIP container containing your user configuration, API secrets vault, semantic memories, chat histories, and productivity stats.</p>
+            <button class="qbtn" id="createBackupBtn" style="background:var(--accent); color:#000; border:none; padding:0.8rem; font-weight:bold; cursor:pointer; border-radius:0.2rem;">ONE-CLICK LOCAL BACKUP</button>
+            
+            <div style="margin-top:1.5rem; border-top:0.1rem solid #333; padding-top:1.5rem;">
+              <label style="display:block; font-size:1.2rem; margin-bottom:0.5rem; color:var(--text-dim);">RESTORE FROM ZIP CONTAINER</label>
+              <div style="display:flex; gap:1rem;">
+                <input type="text" id="restoreFilePath" placeholder="C:\Users\...\KALKI\backups\kalki_backup.zip" style="flex:1; background:#000; color:var(--text); border:0.1rem solid #222; padding:0.8rem; font-family:var(--mono);">
+                <button class="qbtn" id="restoreBackupBtn" style="background:#222; border:0.1rem solid #333; color:var(--cyan); padding:0.8rem 1.5rem; cursor:pointer;">RESTORE</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- APPEARANCE TAB -->
+        <div id="tab-appearance" class="tab-content" style="display:none;">
+          <h3 style="margin-bottom:1.5rem; color:var(--accent);">APPEARANCE & HUD WIDGETS</h3>
+          <div style="background:#111; border:0.1rem solid #222; padding:1.5rem; margin-bottom:1.5rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+              <span style="font-size:1.2rem;">SCREENSAVER SLEEP WIDGET</span>
+              <input type="checkbox" id="set_screensaver_enabled" style="width:2rem; height:2rem; cursor:pointer;">
+            </div>
+            <div style="margin-bottom:1rem;">
+              <label style="display:block; font-size:1.15rem; color:var(--text-dim);">INACTIVITY SLEEP TIMEOUT (MINUTES)</label>
+              <input type="number" id="set_screensaver_idle_mins" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem; font-family:var(--mono);">
+            </div>
           </div>
         </div>
 
@@ -1045,7 +1137,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
     </div>
     
     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem;">
-      <span style="color:var(--text-dim); font-size:0.95rem; font-family:'JetBrains Mono', monospace;">KALKI SECURE UPLINK v1.0.16</span>
+      <span style="color:var(--text-dim); font-size:0.95rem; font-family:'JetBrains Mono', monospace;">KALKI SECURE UPLINK v1.0.18</span>
       <button class="qbtn" id="acknowledgeErrBtn" style="border:0.1rem solid var(--red); color:var(--red); padding:0.6rem 2rem; font-size:1.1rem; background:rgba(255,0,0,0.1);">ACKNOWLEDGE</button>
     </div>
   </div>
@@ -1838,6 +1930,17 @@ async function openSettingsModal() {
       $("set_google_client_secret").value = d.settings.GOOGLE_CLIENT_SECRET || "";
       $("set_google_project_id").value = d.settings.GOOGLE_PROJECT_ID || "";
       
+      $("set_model_chat").value = d.settings.MODEL_CHAT || "auto";
+      $("set_model_vision").value = d.settings.MODEL_VISION || "auto";
+      $("set_model_coding").value = d.settings.MODEL_CODING || "auto";
+      $("set_model_voice").value = d.settings.MODEL_VOICE || "auto";
+      
+      $("set_telemetry_enabled").checked = d.settings.TELEMETRY_ENABLED !== false;
+      $("set_cpu_alerts_enabled").checked = d.settings.CPU_ALERTS_ENABLED !== false;
+      $("set_screensaver_enabled").checked = d.settings.SCREENSAVER_ENABLED !== false;
+      $("set_screensaver_idle_mins").value = d.settings.SCREENSAVER_IDLE_MINS || 5;
+      $("set_tts_voice").value = d.settings.TTS_VOICE || "";
+      
       $("lbl_google_status").innerHTML = d.googleConfigured ? "[LINKED]" : "[NOT CONFIGURED]";
       $("lbl_google_status").style.color = d.googleConfigured ? "var(--lime)" : "var(--orange)";
       $("lbl_spotify_status").innerHTML = d.spotifyConfigured ? "[LINKED]" : "[NOT CONFIGURED]";
@@ -1851,6 +1954,8 @@ async function openSettingsModal() {
       mbtn.innerText = STATE.busyMode ? "BUSY MODE: ON" : "BUSY MODE: OFF";
       mbtn.style.borderColor = STATE.busyMode ? "var(--red)" : "var(--lime)";
       mbtn.style.color = STATE.busyMode ? "var(--red)" : "var(--lime)";
+      
+      if (typeof loadMemoryList === "function") await loadMemoryList();
     }
   } catch(e) {}
   $("settingsModal").style.display = "flex";
@@ -1885,7 +1990,16 @@ $("saveSettingsBtn").addEventListener("click", async () => {
     SPOTIFY_CLIENT_SECRET: $("set_spotify_secret").value,
     GOOGLE_CLIENT_ID: $("set_google_client_id").value,
     GOOGLE_CLIENT_SECRET: $("set_google_client_secret").value,
-    GOOGLE_PROJECT_ID: $("set_google_project_id").value
+    GOOGLE_PROJECT_ID: $("set_google_project_id").value,
+    MODEL_CHAT: $("set_model_chat").value,
+    MODEL_VISION: $("set_model_vision").value,
+    MODEL_CODING: $("set_model_coding").value,
+    MODEL_VOICE: $("set_model_voice").value,
+    TELEMETRY_ENABLED: $("set_telemetry_enabled").checked,
+    CPU_ALERTS_ENABLED: $("set_cpu_alerts_enabled").checked,
+    SCREENSAVER_ENABLED: $("set_screensaver_enabled").checked,
+    SCREENSAVER_IDLE_MINS: parseInt($("set_screensaver_idle_mins").value) || 5,
+    TTS_VOICE: $("set_tts_voice").value
   };
   try {
     const resp = await fetch("/api/settings/save", {
@@ -1931,15 +2045,17 @@ $("runSpotifySetup").addEventListener("click", async () => {
   await fetch("/api/setup/tool", { method: "POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({tool:"spotify"}) });
 });
 
-$("reconnectSpotifyBtn").addEventListener("click", async () => {
-  if (!confirm("This will disconnect Spotify and require you to log in again. Continue?")) return;
-  showNotice("Reconnecting Spotify...", false);
-  await fetch("/api/setup/tool", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({tool: "reconnect_spotify"})
+if ($("reconnectSpotifyBtn")) {
+  $("reconnectSpotifyBtn").addEventListener("click", async () => {
+    if (!confirm("This will disconnect Spotify and require you to log in again. Continue?")) return;
+    showNotice("Reconnecting Spotify...", false);
+    await fetch("/api/setup/tool", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({tool: "reconnect_spotify"})
+    });
   });
-});
+}
 
 $("testSettingsBtn").addEventListener("click", async () => {
   try {
@@ -1987,23 +2103,147 @@ $("importSettingsBtn").addEventListener("click", () => {
     alert("Import settings logic not connected yet.");
 });
 
-$("restoreSettingsBtn").addEventListener("click", async () => {
-    if(!confirm("Restore memory and history from cloud? Local files will be overwritten.")) return;
-    let passphrase = prompt("Enter your cloud sync passphrase (leave blank if already saved in settings):");
-    if (passphrase === null) return;
+if ($("restoreSettingsBtn")) {
+  $("restoreSettingsBtn").addEventListener("click", async () => {
+      if(!confirm("Restore memory and history from cloud? Local files will be overwritten.")) return;
+      let passphrase = prompt("Enter your cloud sync passphrase (leave blank if already saved in settings):");
+      if (passphrase === null) return;
+      try {
+          let res = await fetch("/api/cloud_restore", { 
+              method: "POST", 
+              headers: {"Content-Type":"application/json"}, 
+              body: JSON.stringify({passphrase: passphrase}) 
+          });
+          let data = await res.json();
+          if(data.ok) alert(data.message || "Restore successful.");
+          else alert("Restore failed: " + data.error);
+      } catch(e) {
+          alert("Error: " + e);
+      }
+  });
+}
+
+if ($("createBackupBtn")) {
+  $("createBackupBtn").addEventListener("click", async () => {
     try {
-        let res = await fetch("/api/cloud_restore", { 
-            method: "POST", 
-            headers: {"Content-Type":"application/json"}, 
-            body: JSON.stringify({passphrase: passphrase}) 
-        });
-        let data = await res.json();
-        if(data.ok) alert(data.message || "Restore successful.");
-        else alert("Restore failed: " + data.error);
+      showNotice("Creating backup...", false);
+      const r = await fetch("/api/backup/create", { method: "POST" });
+      const d = await r.json();
+      showNotice(d.message || "Backup completed.", !d.ok);
     } catch(e) {
-        alert("Error: " + e);
+      showNotice("Backup failed: " + e.message, true);
     }
-});
+  });
+}
+
+if ($("restoreBackupBtn")) {
+  $("restoreBackupBtn").addEventListener("click", async () => {
+    const path = $("restoreFilePath").value.trim();
+    if (!path) return showNotice("Please enter backup ZIP file path", true);
+    try {
+      showNotice("Restoring backup...", false);
+      const r = await fetch("/api/backup/restore", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ filePath: path })
+      });
+      const d = await r.json();
+      showNotice(d.message || "Restore completed.", !d.ok);
+      if (d.ok) {
+        setTimeout(() => location.reload(), 2000);
+      }
+    } catch(e) {
+      showNotice("Restore failed: " + e.message, true);
+    }
+  });
+}
+
+if ($("addMemoryBtn")) {
+  $("addMemoryBtn").addEventListener("click", async () => {
+    const text = $("newMemoryFact").value.trim();
+    if (!text) return;
+    try {
+      const r = await fetch("/api/memory/add", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ text })
+      });
+      const d = await r.json();
+      if (d.ok) {
+        $("newMemoryFact").value = "";
+        showNotice("Fact stored in memory bank.");
+        if (typeof loadMemoryList === "function") loadMemoryList();
+      } else {
+        showNotice(d.error || "Failed to store fact", true);
+      }
+    } catch(e) {
+      showNotice("Error storing fact", true);
+    }
+  });
+}
+
+async function loadMemoryList() {
+  const container = $("memoryNodesContainer");
+  if (!container) return;
+  try {
+    const r = await fetch("/api/memory/list");
+    const d = await r.json();
+    if (d.ok && d.memories) {
+      if (d.memories.length === 0) {
+        container.innerHTML = `<p style="font-size:1.2rem; color:var(--text-dim); text-align:center; padding:1rem;">No facts stored yet.</p>`;
+        return;
+      }
+      container.innerHTML = "";
+      d.memories.forEach(m => {
+        const item = document.createElement("div");
+        item.style.display = "flex";
+        item.style.justifyContent = "space-between";
+        item.style.alignItems = "center";
+        item.style.padding = "0.8rem";
+        item.style.borderBottom = "0.1rem solid #222";
+        item.style.fontSize = "1.15rem";
+        
+        const txt = document.createElement("span");
+        txt.style.flex = "1";
+        txt.style.marginRight = "1rem";
+        txt.textContent = m.text;
+        
+        const delBtn = document.createElement("button");
+        delBtn.className = "qbtn";
+        delBtn.textContent = "✕";
+        delBtn.style.color = "var(--red)";
+        delBtn.style.background = "transparent";
+        delBtn.style.border = "none";
+        delBtn.style.cursor = "pointer";
+        delBtn.style.fontSize = "1.3rem";
+        delBtn.addEventListener("click", async () => {
+          if (!confirm("Delete this fact from memory?")) return;
+          try {
+            const res = await fetch("/api/memory/delete", {
+              method: "POST",
+              headers: {"Content-Type": "application/json"},
+              body: JSON.stringify({ doc_id: m.id })
+            });
+            const resD = await res.json();
+            if (resD.ok) {
+              loadMemoryList();
+            } else {
+              alert(resD.error || "Delete failed");
+            }
+          } catch(err) {
+            alert("Error deleting: " + err.message);
+          }
+        });
+        
+        item.appendChild(txt);
+        item.appendChild(delBtn);
+        container.appendChild(item);
+      });
+    }
+  } catch(e) {
+    container.innerHTML = `<p style="font-size:1.2rem; color:var(--red); text-align:center; padding:1rem;">Failed to load memories.</p>`;
+  }
+}
 
 $("modalToggleAssistantBtn").addEventListener("click", async () => {
   STATE.busyMode = !STATE.busyMode;

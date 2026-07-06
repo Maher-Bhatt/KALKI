@@ -92,6 +92,7 @@ def start_services():
     shell = not getattr(sys, "frozen", False)
     
     print("Starting KALKI Server...")
+    os.environ["KALKI_DESKTOP_MODE"] = "1"
     server_process = subprocess.Popen(server_cmd, shell=shell, creationflags=flags)
     
     # Give the server a moment to start
@@ -161,10 +162,29 @@ def on_closing():
     window.hide()
     return False  # Prevent the window from actually being destroyed
 
+def restore_existing_instance():
+    try:
+        import win32gui
+        import win32con
+        hwnd = win32gui.FindWindow(None, "KALKI AI Assistant")
+        if hwnd:
+            try:
+                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
+                win32gui.BringWindowToTop(hwnd)
+                win32gui.SetForegroundWindow(hwnd)
+            except Exception:
+                pass
+            return True
+    except Exception as e:
+        print(f"Error restoring existing window: {e}")
+    return False
+
 if __name__ == '__main__':
     _lock = acquire_single_instance()
     if _lock is None:
-        print("KALKI is already running - exiting to avoid a duplicate instance.")
+        print("KALKI is already running - restoring existing window.")
+        restore_existing_instance()
         sys.exit(0)
 
     # 1. First-time setup check

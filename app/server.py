@@ -415,12 +415,19 @@ def add_memory(fact):
             log(f"cloud memory sync failed: {e}")
         return len(mems)
 
-def get_memory_prompt():
-    mems = load_memory()
-    if not mems:
+def get_memory_prompt(query=""):
+    try:
+        import semantic_memory
+        mems = semantic_memory.memory.search(query, top_k=10) if query else []
+        if not mems:
+            mems = [d for d in semantic_memory.memory.list_all() if d.get("type", "fact") != "project"][:15]
+        if not mems:
+            return ""
+        lines = "\n".join(f"- {m['text']}" for m in mems)
+        return f"\n\nMEMORY BANK - facts about Sir:\n{lines}"
+    except Exception as e:
+        log(f"get_memory_prompt error: {e}")
         return ""
-    lines = "\n".join(f"- {m['fact']}" for m in mems[-30:])
-    return f"\n\nMEMORY BANK - facts about Sir:\n{lines}"
 
 def load_history():
     try:
@@ -2474,6 +2481,11 @@ CONVERSATIONAL TONE:
 - Vary your phrasing — don't open every reply the same way
 - Contractions are fine: "you're", "I'll", "that's", "let's"
 - Be human, not mechanical
+
+FILE INGESTION & MEMORY PROTOCOLS:
+- If a user uploads/attaches a file, the text contents will be appended to their message wrapped in '--- FILE: filename ---' tags. You must read, analyze, process, or debug this file content directly to answer their request.
+- You have the `store_user_memory` tool. When Sir shares any personal facts, preferences, project details, or other information he would expect a smart assistant to remember (e.g. 'I work on the KALKI assistant', 'my favorite editor is VS Code'), you MUST call `store_user_memory` to store it permanently. Do not ask for permission before storing memory.
+- You have the `mark_emails_as_read` tool. When Sir asks you to mark emails/inbox as read, invoke this tool immediately to perform the action.
 """
 
 def hardware_prompt_block():
@@ -2493,7 +2505,7 @@ def hardware_prompt_block():
     )
 
 
-def build_system_prompt():
+def build_system_prompt(query=""):
     now = datetime.now()
     # removed local import
     state_block = ""
@@ -2508,7 +2520,7 @@ def build_system_prompt():
         SYSTEM_PROMPT_BASE
         + state_block
         + hardware_prompt_block()
-        + get_memory_prompt()
+        + get_memory_prompt(query)
         + f"\n\nCURRENT TIME: {now.strftime('%I:%M %p')}"
         + f"\nCURRENT DATE: {now.strftime('%A, %B %d, %Y')}"
     )
@@ -2794,6 +2806,17 @@ def execute_tool_call(tool_name, tool_args):
                 return text[:50000] # Return up to 50k chars to prevent token overflow
             except Exception as e:
                 return f"Failed to read URL: {e}"
+        elif tool_name == "mark_emails_as_read":
+            import mail as mailmod
+            return mailmod.mark_all_read()
+        elif tool_name == "store_user_memory":
+            import semantic_memory
+            fact = args.get("fact", "")
+            importance = args.get("importance", 5)
+            if fact:
+                semantic_memory.memory.add_memory(fact, importance=importance, memory_type="fact")
+                return "Preference stored to persistent memory bank."
+            return "Failed: empty fact."
         elif tool_name in PLUGINS:
             return str(PLUGINS[tool_name].execute(args))
         else:
@@ -3010,15 +3033,200 @@ def ask_gemini(messages, model=None, use_tools=True):
             return ask_gemini(messages, model, use_tools=False)
         return _strip_think((msg.get("content") or "").strip())
 
-def ask_ai(user_messages, force_search=False):
-    """Returns the AI text reply. Routes based on active model and falls back to Ollama."""
-    sys_prompt = build_system_prompt()
+def ask_anthropic(messages, model=None):
+    """Retrieve completions from Anthropic Claude API."""
+    api_key = getattr(config, "ANTHROPIC_API_KEY", "")
+    if not api_key:
+        raise ValueError("Anthropic API key is missing, Sir.")
+    model = model or "claude-3-5-sonnet-20241022"
     
+    system_content = ""
+    filtered_messages = []
+    for m in messages:
+        if m.get("role") == "system":
+            system_content += m.get("content", "") + "\n"
+        else:
+            filtered_messages.append({
+                "role": m.get("role"),
+                "content": m.get("content", "")
+            })
+            
+    payload_dict = {
+        "model": model,
+        "max_tokens": 1024,
+        "system": system_content.strip(),
+        "messages": filtered_messages,
+        "temperature": 0.7
+    }
+    
+    payload = json.dumps(payload_dict).encode()
+    req = urllib.request.Request(
+        "https://api.anthropic.com/v1/messages",
+        data=payload,
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0",
+        },
+        method="POST"
+    )
+    with urllib.request.urlopen(req, timeout=45) as r:
+        data = json.loads(r.read())
+        content = data.get("content", [])
+        reply = ""
+        for block in content:
+            if block.get("type") == "text":
+                reply += block.get("text", "")
+        return _strip_think(reply.strip())
+
+def ask_anthropic_stream(user_messages, model=None):
+    """Yields AI tokens from Anthropic Claude streaming API."""
+    api_key = getattr(config, "ANTHROPIC_API_KEY", "")
+    if not api_key:
+        raise ValueError("Anthropic API key is missing, Sir.")
+    model = model or "claude-3-5-sonnet-20241022"
+    
+    system_content = ""
+    filtered_messages = []
+    for m in user_messages:
+        if m.get("role") == "system":
+            system_content += m.get("content", "") + "\n"
+        else:
+            filtered_messages.append({
+                "role": m.get("role"),
+                "content": m.get("content", "")
+            })
+            
+    payload_dict = {
+        "model": model,
+        "max_tokens": 1024,
+        "system": system_content.strip(),
+        "messages": filtered_messages,
+        "temperature": 0.7,
+        "stream": True
+    }
+    
+    payload = json.dumps(payload_dict).encode()
+    req = urllib.request.Request(
+        "https://api.anthropic.com/v1/messages",
+        data=payload,
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0",
+        },
+        method="POST"
+    )
+    with urllib.request.urlopen(req, timeout=45) as r:
+        for line in r:
+            line_str = line.decode("utf-8").strip()
+            if line_str.startswith("data:"):
+                data_body = line_str[5:].strip()
+                try:
+                    chunk = json.loads(data_body)
+                    if chunk.get("type") == "content_block_delta":
+                        token = chunk["delta"].get("text", "")
+                        if token:
+                            yield token
+                except Exception:
+                    pass
+
+def ask_ai_stream(user_messages):
+    """Yields AI tokens for stream. Routes based on active model and falls back to Ollama."""
     last_user = ""
     for m in reversed(user_messages):
         if m.get("role") == "user":
             last_user = m.get("content", "")
             break
+            
+    sys_prompt = build_system_prompt(last_user)
+    msgs = [{"role": "system", "content": sys_prompt}] + user_messages
+    
+    from core import model_manager
+    chosen, is_offline = model_manager.route_request(STATE["model"])
+    
+    if chosen == "ollama" or is_offline:
+        try:
+            model = pick_ollama_model()
+            if not model:
+                yield "No local Ollama model found, Sir."
+                return
+            payload = json.dumps({"model": model, "messages": msgs, "stream": True}).encode()
+            req = urllib.request.Request(f"{config.OLLAMA_URL}/api/chat", data=payload, headers={"Content-Type": "application/json"}, method="POST")
+            with urllib.request.urlopen(req, timeout=120) as r:
+                for line in r:
+                    if line:
+                        data = json.loads(line.decode("utf-8"))
+                        token = data.get("message", {}).get("content", "")
+                        if token:
+                            yield token
+            return
+        except Exception as e:
+            log(f"Ollama stream failed: {e}")
+            yield f"Offline model failed, Sir: {e}"
+            return
+
+    if chosen.startswith("claude-"):
+        try:
+            for token in ask_anthropic_stream(user_messages, model=chosen):
+                yield token
+            return
+        except Exception as e:
+            log(f"Anthropic stream failed: {e}. Falling back to default Groq...")
+            chosen = "llama-3.3-70b-versatile"
+
+    api_url = None
+    headers = {"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
+    
+    if chosen.startswith("gemini-"):
+        api_url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        headers["Authorization"] = f"Bearer {config.GEMINI_API_KEY}"
+    elif chosen.startswith("gpt-"):
+        api_url = "https://api.openai.com/v1/chat/completions"
+        headers["Authorization"] = f"Bearer {config.OPENAI_API_KEY}"
+    else:
+        api_url = "https://api.groq.com/openai/v1/chat/completions"
+        headers["Authorization"] = f"Bearer {config.GROQ_API_KEY}"
+        
+    payload_dict = {
+        "model": chosen,
+        "messages": msgs,
+        "max_tokens": 1024,
+        "temperature": 0.7,
+        "stream": True
+    }
+    
+    try:
+        req = urllib.request.Request(api_url, data=json.dumps(payload_dict).encode(), headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=45) as r:
+            for line in r:
+                line_str = line.decode("utf-8").strip()
+                if line_str.startswith("data:"):
+                    data_body = line_str[5:].strip()
+                    if data_body == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(data_body)
+                        token = chunk["choices"][0]["delta"].get("content", "")
+                        if token:
+                            yield token
+                    except Exception:
+                        pass
+    except Exception as e:
+        log(f"Cloud stream failed for {chosen}: {e}")
+        yield f"API link failed, Sir: {e}"
+
+def ask_ai(user_messages, force_search=False):
+    """Returns the AI text reply. Routes based on active model and falls back to Ollama."""
+    last_user = ""
+    for m in reversed(user_messages):
+        if m.get("role") == "user":
+            last_user = m.get("content", "")
+            break
+            
+    sys_prompt = build_system_prompt(last_user)
             
     # Vulgar mood swings detection — PERSISTENT across exchanges
     vulgar_keywords = ["fuck", "shit", "idiot", "stupid", "asshole", "bitch",
@@ -3121,6 +3329,13 @@ def ask_ai(user_messages, force_search=False):
             return ask_openai(msgs, model=chosen)
         except Exception as e:
             log(f"OpenAI failed: {e}. Falling back to default Groq...")
+            chosen = "llama-3.3-70b-versatile"
+
+    if chosen.startswith("claude-"):
+        try:
+            return ask_anthropic(msgs, model=chosen)
+        except Exception as e:
+            log(f"Anthropic failed: {e}. Falling back to default Groq...")
             chosen = "llama-3.3-70b-versatile"
 
     if chosen == "ollama":
@@ -3236,6 +3451,9 @@ def _focus_kalki_window():
 def open_browser_to_ui():
     """Bring existing KALKI tab forward, OR launch Chrome to it."""
     global _browser_opened_once
+    if os.environ.get("KALKI_DESKTOP_MODE") == "1":
+        log("Desktop mode active - suppressing Chrome tab launch.")
+        return
 
     url = f"http://localhost:{config.PORT}/"
 
@@ -3458,6 +3676,22 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_response(404); self.end_headers()
             return
 
+        if path == "/api/support":
+            import webbrowser
+            url = getattr(config, "SUPPORT_URL", "https://buymeacoffee.com/maherbhatt")
+            webbrowser.open(url)
+            self._json({"ok": True})
+            return
+
+        if path == "/api/metrics":
+            try:
+                from core import model_manager
+                data = model_manager.get_usage_metrics()
+                self._json({"ok": True, "metrics": data})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)})
+            return
+
         if path == "/api/dashboard":
             try:
                 import core.productivity
@@ -3562,6 +3796,8 @@ class Handler(BaseHTTPRequestHandler):
                 models += ["gemini-2.5-flash", "gemini-2.5-pro"]
             if getattr(config, "OPENAI_API_KEY", "") and not getattr(config, "OPENAI_API_KEY", "").startswith("PASTE_"):
                 models += ["gpt-4o-mini", "gpt-4o"]
+            if getattr(config, "ANTHROPIC_API_KEY", "") and not getattr(config, "ANTHROPIC_API_KEY", "").startswith("PASTE_"):
+                models += ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022"]
             models += AVAILABLE_GROQ_MODELS
             self._json({"models": models})
             return
@@ -3580,6 +3816,18 @@ class Handler(BaseHTTPRequestHandler):
                 "GOOGLE_CLIENT_ID": getattr(config, "GOOGLE_CLIENT_ID", ""),
                 "GOOGLE_CLIENT_SECRET": getattr(config, "GOOGLE_CLIENT_SECRET", ""),
                 "GOOGLE_PROJECT_ID": getattr(config, "GOOGLE_PROJECT_ID", ""),
+                "TELEMETRY_ENABLED": getattr(config, "TELEMETRY_ENABLED", True),
+                "CPU_ALERTS_ENABLED": getattr(config, "CPU_ALERTS_ENABLED", False),
+                "SCREENSAVER_ENABLED": getattr(config, "SCREENSAVER_ENABLED", True),
+                "SCREENSAVER_IDLE_MINS": getattr(config, "SCREENSAVER_IDLE_MINS", 5),
+                "OWNER_CITY": getattr(config, "OWNER_CITY", ""),
+                "OWNER_STATE": getattr(config, "OWNER_STATE", ""),
+                "OWNER_COUNTRY": getattr(config, "OWNER_COUNTRY", ""),
+                "EMAIL_ADDRESS": getattr(config, "EMAIL_ADDRESS", ""),
+                "EMAIL_APP_PASSWORD": getattr(config, "EMAIL_APP_PASSWORD", ""),
+                "GITHUB_TOKEN": getattr(config, "GITHUB_TOKEN", ""),
+                "SHODAN_API_KEY": getattr(config, "SHODAN_API_KEY", ""),
+                "TTS_VOICE": getattr(config, "TTS_VOICE", "")
             }
             # removed local import
             
@@ -3882,6 +4130,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/chat":
             messages = body.get("messages") or []
             is_voice = (body.get("source") == "voice")
+            stream_req = body.get("stream", False)
             # Wake + command in one breath arrives here (not /api/wake), so
             # surface the HUD on any voice command too — otherwise the browser
             # only ever opens for a bare "Hey KALKI" with no follow-up.
@@ -3908,21 +4157,72 @@ class Handler(BaseHTTPRequestHandler):
                 speak(local_reply)
                 append_history(user_text, local_reply)
                 _record_exchange(local_reply)
-                self._json({"reply": local_reply, "source": "local"})
+                if stream_req:
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'text/event-stream')
+                    self.send_header('Cache-Control', 'no-cache')
+                    self.send_header('Connection', 'keep-alive')
+                    self.end_headers()
+                    self.wfile.write(f"data: {json.dumps({'token': local_reply, 'done': True})}\n\n".encode())
+                    self.wfile.flush()
+                else:
+                    self._json({"reply": local_reply, "source": "local"})
                 return
 
-            try:
-                # Prepend recent conversation so KALKI remembers context.
-                convo = load_history()[-8:] + messages
-                reply = ask_ai(convo)
-            except Exception as e:
-                reply = f"My link hiccuped, Sir — say that again? ({str(e)[:80]})"
-            reply = maybe_add_joke_offer(user_text, reply)
-            speak(reply)
-            append_history(user_text, reply)
-            _record_exchange(reply)
-            self._json({"reply": reply, "source": "ai", "model": STATE["model"]})
-            return
+            if stream_req:
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/event-stream')
+                self.send_header('Cache-Control', 'no-cache')
+                self.send_header('Connection', 'keep-alive')
+                self.end_headers()
+                
+                full_reply = []
+                start_time = time.time()
+                for token in ask_ai_stream(messages):
+                    full_reply.append(token)
+                    self.wfile.write(f"data: {json.dumps({'token': token})}\n\n".encode())
+                    self.wfile.flush()
+                
+                reply_str = "".join(full_reply)
+                speak(reply_str)
+                append_history(user_text, reply_str)
+                _record_exchange(reply_str)
+                
+                # Track usage metrics
+                latency = (time.time() - start_time) * 1000
+                try:
+                    from core import model_manager
+                    model_manager.track_usage(STATE["model"], len(user_text)//4, len(reply_str)//4, latency)
+                except Exception:
+                    pass
+                
+                self.wfile.write(f"data: {json.dumps({'done': True, 'model': STATE['model']})}\n\n".encode())
+                self.wfile.flush()
+                return
+            else:
+                start_time = time.time()
+                try:
+                    # Prepend recent conversation so KALKI remembers context.
+                    convo = load_history()[-8:] + messages
+                    reply = ask_ai(convo)
+                except Exception as e:
+                    reply = f"My link hiccuped, Sir — say that again? ({str(e)[:80]})"
+                
+                reply = maybe_add_joke_offer(user_text, reply)
+                speak(reply)
+                append_history(user_text, reply)
+                _record_exchange(reply)
+                
+                # Track usage metrics
+                latency = (time.time() - start_time) * 1000
+                try:
+                    from core import model_manager
+                    model_manager.track_usage(STATE["model"], len(user_text)//4, len(reply)//4, latency)
+                except Exception:
+                    pass
+                
+                self._json({"reply": reply, "source": "ai", "model": STATE["model"]})
+                return
 
         if path == "/api/command":
             cmd = (body.get("cmd") or "").strip()
@@ -3986,6 +4286,124 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/vault/delete":
             label = (body.get("label") or "").strip()
             self._json({"ok": vault.delete_entry(label)}); return
+
+        if path == "/api/parse_document":
+            name = (body.get("name") or "").strip()
+            data_b64 = (body.get("data") or "").strip()
+            if not name or not data_b64:
+                self._json({"ok": False, "error": "name and data required"}, status=400); return
+            try:
+                import base64
+                from core import file_intelligence
+                file_bytes = base64.b64decode(data_b64)
+                text = file_intelligence.parse_binary_document(name, file_bytes)
+                self._json({"ok": True, "text": text[:100000]})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)}, status=500)
+            return
+
+        if path == "/api/telemetry/checkin":
+            if not getattr(config, "TELEMETRY_ENABLED", True):
+                self._json({"ok": False, "error": "telemetry disabled"}); return
+            try:
+                from core import telemetry
+                event_name = (body.get("event") or "heartbeat").strip()
+                properties = body.get("properties") or {}
+                properties["version"] = getattr(config, "CURRENT_VERSION", "v1.0.17")
+                properties["os"] = os.name
+                telemetry.log_event_anonymous(event_name, properties)
+                self._json({"ok": True})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)})
+            return
+
+        if path == "/api/backup/create":
+            try:
+                import zipfile
+                from datetime import datetime
+                backups_dir = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "backups")
+                os.makedirs(backups_dir, exist_ok=True)
+                ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                backup_zip = os.path.join(backups_dir, f"kalki_backup_{ts}.zip")
+                
+                files_to_backup = [
+                    os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "user_config.json"),
+                    os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "secure_api_vault.enc"),
+                    os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "vault_integrity.sha256"),
+                    os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "semantic_memory.json"),
+                    os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "ai_usage.json"),
+                    os.path.join(BASE_DIR, "data", "memory.json"),
+                    os.path.join(BASE_DIR, "data", "history.json"),
+                    os.path.join(BASE_DIR, "data", "productivity.json")
+                ]
+                with zipfile.ZipFile(backup_zip, "w") as z:
+                    for fp in files_to_backup:
+                        if os.path.exists(fp):
+                            z.write(fp, os.path.basename(fp))
+                self._json({"ok": True, "file": backup_zip})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)})
+            return
+
+        if path == "/api/backup/restore":
+            file_path = (body.get("filepath") or "").strip()
+            if not file_path or not os.path.exists(file_path):
+                self._json({"ok": False, "error": "Invalid file path"}, status=400); return
+            try:
+                import zipfile
+                dest_dir = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI")
+                os.makedirs(dest_dir, exist_ok=True)
+                with zipfile.ZipFile(file_path, "r") as z:
+                    for member in z.infolist():
+                        filename = os.path.basename(member.filename)
+                        if not filename:
+                            continue
+                        if filename in ["memory.json", "history.json", "productivity.json"]:
+                            target = os.path.join(BASE_DIR, "data", filename)
+                        else:
+                            target = os.path.join(dest_dir, filename)
+                        with open(target, "wb") as f_out, z.open(member) as f_in:
+                            f_out.write(f_in.read())
+                self._json({"ok": True, "message": "Restore successful."})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)}, status=500)
+            return
+
+        if path == "/api/memory/list":
+            try:
+                import semantic_memory
+                mems = semantic_memory.memory.list_all()
+                self._json({"ok": True, "memories": mems})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)})
+            return
+
+        if path == "/api/memory/update":
+            doc_id = body.get("id")
+            text = (body.get("text") or "").strip()
+            importance = body.get("importance")
+            mem_type = body.get("type")
+            if not doc_id or not text:
+                self._json({"ok": False, "error": "id and text required"}, status=400); return
+            try:
+                import semantic_memory
+                ok = semantic_memory.memory.update_memory(doc_id, text, importance=importance, memory_type=mem_type)
+                self._json({"ok": ok})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)})
+            return
+
+        if path == "/api/memory/delete":
+            doc_id = body.get("id")
+            if not doc_id:
+                self._json({"ok": False, "error": "id required"}, status=400); return
+            try:
+                import semantic_memory
+                ok = semantic_memory.memory.delete_memory(doc_id)
+                self._json({"ok": ok})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)})
+            return
 
         # ── Vision: uploaded image ─────────────────────
         if path == "/api/vision/image":
@@ -4395,15 +4813,22 @@ def main():
                     last_alert["ram_high"] = now_t
 
                 cpu = psutil.cpu_percent(interval=1)
-                if cpu >= config.CPU_HIGH_PCT:
-                    cpu_high_streak += 1
-                else:
-                    cpu_high_streak = 0
+                cpu_alert_enabled = getattr(config, "CPU_ALERTS_ENABLED", True)
+                if cpu_alert_enabled:
+                    limit_streak = 27 if workflows.ACTIVE_STATE in ["dev", "ctf"] else 3
+                    limit_cpu = 100.0 if workflows.ACTIVE_STATE in ["dev", "ctf"] else config.CPU_HIGH_PCT
+                    
+                    if cpu >= limit_cpu:
+                        cpu_high_streak += 1
+                    else:
+                        cpu_high_streak = 0
 
-                if cpu_high_streak >= 3 and \
-                   now_t - last_alert.get("cpu_sustained", 0) > cooldowns["cpu_sustained"]:
-                    speak(f"Suspicious activity detected on your computer, {config.OWNER_TITLE}. CPU is sustained at {int(cpu)} percent.")
-                    last_alert["cpu_sustained"] = now_t
+                    if cpu_high_streak >= limit_streak and \
+                       now_t - last_alert.get("cpu_sustained", 0) > cooldowns["cpu_sustained"]:
+                        speak(f"Suspicious activity detected on your computer, {config.OWNER_TITLE}. CPU is sustained at {int(cpu)} percent.")
+                        last_alert["cpu_sustained"] = now_t
+                        cpu_high_streak = 0
+                else:
                     cpu_high_streak = 0
 
                 # Proactive Email Alert
@@ -4566,6 +4991,22 @@ def main():
             print(f"Failed to fetch Groq models: {e}")
             
     threading.Thread(target=fetch_groq_models, daemon=True).start()
+
+    try:
+        from core import telemetry
+        telemetry.init_telemetry(config)
+    except Exception as e:
+        log(f"Failed to init telemetry: {e}")
+
+    try:
+        from core import location_provider
+        loc = location_provider.get_resolved_location()
+        config.OWNER_CITY = loc.get("city", config.OWNER_CITY)
+        config.OWNER_STATE = loc.get("state", config.OWNER_STATE)
+        config.OWNER_COUNTRY = loc.get("country", config.OWNER_COUNTRY)
+        print(f"Location resolved: {config.OWNER_CITY}, {config.OWNER_STATE}, {config.OWNER_COUNTRY}")
+    except Exception as e:
+        log(f"Failed to resolve location: {e}")
 
     try:
         import core.productivity

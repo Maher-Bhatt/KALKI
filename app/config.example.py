@@ -143,3 +143,33 @@ CPU_HIGH_PCT         = 95
 # -- Integrations --
 GITHUB_TOKEN = "your_personal_access_token"
 SHODAN_API_KEY = "your_shodan_api_key"
+
+# -- New Config Options v1.0.17 --
+SUPPORT_URL = "https://buymeacoffee.com/maherbhatt"
+CPU_ALERTS_ENABLED = False
+SCREENSAVER_ENABLED = True
+SCREENSAVER_IDLE_MINS = 5
+TELEMETRY_ENABLED = True
+
+# -- Dynamic User Config and Secure Vault Loading --
+try:
+    import json
+    # 1. Load from plaintext user_config.json first
+    if os.path.exists(_USER_CONFIG_PATH):
+        with open(_USER_CONFIG_PATH, "r", encoding="utf-8") as _f:
+            _user_conf = json.load(_f)
+        for _k, _v in _user_conf.items():
+            globals()[_k] = _v
+
+    # 2. Load from secure API Vault (dpapi / keyring / aes) if present
+    try:
+        from core import api_vault
+        # Auto migrate plaintext settings on first launch of new version
+        api_vault.migrate_settings_to_vault(_USER_CONFIG_PATH)
+        # Load all decrypted secrets into configuration variables
+        for _k, _v in api_vault.list_secrets().items():
+            globals()[_k] = _v
+    except Exception as _vault_err:
+        pass
+except Exception as _e:
+    pass

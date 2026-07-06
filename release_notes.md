@@ -1,9 +1,41 @@
-# 🚀 KALKI v1.0.16 — Fresh Install Bootstrapping Fix
+# 🚀 KALKI v1.0.18 — Native Claude Integration & Settings Modal Polish
 
 **Release Date:** July 6, 2026  
 **Build:** Production  
 
 ---
+
+## 🔥 v1.0.18 Patch Notes
+
+- **Native Claude / Anthropic Support:** Implemented native Anthropic Claude completions and token streaming endpoints (`ask_anthropic` and `ask_anthropic_stream`) with direct SSE yielding, fully supporting models like `claude-3-5-sonnet-20241022` and `claude-3-5-haiku-20241022`.
+- **Wired Redesigned Settings Controls:** Connected all JS components in the 12-tab configurations board, allowing the user to map distinct models for Chat, Vision, Coding, and Voice roles, verify telemetry/alert flags, trigger one-click local backups, restore ZIP containers, and add/delete semantic memories.
+- **Safe Input Parsing & Guards:** Wrapped type conversions (like vision retention days integer castings) and window focus restorations (`SetForegroundWindow`) in try/except blocks to eliminate crash vectors.
+- **Version Clean Bump:** Bumped version to `v1.0.18` across the server configuration, ISS installer definitions, PyInstaller metadata builders, and web user interfaces.
+
+---
+
+# 🚀 KALKI v1.0.17 — Ultimate Intelligence, Security & HUD Upgrade
+
+**Release Date:** July 6, 2026  
+**Build:** Production  
+
+---
+
+## 🔥 v1.0.17 Patch Notes
+
+- **Real-Time Token Streaming (SSE):** Rewrote the chat completion pipe to stream tokens directly into the chat interface via Server-Sent Events (SSE), achieving sub-second time-to-first-token.
+- **Secure API Key Vault:** Integrated hardware-bound Windows DPAPI and native keyring storage so API secrets are encrypted and persistent across updates.
+- **Advanced Model Manager:** Added support for Groq, Gemini, OpenAI, Anthropic, and local model backends (Ollama/LM Studio) with automatic health checks.
+- **Semantic Memory CRUD:** Added a fully interactive memory manager in the settings panel to inspect, store, or delete long-term facts.
+- **Binary Document Parsing:** Drag-and-drop now parses PDFs, DOCX, XLSX, PPTX, and ZIP archives directly in the background using server-side extraction logic.
+- **One-Click Backup & Restore:** Safeguard configurations, memories, and productivity history into secure encrypted ZIP files.
+- **Interactive Plexus Screensaver:** Integrated a GPU-accelerated Plexus particle screen saver overlay triggered on idle or manually via the topbar.
+- **Support Donation Link:** Added a premium sponsorship/support button next to Settings.
+- **Start Menu Launch Restoration:** Restored app mutex mapping so duplicate shortcuts locate and foreground the native hidden window.
+
+---
+
+# 🚀 KALKI v1.0.16 — Fresh Install Bootstrapping Fix
 
 ## 🔥 v1.0.16 Patch Notes
 

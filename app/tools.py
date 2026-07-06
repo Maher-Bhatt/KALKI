@@ -265,5 +265,38 @@ TOOLS_SCHEMA = [
                 "required": ["name", "actions"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "mark_emails_as_read",
+            "description": "Marks all unread emails in the user's inbox as read.",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "store_user_memory",
+            "description": "Save a personal fact, preference, or detail about Sir to his persistent memory bank so it is remembered in future sessions.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "fact": {
+                        "type": "string",
+                        "description": "The personal fact or preference to remember (e.g. 'Sir's favorite programming language is Python')."
+                    },
+                    "importance": {
+                        "type": "integer",
+                        "description": "How important this fact is on a scale of 1 to 10 (default 5)."
+                    }
+                },
+                "required": ["fact"]
+            }
+        }
     }
 ]
+

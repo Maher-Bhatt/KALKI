@@ -364,6 +364,11 @@ class KalkiSetupWizard(ctk.CTk):
             subprocess.Popen([sys.executable, os.path.join(BASE_DIR, f"{script_name}.py")], creationflags=cflags)
 
     def save_config(self):
+        try:
+            retention_days = int(self.vision_retention_entry.get() or 7)
+        except (ValueError, TypeError):
+            retention_days = 7
+
         self.config_data.update({
             "OWNER_NAME": self.name_entry.get(),
             "OWNER_TITLE": self.title_entry.get(),
@@ -389,7 +394,7 @@ class KalkiSetupWizard(ctk.CTk):
             "TELEGRAM_BOT_TOKEN": self.telegram_bot_entry.get(),
             "TELEGRAM_USER_ID": self.telegram_user_entry.get(),
             "VISION_RECALL_ENABLED": self.vision_var.get(),
-            "VISION_RETENTION_DAYS": int(self.vision_retention_entry.get() or 7),
+            "VISION_RETENTION_DAYS": retention_days,
             "CLOUD_SYNC_PASSPHRASE": self.cloud_sync_entry.get(),
         })
 

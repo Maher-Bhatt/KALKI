@@ -31,3 +31,11 @@ playwright>=1.40.0
 sentry-sdk>=1.39.0
 posthog>=3.0.2
 firebase-admin>=6.3.0
+
+# Document Ingestion & Secure Keyring
+pypdf>=3.17.0
+docx2txt>=0.8
+openpyxl>=3.1.2
+python-pptx>=0.6.21
+keyring>=24.3.0
+
