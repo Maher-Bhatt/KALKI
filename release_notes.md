@@ -1,16 +1,16 @@
-# 🚀 KALKI v1.0.18 — Native Claude Integration & Settings Modal Polish
+# 🚀 KALKI v1.0.19 — Native Claude Integration & Settings Modal Polish
 
 **Release Date:** July 6, 2026  
 **Build:** Production  
 
 ---
 
-## 🔥 v1.0.18 Patch Notes
+## 🔥 v1.0.19 Patch Notes
 
 - **Native Claude / Anthropic Support:** Implemented native Anthropic Claude completions and token streaming endpoints (`ask_anthropic` and `ask_anthropic_stream`) with direct SSE yielding, fully supporting models like `claude-3-5-sonnet-20241022` and `claude-3-5-haiku-20241022`.
 - **Wired Redesigned Settings Controls:** Connected all JS components in the 12-tab configurations board, allowing the user to map distinct models for Chat, Vision, Coding, and Voice roles, verify telemetry/alert flags, trigger one-click local backups, restore ZIP containers, and add/delete semantic memories.
 - **Safe Input Parsing & Guards:** Wrapped type conversions (like vision retention days integer castings) and window focus restorations (`SetForegroundWindow`) in try/except blocks to eliminate crash vectors.
-- **Version Clean Bump:** Bumped version to `v1.0.18` across the server configuration, ISS installer definitions, PyInstaller metadata builders, and web user interfaces.
+- **Version Clean Bump:** Bumped version to `v1.0.19` across the server configuration, ISS installer definitions, PyInstaller metadata builders, and web user interfaces.
 
 ---
 

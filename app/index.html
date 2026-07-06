@@ -1917,13 +1917,13 @@ async function openSettingsModal() {
       $("set_shodan_api_key").value = d.settings.SHODAN_API_KEY || "";
       $("set_groq_key").value = (d.settings.GROQ_API_KEY === "PASTE_YOUR_GROQ_KEY_HERE") ? "" : d.settings.GROQ_API_KEY;
       $("set_openai_key").value = d.settings.OPENAI_API_KEY || "";
-      $("set_anthropic_key").value = d.settings.ANTHROPIC_API_KEY || "";
-      $("set_gemini_key").value = d.settings.GEMINI_API_KEY || "";
-      $("set_elevenlabs_key").value = d.settings.ELEVENLABS_API_KEY || "";
-      $("set_cloud_sync_passphrase").value = d.settings.CLOUD_SYNC_PASSPHRASE || "";
+      if ($("set_anthropic_key")) $("set_anthropic_key").value = d.settings.ANTHROPIC_API_KEY || "";
+      if ($("set_gemini_key")) $("set_gemini_key").value = d.settings.GEMINI_API_KEY || "";
+      if ($("set_elevenlabs_key")) $("set_elevenlabs_key").value = d.settings.ELEVENLABS_API_KEY || "";
+      if ($("set_cloud_sync_passphrase")) $("set_cloud_sync_passphrase").value = d.settings.CLOUD_SYNC_PASSPHRASE || "";
       
-      $("set_spotify_id").value = d.settings.SPOTIFY_CLIENT_ID || "";
-      $("set_spotify_secret").value = d.settings.SPOTIFY_CLIENT_SECRET || "";
+      if ($("set_spotify_id")) $("set_spotify_id").value = d.settings.SPOTIFY_CLIENT_ID || "";
+      if ($("set_spotify_secret")) $("set_spotify_secret").value = d.settings.SPOTIFY_CLIENT_SECRET || "";
       
       // Google Manual
       $("set_google_client_id").value = d.settings.GOOGLE_CLIENT_ID || "";
@@ -1941,14 +1941,20 @@ async function openSettingsModal() {
       $("set_screensaver_idle_mins").value = d.settings.SCREENSAVER_IDLE_MINS || 5;
       $("set_tts_voice").value = d.settings.TTS_VOICE || "";
       
-      $("lbl_google_status").innerHTML = d.googleConfigured ? "[LINKED]" : "[NOT CONFIGURED]";
-      $("lbl_google_status").style.color = d.googleConfigured ? "var(--lime)" : "var(--orange)";
-      $("lbl_spotify_status").innerHTML = d.spotifyConfigured ? "[LINKED]" : "[NOT CONFIGURED]";
-      $("lbl_spotify_status").style.color = d.spotifyConfigured ? "var(--lime)" : "var(--orange)";
-      $("lbl_groq_status").innerHTML = (d.settings.GROQ_API_KEY && d.settings.GROQ_API_KEY !== "PASTE_YOUR_GROQ_KEY_HERE") ? "[PRESENT]" : "[MISSING]";
-      $("lbl_groq_status").style.color = (d.settings.GROQ_API_KEY && d.settings.GROQ_API_KEY !== "PASTE_YOUR_GROQ_KEY_HERE") ? "var(--lime)" : "var(--red)";
+      if ($("lbl_google_status")) {
+        $("lbl_google_status").innerHTML = d.googleConfigured ? "[LINKED]" : "[NOT CONFIGURED]";
+        $("lbl_google_status").style.color = d.googleConfigured ? "var(--lime)" : "var(--orange)";
+      }
+      if ($("lbl_spotify_status")) {
+        $("lbl_spotify_status").innerHTML = d.spotifyConfigured ? "[LINKED]" : "[NOT CONFIGURED]";
+        $("lbl_spotify_status").style.color = d.spotifyConfigured ? "var(--lime)" : "var(--orange)";
+      }
+      if ($("lbl_groq_status")) {
+        $("lbl_groq_status").innerHTML = (d.settings.GROQ_API_KEY && d.settings.GROQ_API_KEY !== "PASTE_YOUR_GROQ_KEY_HERE") ? "[PRESENT]" : "[MISSING]";
+        $("lbl_groq_status").style.color = (d.settings.GROQ_API_KEY && d.settings.GROQ_API_KEY !== "PASTE_YOUR_GROQ_KEY_HERE") ? "var(--lime)" : "var(--red)";
+      }
       
-      if(d.cacheSize) $("lbl_cache_size").innerHTML = d.cacheSize;
+      if(d.cacheSize && $("lbl_cache_size")) $("lbl_cache_size").innerHTML = d.cacheSize;
       
       const mbtn = $("modalToggleAssistantBtn");
       mbtn.innerText = STATE.busyMode ? "BUSY MODE: ON" : "BUSY MODE: OFF";
@@ -1976,21 +1982,21 @@ $("saveSettingsBtn").addEventListener("click", async () => {
     OWNER_CITY: $("set_owner_city").value,
     OWNER_STATE: $("set_owner_state").value,
     OWNER_COUNTRY: $("set_owner_country").value,
-    EMAIL_ADDRESS: $("set_email_address").value,
-    EMAIL_APP_PASSWORD: $("set_email_app_password").value,
-    GITHUB_TOKEN: $("set_github_token").value,
-    SHODAN_API_KEY: $("set_shodan_api_key").value,
-    GROQ_API_KEY: $("set_groq_key").value,
-    OPENAI_API_KEY: $("set_openai_key").value,
-    ANTHROPIC_API_KEY: $("set_anthropic_key").value,
-    GEMINI_API_KEY: $("set_gemini_key").value,
-    ELEVENLABS_API_KEY: $("set_elevenlabs_key").value,
-    CLOUD_SYNC_PASSPHRASE: $("set_cloud_sync_passphrase").value,
-    SPOTIFY_CLIENT_ID: $("set_spotify_id").value,
-    SPOTIFY_CLIENT_SECRET: $("set_spotify_secret").value,
-    GOOGLE_CLIENT_ID: $("set_google_client_id").value,
-    GOOGLE_CLIENT_SECRET: $("set_google_client_secret").value,
-    GOOGLE_PROJECT_ID: $("set_google_project_id").value,
+    EMAIL_ADDRESS: $("set_email_address") ? $("set_email_address").value : "",
+    EMAIL_APP_PASSWORD: $("set_email_app_password") ? $("set_email_app_password").value : "",
+    GITHUB_TOKEN: $("set_github_token") ? $("set_github_token").value : "",
+    SHODAN_API_KEY: $("set_shodan_api_key") ? $("set_shodan_api_key").value : "",
+    GROQ_API_KEY: $("set_groq_key") ? $("set_groq_key").value : "",
+    OPENAI_API_KEY: $("set_openai_key") ? $("set_openai_key").value : "",
+    ANTHROPIC_API_KEY: $("set_anthropic_key") ? $("set_anthropic_key").value : "",
+    GEMINI_API_KEY: $("set_gemini_key") ? $("set_gemini_key").value : "",
+    ELEVENLABS_API_KEY: $("set_elevenlabs_key") ? $("set_elevenlabs_key").value : "",
+    CLOUD_SYNC_PASSPHRASE: $("set_cloud_sync_passphrase") ? $("set_cloud_sync_passphrase").value : "",
+    SPOTIFY_CLIENT_ID: $("set_spotify_id") ? $("set_spotify_id").value : "",
+    SPOTIFY_CLIENT_SECRET: $("set_spotify_secret") ? $("set_spotify_secret").value : "",
+    GOOGLE_CLIENT_ID: $("set_google_client_id") ? $("set_google_client_id").value : "",
+    GOOGLE_CLIENT_SECRET: $("set_google_client_secret") ? $("set_google_client_secret").value : "",
+    GOOGLE_PROJECT_ID: $("set_google_project_id") ? $("set_google_project_id").value : "",
     MODEL_CHAT: $("set_model_chat").value,
     MODEL_VISION: $("set_model_vision").value,
     MODEL_CODING: $("set_model_coding").value,
@@ -2091,7 +2097,7 @@ $("clearCacheBtn").addEventListener("click", async () => {
     const r = await fetch("/api/settings/clear_cache");
     const d = await r.json();
     showNotice(d.ok ? "Cache cleared successfully." : "Failed to clear cache.");
-    if(d.ok) $("lbl_cache_size").innerHTML = "0.0 MB";
+    if(d.ok && $("lbl_cache_size")) $("lbl_cache_size").innerHTML = "0.0 MB";
   } catch(e) { showNotice("Error clearing cache", true); }
 });
 
