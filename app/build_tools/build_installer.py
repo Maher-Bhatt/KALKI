@@ -34,12 +34,12 @@ def main():
         '040904B0',
         [StringStruct('CompanyName', 'KALKI Technologies'),
         StringStruct('FileDescription', 'KALKI AI Desktop Assistant'),
-        StringStruct('FileVersion', '1.0.19'),
+        StringStruct('FileVersion', '1.0.20'),
         StringStruct('InternalName', 'kalki_assistant'),
         StringStruct('LegalCopyright', '© 2026 KALKI Technologies. All rights reserved.'),
         StringStruct('OriginalFilename', 'KALKI.exe'),
         StringStruct('ProductName', 'KALKI AI Assistant'),
-        StringStruct('ProductVersion', '1.0.19')])
+        StringStruct('ProductVersion', '1.0.20')])
       ]), 
     VarFileInfo([VarStruct('Translation', [1033, 1200])])
   ]

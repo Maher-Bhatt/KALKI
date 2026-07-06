@@ -67,9 +67,7 @@ def _get_creds(interactive=False):
             except Exception as e:
                 print(f"[gcal] token refresh failed: {e}")
         if not interactive:
-            raise RuntimeError(
-                "No valid Google token. Run setup_google.py once to authorize."
-            )
+            raise Exception("No valid Google token. Please link Google in the Settings menu.")
         if not CRED_PATH or not os.path.exists(CRED_PATH):
             raise FileNotFoundError(
                 f"Place Google OAuth credentials.json at {CRED_PATH}. "

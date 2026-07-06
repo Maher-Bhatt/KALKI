@@ -1183,7 +1183,7 @@ def handle_local(text):
     if t in ("pause", "pause music", "pause song", "pause spotify",
              "pause the music"):
         if not spotify_mod.is_configured():
-            return True, "Spotify not linked, Sir. Run setup_spotify.py."
+            return True, "Spotify not linked, Sir. Please link Spotify in the Settings menu."
         return True, spotify_mod.pause()
 
     if t in ("resume", "resume music", "resume song", "play music",
@@ -1782,7 +1782,7 @@ def handle_local(text):
         and any(k in t for k in
                 ("what", "tell me", "show", "read", "check", "today", "my "))):
         if not gcal.is_configured():
-            return True, ("Calendar not yet linked, Sir. Run setup_google.py once "
+            return True, ("Calendar not yet linked, Sir. Please link Google in the Settings menu "
                           "to authorize.")
         return True, gcal.today_summary()
 
@@ -1794,7 +1794,7 @@ def handle_local(text):
     if t in ("check gmail", "check my gmail", "any gmail", "read gmail",
              "gmail summary"):
         if not gcal.is_configured():
-            return True, "Gmail OAuth not yet linked, Sir. Run setup_google.py."
+            return True, "Gmail OAuth not yet linked, Sir. Please link Google in the Settings menu."
         return True, gcal.gmail_summary()
 
     # ════════════════════════════════════════════════════
@@ -3376,7 +3376,7 @@ def ask_ai(user_messages, force_search=False):
     except Exception as e:
         log(f"[Ollama failed] {e}")
         return (f"My link is down, Sir. Groq error: {groq_err[:140]}. "
-                f"Check config.py or try a different model from the dropdown.")
+                f"Check your API keys in Settings or try a different model from the dropdown.")
 
 
 # ─────────────────────────────────────────────────────────────
