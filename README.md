@@ -7,7 +7,7 @@
   <em>Inspired by J.A.R.V.I.S. • Powered by Groq LLaMA • Engineered for power users & developers.</em>
 
   <p>
-    <img src="https://img.shields.io/badge/release-v1.0.20-00c8ff?style=for-the-badge&logo=github" alt="release">
+    <img src="https://img.shields.io/badge/release-v1.0.21-00c8ff?style=for-the-badge&logo=github" alt="release">
     <img src="https://img.shields.io/badge/platform-Windows_10%2B-0078d4?style=for-the-badge&logo=windows" alt="platform">
     <img src="https://img.shields.io/badge/brain-Groq_LLaMA_3.3-ff6b35?style=for-the-badge&logo=meta" alt="brain">
     <img src="https://img.shields.io/badge/engine-Python_3.11+-3776AB?style=for-the-badge&logo=python" alt="python">
@@ -20,7 +20,7 @@
 
 ---
 
-## 📢 What's New in the Latest Updates (v1.0.20)
+## 📢 What's New in the Latest Updates (v1.0.21)
 
 > KALKI has evolved into a true two-way, multimodal AI platform with a stunning premium UI and deeper OS-level integrations.
 
@@ -29,6 +29,10 @@
 
 | Feature | Description |
 |:---|:---|
+| **🛠 Installer HUD Fixes** | The Windows installer now ships the PWA manifest and service worker so installed buttons, cache refresh, and restart behavior stay stable. |
+| **⚙️ Settings Board Repair** | Restored missing settings controls, provider status labels, cloud restore controls, Spotify reconnect, cache size display, and semantic memory add/delete wiring. |
+| **🔁 Upgrade Cache Busting** | The service worker now clears old caches and never serves stale HTML/API responses after an app update. |
+| **🔐 Safer Secret Saves** | Settings saves no longer wipe existing API keys when password fields are left blank, and new secrets are persisted through the secure vault path. |
 | **☁️ Native Claude Support** | Implemented native Anthropic Claude completions (`ask_anthropic` and `ask_anthropic_stream`) with direct SSE token streaming. |
 | **⚙️ 12-Tab Settings Board** | Redesigned configurations board with 12 tabs to map role models (Chat, Vision, Coding, Voice), toggle alerts/telemetry, and manage backups. |
 | **🔒 Secure API Key Vault** | Integrated hardware-bound Windows DPAPI and native keyring storage so API secrets are encrypted and persistent across updates. |

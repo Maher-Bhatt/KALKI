@@ -1,3 +1,15 @@
+# Fix log — 2026-07-08
+
+## v1.0.21 install/HUD stabilization
+
+- Fixed installed builds missing `manifest.json` and `service-worker.js`.
+- Bumped the service-worker cache and made HTML/API requests network-first to stop stale UI after restart/update.
+- Repaired settings-board crashes caused by missing cloud restore, provider status, Spotify reconnect, and cache-size controls.
+- Restored semantic memory add/delete by adding `/api/memory/add` and aligning delete payloads.
+- Fixed backup restore payload mismatch and restricted restored ZIP members.
+- Prevented blank password fields from wiping existing API keys; new secrets now persist through the secure API vault.
+- Bumped runtime, updater, installer, EXE metadata, README, release notes, and HUD labels to `v1.0.21`.
+
 # Fix log — 2026-07-05
 
 ## Theme (corrected mid-pass)

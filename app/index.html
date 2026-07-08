@@ -3,7 +3,7 @@
 <head>
 <!--
 ====================================================================
-KALKI v1.0.18 PRO — Frontend User Interface
+KALKI v1.0.21 PRO — Frontend User Interface
 ====================================================================
 Architecture:
 - Pure HTML/CSS/JS (Zero external dependencies or frameworks).
@@ -645,7 +645,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
     <div>OPER <span class="v" id="topOwner">Sir</span></div>
     <div>LOC <span class="v" id="topLoc">—</span></div>
     <div>MODE <span class="v cy" id="topMode">SYSTEM</span></div>
-    <div>SYS <span class="v" id="topSys">v1.0.18 PRO</span></div>
+    <div>SYS <span class="v" id="topSys">v1.0.21 PRO</span></div>
     <div>NET <span class="v ok" id="topNet">ONLINE</span></div>
     <div><span class="v cy" id="topClock">00:00:00</span></div>
     <div style="cursor:pointer; border:0.1rem solid var(--frame); padding:0.2rem 0.8rem; border-radius:0.3rem;" id="topSettingsBtn">⚙ SETTINGS</div>
@@ -765,7 +765,6 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
 
 <!-- SETTINGS MODAL -->
 <div id="settingsModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center; font-family:var(--mono);">
-  <div class="modal-content" style="background:#0a0a0c; border:0.1rem solid var(--accent); width:80rem; height:60rem; display:flex; flex-direction:column;">
   <div class="modal-content" style="background:#0a0a0c; border:0.1rem solid var(--accent); width:85rem; height:65rem; display:flex; flex-direction:column; border-radius:0.4rem; overflow:hidden; box-shadow: 0 0 2rem rgba(0,255,170,0.2);">
     <!-- Modal Header -->
     <div style="display:flex; justify-content:space-between; align-items:center; padding:1.5rem 2rem; border-bottom:0.1rem solid #222; background:#0e0e12;">
@@ -837,6 +836,11 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
           
           <div style="border:0.1rem solid #222; background:#111; padding:1.5rem; margin-bottom:1.5rem;">
             <h4 style="margin-bottom:1rem; color:var(--accent);">ACTIVE LLM API KEYS</h4>
+            <div style="display:flex; gap:1rem; margin-bottom:1rem; font-size:1.05rem; color:var(--text-dim);">
+              <span>GROQ <b id="lbl_groq_status" style="color:var(--red);">[MISSING]</b></span>
+              <span>GOOGLE <b id="lbl_google_status" style="color:var(--orange);">[NOT CONFIGURED]</b></span>
+              <span>SPOTIFY <b id="lbl_spotify_status" style="color:var(--orange);">[NOT CONFIGURED]</b></span>
+            </div>
             <div style="margin-bottom:1rem;">
               <label style="display:flex; justify-content:space-between; font-size:1.1rem; color:var(--text-dim);">
                 <span>PRIMARY SYSTEM MODEL (GROQ KEY)</span>
@@ -952,6 +956,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
               <button class="qbtn" id="runSpotifySetup" style="width:23%; background:#222; border:0.1rem solid #444; color:var(--text); padding:0.6rem; cursor:pointer;">LINK SPOTIFY</button>
               <button class="qbtn" id="testSpotifyBtn" style="width:23%; background:#1a1a1a; border:0.1rem solid var(--lime); color:var(--lime); padding:0.6rem; cursor:pointer;">TEST SPOTIFY</button>
             </div>
+            <button class="qbtn" id="reconnectSpotifyBtn" style="width:100%; margin-top:0.8rem; background:#181818; border:0.1rem solid #333; color:var(--text-dim); padding:0.6rem; cursor:pointer;">RECONNECT SPOTIFY</button>
           </div>
         </div>
         
@@ -1035,6 +1040,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
           <div style="display:flex; flex-direction:column; gap:1.2rem;">
             <button class="qbtn" id="exportSettingsBtn" style="background:#222; border:0.1rem solid #333; color:var(--text); padding:0.8rem; cursor:pointer; text-align:left; font-family:var(--mono);">EXPORT SETTINGS (JSON)</button>
             <button class="qbtn" id="importSettingsBtn" style="background:#222; border:0.1rem solid #333; color:var(--text); padding:0.8rem; cursor:pointer; text-align:left; font-family:var(--mono);">IMPORT SETTINGS (JSON)</button>
+            <div style="font-size:1.1rem; color:var(--text-dim);">CACHE SIZE: <span id="lbl_cache_size" style="color:var(--accent);">0.00 MB</span></div>
             <button class="qbtn" id="clearCacheBtn" style="background:#222; border:0.1rem solid #333; color:var(--text); padding:0.8rem; cursor:pointer; text-align:left; font-family:var(--mono);">CLEAR INTERNET CACHE</button>
             <button class="qbtn" id="resetSettingsBtn" style="background:#1a0000; border:0.1rem solid var(--red); color:var(--red); padding:0.8rem; cursor:pointer; text-align:left; font-family:var(--mono); margin-top:1.5rem;">RESTORE DEFAULT FACTORY CONFIGS</button>
           </div>
@@ -1046,7 +1052,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
           <div style="background:#111; border:0.1rem solid #222; padding:1.5rem; margin-bottom:1.5rem;">
             <div style="display:flex; justify-content:space-between; font-size:1.2rem; margin-bottom:0.5rem;">
               <span>LOCAL RUNTIME VERSION:</span>
-              <span style="color:var(--cyan); font-weight:bold;">v1.0.18</span>
+              <span style="color:var(--cyan); font-weight:bold;">v1.0.21</span>
             </div>
             <div style="display:flex; justify-content:space-between; font-size:1.2rem;">
               <span>BINARY INTEGRITY CHECK:</span>
@@ -1061,6 +1067,11 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
           <div style="background:#111; border:0.1rem solid #222; padding:1.5rem; margin-bottom:1.5rem; display:flex; flex-direction:column; gap:1rem;">
             <p style="font-size:1.15rem; color:var(--text-dim); line-height:1.4;">Creates a secure encrypted ZIP container containing your user configuration, API secrets vault, semantic memories, chat histories, and productivity stats.</p>
             <button class="qbtn" id="createBackupBtn" style="background:var(--accent); color:#000; border:none; padding:0.8rem; font-weight:bold; cursor:pointer; border-radius:0.2rem;">ONE-CLICK LOCAL BACKUP</button>
+            <div style="margin-top:1rem; border-top:0.1rem solid #333; padding-top:1.5rem;">
+              <label style="display:block; font-size:1.2rem; margin-bottom:0.5rem; color:var(--text-dim);">CLOUD RESTORE PASSPHRASE</label>
+              <input type="password" id="set_cloud_sync_passphrase" placeholder="Saved only in the secure vault" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #222; padding:0.8rem; font-family:var(--mono);">
+              <button class="qbtn" id="restoreSettingsBtn" style="margin-top:0.8rem; background:#222; border:0.1rem solid #333; color:var(--cyan); padding:0.8rem 1.5rem; cursor:pointer;">RESTORE CLOUD MEMORY</button>
+            </div>
             
             <div style="margin-top:1.5rem; border-top:0.1rem solid #333; padding-top:1.5rem;">
               <label style="display:block; font-size:1.2rem; margin-bottom:0.5rem; color:var(--text-dim);">RESTORE FROM ZIP CONTAINER</label>
@@ -1137,7 +1148,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
     </div>
     
     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem;">
-      <span style="color:var(--text-dim); font-size:0.95rem; font-family:'JetBrains Mono', monospace;">KALKI SECURE UPLINK v1.0.18</span>
+      <span style="color:var(--text-dim); font-size:0.95rem; font-family:'JetBrains Mono', monospace;">KALKI SECURE UPLINK v1.0.21</span>
       <button class="qbtn" id="acknowledgeErrBtn" style="border:0.1rem solid var(--red); color:var(--red); padding:0.6rem 2rem; font-size:1.1rem; background:rgba(255,0,0,0.1);">ACKNOWLEDGE</button>
     </div>
   </div>
@@ -1877,7 +1888,7 @@ function showNotice(msg, isErr=false) {
   n.style.display = "block";
   n.style.color = isErr ? "var(--red)" : "var(--lime)";
   n.style.borderColor = isErr ? "var(--red)" : "var(--lime)";
-  n.innerHTML = msg;
+  n.textContent = msg;
   setTimeout(()=>n.style.display="none", 4000);
 }
 
@@ -1950,8 +1961,9 @@ async function openSettingsModal() {
         $("lbl_spotify_status").style.color = d.spotifyConfigured ? "var(--lime)" : "var(--orange)";
       }
       if ($("lbl_groq_status")) {
-        $("lbl_groq_status").innerHTML = (d.settings.GROQ_API_KEY && d.settings.GROQ_API_KEY !== "PASTE_YOUR_GROQ_KEY_HERE") ? "[PRESENT]" : "[MISSING]";
-        $("lbl_groq_status").style.color = (d.settings.GROQ_API_KEY && d.settings.GROQ_API_KEY !== "PASTE_YOUR_GROQ_KEY_HERE") ? "var(--lime)" : "var(--red)";
+        const hasGroq = !!(d.secretStatus && d.secretStatus.GROQ_API_KEY);
+        $("lbl_groq_status").innerHTML = hasGroq ? "[PRESENT]" : "[MISSING]";
+        $("lbl_groq_status").style.color = hasGroq ? "var(--lime)" : "var(--red)";
       }
       
       if(d.cacheSize && $("lbl_cache_size")) $("lbl_cache_size").innerHTML = d.cacheSize;
@@ -2081,7 +2093,7 @@ $("testSettingsBtn").addEventListener("click", async () => {
 $("resetSettingsBtn").addEventListener("click", async () => {
   if(!confirm("Are you sure you want to reset all configurations and caches?")) return;
   try {
-    const r = await fetch("/api/settings/reset");
+    const r = await fetch("/api/settings/reset", { method: "POST", headers: {"Content-Type": "application/json"}, body: "{}" });
     const d = await r.json();
     if(d.ok) {
       showNotice("Configurations wiped. Please restart KALKI.");
@@ -2094,7 +2106,7 @@ $("resetSettingsBtn").addEventListener("click", async () => {
 
 $("clearCacheBtn").addEventListener("click", async () => {
   try {
-    const r = await fetch("/api/settings/clear_cache");
+    const r = await fetch("/api/settings/clear_cache", { method: "POST", headers: {"Content-Type": "application/json"}, body: "{}" });
     const d = await r.json();
     showNotice(d.ok ? "Cache cleared successfully." : "Failed to clear cache.");
     if(d.ok && $("lbl_cache_size")) $("lbl_cache_size").innerHTML = "0.0 MB";
@@ -2228,7 +2240,7 @@ async function loadMemoryList() {
             const res = await fetch("/api/memory/delete", {
               method: "POST",
               headers: {"Content-Type": "application/json"},
-              body: JSON.stringify({ doc_id: m.id })
+              body: JSON.stringify({ id: m.id })
             });
             const resD = await res.json();
             if (resD.ok) {

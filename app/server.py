@@ -46,6 +46,8 @@ if not os.path.exists(_cfg_path) and os.path.exists(_example_path):
     shutil.copy(_example_path, _cfg_path)
 
 import config
+if not hasattr(config, "CURRENT_VERSION"):
+    config.CURRENT_VERSION = "v1.0.21"
 import github_mod
 import shodan_mod
 import ctypes
@@ -72,6 +74,7 @@ import deepscan
 import runtime_log
 import runtime_security
 import semantic_memory
+from core import api_vault
 
 # ─────────────────────────────────────────────────────────────
 # Optional dependencies — degrade gracefully if missing
@@ -208,6 +211,43 @@ def load_plugins():
 load_plugins()
 
 AVAILABLE_GROQ_MODELS = []
+
+SECRET_SETTING_KEYS = {
+    "GROQ_API_KEY",
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "GEMINI_API_KEY",
+    "ELEVENLABS_API_KEY",
+    "EMAIL_APP_PASSWORD",
+    "GITHUB_TOKEN",
+    "SHODAN_API_KEY",
+    "SPOTIFY_CLIENT_SECRET",
+    "GOOGLE_CLIENT_SECRET",
+    "CLOUD_SYNC_PASSPHRASE",
+    "TELEGRAM_BOT_TOKEN",
+}
+
+PLACEHOLDER_VALUES = {
+    "",
+    "PASTE_YOUR_GROQ_KEY_HERE",
+    "your_personal_access_token",
+    "your_shodan_api_key",
+}
+
+
+def _is_configured_secret(value):
+    value = str(value or "").strip()
+    return bool(value and value not in PLACEHOLDER_VALUES and not value.startswith("PASTE_"))
+
+
+def _public_settings_value(key, value):
+    if key in SECRET_SETTING_KEYS:
+        return "" if _is_configured_secret(value) else value
+    return value
+
+
+def _settings_status(keys):
+    return {k: _is_configured_secret(getattr(config, k, "")) for k in keys}
 
 STATE = {
     "speaking": False,
@@ -3710,7 +3750,8 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/clipboard_response":
-            phrase = body.get("phrase", "").lower()
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            phrase = (qs.get("phrase", [""])[0] or "").lower()
             pending = STATE.pop("clipboard_prompt_pending", None)
             
             if pending:
@@ -3827,8 +3868,14 @@ class Handler(BaseHTTPRequestHandler):
                 "EMAIL_APP_PASSWORD": getattr(config, "EMAIL_APP_PASSWORD", ""),
                 "GITHUB_TOKEN": getattr(config, "GITHUB_TOKEN", ""),
                 "SHODAN_API_KEY": getattr(config, "SHODAN_API_KEY", ""),
+                "CLOUD_SYNC_PASSPHRASE": getattr(config, "CLOUD_SYNC_PASSPHRASE", ""),
+                "MODEL_CHAT": getattr(config, "MODEL_CHAT", "auto"),
+                "MODEL_VISION": getattr(config, "MODEL_VISION", "auto"),
+                "MODEL_CODING": getattr(config, "MODEL_CODING", "auto"),
+                "MODEL_VOICE": getattr(config, "MODEL_VOICE", "auto"),
                 "TTS_VOICE": getattr(config, "TTS_VOICE", "")
             }
+            public_keys = {k: _public_settings_value(k, v) for k, v in keys.items()}
             # removed local import
             
             # calculate cache size
@@ -3840,7 +3887,8 @@ class Handler(BaseHTTPRequestHandler):
                 
             self._json({
                 "ok": True, 
-                "settings": keys, 
+                "settings": public_keys,
+                "secretStatus": _settings_status(SECRET_SETTING_KEYS),
                 "spotifyConfigured": spotify_mod.is_configured(), 
                 "googleConfigured": gcal.is_configured(),
                 "cacheSize": f"{cache_size_mb:.2f} MB"
@@ -3852,7 +3900,12 @@ class Handler(BaseHTTPRequestHandler):
                 req = urllib.request.Request("https://api.groq.com/openai/v1/models", headers={"Authorization": f"Bearer {getattr(config,'GROQ_API_KEY','')}"})
                 with urllib.request.urlopen(req, timeout=5) as res:
                     groq_status = "OK" if res.status == 200 else "FAILED"
-                self._json({"ok": True, "groq": groq_status})
+                self._json({
+                    "ok": True,
+                    "groq": groq_status,
+                    "spotify": "OK" if spotify_mod.is_configured() else "NOT LINKED",
+                    "google": "OK" if gcal.is_configured() else "NOT LINKED",
+                })
             except Exception as e:
                 self._json({"ok": False, "error": str(e)})
             return
@@ -3868,28 +3921,11 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/settings/reset":
-            try:
-                if os.path.exists(config._USER_CONFIG_PATH): os.remove(config._USER_CONFIG_PATH)
-                if os.path.exists(os.path.join(BASE_DIR, "data", "token.json")): os.remove(os.path.join(BASE_DIR, "data", "token.json"))
-                if os.path.exists(os.path.join(BASE_DIR, "data", "spotify_token.json")): os.remove(os.path.join(BASE_DIR, "data", "spotify_token.json"))
-                if os.path.exists(os.path.join(BASE_DIR, "data", "credentials.json")): os.remove(os.path.join(BASE_DIR, "data", "credentials.json"))
-                self._json({"ok": True})
-            except Exception as e:
-                self._json({"ok": False, "error": str(e)})
+            self._json({"ok": False, "error": "POST required"}, status=405)
             return
             
         if path == "/api/settings/clear_cache":
-            try:
-                data_dir = os.path.join(BASE_DIR, "data")
-                if os.path.exists(data_dir):
-                    for f in os.listdir(data_dir):
-                        fp = os.path.join(data_dir, f)
-                        # don't delete tokens or credentials or database
-                        if os.path.isfile(fp) and f not in ["token.json", "spotify_token.json", "credentials.json", "kalki.db"]:
-                            os.remove(fp)
-                self._json({"ok": True})
-            except Exception as e:
-                self._json({"ok": False, "error": str(e)})
+            self._json({"ok": False, "error": "POST required"}, status=405)
             return
 
         if path == "/api/settings/export":
@@ -3956,6 +3992,31 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": True})
             return
 
+        if path == "/api/settings/reset":
+            try:
+                if os.path.exists(config._USER_CONFIG_PATH): os.remove(config._USER_CONFIG_PATH)
+                if os.path.exists(os.path.join(BASE_DIR, "data", "token.json")): os.remove(os.path.join(BASE_DIR, "data", "token.json"))
+                if os.path.exists(os.path.join(BASE_DIR, "data", "spotify_token.json")): os.remove(os.path.join(BASE_DIR, "data", "spotify_token.json"))
+                if os.path.exists(os.path.join(BASE_DIR, "data", "credentials.json")): os.remove(os.path.join(BASE_DIR, "data", "credentials.json"))
+                self._json({"ok": True})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)})
+            return
+
+        if path == "/api/settings/clear_cache":
+            try:
+                data_dir = os.path.join(BASE_DIR, "data")
+                keep = {"token.json", "spotify_token.json", "credentials.json", "google_token.pickle", "kalki.db", "api_token.txt"}
+                if os.path.exists(data_dir):
+                    for f in os.listdir(data_dir):
+                        fp = os.path.join(data_dir, f)
+                        if os.path.isfile(fp) and f not in keep:
+                            os.remove(fp)
+                self._json({"ok": True})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)})
+            return
+
         if path == "/api/settings/save":
             try:
                 updates = body.get("updates", {})
@@ -3964,27 +4025,42 @@ class Handler(BaseHTTPRequestHandler):
                 if os.path.exists(cfg_path):
                     with open(cfg_path, "r", encoding="utf-8") as f:
                         new_conf = json.load(f)
-                new_conf.update(updates)
+                os.makedirs(os.path.dirname(cfg_path), exist_ok=True)
+
+                effective_updates = {}
+                for k, v in updates.items():
+                    if k in SECRET_SETTING_KEYS:
+                        if str(v or "").strip():
+                            api_vault.set_secret(k, v)
+                            effective_updates[k] = v
+                        new_conf.pop(k, None)
+                    else:
+                        new_conf[k] = v
+                        effective_updates[k] = v
+
                 with open(cfg_path, "w", encoding="utf-8") as f:
                     json.dump(new_conf, f, indent=4)
                 
                 # Apply locally to current config module
-                for k, v in updates.items():
+                for k, v in effective_updates.items():
                     setattr(config, k, v)
                     if k == "SPOTIFY_CLIENT_ID": os.environ["SPOTIFY_CLIENT_ID"] = v
                     if k == "SPOTIFY_CLIENT_SECRET": os.environ["SPOTIFY_CLIENT_SECRET"] = v
                 
                 # Check if we should dynamically generate credentials.json for Google Auth
-                if updates.get("GOOGLE_CLIENT_ID") and updates.get("GOOGLE_CLIENT_SECRET") and updates.get("GOOGLE_PROJECT_ID"):
+                google_client_id = effective_updates.get("GOOGLE_CLIENT_ID") or getattr(config, "GOOGLE_CLIENT_ID", "")
+                google_client_secret = effective_updates.get("GOOGLE_CLIENT_SECRET") or getattr(config, "GOOGLE_CLIENT_SECRET", "")
+                google_project_id = effective_updates.get("GOOGLE_PROJECT_ID") or getattr(config, "GOOGLE_PROJECT_ID", "")
+                if google_client_id and google_client_secret and google_project_id:
                     cred_path = os.path.join(BASE_DIR, "data", "credentials.json")
                     cred_data = {
                         "installed": {
-                            "client_id": updates["GOOGLE_CLIENT_ID"],
-                            "project_id": updates["GOOGLE_PROJECT_ID"],
+                            "client_id": google_client_id,
+                            "project_id": google_project_id,
                             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                             "token_uri": "https://oauth2.googleapis.com/token",
                             "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                            "client_secret": updates["GOOGLE_CLIENT_SECRET"],
+                            "client_secret": google_client_secret,
                             "redirect_uris": ["http://localhost:8080/"]
                         }
                     }
@@ -4030,14 +4106,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 from core import cloud_sync
                 uid = getattr(config, "OWNER_NAME", "default_user")
-                
-                body = {}
-                if self.headers.get("Content-Length"):
-                    content_len = int(self.headers.get("Content-Length"))
-                    body_str = self.rfile.read(content_len).decode("utf-8", "ignore")
-                    if body_str:
-                        body = json.loads(body_str)
-                
+
                 passphrase = body.get("passphrase")
                 if not passphrase:
                     passphrase = getattr(config, "CLOUD_SYNC_PASSPHRASE", "")
@@ -4346,17 +4415,22 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/backup/restore":
-            file_path = (body.get("filepath") or "").strip()
+            file_path = (body.get("filepath") or body.get("filePath") or "").strip()
             if not file_path or not os.path.exists(file_path):
                 self._json({"ok": False, "error": "Invalid file path"}, status=400); return
             try:
                 import zipfile
                 dest_dir = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI")
                 os.makedirs(dest_dir, exist_ok=True)
+                allowed = {
+                    "user_config.json", "secure_api_vault.enc", "vault_integrity.sha256",
+                    "semantic_memory.json", "ai_usage.json", "memory.json", "history.json",
+                    "productivity.json"
+                }
                 with zipfile.ZipFile(file_path, "r") as z:
                     for member in z.infolist():
                         filename = os.path.basename(member.filename)
-                        if not filename:
+                        if not filename or filename not in allowed or member.file_size > 20 * 1024 * 1024:
                             continue
                         if filename in ["memory.json", "history.json", "productivity.json"]:
                             target = os.path.join(BASE_DIR, "data", filename)
@@ -4369,9 +4443,24 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": str(e)}, status=500)
             return
 
+        if path == "/api/memory/add":
+            text = (body.get("text") or body.get("fact") or "").strip()
+            if not text:
+                self._json({"ok": False, "error": "text required"}, status=400); return
+            try:
+                doc_id = semantic_memory.memory.add_memory(
+                    text,
+                    tags=body.get("tags") or [],
+                    importance=body.get("importance", 5),
+                    memory_type=body.get("type", "fact"),
+                )
+                self._json({"ok": True, "id": doc_id})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)}, status=500)
+            return
+
         if path == "/api/memory/list":
             try:
-                import semantic_memory
                 mems = semantic_memory.memory.list_all()
                 self._json({"ok": True, "memories": mems})
             except Exception as e:
@@ -4383,10 +4472,9 @@ class Handler(BaseHTTPRequestHandler):
             text = (body.get("text") or "").strip()
             importance = body.get("importance")
             mem_type = body.get("type")
-            if not doc_id or not text:
+            if doc_id in (None, "") or not text:
                 self._json({"ok": False, "error": "id and text required"}, status=400); return
             try:
-                import semantic_memory
                 ok = semantic_memory.memory.update_memory(doc_id, text, importance=importance, memory_type=mem_type)
                 self._json({"ok": ok})
             except Exception as e:
@@ -4394,11 +4482,10 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/memory/delete":
-            doc_id = body.get("id")
-            if not doc_id:
+            doc_id = body.get("id") if "id" in body else body.get("doc_id")
+            if doc_id in (None, ""):
                 self._json({"ok": False, "error": "id required"}, status=400); return
             try:
-                import semantic_memory
                 ok = semantic_memory.memory.delete_memory(doc_id)
                 self._json({"ok": ok})
             except Exception as e:

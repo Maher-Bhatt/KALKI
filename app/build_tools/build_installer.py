@@ -2,6 +2,9 @@ import os
 import subprocess
 import sys
 
+APP_VERSION = "1.0.21"
+VERSION_PARTS = tuple(int(part) for part in APP_VERSION.split(".")) + (0,)
+
 def run_cmd(cmd):
     print(f"Running: {cmd}")
     subprocess.run(cmd, shell=True, check=True)
@@ -16,10 +19,10 @@ def main():
     # Generate Version Info File for Windows executable metadata
     version_info_path = os.path.abspath(os.path.join("build_tools", "file_version_info.txt"))
     with open(version_info_path, "w", encoding="utf-8") as f:
-        f.write("""VSVersionInfo(
+        f.write(f"""VSVersionInfo(
   ffi=FixedFileInfo(
-    filevers=(1, 0, 19, 0),
-    prodvers=(1, 0, 19, 0),
+    filevers={VERSION_PARTS},
+    prodvers={VERSION_PARTS},
     mask=0x3f,
     flags=0x0,
     OS=0x40004,
@@ -34,12 +37,12 @@ def main():
         '040904B0',
         [StringStruct('CompanyName', 'KALKI Technologies'),
         StringStruct('FileDescription', 'KALKI AI Desktop Assistant'),
-        StringStruct('FileVersion', '1.0.20'),
+        StringStruct('FileVersion', '{APP_VERSION}'),
         StringStruct('InternalName', 'kalki_assistant'),
         StringStruct('LegalCopyright', '© 2026 KALKI Technologies. All rights reserved.'),
         StringStruct('OriginalFilename', 'KALKI.exe'),
         StringStruct('ProductName', 'KALKI AI Assistant'),
-        StringStruct('ProductVersion', '1.0.20')])
+        StringStruct('ProductVersion', '{APP_VERSION}')])
       ]), 
     VarFileInfo([VarStruct('Translation', [1033, 1200])])
   ]

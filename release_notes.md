@@ -1,3 +1,22 @@
+# 🚀 KALKI v1.0.21 — Installed HUD Stability & Settings Repair
+
+**Release Date:** July 8, 2026
+**Build:** Production
+
+---
+
+## 🔥 v1.0.21 Patch Notes
+
+- **Installed Frontend Fix:** The installer now includes `manifest.json` and `service-worker.js`, preventing installed builds from missing core HUD/PWA files.
+- **Restart Glitch Fix:** The service worker now bumps its cache to `v1.0.21`, clears older caches on activation, and fetches HTML/API routes from network so upgrades do not revive stale UI code.
+- **Settings Button Repair:** Restored missing settings controls and status labels for cloud restore, provider status, Spotify reconnect, and cache size so the settings board no longer crashes mid-script.
+- **Memory Manager Repair:** Added the missing `/api/memory/add` backend route and aligned memory delete payloads, restoring semantic memory add/delete from the HUD.
+- **Backup/Restore Repair:** Backend restore now accepts the frontend `filePath` payload, validates backup members, and avoids restoring unexpected ZIP entries.
+- **Safer Secret Persistence:** Blank password fields no longer wipe existing API keys, and newly-entered secrets are moved into the secure API vault instead of being re-saved in plaintext user config.
+- **Version Clean Bump:** Bumped runtime, updater, installer, PyInstaller metadata, README, and HUD labels to `v1.0.21`.
+
+---
+
 # 🚀 KALKI v1.0.20 — Native Claude Integration & Settings Modal Polish
 
 **Release Date:** July 6, 2026  

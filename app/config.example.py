@@ -6,6 +6,8 @@
 
 import os
 
+CURRENT_VERSION = "v1.0.21"
+
 # ── INTERNAL PATHS (do not change) ───────────────────────────
 # Where the Setup Wizard and hardware auto-detect persist their own data.
 # Keep this in sync with USER_DATA_DIR in main_app.py / kalki_setup_wizard.py —
