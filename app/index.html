@@ -3,7 +3,7 @@
 <head>
 <!--
 ====================================================================
-KALKI v1.0.21 PRO — Frontend User Interface
+KALKI v1.0.22 PRO — Frontend User Interface
 ====================================================================
 Architecture:
 - Pure HTML/CSS/JS (Zero external dependencies or frameworks).
@@ -15,6 +15,7 @@ Architecture:
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>K.A.L.K.I.</title>
+<link rel="icon" href="/assets/kalki_icon.ico">
 <link rel="manifest" href="/manifest.json">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
@@ -645,7 +646,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
     <div>OPER <span class="v" id="topOwner">Sir</span></div>
     <div>LOC <span class="v" id="topLoc">—</span></div>
     <div>MODE <span class="v cy" id="topMode">SYSTEM</span></div>
-    <div>SYS <span class="v" id="topSys">v1.0.21 PRO</span></div>
+    <div>SYS <span class="v" id="topSys">v1.0.22 PRO</span></div>
     <div>NET <span class="v ok" id="topNet">ONLINE</span></div>
     <div><span class="v cy" id="topClock">00:00:00</span></div>
     <div style="cursor:pointer; border:0.1rem solid var(--frame); padding:0.2rem 0.8rem; border-radius:0.3rem;" id="topSettingsBtn">⚙ SETTINGS</div>
@@ -967,11 +968,42 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
             <label style="display:block; font-size:1.2rem; color:var(--text-dim);">TTS VOICE AGENT</label>
             <input type="text" id="set_tts_voice" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #222; padding:0.8rem; margin-top:0.3rem; font-family:var(--mono);">
           </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
+            <div>
+              <label style="display:block; font-size:1.2rem; color:var(--text-dim);">TTS PROVIDER</label>
+              <select id="set_tts_provider" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #222; padding:0.8rem; margin-top:0.3rem; font-family:var(--mono);">
+                <option value="edge">EDGE NEURAL (FAST)</option>
+                <option value="groq">GROQ ORPHEUS (FALLBACK)</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:block; font-size:1.2rem; color:var(--text-dim);">GROQ TTS TIMEOUT SEC</label>
+              <input type="number" min="1" max="10" id="set_tts_groq_timeout_sec" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #222; padding:0.8rem; margin-top:0.3rem; font-family:var(--mono);">
+            </div>
+            <div>
+              <label style="display:block; font-size:1.2rem; color:var(--text-dim);">RATE</label>
+              <input type="text" id="set_tts_rate" placeholder="+0%" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #222; padding:0.8rem; margin-top:0.3rem; font-family:var(--mono);">
+            </div>
+            <div>
+              <label style="display:block; font-size:1.2rem; color:var(--text-dim);">PITCH</label>
+              <input type="text" id="set_tts_pitch" placeholder="+0Hz" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #222; padding:0.8rem; margin-top:0.3rem; font-family:var(--mono);">
+            </div>
+            <div>
+              <label style="display:block; font-size:1.2rem; color:var(--text-dim);">VOLUME</label>
+              <input type="text" id="set_tts_volume" placeholder="+0%" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #222; padding:0.8rem; margin-top:0.3rem; font-family:var(--mono);">
+            </div>
+            <div>
+              <label style="display:block; font-size:1.2rem; color:var(--text-dim);">OUTPUT DEVICE CONTAINS</label>
+              <input type="text" id="set_tts_output_device" placeholder="Leave blank for default" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #222; padding:0.8rem; margin-top:0.3rem; font-family:var(--mono);">
+            </div>
+          </div>
           <div style="margin-bottom:1.5rem;">
             <label style="display:block; font-size:1.2rem; color:var(--text-dim);">ELEVENLABS API KEY</label>
             <input type="password" id="set_elevenlabs_key" style="width:100%; background:#111; color:var(--text); border:0.1rem solid #333; padding:0.8rem; margin-top:0.3rem;">
           </div>
           <div style="margin-top:2rem;">
+            <div id="lbl_tts_status" style="font-size:1.1rem; color:var(--text-dim); margin-bottom:0.8rem; font-family:var(--mono);">TTS STATUS: READY</div>
+            <button class="qbtn" id="testVoiceBtn" style="width:100%; background:#1a1a1a; border:0.1rem solid var(--accent); color:var(--accent); padding:0.8rem; cursor:pointer; margin-bottom:0.8rem;">TEST KALKI VOICE</button>
             <button class="qbtn" id="testSettingsBtn" style="width:100%; background:#1a1a1a; border:0.1rem solid var(--lime); color:var(--lime); padding:0.8rem; cursor:pointer;">TEST ALL API CONNECTIONS</button>
           </div>
         </div>
@@ -1052,7 +1084,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
           <div style="background:#111; border:0.1rem solid #222; padding:1.5rem; margin-bottom:1.5rem;">
             <div style="display:flex; justify-content:space-between; font-size:1.2rem; margin-bottom:0.5rem;">
               <span>LOCAL RUNTIME VERSION:</span>
-              <span style="color:var(--cyan); font-weight:bold;">v1.0.21</span>
+              <span style="color:var(--cyan); font-weight:bold;">v1.0.22</span>
             </div>
             <div style="display:flex; justify-content:space-between; font-size:1.2rem;">
               <span>BINARY INTEGRITY CHECK:</span>
@@ -1148,7 +1180,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
     </div>
     
     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem;">
-      <span style="color:var(--text-dim); font-size:0.95rem; font-family:'JetBrains Mono', monospace;">KALKI SECURE UPLINK v1.0.21</span>
+      <span style="color:var(--text-dim); font-size:0.95rem; font-family:'JetBrains Mono', monospace;">KALKI SECURE UPLINK v1.0.22</span>
       <button class="qbtn" id="acknowledgeErrBtn" style="border:0.1rem solid var(--red); color:var(--red); padding:0.6rem 2rem; font-size:1.1rem; background:rgba(255,0,0,0.1);">ACKNOWLEDGE</button>
     </div>
   </div>
@@ -1951,6 +1983,12 @@ async function openSettingsModal() {
       $("set_screensaver_enabled").checked = d.settings.SCREENSAVER_ENABLED !== false;
       $("set_screensaver_idle_mins").value = d.settings.SCREENSAVER_IDLE_MINS || 5;
       $("set_tts_voice").value = d.settings.TTS_VOICE || "";
+      if ($("set_tts_provider")) $("set_tts_provider").value = d.settings.TTS_PROVIDER || "edge";
+      if ($("set_tts_rate")) $("set_tts_rate").value = d.settings.TTS_RATE || "+0%";
+      if ($("set_tts_pitch")) $("set_tts_pitch").value = d.settings.TTS_PITCH || "+0Hz";
+      if ($("set_tts_volume")) $("set_tts_volume").value = d.settings.TTS_VOLUME || "+0%";
+      if ($("set_tts_output_device")) $("set_tts_output_device").value = d.settings.TTS_OUTPUT_DEVICE || "";
+      if ($("set_tts_groq_timeout_sec")) $("set_tts_groq_timeout_sec").value = d.settings.TTS_GROQ_TIMEOUT_SEC || 3;
       
       if ($("lbl_google_status")) {
         $("lbl_google_status").innerHTML = d.googleConfigured ? "[LINKED]" : "[NOT CONFIGURED]";
@@ -2017,7 +2055,13 @@ $("saveSettingsBtn").addEventListener("click", async () => {
     CPU_ALERTS_ENABLED: $("set_cpu_alerts_enabled").checked,
     SCREENSAVER_ENABLED: $("set_screensaver_enabled").checked,
     SCREENSAVER_IDLE_MINS: parseInt($("set_screensaver_idle_mins").value) || 5,
-    TTS_VOICE: $("set_tts_voice").value
+    TTS_PROVIDER: $("set_tts_provider") ? $("set_tts_provider").value : "edge",
+    TTS_VOICE: $("set_tts_voice").value,
+    TTS_RATE: $("set_tts_rate") ? $("set_tts_rate").value : "+0%",
+    TTS_PITCH: $("set_tts_pitch") ? $("set_tts_pitch").value : "+0Hz",
+    TTS_VOLUME: $("set_tts_volume") ? $("set_tts_volume").value : "+0%",
+    TTS_OUTPUT_DEVICE: $("set_tts_output_device") ? $("set_tts_output_device").value : "",
+    TTS_GROQ_TIMEOUT_SEC: parseInt($("set_tts_groq_timeout_sec") ? $("set_tts_groq_timeout_sec").value : "3") || 3
   };
   try {
     const resp = await fetch("/api/settings/save", {
@@ -2038,6 +2082,27 @@ $("saveSettingsBtn").addEventListener("click", async () => {
     showNotice("Save failed: " + e.message, true);
   }
 });
+
+if ($("testVoiceBtn")) {
+  $("testVoiceBtn").addEventListener("click", async () => {
+    try {
+      if ($("lbl_tts_status")) $("lbl_tts_status").textContent = "TTS STATUS: STARTING TEST...";
+      showNotice("Speaking test phrase...", false);
+      const r = await fetch("/api/tts/test", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({})
+      });
+      const d = await r.json();
+      const status = d.ok ? `TTS STATUS: ${d.provider || "edge"} STARTED` : `TTS STATUS: ${d.lastError || "FAILED"}`;
+      if ($("lbl_tts_status")) $("lbl_tts_status").textContent = status;
+      showNotice(d.ok ? "Voice test started." : (d.lastError || "Voice test failed."), !d.ok);
+    } catch(e) {
+      if ($("lbl_tts_status")) $("lbl_tts_status").textContent = "TTS STATUS: " + e.message;
+      showNotice("Voice test failed: " + e.message, true);
+    }
+  });
+}
 
 $("runGoogleSetup").addEventListener("click", async () => {
   showNotice("Launching Google Oauth Flow...");

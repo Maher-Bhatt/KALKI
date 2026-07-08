@@ -7,7 +7,7 @@
   <em>Inspired by J.A.R.V.I.S. • Powered by Groq LLaMA • Engineered for power users & developers.</em>
 
   <p>
-    <img src="https://img.shields.io/badge/release-v1.0.21-00c8ff?style=for-the-badge&logo=github" alt="release">
+    <img src="https://img.shields.io/badge/release-v1.0.22-00c8ff?style=for-the-badge&logo=github" alt="release">
     <img src="https://img.shields.io/badge/platform-Windows_10%2B-0078d4?style=for-the-badge&logo=windows" alt="platform">
     <img src="https://img.shields.io/badge/brain-Groq_LLaMA_3.3-ff6b35?style=for-the-badge&logo=meta" alt="brain">
     <img src="https://img.shields.io/badge/engine-Python_3.11+-3776AB?style=for-the-badge&logo=python" alt="python">
@@ -20,7 +20,7 @@
 
 ---
 
-## 📢 What's New in the Latest Updates (v1.0.21)
+## 📢 What's New in the Latest Updates (v1.0.22)
 
 > KALKI has evolved into a true two-way, multimodal AI platform with a stunning premium UI and deeper OS-level integrations.
 
@@ -29,6 +29,8 @@
 
 | Feature | Description |
 |:---|:---|
+| **Voice Response Repair** | TTS now defaults to fast Edge Neural playback, keeps Groq TTS opt-in with a short fallback timeout, and exposes a Voice Test button with diagnostics. |
+| **Installer Terms Update** | The setup wizard now shows the terms before install and bundles `TERMS.md` alongside the MIT license. |
 | **🛠 Installer HUD Fixes** | The Windows installer now ships the PWA manifest and service worker so installed buttons, cache refresh, and restart behavior stay stable. |
 | **⚙️ Settings Board Repair** | Restored missing settings controls, provider status labels, cloud restore controls, Spotify reconnect, cache size display, and semantic memory add/delete wiring. |
 | **🔁 Upgrade Cache Busting** | The service worker now clears old caches and never serves stale HTML/API responses after an app update. |
@@ -239,6 +241,7 @@ KALKI separates its **Brain** (Python backend) from its **Body** (JS HUD) — th
 KALKI/
 ├── 📄 README.md              # You are here
 ├── 📄 LICENSE                 # MIT License
+├── 📄 TERMS.md                # Use terms and responsible-use conditions
 ├── 📄 release_notes.md       # changelogs
 │
 ├── 📁 app/                   # ← All source code lives here
@@ -293,7 +296,7 @@ KALKI/
 
 ## 📜 License
 
-KALKI is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for full details.
+KALKI is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for full details. Installation and use are also covered by [TERMS.md](TERMS.md), including responsible-use conditions for cybersecurity and automation features.
 
 ---
 

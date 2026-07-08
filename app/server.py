@@ -46,8 +46,19 @@ if not os.path.exists(_cfg_path) and os.path.exists(_example_path):
     shutil.copy(_example_path, _cfg_path)
 
 import config
-if not hasattr(config, "CURRENT_VERSION"):
-    config.CURRENT_VERSION = "v1.0.21"
+_CONFIG_DEFAULTS = {
+    "CURRENT_VERSION": "v1.0.22",
+    "TTS_PROVIDER": "edge",
+    "TTS_GROQ_TIMEOUT_SEC": 3,
+    "TTS_VOICE": "en-US-BrianMultilingualNeural",
+    "TTS_RATE": "+0%",
+    "TTS_PITCH": "+0Hz",
+    "TTS_VOLUME": "+0%",
+    "TTS_OUTPUT_DEVICE": "",
+}
+for _cfg_key, _cfg_value in _CONFIG_DEFAULTS.items():
+    if not hasattr(config, _cfg_key):
+        setattr(config, _cfg_key, _cfg_value)
 import github_mod
 import shodan_mod
 import ctypes
@@ -86,15 +97,20 @@ except Exception:
 
 try:
     import pygame
-    # Probe that the mixer works, then immediately release the audio device.
-    # Holding it open pins a Bluetooth headset's A2DP channel to this laptop,
-    # so a phone sharing the same multipoint headset gets no sound. We now
-    # open the device only while actually speaking (see speak()).
-    pygame.mixer.init()
-    pygame.mixer.quit()
     PYGAME_OK = True
-except Exception:
+    PYGAME_PROBE_ERROR = ""
+    try:
+        # Probe that the mixer works, then immediately release the audio device.
+        # A transient boot-time mixer failure must not permanently disable TTS;
+        # playback retries device init inside speak().
+        pygame.mixer.init()
+        pygame.mixer.quit()
+    except Exception as _pygame_probe_error:
+        PYGAME_PROBE_ERROR = str(_pygame_probe_error)
+except Exception as _pygame_import_error:
+    pygame = None
     PYGAME_OK = False
+    PYGAME_PROBE_ERROR = str(_pygame_import_error)
 
 # Serializes mixer open/close so overlapping speak() calls don't clash.
 _audio_lock = __import__("threading").Lock()
@@ -251,6 +267,10 @@ def _settings_status(keys):
 
 STATE = {
     "speaking": False,
+    "last_tts_error": "",
+    "last_tts_provider": "",
+    "last_tts_at": 0.0,
+    "last_tts_latency_ms": 0,
     "model": config.GROQ_MODEL,
     "started_at": time.time(),
     # ── UI presence + voice-driven exchange tracking ──
@@ -639,6 +659,101 @@ def _tts_output_device():
             log(f"TTS output device lookup failed: {e}")
     return _TTS_DEV
 
+
+def _tts_provider():
+    provider = str(getattr(config, "TTS_PROVIDER", "edge") or "edge").strip().lower()
+    return provider if provider in ("edge", "groq") else "edge"
+
+
+def _groq_tts_available():
+    return _is_configured_secret(getattr(config, "GROQ_API_KEY", ""))
+
+
+def _tts_timeout_seconds():
+    try:
+        return max(1, min(10, float(getattr(config, "TTS_GROQ_TIMEOUT_SEC", 3))))
+    except Exception:
+        return 3
+
+
+def _build_edge_tts_file(text):
+    if edge_tts is None:
+        raise RuntimeError("edge-tts is not installed")
+    return asyncio.run(_speak_async(
+        text,
+        getattr(config, "TTS_VOICE", "en-US-BrianMultilingualNeural"),
+        getattr(config, "TTS_RATE", "+0%"),
+        getattr(config, "TTS_VOLUME", "+0%"),
+        getattr(config, "TTS_PITCH", "+0Hz"),
+    ))
+
+
+def _build_groq_tts_file(text):
+    if not _groq_tts_available():
+        raise RuntimeError("Groq API key is not configured")
+    tmp = tempfile.mktemp(suffix=".mp3")
+    payload = json.dumps({
+        "model": "orpheus",
+        "input": text,
+        "voice": "kalki"
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.groq.com/openai/v1/audio/speech",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {config.GROQ_API_KEY}",
+            "Content-Type": "application/json"
+        },
+        method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=_tts_timeout_seconds()) as r:
+            with open(tmp, "wb") as f:
+                f.write(r.read())
+        return tmp
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except Exception:
+            pass
+        raise
+
+
+def _build_tts_file(text):
+    provider = _tts_provider()
+    if provider == "groq":
+        try:
+            return _build_groq_tts_file(text), "groq"
+        except Exception as e:
+            STATE["last_tts_error"] = f"Groq TTS failed, falling back to Edge: {e}"
+            log(STATE["last_tts_error"])
+    return _build_edge_tts_file(text), "edge"
+
+
+def _init_tts_mixer():
+    if not PYGAME_OK:
+        raise RuntimeError(f"pygame audio is unavailable: {PYGAME_PROBE_ERROR}")
+    errors = []
+    preferred = _tts_output_device()
+    candidates = [preferred] if preferred else []
+    candidates.append(None)
+    for dev in candidates:
+        try:
+            try:
+                if pygame.mixer.get_init():
+                    pygame.mixer.quit()
+            except Exception:
+                pass
+            if dev:
+                pygame.mixer.init(devicename=dev)
+            else:
+                pygame.mixer.init()
+            return dev or "default"
+        except Exception as e:
+            errors.append(f"{dev or 'default'}: {e}")
+    raise RuntimeError("audio output init failed: " + "; ".join(errors))
+
+
 def is_urgent(text):
     text_lower = text.lower()
     # 1. Zero-delay keywords
@@ -670,71 +785,41 @@ def is_urgent(text):
 
 
 def speak(text, is_notification=False):
-    """Non-blocking TTS using edge-tts neural voice. Markdown stripped first."""
+    """Non-blocking TTS using the configured neural voice. Markdown stripped first."""
     if is_notification and (STATE.get("gaming") or STATE.get("focus") or STATE.get("workflow") in ["gaming", "focus"]):
         if not is_urgent(text):
             log(f"Suppressed non-urgent notification due to DND: {text}")
-            return
+            return False
             
     text = clean_for_speech(text)
     if not text:
-        return
-    if edge_tts is None or not PYGAME_OK:
-        log(f"[TTS missing] {text} (edge_tts is None or not PYGAME_OK)")
-        return
+        return False
+    if edge_tts is None:
+        STATE["last_tts_error"] = "edge-tts is not installed"
+        log(f"[TTS missing] {text} ({STATE['last_tts_error']})")
+        return False
 
     def _run():
         tmp = None
+        started_at = time.perf_counter()
         with _audio_lock:
             try:
                 STATE["speaking"] = True
-                
-                # Attempt Groq Orpheus TTS
-                tmp = tempfile.mktemp(suffix=".mp3")
-                try:
-                    payload = json.dumps({
-                        "model": "orpheus",
-                        "input": text,
-                        "voice": "kalki"
-                    }).encode()
-                    req = urllib.request.Request(
-                        "https://api.groq.com/openai/v1/audio/speech",
-                        data=payload,
-                        headers={
-                            "Authorization": f"Bearer {config.GROQ_API_KEY}",
-                            "Content-Type": "application/json"
-                        },
-                        method="POST"
-                    )
-                    with urllib.request.urlopen(req, timeout=10) as r:
-                        with open(tmp, 'wb') as f:
-                            f.write(r.read())
-                except Exception as groq_e:
-                    # Fallback to edge-tts if Groq TTS is unavailable or errors
-                    tmp = asyncio.run(_speak_async(
-                        text,
-                        config.TTS_VOICE,
-                        config.TTS_RATE,
-                        config.TTS_VOLUME,
-                        getattr(config, "TTS_PITCH", "+0Hz"),
-                    ))
+                STATE["last_tts_error"] = ""
+                tmp, provider = _build_tts_file(text)
+                STATE["last_tts_provider"] = provider
+                STATE["last_tts_at"] = time.time()
+                STATE["last_tts_latency_ms"] = int((time.perf_counter() - started_at) * 1000)
                 # Open the audio device only now, for the duration of speech.
-                # If TTS_OUTPUT_DEVICE is set (e.g. laptop speakers), play there
-                # so KALKI never grabs a shared Bluetooth headset — leaving the
-                # headset free for your phone, no audio cut.
-                _dev = _tts_output_device()
-                if _dev:
-                    try:
-                        pygame.mixer.init(devicename=_dev)
-                    except Exception:
-                        pygame.mixer.init()
-                else:
-                    pygame.mixer.init()
+                # If TTS_OUTPUT_DEVICE is set, try that output first and then
+                # fall back to the Windows default output.
+                _init_tts_mixer()
                 pygame.mixer.music.load(tmp)
                 pygame.mixer.music.play()
                 while pygame.mixer.music.get_busy():
                     time.sleep(0.1)
             except Exception as e:
+                STATE["last_tts_error"] = str(e)
                 log(f"TTS error: {e}")
             finally:
                 # Release the audio device so a shared BT headset can switch
@@ -758,6 +843,7 @@ def speak(text, is_notification=False):
                 STATE["speaking"] = False
 
     threading.Thread(target=_run, daemon=True).start()
+    return True
 
 
 # ─────────────────────────────────────────────────────────────
@@ -3806,6 +3892,11 @@ class Handler(BaseHTTPRequestHandler):
                 "groqConfigured": bool(config.GROQ_API_KEY and config.GROQ_API_KEY != "PASTE_YOUR_GROQ_KEY_HERE"),
                 "ollamaOnline": ollama_ok,
                 "speaking": STATE["speaking"],
+                "ttsProvider": _tts_provider(),
+                "ttsLastProvider": STATE.get("last_tts_provider", ""),
+                "ttsLastError": STATE.get("last_tts_error", ""),
+                "ttsLastLatencyMs": STATE.get("last_tts_latency_ms", 0),
+                "ttsProbeError": PYGAME_PROBE_ERROR,
                 "memCount": len(load_memory()),
                 "time": now.strftime("%I:%M %p"),
                 "timeFull": now.strftime("%H:%M:%S"),
@@ -3873,7 +3964,13 @@ class Handler(BaseHTTPRequestHandler):
                 "MODEL_VISION": getattr(config, "MODEL_VISION", "auto"),
                 "MODEL_CODING": getattr(config, "MODEL_CODING", "auto"),
                 "MODEL_VOICE": getattr(config, "MODEL_VOICE", "auto"),
-                "TTS_VOICE": getattr(config, "TTS_VOICE", "")
+                "TTS_PROVIDER": getattr(config, "TTS_PROVIDER", "edge"),
+                "TTS_VOICE": getattr(config, "TTS_VOICE", ""),
+                "TTS_RATE": getattr(config, "TTS_RATE", "+0%"),
+                "TTS_PITCH": getattr(config, "TTS_PITCH", "+0Hz"),
+                "TTS_VOLUME": getattr(config, "TTS_VOLUME", "+0%"),
+                "TTS_OUTPUT_DEVICE": getattr(config, "TTS_OUTPUT_DEVICE", ""),
+                "TTS_GROQ_TIMEOUT_SEC": getattr(config, "TTS_GROQ_TIMEOUT_SEC", 3)
             }
             public_keys = {k: _public_settings_value(k, v) for k, v in keys.items()}
             # removed local import
@@ -3945,12 +4042,25 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"memories": load_memory()})
             return
 
+        if path == "/api/memory/list":
+            try:
+                mems = semantic_memory.memory.list_all()
+                self._json({"ok": True, "memories": mems})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)}, status=500)
+            return
+
+        if path == "/favicon.ico":
+            path = "/assets/kalki_icon.ico"
+
         if path.startswith("/assets/"):
             try:
                 local_path = os.path.join(BASE_DIR, path.lstrip("/"))
+                if not os.path.exists(local_path):
+                    local_path = os.path.join(os.path.dirname(BASE_DIR), path.lstrip("/"))
                 with open(local_path, "rb") as f:
                     content = f.read()
-                ctype = "image/png" if local_path.endswith(".png") else "application/octet-stream"
+                ctype = "image/png" if local_path.endswith(".png") else "image/x-icon" if local_path.endswith(".ico") else "application/octet-stream"
                 self.send_response(200)
                 self.send_header("Content-Type", ctype)
                 self.send_header("Content-Length", str(len(content)))
@@ -4136,6 +4246,18 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": True, "message": "Meeting recording stopped, processing action items."})
             else:
                 self._json({"ok": False, "error": "Not recording."})
+            return
+
+        if path == "/api/tts/test":
+            phrase = (body.get("text") or "").strip() or f"Voice check complete, {getattr(config, 'OWNER_TITLE', 'Sir')}."
+            ok = speak(phrase)
+            self._json({
+                "ok": bool(ok),
+                "provider": _tts_provider(),
+                "lastProvider": STATE.get("last_tts_provider", ""),
+                "lastError": STATE.get("last_tts_error", ""),
+                "probeError": PYGAME_PROBE_ERROR,
+            })
             return
 
         if path == "/api/stop":

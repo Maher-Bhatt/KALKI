@@ -1,5 +1,5 @@
 #define MyAppName "KALKI"
-#define MyAppVersion "1.0.21"
+#define MyAppVersion "1.0.22"
 #define MyAppPublisher "KALKI Technologies"
 #define MyAppExeName "KALKI.exe"
 
@@ -14,6 +14,7 @@ PrivilegesRequired=lowest
 OutputDir=..\..\Output
 OutputBaseFilename=KALKI_Setup
 LicenseFile=..\..\LICENSE
+InfoBeforeFile=..\..\TERMS.md
 SetupIconFile=..\..\assets\kalki_icon.ico
 Compression=lzma
 SolidCompression=yes
@@ -45,6 +46,7 @@ Source: "..\manifest.json"; DestDir: "{app}"; Flags: ignoreversion; Components: 
 Source: "..\service-worker.js"; DestDir: "{app}"; Flags: ignoreversion; Components: core
 Source: "..\config.example.py"; DestDir: "{app}"; Flags: ignoreversion; Components: core
 Source: "..\..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion; Components: core
+Source: "..\..\TERMS.md"; DestDir: "{app}"; Flags: ignoreversion; Components: core
 
 [Dirs]
 Name: "{app}\data"; Components: core

@@ -1,3 +1,22 @@
+# 🚀 KALKI v1.0.22 — Voice Reliability & Terms Update
+
+**Release Date:** July 8, 2026
+**Build:** Production
+
+---
+
+## 🔥 v1.0.22 Patch Notes
+
+- **Voice Playback Repair:** KALKI now defaults to Microsoft Edge Neural TTS for faster speech after answers render, instead of waiting on Groq TTS first.
+- **Groq TTS Opt-In:** Groq Orpheus TTS remains available as a selectable provider, now with a configurable short timeout and automatic Edge fallback.
+- **Audio Mixer Resilience:** A startup-time mixer probe failure no longer permanently disables voice for the whole session; playback retries the device when KALKI actually speaks.
+- **Voice Test Controls:** Added provider, rate, pitch, volume, output-device, timeout, and direct voice-test controls to the HUD settings board.
+- **TTS Diagnostics:** `/api/status` now reports current TTS provider, last provider used, latency, probe error, and last voice error for easier troubleshooting.
+- **Installer Terms Update:** Added `TERMS.md`, shows it before installation, bundles it with installed files, and links it from the README.
+- **Version Clean Bump:** Bumped runtime, updater, installer, PyInstaller metadata, service-worker cache, README, release notes, and HUD labels to `v1.0.22`.
+
+---
+
 # 🚀 KALKI v1.0.21 — Installed HUD Stability & Settings Repair
 
 **Release Date:** July 8, 2026

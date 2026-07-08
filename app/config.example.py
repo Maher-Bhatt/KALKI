@@ -6,7 +6,7 @@
 
 import os
 
-CURRENT_VERSION = "v1.0.21"
+CURRENT_VERSION = "v1.0.22"
 
 # ── INTERNAL PATHS (do not change) ───────────────────────────
 # Where the Setup Wizard and hardware auto-detect persist their own data.
@@ -34,6 +34,10 @@ OWNER_STATE   = "YourState"
 OWNER_COUNTRY = "YourCountry"
 
 # ── VOICE (edge-tts) ────────────────────────────────────────
+# Default to Edge TTS for fastest local-feeling playback. Groq TTS is available
+# as an opt-in provider, but it has a short timeout and falls back to Edge.
+TTS_PROVIDER = "edge"             # edge | groq
+TTS_GROQ_TIMEOUT_SEC = 3
 # Most human / least robotic: en-US-BrianMultilingualNeural (default),
 #   en-US-AndrewMultilingualNeural — newest neural models, very natural.
 # British butler (JARVIS vibe): en-GB-RyanNeural, en-GB-ThomasNeural
