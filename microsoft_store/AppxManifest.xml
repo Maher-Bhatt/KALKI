@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  IgnorableNamespaces="uap rescap desktop">
+
+  <!-- ⚠️ IMPORTANT: Replace Identity fields with your Partner Center Product Identity values -->
+  <Identity
+    Name="PLACEHOLDER_PACKAGE_IDENTITY_NAME"
+    Publisher="PLACEHOLDER_PUBLISHER_ID"
+    Version="1.0.24.0"
+    ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>Kalki</DisplayName>
+    <!-- ⚠️ Replace with your Partner Center Publisher Display Name -->
+    <PublisherDisplayName>PLACEHOLDER_PUBLISHER_DISPLAY_NAME</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+
+  <Applications>
+    <Application Id="KALKI"
+      Executable="KALKI.exe"
+      EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="Kalki"
+        Description="KALKI — Your intelligent AI desktop assistant with voice control, Spotify integration, cybersecurity tools, and more."
+        BackgroundColor="#1a1a2e"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" Square71x71Logo="Assets\Square71x71Logo.png" />
+        <uap:SplashScreen Image="Assets\SplashScreen.png" BackgroundColor="#1a1a2e" />
+      </uap:VisualElements>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <!-- Internet access for AI APIs, TTS, weather, etc. -->
+    <Capability Name="internetClient" />
+    <Capability Name="internetClientServer" />
+    <!-- Microphone for voice commands -->
+    <uap:Capability Name="microphone" />
+    <!-- Full trust to run as a desktop app (required for Win32 EXEs) -->
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+
+</Package>

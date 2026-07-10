@@ -9,11 +9,19 @@ import subprocess
 REPO = "Maher-Bhatt/KALKI"
 CURRENT_VERSION = "v1.0.24"
 
+# Microsoft Store builds must not self-update — the Store handles updates.
+_BASE = os.path.dirname(os.path.dirname(os.path.abspath(
+    sys.executable if getattr(sys, "frozen", False) else __file__
+)))
+IS_STORE_BUILD = os.path.exists(os.path.join(_BASE, "store_build.txt"))
+
 def check_for_updates():
     """
     Ping GitHub releases to see if a newer version is available.
     Returns (has_update, latest_version, download_url)
     """
+    if IS_STORE_BUILD:
+        return False, CURRENT_VERSION, None
     url = f"https://api.github.com/repos/{REPO}/releases/latest"
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "KALKI-AutoUpdater"})
