@@ -8,8 +8,12 @@ import os
 import time
 import threading
 import datetime
-from PIL import ImageGrab
-import pytesseract
+try:
+    from PIL import ImageGrab
+    import pytesseract
+    HAS_OCR = True
+except ImportError:
+    HAS_OCR = False
 
 import config
 import semantic_memory
@@ -20,6 +24,8 @@ import semantic_memory
 _vision_thread = None
 
 def _vision_loop():
+    if not HAS_OCR:
+        return
     while getattr(config, "VISION_RECALL_ENABLED", False):
         try:
             # 1. Capture screen

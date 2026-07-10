@@ -47,7 +47,7 @@ if not os.path.exists(_cfg_path) and os.path.exists(_example_path):
 
 import config
 _CONFIG_DEFAULTS = {
-    "CURRENT_VERSION": "v1.0.22",
+    "CURRENT_VERSION": "v1.0.23",
     "TTS_PROVIDER": "edge",
     "TTS_GROQ_TIMEOUT_SEC": 3,
     "TTS_VOICE": "en-US-BrianMultilingualNeural",

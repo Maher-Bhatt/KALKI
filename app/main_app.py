@@ -56,7 +56,14 @@ def get_exe_path(name):
         # In the distributed installer, everything is in the root directory
         return os.path.join(BASE_DIR, f"{name}.exe")
     else:
-        return f'{sys.executable} "{os.path.join(BASE_DIR, f"{name}.py")}"'
+        # Map executable names to source file names for dev mode
+        name_map = {
+            "KALKI_Server": "server",
+            "KALKI_Listener": "listener",
+            "KALKI_Setup_Wizard": "kalki_setup_wizard"
+        }
+        src_name = name_map.get(name, name)
+        return f'{sys.executable} "{os.path.join(BASE_DIR, f"{src_name}.py")}"'
 
 def is_setup_complete():
     marker_path = os.path.join(USER_DATA_DIR, "setup_complete.marker")

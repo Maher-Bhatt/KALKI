@@ -7,7 +7,7 @@
   <em>Inspired by J.A.R.V.I.S. • Powered by Groq LLaMA • Engineered for power users & developers.</em>
 
   <p>
-    <img src="https://img.shields.io/badge/release-v1.0.22-00c8ff?style=for-the-badge&logo=github" alt="release">
+    <img src="https://img.shields.io/badge/release-v1.0.23-00c8ff?style=for-the-badge&logo=github" alt="release">
     <img src="https://img.shields.io/badge/platform-Windows_10%2B-0078d4?style=for-the-badge&logo=windows" alt="platform">
     <img src="https://img.shields.io/badge/brain-Groq_LLaMA_3.3-ff6b35?style=for-the-badge&logo=meta" alt="brain">
     <img src="https://img.shields.io/badge/engine-Python_3.11+-3776AB?style=for-the-badge&logo=python" alt="python">
@@ -20,7 +20,7 @@
 
 ---
 
-## 📢 What's New in the Latest Updates (v1.0.22)
+## 📢 What's New in the Latest Updates (v1.0.23)
 
 > KALKI has evolved into a true two-way, multimodal AI platform with a stunning premium UI and deeper OS-level integrations.
 
