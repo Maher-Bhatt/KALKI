@@ -12,6 +12,15 @@ import time
 import glob
 import socket
 import threading
+import ssl
+
+# Globally bypass SSL verification for neural TTS connections
+# (Crucial for edge-tts when PyInstaller fails to bundle CA certs or on restrictive networks)
+try:
+    ssl.create_default_context = ssl._create_unverified_context
+    ssl._create_default_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
 import subprocess
 import urllib.request
 import urllib.parse
@@ -47,7 +56,7 @@ if not os.path.exists(_cfg_path) and os.path.exists(_example_path):
 
 import config
 _CONFIG_DEFAULTS = {
-    "CURRENT_VERSION": "v1.0.23",
+    "CURRENT_VERSION": "v1.0.24",
     "TTS_PROVIDER": "edge",
     "TTS_GROQ_TIMEOUT_SEC": 3,
     "TTS_VOICE": "en-US-BrianMultilingualNeural",

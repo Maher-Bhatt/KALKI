@@ -6,7 +6,7 @@
 
 import os
 
-CURRENT_VERSION = "v1.0.23"
+CURRENT_VERSION = "v1.0.24"
 
 # ── INTERNAL PATHS (do not change) ───────────────────────────
 # Where the Setup Wizard and hardware auto-detect persist their own data.
