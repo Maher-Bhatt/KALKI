@@ -10,9 +10,10 @@ REPO = "Maher-Bhatt/KALKI"
 CURRENT_VERSION = "v1.0.24"
 
 # Microsoft Store builds must not self-update — the Store handles updates.
-_BASE = os.path.dirname(os.path.dirname(os.path.abspath(
-    sys.executable if getattr(sys, "frozen", False) else __file__
-)))
+if getattr(sys, "frozen", False):
+    _BASE = os.path.dirname(os.path.abspath(sys.executable))
+else:
+    _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 IS_STORE_BUILD = os.path.exists(os.path.join(_BASE, "store_build.txt"))
 
 def check_for_updates():

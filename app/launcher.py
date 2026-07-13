@@ -28,13 +28,32 @@ sys.path.insert(0, BASE_DIR)
 # --- Auto-bootstrap config.py from config.example.py on first run -----------
 _cfg_path = os.path.join(BASE_DIR, "config.py")
 _example_path = os.path.join(BASE_DIR, "config.example.py")
-if not os.path.exists(_cfg_path) and os.path.exists(_example_path):
-    import shutil
-    shutil.copy(_example_path, _cfg_path)
+_user_data_dir = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI")
+_user_cfg_path = os.path.join(_user_data_dir, "config.py")
+
+if not os.path.exists(_cfg_path):
+    try:
+        if os.path.exists(_example_path):
+            import shutil
+            shutil.copy(_example_path, _cfg_path)
+    except (PermissionError, OSError):
+        os.makedirs(_user_data_dir, exist_ok=True)
+        if not os.path.exists(_user_cfg_path) and os.path.exists(_example_path):
+            import shutil
+            shutil.copy(_example_path, _user_cfg_path)
+
+if not os.path.exists(_cfg_path) and os.path.exists(_user_cfg_path):
+    sys.path.insert(0, _user_data_dir)
 
 import config
 
-LOG_PATH = os.path.join(BASE_DIR, "data", "launcher.log")
+_is_store = os.path.exists(os.path.join(BASE_DIR, "store_build.txt"))
+if _is_store:
+    _data_root = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "data")
+else:
+    _data_root = os.path.join(BASE_DIR, "data")
+
+LOG_PATH = os.path.join(_data_root, "launcher.log")
 os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
 
 

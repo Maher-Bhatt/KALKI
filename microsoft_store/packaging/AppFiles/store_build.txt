@@ -1,0 +1,5 @@
+This file marks this installation as a Microsoft Store build.
+When present, the KALKI auto-updater (core/updater.py) is disabled.
+Updates are managed exclusively through the Microsoft Store.
+
+DO NOT DELETE THIS FILE.

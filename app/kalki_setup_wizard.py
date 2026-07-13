@@ -76,11 +76,27 @@ def _apply_to_config_py(updates: dict) -> None:
     """
     cfg_path = os.path.join(BASE_DIR, "config.py")
     example_path = os.path.join(BASE_DIR, "config.example.py")
+    user_cfg_path = os.path.join(USER_DATA_DIR, "config.py")
+
+    # Try creating config.py in the install directory first
     if not os.path.exists(cfg_path):
-        if os.path.exists(example_path):
-            shutil.copy(example_path, cfg_path)
+        try:
+            if os.path.exists(example_path):
+                shutil.copy(example_path, cfg_path)
+        except (PermissionError, OSError):
+            if not os.path.exists(user_cfg_path) and os.path.exists(example_path):
+                shutil.copy(example_path, user_cfg_path)
+
+    # If BASE_DIR is read-only or cfg_path doesn't exist, patch USER_DATA_DIR/config.py instead
+    if not os.path.exists(cfg_path) or not os.access(cfg_path, os.W_OK):
+        if os.path.exists(user_cfg_path):
+            cfg_path = user_cfg_path
         else:
-            return
+            if os.path.exists(example_path):
+                shutil.copy(example_path, user_cfg_path)
+                cfg_path = user_cfg_path
+            else:
+                return
 
     with open(cfg_path, "r", encoding="utf-8") as f:
         text = f.read()

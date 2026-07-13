@@ -50,9 +50,22 @@ except Exception:
 # --- Auto-bootstrap config.py from config.example.py on first run -----------
 _cfg_path = os.path.join(BASE_DIR, "config.py")
 _example_path = os.path.join(BASE_DIR, "config.example.py")
-if not os.path.exists(_cfg_path) and os.path.exists(_example_path):
-    import shutil
-    shutil.copy(_example_path, _cfg_path)
+_user_data_dir = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI")
+_user_cfg_path = os.path.join(_user_data_dir, "config.py")
+
+if not os.path.exists(_cfg_path):
+    try:
+        if os.path.exists(_example_path):
+            import shutil
+            shutil.copy(_example_path, _cfg_path)
+    except (PermissionError, OSError):
+        os.makedirs(_user_data_dir, exist_ok=True)
+        if not os.path.exists(_user_cfg_path) and os.path.exists(_example_path):
+            import shutil
+            shutil.copy(_example_path, _user_cfg_path)
+
+if not os.path.exists(_cfg_path) and os.path.exists(_user_cfg_path):
+    sys.path.insert(0, _user_data_dir)
 
 import config
 _CONFIG_DEFAULTS = {
@@ -146,29 +159,34 @@ except Exception:
 # ─────────────────────────────────────────────────────────────
 # State
 # ─────────────────────────────────────────────────────────────
-DATA_DIR = os.path.join(BASE_DIR, "data")
+_is_store = os.path.exists(os.path.join(BASE_DIR, "store_build.txt"))
+if _is_store:
+    DATA_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "data")
+else:
+    DATA_DIR = os.path.join(BASE_DIR, "data")
+
 os.makedirs(DATA_DIR, exist_ok=True)
 
-MEMORY_PATH  = os.path.join(BASE_DIR, config.MEMORY_FILE)
-HISTORY_PATH = os.path.join(BASE_DIR, config.HISTORY_FILE)
-VAULT_PATH   = os.path.join(BASE_DIR, "data", "vault.json")
-SCRIPTS_DIR  = os.path.join(BASE_DIR, "data", "scripts")
-TASKS_PATH   = os.path.join(BASE_DIR, "data", "tasks.json")
-REMINDERS_PATH = os.path.join(BASE_DIR, "data", "reminders.json")
-LOG_PATH     = os.path.join(BASE_DIR, "data", "kalki.log")
+MEMORY_PATH  = os.path.join(DATA_DIR, os.path.basename(config.MEMORY_FILE))
+HISTORY_PATH = os.path.join(DATA_DIR, os.path.basename(config.HISTORY_FILE))
+VAULT_PATH   = os.path.join(DATA_DIR, "vault.json")
+SCRIPTS_DIR  = os.path.join(DATA_DIR, "scripts")
+TASKS_PATH   = os.path.join(DATA_DIR, "tasks.json")
+REMINDERS_PATH = os.path.join(DATA_DIR, "reminders.json")
+LOG_PATH     = os.path.join(DATA_DIR, "kalki.log")
 os.makedirs(SCRIPTS_DIR, exist_ok=True)
 vault.VAULT_PATH = VAULT_PATH
 coder.SCRIPTS_DIR = SCRIPTS_DIR
 taskmod.TASKS_PATH = TASKS_PATH
 taskmod.REMINDERS_PATH = REMINDERS_PATH
-gcal.CRED_PATH  = os.path.join(BASE_DIR, "data", "google_credentials.json")
-gcal.TOKEN_PATH = os.path.join(BASE_DIR, "data", "google_token.pickle")
-spotify_mod.CACHE_PATH = os.path.join(BASE_DIR, "data", "spotify_token.json")
-whatsapp_mod.CONTACTS_PATH = os.path.join(BASE_DIR, "data", "contacts.json")
-notesmod.NOTES_PATH = os.path.join(BASE_DIR, "data", "notes.json")
-webscan.SCANS_DIR = os.path.join(BASE_DIR, "data", "scans")
-watchdog.WATCHLIST_PATH = os.path.join(BASE_DIR, "data", "watchlist.json")
-deepscan.SCANS_DIR = os.path.join(BASE_DIR, "data", "scans")
+gcal.CRED_PATH  = os.path.join(DATA_DIR, "google_credentials.json")
+gcal.TOKEN_PATH = os.path.join(DATA_DIR, "google_token.pickle")
+spotify_mod.CACHE_PATH = os.path.join(DATA_DIR, "spotify_token.json")
+whatsapp_mod.CONTACTS_PATH = os.path.join(DATA_DIR, "contacts.json")
+notesmod.NOTES_PATH = os.path.join(DATA_DIR, "notes.json")
+webscan.SCANS_DIR = os.path.join(DATA_DIR, "scans")
+watchdog.WATCHLIST_PATH = os.path.join(DATA_DIR, "watchlist.json")
+deepscan.SCANS_DIR = os.path.join(DATA_DIR, "scans")
 
 
 def log(msg):
@@ -3760,7 +3778,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/" or path == "/index.html":
             try:
-                crash_log_path = os.path.join(BASE_DIR, "data", "crash.log")
+                crash_log_path = os.path.join(DATA_DIR, "crash.log")
                 if os.path.exists(crash_log_path):
                     with open(crash_log_path, "r", encoding="utf-8") as f:
                         crash_details = f.read()
@@ -3776,7 +3794,7 @@ class Handler(BaseHTTPRequestHandler):
                     self._text(html.encode("utf-8"), ctype="text/html; charset=utf-8")
                     return
                 
-                lock_path = os.path.join(BASE_DIR, "data", "updating.lock")
+                lock_path = os.path.join(DATA_DIR, "updating.lock")
                 if os.path.exists(lock_path):
                     if time.time() - os.path.getmtime(lock_path) < 300:
                         html = """<!DOCTYPE html><html><head><title>KALKI Updating</title>
@@ -3986,7 +4004,7 @@ class Handler(BaseHTTPRequestHandler):
             
             # calculate cache size
             cache_size_mb = 0
-            data_dir = os.path.join(BASE_DIR, "data")
+            data_dir = DATA_DIR
             if os.path.exists(data_dir):
                 size_bytes = sum(os.path.getsize(os.path.join(data_dir, f)) for f in os.listdir(data_dir) if os.path.isfile(os.path.join(data_dir, f)))
                 cache_size_mb = size_bytes / (1024*1024)
@@ -4105,7 +4123,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/recovery/clear":
             try:
-                os.remove(os.path.join(BASE_DIR, "data", "crash.log"))
+                os.remove(os.path.join(DATA_DIR, "crash.log"))
             except:
                 pass
             self._json({"ok": True})
@@ -4114,9 +4132,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/settings/reset":
             try:
                 if os.path.exists(config._USER_CONFIG_PATH): os.remove(config._USER_CONFIG_PATH)
-                if os.path.exists(os.path.join(BASE_DIR, "data", "token.json")): os.remove(os.path.join(BASE_DIR, "data", "token.json"))
-                if os.path.exists(os.path.join(BASE_DIR, "data", "spotify_token.json")): os.remove(os.path.join(BASE_DIR, "data", "spotify_token.json"))
-                if os.path.exists(os.path.join(BASE_DIR, "data", "credentials.json")): os.remove(os.path.join(BASE_DIR, "data", "credentials.json"))
+                if os.path.exists(os.path.join(DATA_DIR, "token.json")): os.remove(os.path.join(DATA_DIR, "token.json"))
+                if os.path.exists(os.path.join(DATA_DIR, "spotify_token.json")): os.remove(os.path.join(DATA_DIR, "spotify_token.json"))
+                if os.path.exists(os.path.join(DATA_DIR, "credentials.json")): os.remove(os.path.join(DATA_DIR, "credentials.json"))
                 self._json({"ok": True})
             except Exception as e:
                 self._json({"ok": False, "error": str(e)})
@@ -4124,7 +4142,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/settings/clear_cache":
             try:
-                data_dir = os.path.join(BASE_DIR, "data")
+                data_dir = DATA_DIR
                 keep = {"token.json", "spotify_token.json", "credentials.json", "google_token.pickle", "kalki.db", "api_token.txt"}
                 if os.path.exists(data_dir):
                     for f in os.listdir(data_dir):
@@ -4171,7 +4189,7 @@ class Handler(BaseHTTPRequestHandler):
                 google_client_secret = effective_updates.get("GOOGLE_CLIENT_SECRET") or getattr(config, "GOOGLE_CLIENT_SECRET", "")
                 google_project_id = effective_updates.get("GOOGLE_PROJECT_ID") or getattr(config, "GOOGLE_PROJECT_ID", "")
                 if google_client_id and google_client_secret and google_project_id:
-                    cred_path = os.path.join(BASE_DIR, "data", "credentials.json")
+                    cred_path = os.path.join(DATA_DIR, "credentials.json")
                     cred_data = {
                         "installed": {
                             "client_id": google_client_id,
@@ -4183,8 +4201,8 @@ class Handler(BaseHTTPRequestHandler):
                             "redirect_uris": ["http://localhost:8080/"]
                         }
                     }
-                    if not os.path.exists(os.path.join(BASE_DIR, "data")):
-                        os.makedirs(os.path.join(BASE_DIR, "data"), exist_ok=True)
+                    if not os.path.exists(DATA_DIR):
+                        os.makedirs(DATA_DIR, exist_ok=True)
                     with open(cred_path, "w", encoding="utf-8") as cf:
                         json.dump(cred_data, cf, indent=4)
                 
@@ -4230,8 +4248,8 @@ class Handler(BaseHTTPRequestHandler):
                 if not passphrase:
                     passphrase = getattr(config, "CLOUD_SYNC_PASSPHRASE", "")
                 
-                m1 = cloud_sync.restore_memory_from_cloud(uid, os.path.join(BASE_DIR, "data", "memory.json"), passphrase)
-                m2 = cloud_sync.restore_history_from_cloud(uid, os.path.join(BASE_DIR, "data", "history.json"), passphrase)
+                m1 = cloud_sync.restore_memory_from_cloud(uid, os.path.join(DATA_DIR, "memory.json"), passphrase)
+                m2 = cloud_sync.restore_history_from_cloud(uid, os.path.join(DATA_DIR, "history.json"), passphrase)
                 
                 if m1 or m2:
                     self._json({"ok": True, "message": "Restore successful."})
@@ -4532,9 +4550,9 @@ class Handler(BaseHTTPRequestHandler):
                     os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "vault_integrity.sha256"),
                     os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "semantic_memory.json"),
                     os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "ai_usage.json"),
-                    os.path.join(BASE_DIR, "data", "memory.json"),
-                    os.path.join(BASE_DIR, "data", "history.json"),
-                    os.path.join(BASE_DIR, "data", "productivity.json")
+                    os.path.join(DATA_DIR, "memory.json"),
+                    os.path.join(DATA_DIR, "history.json"),
+                    os.path.join(DATA_DIR, "productivity.json")
                 ]
                 with zipfile.ZipFile(backup_zip, "w") as z:
                     for fp in files_to_backup:
@@ -4564,7 +4582,7 @@ class Handler(BaseHTTPRequestHandler):
                         if not filename or filename not in allowed or member.file_size > 20 * 1024 * 1024:
                             continue
                         if filename in ["memory.json", "history.json", "productivity.json"]:
-                            target = os.path.join(BASE_DIR, "data", filename)
+                            target = os.path.join(DATA_DIR, filename)
                         else:
                             target = os.path.join(dest_dir, filename)
                         with open(target, "wb") as f_out, z.open(member) as f_in:
@@ -5253,7 +5271,7 @@ def main():
     import hardware_detect
     hw = hardware_detect.detect_hardware()
     config.HARDWARE_PROFILE = hw
-    cfg_path = getattr(config, "_USER_CONFIG_PATH", os.path.join(BASE_DIR, "data", "user_config.json"))
+    cfg_path = getattr(config, "_USER_CONFIG_PATH", os.path.join(DATA_DIR, "user_config.json"))
     try:
         user_cfg = {}
         if os.path.exists(cfg_path):

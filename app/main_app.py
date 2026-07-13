@@ -13,12 +13,25 @@ import psutil
 _boot_dir = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, "frozen", False) else __file__))
 _cfg_path = os.path.join(_boot_dir, "config.py")
 _example_path = os.path.join(_boot_dir, "config.example.py")
-if not os.path.exists(_cfg_path) and os.path.exists(_example_path):
-    import shutil
-    shutil.copy(_example_path, _cfg_path)
+
+_user_data_dir = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI")
+_user_cfg_path = os.path.join(_user_data_dir, "config.py")
+
+if not os.path.exists(_cfg_path):
+    try:
+        if os.path.exists(_example_path):
+            import shutil
+            shutil.copy(_example_path, _cfg_path)
+    except (PermissionError, OSError):
+        os.makedirs(_user_data_dir, exist_ok=True)
+        if not os.path.exists(_user_cfg_path) and os.path.exists(_example_path):
+            import shutil
+            shutil.copy(_example_path, _user_cfg_path)
 
 os.chdir(_boot_dir)
 sys.path.insert(0, _boot_dir)
+if not os.path.exists(_cfg_path) and os.path.exists(_user_cfg_path):
+    sys.path.insert(0, _user_data_dir)
 
 import config
 
@@ -100,13 +113,21 @@ def start_services():
     
     print("Starting KALKI Server...")
     os.environ["KALKI_DESKTOP_MODE"] = "1"
-    server_process = subprocess.Popen(server_cmd, shell=shell, creationflags=flags)
+    try:
+        server_process = subprocess.Popen(server_cmd, shell=shell, creationflags=flags)
+    except (FileNotFoundError, OSError) as e:
+        print(f"[KALKI] Failed to start server: {e}")
+        server_process = None
     
     # Give the server a moment to start
     time.sleep(3)
     
     print("Starting KALKI Listener...")
-    listener_process = subprocess.Popen(listener_cmd, shell=shell, creationflags=flags)
+    try:
+        listener_process = subprocess.Popen(listener_cmd, shell=shell, creationflags=flags)
+    except (FileNotFoundError, OSError) as e:
+        print(f"[KALKI] Failed to start listener: {e}")
+        listener_process = None
 
 import threading
 import pystray
