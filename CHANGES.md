@@ -1,4 +1,15 @@
-# Fix log — 2026-07-08
+# Fix log — 2026-07-15
+
+## v1.2.1 major bugfixes and UX improvements
+
+- Fixed Settings API keys not showing properly and breaking linkage.
+- Fixed Spotify and Google Calendar OAuth broken redirect ports.
+- Fixed the infamous Mic "Mute Loop" glitch where TTS would lock the microphone indefinitely.
+- Changed default LLM from 70B to `llama3-8b-8192` to avoid restrictive Groq rate limits.
+- Switched Weather provider to Open-Meteo with exact IP-based geolocation.
+- Overhauled Settings UI readability with larger fonts and added "Support" / "Review" buttons.
+- Fully implemented 7-day and 30-day Screen Time dashboards.
+- Refined Setup Wizard instructions for non-technical users.
 
 ## v1.2.0 voice reliability and terms update
 
