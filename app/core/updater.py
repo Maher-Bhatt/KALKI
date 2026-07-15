@@ -7,7 +7,7 @@ import tempfile
 import subprocess
 
 REPO = "Maher-Bhatt/KALKI"
-CURRENT_VERSION = "v1.0.24"
+CURRENT_VERSION = "v1.0.25"
 
 # Microsoft Store builds must not self-update — the Store handles updates.
 if getattr(sys, "frozen", False):

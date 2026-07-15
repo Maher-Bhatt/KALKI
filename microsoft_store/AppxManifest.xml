@@ -16,7 +16,7 @@
   <Identity
     Name="MaherBhatt.Kalki"
     Publisher="CN=5077752A-5182-4523-A5DB-4EBB2626926D"
-    Version="1.0.24.0"
+    Version="1.0.25.0"
     ProcessorArchitecture="x64" />
 
   <Properties>
@@ -40,6 +40,11 @@
     <Application Id="KALKI"
       Executable="KALKI.exe"
       EntryPoint="Windows.FullTrustApplication">
+      <Extensions>
+        <desktop:Extension Category="windows.startupTask" Executable="KALKI.exe" EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="KalkiStartupTask" Enabled="true" DisplayName="Kalki AI Assistant" />
+        </desktop:Extension>
+      </Extensions>
 
       <uap:VisualElements
         DisplayName="Kalki"

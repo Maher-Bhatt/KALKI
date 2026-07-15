@@ -16,7 +16,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$ProjectRoot = (Get-Item (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))).FullName
+$ProjectRoot = (Get-Item (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)))).FullName
 $AppDir      = Join-Path $ProjectRoot "app"
 $BuildTools  = Join-Path $AppDir "build_tools"
 $DistDir     = Join-Path $AppDir "dist"
@@ -47,11 +47,12 @@ if ($Clean -and (Test-Path $DistDir)) {
 # Run PyInstaller via the existing build script
 Log "Running build_installer.py..."
 Push-Location $BuildTools
+$ErrorActionPreference = "Continue"
 try {
     py build_installer.py 2>&1 | Tee-Object -FilePath $LogFile -Append
     if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne $null) {
-        # build_installer.py may fail at the Inno Setup step — that's OK for Store builds
-        Log "WARNING: build_installer.py exited with code $LASTEXITCODE (Inno Setup step may have failed — acceptable for Store builds)"
+        # build_installer.py may fail at the Inno Setup step - that's OK for Store builds
+        Log "WARNING: build_installer.py exited with code $LASTEXITCODE (Inno Setup step may have failed - acceptable for Store builds)"
     }
 } finally {
     Pop-Location
