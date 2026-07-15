@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kalki-pwa-v1.0.25';
+const CACHE_NAME = 'kalki-pwa-v1.2.0';
 const ASSETS = [
   '/',
   '/index.html',

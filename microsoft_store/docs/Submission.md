@@ -97,7 +97,7 @@ Users can find it by searching "Kalki" or "AI assistant".
 
 When you release a new version:
 
-1. Update the version number in `AppxManifest.xml` (e.g., `1.0.25.0`)
+1. Update the version number in `AppxManifest.xml` (e.g., `1.2.0.0`)
 2. Run the bump script for all files
 3. Rebuild: `powershell -ExecutionPolicy Bypass -File microsoft_store\build_msix.ps1`
 4. Go to Partner Center → Kalki → **Update** → Upload new `.msix` → Submit

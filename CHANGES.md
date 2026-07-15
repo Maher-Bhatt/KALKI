@@ -1,6 +1,6 @@
 # Fix log — 2026-07-08
 
-## v1.0.25 voice reliability and terms update
+## v1.2.0 voice reliability and terms update
 
 - Defaulted speech output to fast Edge Neural TTS so answers start speaking without waiting on Groq TTS first.
 - Kept Groq Orpheus TTS as an opt-in provider with a short timeout and Edge fallback.
@@ -8,7 +8,7 @@
 - Added TTS diagnostics to `/api/status` and a `/api/tts/test` endpoint for direct HUD voice testing.
 - Added provider, voice, rate, pitch, volume, output-device, and timeout controls to the Voice settings tab.
 - Added `TERMS.md`, linked it in the README, showed it in the installer before install, and bundled it beside `LICENSE`.
-- Bumped runtime, updater, installer, EXE metadata, README, release notes, service-worker cache, and HUD labels to `v1.0.25`.
+- Bumped runtime, updater, installer, EXE metadata, README, release notes, service-worker cache, and HUD labels to `v1.2.0`.
 
 ## v1.0.21 install/HUD stabilization
 

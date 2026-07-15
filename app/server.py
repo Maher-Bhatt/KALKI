@@ -69,7 +69,7 @@ if not os.path.exists(_cfg_path) and os.path.exists(_user_cfg_path):
 
 import config
 _CONFIG_DEFAULTS = {
-    "CURRENT_VERSION": "v1.0.25",
+    "CURRENT_VERSION": "v1.2.0",
     "TTS_PROVIDER": "edge",
     "TTS_GROQ_TIMEOUT_SEC": 3,
     "TTS_VOICE": "en-US-BrianMultilingualNeural",
