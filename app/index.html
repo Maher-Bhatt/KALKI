@@ -793,7 +793,8 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
         <button class="tab-btn" data-tab="tab-developer" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent; font-size:1.15rem;">DEVELOPER</button>
         <button class="tab-btn" data-tab="tab-updates" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent; font-size:1.15rem;">UPDATES</button>
         <button class="tab-btn" data-tab="tab-backup" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent; font-size:1.15rem;">BACKUP & RESET</button>
-        <button class="tab-btn" data-tab="tab-appearance" style="background:transparent; color:var(--text-dim); border:none; padding:1.2rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent; font-size:1.15rem;">APPEARANCE</button>
+        <button class="tab-btn" data-tab="tab-appearance" style="background:transparent; color:var(--text-dim); border:none; padding:1.4rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent; font-size:1.4rem;">APPEARANCE</button>
+        <button class="tab-btn" data-tab="tab-support" style="background:transparent; color:var(--text-dim); border:none; padding:1.4rem 2rem; text-align:left; cursor:pointer; border-left:0.3rem solid transparent; font-size:1.4rem; color:var(--orange);">SUPPORT / REVIEW</button>
       </div>
       
       <!-- Content Container -->
@@ -1129,6 +1130,17 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
             </div>
           </div>
         </div>
+        
+        <!-- SUPPORT TAB -->
+        <div id="tab-support" class="tab-content" style="display:none;">
+          <h3 style="margin-bottom:1.5rem; color:var(--orange); font-size:1.6rem;">SUPPORT THE PROJECT</h3>
+          <div style="background:#111; border:0.1rem solid #222; padding:2rem; border-radius:0.5rem;">
+            <p style="font-size:1.4rem; line-height:1.5; color:var(--text); margin-bottom:1.5rem;">If you enjoy KALKI and want to help support development, you can buy me a coffee! Your support means everything.</p>
+            <button class="qbtn" onclick="window.open('https://buymeacoffee.com/MaherBhatt', '_blank')" style="background:#ffdd00; color:#000; font-weight:bold; padding:1.2rem 2rem; border:none; border-radius:0.5rem; font-size:1.4rem; cursor:pointer; width:100%; margin-bottom:1.5rem;">☕ Buy Me a Coffee</button>
+            <p style="font-size:1.4rem; line-height:1.5; color:var(--text); margin-bottom:1.5rem;">Loving the app? Leave a review to help others discover KALKI.</p>
+            <button class="qbtn" onclick="window.open('ms-windows-store://review/?ProductId=', '_blank')" style="background:#0078D7; color:#fff; font-weight:bold; padding:1.2rem 2rem; border:none; border-radius:0.5rem; font-size:1.4rem; cursor:pointer; width:100%;">⭐ Review KALKI on Microsoft Store</button>
+          </div>
+        </div>
 
       </div>
     </div>
@@ -1313,7 +1325,7 @@ async function refreshStatus(){
     
     // Resource overload detection
     if (d.cpu > 95) {
-      if (!STATE.cpuAlerted) {
+      if (!STATE.cpuAlerted && d.cpuAlertsEnabled) {
         STATE.cpuAlerted = true;
         triggerSystemError("cpu_core", "sustained_load_critical", "CPU utilization has spiked critically to " + Math.round(d.cpu) + "%. This may cause UI stuttering or slow speech synthesis.", "Close background applications or compile processes.");
       }
@@ -1955,23 +1967,30 @@ async function openSettingsModal() {
       $("set_owner_state").value = d.settings.OWNER_STATE || "";
       $("set_owner_country").value = d.settings.OWNER_COUNTRY || "";
       $("set_email_address").value = d.settings.EMAIL_ADDRESS || "";
-      $("set_email_app_password").value = d.settings.EMAIL_APP_PASSWORD || "";
-      $("set_github_token").value = d.settings.GITHUB_TOKEN || "";
-      $("set_shodan_api_key").value = d.settings.SHODAN_API_KEY || "";
-      $("set_groq_key").value = (d.settings.GROQ_API_KEY === "PASTE_YOUR_GROQ_KEY_HERE") ? "" : d.settings.GROQ_API_KEY;
-      $("set_openai_key").value = d.settings.OPENAI_API_KEY || "";
-      if ($("set_anthropic_key")) $("set_anthropic_key").value = d.settings.ANTHROPIC_API_KEY || "";
-      if ($("set_gemini_key")) $("set_gemini_key").value = d.settings.GEMINI_API_KEY || "";
-      if ($("set_elevenlabs_key")) $("set_elevenlabs_key").value = d.settings.ELEVENLABS_API_KEY || "";
-      if ($("set_cloud_sync_passphrase")) $("set_cloud_sync_passphrase").value = d.settings.CLOUD_SYNC_PASSPHRASE || "";
+      const setSecret = (id, val, configured) => {
+        const el = $(id);
+        if(!el) return;
+        el.value = (val === "PASTE_YOUR_GROQ_KEY_HERE") ? "" : (val || "");
+        el.placeholder = configured ? "[ CONFIGURED - HIDDEN ]" : "";
+      };
+      
+      setSecret("set_email_app_password", d.settings.EMAIL_APP_PASSWORD, d.secretStatus?.EMAIL_APP_PASSWORD);
+      setSecret("set_github_token", d.settings.GITHUB_TOKEN, d.secretStatus?.GITHUB_TOKEN);
+      setSecret("set_shodan_api_key", d.settings.SHODAN_API_KEY, d.secretStatus?.SHODAN_API_KEY);
+      setSecret("set_groq_key", d.settings.GROQ_API_KEY, d.secretStatus?.GROQ_API_KEY);
+      setSecret("set_openai_key", d.settings.OPENAI_API_KEY, d.secretStatus?.OPENAI_API_KEY);
+      setSecret("set_anthropic_key", d.settings.ANTHROPIC_API_KEY, d.secretStatus?.ANTHROPIC_API_KEY);
+      setSecret("set_gemini_key", d.settings.GEMINI_API_KEY, d.secretStatus?.GEMINI_API_KEY);
+      setSecret("set_elevenlabs_key", d.settings.ELEVENLABS_API_KEY, d.secretStatus?.ELEVENLABS_API_KEY);
+      setSecret("set_cloud_sync_passphrase", d.settings.CLOUD_SYNC_PASSPHRASE, d.secretStatus?.CLOUD_SYNC_PASSPHRASE);
       
       if ($("set_spotify_id")) $("set_spotify_id").value = d.settings.SPOTIFY_CLIENT_ID || "";
-      if ($("set_spotify_secret")) $("set_spotify_secret").value = d.settings.SPOTIFY_CLIENT_SECRET || "";
+      setSecret("set_spotify_secret", d.settings.SPOTIFY_CLIENT_SECRET, d.secretStatus?.SPOTIFY_CLIENT_SECRET);
       
       // Google Manual
-      $("set_google_client_id").value = d.settings.GOOGLE_CLIENT_ID || "";
-      $("set_google_client_secret").value = d.settings.GOOGLE_CLIENT_SECRET || "";
-      $("set_google_project_id").value = d.settings.GOOGLE_PROJECT_ID || "";
+      if ($("set_google_client_id")) $("set_google_client_id").value = d.settings.GOOGLE_CLIENT_ID || "";
+      setSecret("set_google_client_secret", d.settings.GOOGLE_CLIENT_SECRET, d.secretStatus?.GOOGLE_CLIENT_SECRET);
+      if ($("set_google_project_id")) $("set_google_project_id").value = d.settings.GOOGLE_PROJECT_ID || "";
       
       $("set_model_chat").value = d.settings.MODEL_CHAT || "auto";
       $("set_model_vision").value = d.settings.MODEL_VISION || "auto";
@@ -2931,7 +2950,14 @@ function updateDashboard(statusData) {
         </div>
       </div>
       <div style="background:#111; border:1px solid #333; border-radius:0.5rem; padding:1.5rem;">
-        <h3 style="color:var(--text-dim); margin-bottom:1.5rem;">SCREEN TIME (TODAY)</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+          <h3 style="color:var(--text-dim);">SCREEN TIME</h3>
+          <div style="display:flex; gap:1rem;">
+            <button id="st_btn_today" onclick="setScreenTimeRange(1)" style="background:var(--accent); color:#000; border:none; padding:0.5rem 1rem; cursor:pointer; font-weight:bold;">TODAY</button>
+            <button id="st_btn_week" onclick="setScreenTimeRange(7)" style="background:#222; color:var(--text); border:1px solid #444; padding:0.5rem 1rem; cursor:pointer;">7 DAYS</button>
+            <button id="st_btn_month" onclick="setScreenTimeRange(30)" style="background:#222; color:var(--text); border:1px solid #444; padding:0.5rem 1rem; cursor:pointer;">30 DAYS</button>
+          </div>
+        </div>
         <div id="dashProd" style="display:flex; flex-direction:column; gap:1rem;">
           Loading...
         </div>
@@ -2977,16 +3003,62 @@ async function fetchDashboard() {
       document.getElementById('dashState').innerText = json.data.state;
       document.getElementById('dashMem').innerText = json.data.memCount;
       
-      const prod = json.data.productivity || {};
-      const today = new Date().toISOString().split('T')[0];
-      const todayRaw = prod[today] || {};
-      // Legacy fallback: old versions stored a flat {category: seconds} dict
-      // with no per-app detail. New format nests categories + category_apps.
-      const categories = todayRaw.categories || todayRaw;
-      const categoryApps = todayRaw.category_apps || {};
+      window.latestDashProd = json.data.productivity || {};
+      renderScreenTime();
+    }
+  } catch (e) {
+    console.error("Dashboard fetch error:", e);
+  }
+}
 
-      const container = document.getElementById('dashProd');
-      container.innerHTML = '';
+let stRange = 1;
+function setScreenTimeRange(days) {
+  stRange = days;
+  ["today", "week", "month"].forEach(id => {
+    let btn = document.getElementById("st_btn_" + id);
+    if(btn) { btn.style.background = "#222"; btn.style.color = "var(--text)"; btn.style.border = "1px solid #444"; btn.style.fontWeight = "normal"; }
+  });
+  let activeId = days === 1 ? "today" : (days === 7 ? "week" : "month");
+  let activeBtn = document.getElementById("st_btn_" + activeId);
+  if(activeBtn) { activeBtn.style.background = "var(--accent)"; activeBtn.style.color = "#000"; activeBtn.style.border = "none"; activeBtn.style.fontWeight = "bold"; }
+  renderScreenTime();
+}
+
+function renderScreenTime() {
+  if (!window.latestDashProd) return;
+  const prod = window.latestDashProd;
+  
+  const targetDates = [];
+  for (let i = 0; i < stRange; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    targetDates.push(d.toISOString().split('T')[0]);
+  }
+  
+  let mergedCategories = {};
+  let mergedCategoryApps = {};
+  
+  targetDates.forEach(dt => {
+      const dayRaw = prod[dt] || {};
+      const cats = dayRaw.categories || dayRaw;
+      const apps = dayRaw.category_apps || {};
+      
+      for (const [c, s] of Object.entries(cats)) {
+        if(typeof s === 'number') mergedCategories[c] = (mergedCategories[c] || 0) + s;
+      }
+      for (const [c, appDict] of Object.entries(apps)) {
+        if (!mergedCategoryApps[c]) mergedCategoryApps[c] = {};
+        for (const [a, s] of Object.entries(appDict)) {
+          if(typeof s === 'number') mergedCategoryApps[c][a] = (mergedCategoryApps[c][a] || 0) + s;
+        }
+      }
+  });
+
+  const categories = mergedCategories;
+  const categoryApps = mergedCategoryApps;
+
+  const container = document.getElementById('dashProd');
+  container.innerHTML = '';
 
       const totalSec = Object.values(categories).reduce((a, b) => a + b, 0);
       const barColors = {
@@ -3022,14 +3094,45 @@ async function fetchDashboard() {
             <div style="width:100%; background:#222; height:8px; border-radius:4px;">
               <div style="width:${pct}%; background:${barColor}; height:100%; border-radius:4px;"></div>
             </div>
-            ${appLine}
-          `;
-          container.appendChild(div);
-        }
-      }
+
+  const container = document.getElementById('dashProd');
+  container.innerHTML = '';
+
+  const totalSec = Object.values(categories).reduce((a, b) => a + b, 0);
+  const barColors = {
+    "Coding": "#9aa3ad", "Terminal / DevOps": "#7d7d94", "Browsing": "#a9835c",
+    "Communication": "#7f9478", "Media / Music": "#c4c9d1", "Gaming": "#b5504a",
+    "Office / Docs": "#8b8b92", "Design / Media Creation": "#9aa3ad",
+    "File Management": "#5c6068", "Other": "#5c6068",
+  };
+
+  if (Object.keys(categories).length === 0 || totalSec === 0) {
+    container.innerHTML = '<div style="color:var(--text-dim)">No data recorded yet.</div>';
+  } else {
+    for (const [cat, secs] of Object.entries(categories).sort((a, b) => b[1] - a[1])) {
+      const pct = ((secs / totalSec) * 100).toFixed(1);
+      const barColor = barColors[cat] || "var(--accent)";
+      const appsInCat = categoryApps[cat] || {};
+      const topApps = Object.entries(appsInCat).sort((a, b) => b[1] - a[1]).slice(0, 3);
+      const appLine = topApps.length
+        ? `<div style="font-size:0.85rem; color:var(--text-dim); margin-top:0.2rem;">${
+            topApps.map(([a, s]) => `${a} (${formatTime(s)})`).join(' &middot; ')
+          }</div>`
+        : '';
+      const div = document.createElement('div');
+      div.style.marginBottom = '0.9rem';
+      div.innerHTML = `
+        <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
+          <span>${cat.toUpperCase()}</span>
+          <span>${formatTime(secs)} (${pct}%)</span>
+        </div>
+        <div style="width:100%; background:#222; height:8px; border-radius:4px;">
+          <div style="width:${pct}%; background:${barColor}; height:100%; border-radius:4px;"></div>
+        </div>
+        ${appLine}
+      `;
+      container.appendChild(div);
     }
-  } catch(e) {
-    console.error("Dashboard fetch error", e);
   }
 }
 

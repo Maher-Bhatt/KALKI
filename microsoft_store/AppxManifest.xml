@@ -16,7 +16,7 @@
   <Identity
     Name="MaherBhatt.Kalki"
     Publisher="CN=5077752A-5182-4523-A5DB-4EBB2626926D"
-    Version="1.2.0.0"
+    Version="1.2.1.0"
     ProcessorArchitecture="x64" />
 
   <Properties>

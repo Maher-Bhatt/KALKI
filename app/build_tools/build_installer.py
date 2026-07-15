@@ -2,7 +2,7 @@ import os
 import subprocess
 import sys
 
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.2.1"
 VERSION_PARTS = tuple(int(part) for part in APP_VERSION.split(".")) + (0,)
 
 def run_cmd(cmd):

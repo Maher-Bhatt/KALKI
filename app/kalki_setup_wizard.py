@@ -192,16 +192,16 @@ class KalkiSetupWizard(ctk.CTk):
 
         # Step 1: Identity
         f1 = ctk.CTkFrame(self.main_container, fg_color="transparent")
-        self._section_heading(f1, "1. Identity")
-        self._help_text(f1, "Tell KALKI your name so it can address you properly.")
+        self._section_heading(f1, "1. Who are you?")
+        self._help_text(f1, "Tell KALKI what to call you.")
         self.name_entry = self._create_input(f1, "Your Name:", self.config_data.get("OWNER_NAME", ""))
-        self.title_entry = self._create_input(f1, "Your Title (e.g., Sir, Boss):", self.config_data.get("OWNER_TITLE", "Sir"))
+        self.title_entry = self._create_input(f1, "What should KALKI call you? (e.g., Sir, Boss):", self.config_data.get("OWNER_TITLE", "Sir"))
         self.steps.append(f1)
 
         # Step 2: Location
         f2 = ctk.CTkFrame(self.main_container, fg_color="transparent")
-        self._section_heading(f2, "2. Location")
-        self._help_text(f2, "Used for weather, news, and location-aware answers.")
+        self._section_heading(f2, "2. Where are you?")
+        self._help_text(f2, "KALKI uses this for local weather and news.")
         self.city_entry = self._create_input(f2, "City:", self.config_data.get("OWNER_CITY", ""))
         self.state_entry = self._create_input(f2, "State:", self.config_data.get("OWNER_STATE", ""))
         self.country_entry = self._create_input(f2, "Country:", self.config_data.get("OWNER_COUNTRY", ""))
@@ -209,20 +209,20 @@ class KalkiSetupWizard(ctk.CTk):
 
         # Step 3: Core AI
         f3 = ctk.CTkFrame(self.main_container, fg_color="transparent")
-        self._section_heading(f3, "3. Core AI")
-        self._help_text(f3, "Provide a free Groq API key, or use Managed AI Mode.")
+        self._section_heading(f3, "3. KALKI's Brain (AI)")
+        self._help_text(f3, "KALKI needs a free 'Groq' account to think fast. Get one below!")
         self.managed_ai_var = ctk.BooleanVar(value=self.config_data.get("MANAGED_AI_ENABLED", False))
-        self.managed_ai_cb = ctk.CTkCheckBox(f3, text="Use Managed AI (Zero API Key required, proxied through our server)", variable=self.managed_ai_var)
+        self.managed_ai_cb = ctk.CTkCheckBox(f3, text="Use KALKI Managed AI (Skip making a Groq account)", variable=self.managed_ai_var)
         self.managed_ai_cb.pack(fill="x", padx=20, pady=5)
         
-        self.groq_entry = self._create_input(f3, "Or bring your own Groq API Key:", self.config_data.get("GROQ_API_KEY", ""), is_password=True)
-        self._link(f3, "Get free key at console.groq.com", "https://console.groq.com")
+        self.groq_entry = self._create_input(f3, "Or paste your free Groq API Key here:", self.config_data.get("GROQ_API_KEY", ""), is_password=True)
+        self._link(f3, "Click here to get a free key (console.groq.com)", "https://console.groq.com")
         self.steps.append(f3)
 
-        # Step 3.5: Voice & Personality (previously only editable by hand in config.py)
+        # Step 3.5: Voice & Personality
         fv = ctk.CTkFrame(self.main_container, fg_color="transparent")
         self._section_heading(fv, "4. Voice & Personality")
-        self._help_text(fv, "How KALKI sounds and listens. These used to require editing config.py by hand.")
+        self._help_text(fv, "Choose how you want KALKI to sound and listen.")
 
         voice_frame = ctk.CTkFrame(fv, fg_color="transparent")
         voice_frame.pack(fill="x", pady=5)

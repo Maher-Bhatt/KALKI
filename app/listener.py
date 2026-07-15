@@ -97,6 +97,7 @@ def post_stop():
 
 
 LAST_STATUS = {"speaking": False, "listenerPaused": False}
+_last_speaking_start = 0
 
 def _status():
     global LAST_STATUS
@@ -119,10 +120,21 @@ def is_paused():
 
 
 def get_mute_decision():
-    """Single fetch, single decision. Replaces separate is_paused()/is_speaking() calls -
-    do not call _status() more than once per loop iteration for this check."""
+    """Single fetch, single decision. Prevents permanent speaking locks."""
+    global _last_speaking_start
     st = _status()
-    return bool(st.get("listenerPaused", False) or st.get("speaking", False))
+    is_speaking = st.get("speaking", False)
+    
+    # Watchdog: If speaking for > 30 seconds continuously, assume stuck and force false.
+    if is_speaking:
+        if _last_speaking_start == 0:
+            _last_speaking_start = time.time()
+        elif time.time() - _last_speaking_start > 30:
+            is_speaking = False
+    else:
+        _last_speaking_start = 0
+        
+    return bool(st.get("listenerPaused", False) or is_speaking)
 
 
 def post_mic_state(muted: bool):

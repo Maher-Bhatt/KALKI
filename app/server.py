@@ -69,7 +69,7 @@ if not os.path.exists(_cfg_path) and os.path.exists(_user_cfg_path):
 
 import config
 _CONFIG_DEFAULTS = {
-    "CURRENT_VERSION": "v1.2.0",
+    "CURRENT_VERSION": "v1.2.1",
     "TTS_PROVIDER": "edge",
     "TTS_GROQ_TIMEOUT_SEC": 3,
     "TTS_VOICE": "en-US-BrianMultilingualNeural",
@@ -209,18 +209,43 @@ def update_location_from_ip():
                 config.OWNER_CITY = data.get("city", config.OWNER_CITY)
                 config.OWNER_STATE = data.get("regionName", config.OWNER_STATE)
                 config.OWNER_COUNTRY = data.get("country", config.OWNER_COUNTRY)
-                log(f"Auto-location updated (no city configured): {config.OWNER_CITY}, {config.OWNER_STATE}, {config.OWNER_COUNTRY}")
+                config.LATITUDE = data.get("lat")
+                config.LONGITUDE = data.get("lon")
+                log(f"Auto-location updated: {config.OWNER_CITY}, {config.OWNER_STATE}, {config.OWNER_COUNTRY} ({config.LATITUDE},{config.LONGITUDE})")
     except Exception as e:
         log(f"Auto-location failed: {e}")
 
 threading.Thread(target=update_location_from_ip, daemon=True).start()
 
 def fetch_weather_line(timeout=5):
-    """Short wttr.in condition string for the configured city, or None on failure."""
+    """Short weather string using Open-Meteo (GPS) or wttr.in (City), or None."""
     try:
+        import urllib.request, json
+        lat = getattr(config, "LATITUDE", None)
+        lon = getattr(config, "LONGITUDE", None)
         city = (getattr(config, "OWNER_CITY", "") or "").strip()
+        
+        if lat is not None and lon is not None:
+            url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                w_data = json.loads(r.read()).get("current_weather", {})
+                temp = w_data.get("temperature", "?")
+                code = w_data.get("weathercode", 0)
+                # Quick mapping for common WMO codes
+                icon = "☀️"
+                if code in (1, 2, 3): icon = "⛅"
+                elif code in (45, 48): icon = "🌫️"
+                elif 51 <= code <= 67: icon = "🌧️"
+                elif 71 <= code <= 77: icon = "❄️"
+                elif 95 <= code <= 99: icon = "⛈️"
+                
+                loc_name = city if city else "Local"
+                return f"{loc_name}: {icon} +{temp}°C"
+        
         if not city:
             return None
+            
         w = urllib.request.urlopen(
             f"https://wttr.in/{urllib.parse.quote(city)}?format=3",
             timeout=timeout,
@@ -1855,13 +1880,20 @@ def handle_local(text):
 
 
     # ── SYSTEM AUTOMATION ──
-    if t in ("lock my pc", "lock pc", "lock the computer", "lock the pc"):
+    if t in ("lock my pc", "lock pc", "lock the computer", "lock the pc", "lock the screen"):
         try:
             import ctypes
             ctypes.windll.user32.LockWorkStation()
             return True, "PC locked, Sir."
         except Exception as e:
             return True, f"Failed to lock PC: {e}"
+            
+    if t in ("shut down the pc", "shut down pc", "shutdown pc", "shut down", "shutdown the pc"):
+        try:
+            os.system("shutdown /s /t 0")
+            return True, "Shutting down the PC, Sir."
+        except Exception as e:
+            return True, f"Failed to shut down: {e}"
 
     if t in ("mute audio", "mute volume", "mute the audio", "mute pc", "toggle mute"):
         try:
@@ -3328,7 +3360,7 @@ def ask_ai_stream(user_messages):
             return
         except Exception as e:
             log(f"Anthropic stream failed: {e}. Falling back to default Groq...")
-            chosen = "llama-3.3-70b-versatile"
+            chosen = "llama3-8b-8192"
 
     api_url = None
     headers = {"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
@@ -3456,7 +3488,7 @@ def ask_ai(user_messages, force_search=False):
                 elif has_openai:
                     chosen = "gpt-4o"
                 elif has_groq:
-                    chosen = getattr(config, "GROQ_MODEL", "llama-3.3-70b-versatile")
+                    chosen = getattr(config, "GROQ_MODEL", "llama3-8b-8192")
                 else:
                     chosen = "ollama"
             else:
@@ -3475,21 +3507,21 @@ def ask_ai(user_messages, force_search=False):
             return ask_gemini(msgs, model=chosen)
         except Exception as e:
             log(f"Gemini failed: {e}. Falling back to default Groq...")
-            chosen = "llama-3.3-70b-versatile"
+            chosen = "llama3-8b-8192"
             
     if chosen.startswith("gpt-"):
         try:
             return ask_openai(msgs, model=chosen)
         except Exception as e:
             log(f"OpenAI failed: {e}. Falling back to default Groq...")
-            chosen = "llama-3.3-70b-versatile"
+            chosen = "llama3-8b-8192"
 
     if chosen.startswith("claude-"):
         try:
             return ask_anthropic(msgs, model=chosen)
         except Exception as e:
             log(f"Anthropic failed: {e}. Falling back to default Groq...")
-            chosen = "llama-3.3-70b-versatile"
+            chosen = "llama3-8b-8192"
 
     if chosen == "ollama":
         try:
@@ -3940,6 +3972,7 @@ class Handler(BaseHTTPRequestHandler):
                 "recentExchange": STATE.get("recent_exchange"),
                 "listenerPaused": STATE.get("listener_paused", False),
                 "listenerMicMuted": STATE.get("listener_mic_muted"),
+                "cpuAlertsEnabled": getattr(config, "CPU_ALERTS_ENABLED", False),
                 "gcalConfigured": gcal.is_configured(),
                 "spotifyConfigured": spotify_mod.is_configured(),
                 "todayEvents": STATE.get("cached_today_events", []),

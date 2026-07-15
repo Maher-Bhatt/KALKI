@@ -74,7 +74,7 @@ def _get_creds(interactive=False):
                 f"Get one at https://console.cloud.google.com (Desktop OAuth client)."
             )
         flow = InstalledAppFlow.from_client_secrets_file(CRED_PATH, SCOPES)
-        creds = flow.run_local_server(port=0)
+        creds = flow.run_local_server(port=8080)
         _atomic_pickle_dump(creds, TOKEN_PATH)
         return creds
 

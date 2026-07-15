@@ -1,0 +1,12 @@
+<Configuration>
+  <MappedFolders>
+    <MappedFolder>
+      <HostFolder>C:\Users\maher\Music\KALKI application\microsoft_store\output</HostFolder>
+      <SandboxFolder>C:\kalki_test</SandboxFolder>
+      <ReadOnly>true</ReadOnly>
+    </MappedFolder>
+  </MappedFolders>
+  <LogonCommand>
+    <Command>powershell.exe -ExecutionPolicy Bypass -WindowStyle Maximized -Command "Write-Host 'Installing KALKI Certificate...'; Import-Certificate -FilePath C:\kalki_test\KalkiTestCert.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople; Write-Host 'Installing KALKI MSIX Package (v1.2.0)...'; Add-AppxPackage -Path C:\kalki_test\KALKI.msix; Write-Host 'Installation Complete! Launching KALKI...'; Start-Sleep -Seconds 2; Start-Process shell:AppsFolder\MaherBhatt.Kalki_pwae4j5tndj8e!App"</Command>
+  </LogonCommand>
+</Configuration>
