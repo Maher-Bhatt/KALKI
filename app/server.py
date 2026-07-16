@@ -174,6 +174,7 @@ SCRIPTS_DIR  = os.path.join(DATA_DIR, "scripts")
 TASKS_PATH   = os.path.join(DATA_DIR, "tasks.json")
 REMINDERS_PATH = os.path.join(DATA_DIR, "reminders.json")
 LOG_PATH     = os.path.join(DATA_DIR, "kalki.log")
+USER_CONFIG_PATH = getattr(config, "_USER_CONFIG_PATH", os.path.join(os.path.dirname(DATA_DIR), "user_config.json"))
 os.makedirs(SCRIPTS_DIR, exist_ok=True)
 vault.VAULT_PATH = VAULT_PATH
 coder.SCRIPTS_DIR = SCRIPTS_DIR
@@ -4097,8 +4098,8 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/settings/export":
-            if os.path.exists(config._USER_CONFIG_PATH):
-                with open(config._USER_CONFIG_PATH, "r", encoding="utf-8") as f:
+            if os.path.exists(USER_CONFIG_PATH):
+                with open(USER_CONFIG_PATH, "r", encoding="utf-8") as f:
                     content = f.read()
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
@@ -4175,7 +4176,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/settings/reset":
             try:
-                if os.path.exists(config._USER_CONFIG_PATH): os.remove(config._USER_CONFIG_PATH)
+                if os.path.exists(USER_CONFIG_PATH): os.remove(USER_CONFIG_PATH)
                 if os.path.exists(os.path.join(DATA_DIR, "token.json")): os.remove(os.path.join(DATA_DIR, "token.json"))
                 if os.path.exists(os.path.join(DATA_DIR, "spotify_token.json")): os.remove(os.path.join(DATA_DIR, "spotify_token.json"))
                 if os.path.exists(os.path.join(DATA_DIR, "credentials.json")): os.remove(os.path.join(DATA_DIR, "credentials.json"))
@@ -4202,7 +4203,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 updates = body.get("updates", {})
                 new_conf = {}
-                cfg_path = config._USER_CONFIG_PATH
+                cfg_path = USER_CONFIG_PATH
                 if os.path.exists(cfg_path):
                     with open(cfg_path, "r", encoding="utf-8") as f:
                         new_conf = json.load(f)
@@ -5315,7 +5316,7 @@ def main():
     import hardware_detect
     hw = hardware_detect.detect_hardware()
     config.HARDWARE_PROFILE = hw
-    cfg_path = getattr(config, "_USER_CONFIG_PATH", os.path.join(DATA_DIR, "user_config.json"))
+    cfg_path = USER_CONFIG_PATH
     try:
         user_cfg = {}
         if os.path.exists(cfg_path):
