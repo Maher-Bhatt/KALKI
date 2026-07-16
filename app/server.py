@@ -193,25 +193,25 @@ def log(msg):
     runtime_log.append_log(LOG_PATH, str(msg))
 
 def update_location_from_ip():
-    # IP geolocation resolves to whatever city your ISP routes through (often
-    # the nearest big city, not your actual town), so it must never override
-    # a city the user actually configured — only fill the gap when blank.
-    configured_city = (getattr(config, "OWNER_CITY", "") or "").strip()
-    if configured_city and configured_city.lower() != "yourcity":
-        log(f"Using configured location: {configured_city} — skipping IP auto-detect.")
-        return
+    # Always fetch GPS coordinates (LATITUDE/LONGITUDE) via IP auto-detect if not set,
+    # but preserve configured city/state/country to avoid overwriting user preferences.
     try:
         import urllib.request, json
         req = urllib.request.Request("http://ip-api.com/json/", headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=5) as r:
             data = json.loads(r.read())
             if data.get("status") == "success":
-                config.OWNER_CITY = data.get("city", config.OWNER_CITY)
-                config.OWNER_STATE = data.get("regionName", config.OWNER_STATE)
-                config.OWNER_COUNTRY = data.get("country", config.OWNER_COUNTRY)
-                config.LATITUDE = data.get("lat")
-                config.LONGITUDE = data.get("lon")
-                log(f"Auto-location updated: {config.OWNER_CITY}, {config.OWNER_STATE}, {config.OWNER_COUNTRY} ({config.LATITUDE},{config.LONGITUDE})")
+                configured_city = (getattr(config, "OWNER_CITY", "") or "").strip()
+                if not configured_city or configured_city.lower() == "yourcity":
+                    config.OWNER_CITY = data.get("city", config.OWNER_CITY)
+                    config.OWNER_STATE = data.get("regionName", config.OWNER_STATE)
+                    config.OWNER_COUNTRY = data.get("country", config.OWNER_COUNTRY)
+                
+                if getattr(config, "LATITUDE", None) is None:
+                    config.LATITUDE = data.get("lat")
+                if getattr(config, "LONGITUDE", None) is None:
+                    config.LONGITUDE = data.get("lon")
+                log(f"Auto-location updated: {config.OWNER_CITY} ({config.LATITUDE},{config.LONGITUDE})")
     except Exception as e:
         log(f"Auto-location failed: {e}")
 
@@ -232,13 +232,24 @@ def fetch_weather_line(timeout=5):
                 w_data = json.loads(r.read()).get("current_weather", {})
                 temp = w_data.get("temperature", "?")
                 code = w_data.get("weathercode", 0)
-                # Quick mapping for common WMO codes
-                icon = "☀️"
-                if code in (1, 2, 3): icon = "⛅"
-                elif code in (45, 48): icon = "🌫️"
-                elif 51 <= code <= 67: icon = "🌧️"
-                elif 71 <= code <= 77: icon = "❄️"
-                elif 95 <= code <= 99: icon = "⛈️"
+                is_day = w_data.get("is_day", 1)
+                
+                # Mapping for WMO codes depending on day/night
+                if is_day == 0:  # Night
+                    icon = "🌙"
+                    if code in (1, 2): icon = "☁️🌙"
+                    elif code == 3: icon = "☁️"
+                    elif code in (45, 48): icon = "🌫️"
+                    elif 51 <= code <= 67: icon = "🌧️"
+                    elif 71 <= code <= 77: icon = "❄️"
+                    elif 95 <= code <= 99: icon = "⛈️"
+                else:  # Day
+                    icon = "☀️"
+                    if code in (1, 2, 3): icon = "⛅"
+                    elif code in (45, 48): icon = "🌫️"
+                    elif 51 <= code <= 67: icon = "🌧️"
+                    elif 71 <= code <= 77: icon = "❄️"
+                    elif 95 <= code <= 99: icon = "⛈️"
                 
                 loc_name = city if city else "Local"
                 return f"{loc_name}: {icon} +{temp}°C"

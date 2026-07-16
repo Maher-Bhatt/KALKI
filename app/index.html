@@ -3,7 +3,7 @@
 <head>
 <!--
 ====================================================================
-KALKI v1.2.0 PRO — Frontend User Interface
+KALKI v1.2.1 PRO — Frontend User Interface
 ====================================================================
 Architecture:
 - Pure HTML/CSS/JS (Zero external dependencies or frameworks).
@@ -646,7 +646,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
     <div>OPER <span class="v" id="topOwner">Sir</span></div>
     <div>LOC <span class="v" id="topLoc">—</span></div>
     <div>MODE <span class="v cy" id="topMode">SYSTEM</span></div>
-    <div>SYS <span class="v" id="topSys">v1.2.0 PRO</span></div>
+    <div>SYS <span class="v" id="topSys">v1.2.1 PRO</span></div>
     <div>NET <span class="v ok" id="topNet">ONLINE</span></div>
     <div><span class="v cy" id="topClock">00:00:00</span></div>
     <div style="cursor:pointer; border:0.1rem solid var(--frame); padding:0.2rem 0.8rem; border-radius:0.3rem;" id="topSettingsBtn">⚙ SETTINGS</div>
@@ -1085,7 +1085,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
           <div style="background:#111; border:0.1rem solid #222; padding:1.5rem; margin-bottom:1.5rem;">
             <div style="display:flex; justify-content:space-between; font-size:1.2rem; margin-bottom:0.5rem;">
               <span>LOCAL RUNTIME VERSION:</span>
-              <span style="color:var(--cyan); font-weight:bold;">v1.2.0</span>
+              <span style="color:var(--cyan); font-weight:bold;">v1.2.1</span>
             </div>
             <div style="display:flex; justify-content:space-between; font-size:1.2rem;">
               <span>BINARY INTEGRITY CHECK:</span>
@@ -1192,7 +1192,7 @@ body.mode-thinking { animation: thinkingPulse 3s ease-in-out infinite; }
     </div>
     
     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem;">
-      <span style="color:var(--text-dim); font-size:0.95rem; font-family:'JetBrains Mono', monospace;">KALKI SECURE UPLINK v1.2.0</span>
+      <span style="color:var(--text-dim); font-size:0.95rem; font-family:'JetBrains Mono', monospace;">KALKI SECURE UPLINK v1.2.1</span>
       <button class="qbtn" id="acknowledgeErrBtn" style="border:0.1rem solid var(--red); color:var(--red); padding:0.6rem 2rem; font-size:1.1rem; background:rgba(255,0,0,0.1);">ACKNOWLEDGE</button>
     </div>
   </div>
@@ -3057,43 +3057,7 @@ function renderScreenTime() {
   const categories = mergedCategories;
   const categoryApps = mergedCategoryApps;
 
-  const container = document.getElementById('dashProd');
-  container.innerHTML = '';
 
-      const totalSec = Object.values(categories).reduce((a, b) => a + b, 0);
-      const barColors = {
-        "Coding": "#9aa3ad", "Terminal / DevOps": "#7d7d94", "Browsing": "#a9835c",
-        "Communication": "#7f9478", "Media / Music": "#c4c9d1", "Gaming": "#b5504a",
-        "Office / Docs": "#8b8b92", "Design / Media Creation": "#9aa3ad",
-        "File Management": "#5c6068", "Other": "#5c6068",
-      };
-
-      if (Object.keys(categories).length === 0 || totalSec === 0) {
-        container.innerHTML = '<div style="color:var(--text-dim)">No data recorded yet today.</div>';
-      } else {
-        for (const [cat, secs] of Object.entries(categories).sort((a, b) => b[1] - a[1])) {
-          const pct = ((secs / totalSec) * 100).toFixed(1);
-          const barColor = barColors[cat] || "var(--accent)";
-          const appsInCat = categoryApps[cat] || {};
-          const topApps = Object.entries(appsInCat).sort((a, b) => b[1] - a[1]).slice(0, 3);
-          // Named apps matter most for "Other" (that used to be an opaque
-          // bucket) but showing them everywhere makes the whole panel
-          // legible instead of just six vague labels.
-          const appLine = topApps.length
-            ? `<div style="font-size:0.85rem; color:var(--text-dim); margin-top:0.2rem;">${
-                topApps.map(([a, s]) => `${a} (${formatTime(s)})`).join(' &middot; ')
-              }</div>`
-            : '';
-          const div = document.createElement('div');
-          div.style.marginBottom = '0.9rem';
-          div.innerHTML = `
-            <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
-              <span>${cat.toUpperCase()}</span>
-              <span>${formatTime(secs)} (${pct}%)</span>
-            </div>
-            <div style="width:100%; background:#222; height:8px; border-radius:4px;">
-              <div style="width:${pct}%; background:${barColor}; height:100%; border-radius:4px;"></div>
-            </div>
 
   const container = document.getElementById('dashProd');
   container.innerHTML = '';
