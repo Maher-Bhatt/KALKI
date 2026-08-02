@@ -4141,6 +4141,7 @@ class Handler(BaseHTTPRequestHandler):
                 "ollamaOnline": ollama_ok,
                 "speaking": STATE["speaking"],
                 "ttsProvider": _tts_provider(),
+                "ttsVoice": getattr(config, "TTS_VOICE", ""),
                 "ttsLastProvider": STATE.get("last_tts_provider", ""),
                 "ttsLastError": STATE.get("last_tts_error", ""),
                 "ttsLastLatencyMs": STATE.get("last_tts_latency_ms", 0),

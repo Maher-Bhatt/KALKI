@@ -63,6 +63,9 @@ Architecture:
   --accent: #9aa3ad;
   --accent-glow: rgba(154, 163, 173, 0.16);
   --accent-soft: rgba(154, 163, 173, 0.08);
+  --cyan: #8ea7b8;
+  --sandstone: #b9aaa0;
+  --mono: "JetBrains Mono", "Consolas", monospace;
   --bronze: #a9835c;
   --lime: #7f9478;
   --orange: #a9835c;
@@ -728,9 +731,9 @@ button, input, select { min-height: 44px; }
   <div class="title" style="margin-top:1.4rem">CORE SUBSYSTEMS</div>
   <div class="row"><span>GROQ AI</span><span class="v" id="sGroq">…</span></div>
   <div class="row"><span>OLLAMA</span><span class="v" id="sOllama">…</span></div>
-  <div class="row"><span>VOICE</span><span class="v ok">Brian · Neural</span></div>
+  <div class="row"><span>VOICE</span><span class="v ok" id="sVoice">Loading…</span></div>
   <div class="row"><span>MIC LINK</span><span class="v" id="sMic">stand-by</span></div>
-  <div class="row"><span>HARDWARE</span><span class="v cy" id="sHardware">RTX // 32GB</span></div>
+  <div class="row"><span>HARDWARE</span><span class="v cy" id="sHardware">Detecting…</span></div>
   <div class="row"><span>SYSTEM CORE</span><span class="v ok">ACTIVE</span></div>
   <div class="row"><span>MEM BANK</span><span class="v cy" id="sMem">0</span></div>
   <div class="row"><span>UPTIME</span><span class="v cy" id="sUp">0s</span></div>
@@ -1408,6 +1411,9 @@ async function refreshStatus(){
     $("sGroq").className     = "v " + (d.groqConfigured ? "ok" : "bad");
     $("sOllama").textContent = d.ollamaOnline ? "ONLINE" : "OFFLINE";
     $("sOllama").className   = "v " + (d.ollamaOnline ? "ok" : "warn");
+    $("sVoice").textContent = d.ttsVoice
+      ? d.ttsVoice.replace("MultilingualNeural", "").replace("Neural", " · Neural")
+      : "NOT CONFIGURED";
     if (d.updateProgress && d.updateProgress.active) {
       $("sMem").textContent = `UPDATING ${d.updateProgress.pct}%`;
       $("sMem").style.color = "var(--orange)";
@@ -1421,8 +1427,8 @@ async function refreshStatus(){
     $("topLoc").textContent  = d.city || "";
     $("topMode").textContent = "SYSTEM/" + (d.hudQuality || "balanced").toUpperCase();
     if (d.hardware){
-      const gpu = (d.hardware.gpu || "RTX").replace("RTX ", "RTX");
-      const ram = d.hardware.ram_gb ? `${d.hardware.ram_gb}GB` : "32GB";
+      const gpu = d.hardware.gpu || "GPU unavailable";
+      const ram = d.hardware.ram_gb ? `${d.hardware.ram_gb}GB` : "RAM unavailable";
       $("sHardware").textContent = `${gpu} // ${ram}`;
     }
 
@@ -1977,21 +1983,57 @@ function showNotice(msg, isErr=false) {
 $("settingsBtn").addEventListener("click", openSettingsModal);
 if($("topSettingsBtn")) $("topSettingsBtn").addEventListener("click", openSettingsModal);
 
-// Tab Switching
-document.querySelectorAll(".tab-btn").forEach(btn => {
-  btn.addEventListener("click", (e) => {
-    document.querySelectorAll(".tab-btn").forEach(b => {
-      b.classList.remove("active");
-      b.style.color = "var(--text-dim)";
-      b.style.borderLeftColor = "transparent";
-    });
-    e.target.classList.add("active");
-    e.target.style.color = "var(--text)";
-    e.target.style.borderLeftColor = "var(--accent)";
-    
-    document.querySelectorAll(".tab-content").forEach(c => c.style.display = "none");
-    $(e.target.dataset.tab).style.display = "block";
+// Settings tabs use the standard tab pattern so they work with keyboard and
+// assistive technology as well as the mouse.
+const settingsTabs = [...document.querySelectorAll(".tab-btn")];
+if (settingsTabs[0]?.parentElement) {
+  settingsTabs[0].parentElement.setAttribute("role", "tablist");
+  settingsTabs[0].parentElement.setAttribute("aria-orientation", "vertical");
+}
+function activateSettingsTab(button, shouldFocus = false) {
+  settingsTabs.forEach(tab => {
+    const selected = tab === button;
+    const panel = $(tab.dataset.tab);
+    tab.classList.toggle("active", selected);
+    tab.style.color = selected ? "var(--text)" : "var(--text-dim)";
+    tab.style.borderLeftColor = selected ? "var(--accent)" : "transparent";
+    tab.setAttribute("aria-selected", String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+    if (panel) {
+      panel.style.display = selected ? "block" : "none";
+      panel.hidden = !selected;
+    }
   });
+  if (shouldFocus) button.focus();
+}
+settingsTabs.forEach((button, index) => {
+  const panel = $(button.dataset.tab);
+  button.setAttribute("role", "tab");
+  button.setAttribute("aria-controls", button.dataset.tab);
+  button.setAttribute("aria-selected", String(button.classList.contains("active")));
+  button.tabIndex = button.classList.contains("active") ? 0 : -1;
+  if (panel) panel.setAttribute("role", "tabpanel");
+  button.addEventListener("click", () => activateSettingsTab(button));
+  button.addEventListener("keydown", (event) => {
+    if (!['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const targetIndex = event.key === 'Home' ? 0 : event.key === 'End' ? settingsTabs.length - 1
+      : (index + (event.key === 'ArrowDown' || event.key === 'ArrowRight' ? 1 : -1) + settingsTabs.length) % settingsTabs.length;
+    activateSettingsTab(settingsTabs[targetIndex], true);
+  });
+});
+
+// The legacy markup uses visual labels. Attach them programmatically to their
+// form controls so every settings field has an accessible name.
+document.querySelectorAll("#settingsModal input, #settingsModal select").forEach((control, index) => {
+  if (control.getAttribute("aria-label")) return;
+  const label = control.closest("div")?.querySelector("label");
+  if (label) {
+    if (!control.id) control.id = `settings-field-${index}`;
+    label.htmlFor = control.id;
+  } else {
+    control.setAttribute("aria-label", control.placeholder || "KALKI setting");
+  }
 });
 
 async function openSettingsModal() {
@@ -2082,6 +2124,19 @@ $("closeSettingsBtn").addEventListener("click", () => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && $("settingsModal").style.display === "flex") {
     $("closeSettingsBtn").click();
+    return;
+  }
+  if (event.key === "Tab" && $("settingsModal").style.display === "flex") {
+    const focusable = [...$("settingsModal").querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )].filter(el => !el.disabled && el.offsetParent !== null);
+    if (!focusable.length) return;
+    const current = focusable.indexOf(document.activeElement);
+    const next = event.shiftKey
+      ? (current <= 0 ? focusable.length - 1 : current - 1)
+      : (current === focusable.length - 1 ? 0 : current + 1);
+    event.preventDefault();
+    focusable[next].focus();
   }
 });
 

@@ -239,7 +239,7 @@ if __name__ == '__main__':
     print("Opening KALKI Desktop Interface...")
     window = webview.create_window(
         title='KALKI AI Assistant', 
-        url='http://127.0.0.1:8888', 
+        url=f'http://127.0.0.1:{config.PORT}',
         width=1280, 
         height=800,
         min_size=(800, 600),
