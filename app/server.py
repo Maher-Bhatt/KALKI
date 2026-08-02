@@ -3451,12 +3451,36 @@ def ask_anthropic_stream(user_messages, model=None):
                 except Exception:
                     pass
 
+def ask_deepseek_free_stream(user_messages):
+    """Fallback to DeepSeek-R1 via g4f (Free LLM) if no API keys are provided."""
+    try:
+        from g4f.client import Client
+        import g4f
+        client = Client()
+        # g4f expects history to be passed directly
+        response = client.chat.completions.create(
+            model="deepseek-r1",
+            messages=user_messages,
+            stream=True
+        )
+        for chunk in response:
+            if chunk.choices and chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
+    except ImportError:
+        yield "Error: g4f missing. Run: pip install g4f curl_cffi"
+    except Exception as e:
+        log(f"DeepSeek-R1 fallback failed: {e}")
+        yield f"[Free DeepSeek-R1 Fallback Failed]: {e}"
+
 def resolve_auto_model(last_user):
     has_gemini = bool(getattr(config, "GEMINI_API_KEY", "") and not getattr(config, "GEMINI_API_KEY", "").startswith("PASTE_"))
     has_openai = bool(getattr(config, "OPENAI_API_KEY", "") and not getattr(config, "OPENAI_API_KEY", "").startswith("PASTE_"))
     has_groq = bool(getattr(config, "GROQ_API_KEY", "") and not getattr(config, "GROQ_API_KEY", "").startswith("PASTE_"))
     
     low_prompt = (last_user or "").lower()
+    
+    if not (has_gemini or has_openai or has_groq):
+        return "deepseek-r1"
     
     if "gemini" in low_prompt and has_gemini:
         return "gemini-2.5-flash"
@@ -3494,6 +3518,11 @@ def ask_ai_stream(user_messages):
         chosen = resolve_auto_model(last_user)
         is_offline = not model_manager.check_internet()
         if is_offline: chosen = "ollama"
+    
+    if chosen == "deepseek-r1":
+        for token in ask_deepseek_free_stream(user_messages):
+            yield token
+        return
     
     if chosen == "ollama" or is_offline:
         try:
