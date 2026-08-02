@@ -1,0 +1,74 @@
+# ── Sensitive: API keys, tokens, credentials ──
+config.py
+user_config.json
+data/google_credentials.json
+data/google_token.pickle
+data/spotify_token.json
+data/vault.json
+data/contacts.json
+data/firebase_credentials.json
+
+# ── Personal data ──
+data/memory.json
+data/history.json
+data/tasks.json
+data/reminders.json
+data/notes.json
+data/watchlist.json
+data/vosk-model/
+data/wordlist.txt
+data/rockyou.txt
+data/scripts/
+data/scans/
+data/voice_samples/
+
+# ── Logs ──
+data/kalki.log
+data/kalki.log.*
+data/listener.log
+data/launcher.log
+*.log
+
+# ── Python ──
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+venv/
+.venv/
+env/
+
+# ── OS / IDE ──
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+.spyderproject
+.claude/
+.ruff_cache/
+
+# ── Build / temp ──
+build/
+dist/
+*.tmp
+Output/
+app/build_tools/Output/
+*.spec
+
+# ── Node ──
+node_modules/
+package-lock.json
+
+# ── Browsers (bundled at build time) ──
+browsers/
+
+# ── Sync helpers ──
+sync_to_github.py
+
+# ── Data directory (runtime only) ──
+data/
+microsoft_store/packaging/AppFiles/
