@@ -38,4 +38,5 @@ docx2txt>=0.8
 openpyxl>=3.1.2
 python-pptx>=0.6.21
 keyring>=24.3.0
-
+g4f>=0.3.1
+curl_cffi>=0.7.1

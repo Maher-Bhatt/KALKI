@@ -237,14 +237,28 @@ if __name__ == '__main__':
     
     # 3. Open Native Application Window
     print("Opening KALKI Desktop Interface...")
+    
+    class WebApi:
+        def __init__(self):
+            self.window = None
+        def minimize(self):
+            if self.window: self.window.minimize()
+        def close(self):
+            if self.window: self.window.destroy()
+            
+    api = WebApi()
+    
     window = webview.create_window(
         title='KALKI AI Assistant', 
         url=f'http://127.0.0.1:{config.PORT}',
         width=1280, 
         height=800,
         min_size=(800, 600),
-        background_color='#121212'
+        background_color='#121212',
+        frameless=True,
+        js_api=api
     )
+    api.window = window
     
     window.events.closing += on_closing
     
