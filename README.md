@@ -1,14 +1,14 @@
 <div align="center">
 
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=4169E1,8A2BE2,9400D3&height=250&section=header&text=K.A.L.K.I.&fontSize=90&fontColor=ffffff&animation=twinkling&fontAlignY=35&desc=SYSTEM%20CORE%20//%20AUTONOMOUS%20AI&descAlignY=60&descSize=20" />
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:000000,100:ff0000&height=250&section=header&text=K.A.L.K.I.&fontSize=90&fontColor=ffffff&animation=twinkling&fontAlignY=35&desc=SYSTEM%20CORE%20//%20AUTONOMOUS%20AI&descAlignY=60&descSize=20" />
 
   <a href="https://github.com/Maher-Bhatt/KALKI">
-    <img src="https://readme-typing-svg.demolab.com?font=Orbitron&weight=700&size=28&duration=4000&pause=1000&color=8A2BE2&center=true&vCenter=true&width=800&height=60&lines=System+Core+Online...;Powered+by+DeepSeek-R1+%26+Groq+LPU;Zero-Trust+Security+Protocol+Enabled;Welcome+to+the+Future." alt="Typing SVG" />
+    <img src="https://readme-typing-svg.demolab.com?font=Orbitron&weight=700&size=28&duration=4000&pause=1000&color=FF0000&center=true&vCenter=true&width=800&height=60&lines=System+Core+Online...;Powered+by+DeepSeek-R1+%26+Groq+LPU;Zero-Trust+Security+Protocol+Enabled;Welcome+to+the+Future." alt="Typing SVG" />
   </a>
 
   <br>
 
-  <img src="screenshots/poster_banner.png" alt="KALKI AI Assistant" width="100%" style="border-radius: 15px; box-shadow: 0 4px 30px rgba(138, 43, 226, 0.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);">
+  <img src="screenshots/poster_banner.png" alt="KALKI AI Assistant" width="100%">
 
   <br><br>
 
@@ -18,16 +18,16 @@
   <br><br>
 
   <p>
-    <a href="https://github.com/Maher-Bhatt/KALKI/releases/latest"><img src="https://img.shields.io/github/v/release/Maher-Bhatt/KALKI?style=for-the-badge&logo=github&color=8A2BE2&labelColor=1E1E1E" alt="Release"></a>
-    <img src="https://img.shields.io/badge/Platform-Windows_11_Ready-8A2BE2?style=for-the-badge&logo=windows&logoColor=ffffff&labelColor=1E1E1E" alt="Platform">
-    <img src="https://img.shields.io/badge/Brain-DeepSeek_R1_%7C_Llama_3.3-8A2BE2?style=for-the-badge&logo=meta&logoColor=ffffff&labelColor=1E1E1E" alt="Brain">
-    <img src="https://img.shields.io/badge/Speed-%3C500ms_Latency-8A2BE2?style=for-the-badge&logo=lightning&logoColor=ffffff&labelColor=1E1E1E" alt="Speed">
+    <a href="https://github.com/Maher-Bhatt/KALKI/releases/latest"><img src="https://img.shields.io/github/v/release/Maher-Bhatt/KALKI?style=for-the-badge&logo=github&color=ff0000&labelColor=000000" alt="Release"></a>
+    <img src="https://img.shields.io/badge/Platform-Windows_11_Ready-ff0000?style=for-the-badge&logo=windows&logoColor=ffffff&labelColor=000000" alt="Platform">
+    <img src="https://img.shields.io/badge/Brain-DeepSeek_R1_%7C_Llama_3.3-ff0000?style=for-the-badge&logo=meta&logoColor=ffffff&labelColor=000000" alt="Brain">
+    <img src="https://img.shields.io/badge/Speed-%3C500ms_Latency-ff0000?style=for-the-badge&logo=lightning&logoColor=ffffff&labelColor=000000" alt="Speed">
   </p>
 
   <br>
 
   <a href="https://github.com/Maher-Bhatt/KALKI/releases/latest">
-    <img src="https://img.shields.io/badge/🔥_DOWNLOAD_KALKI_SETUP.EXE-4169E1?style=for-the-badge&logo=windows&logoColor=ffffff&labelColor=1E1E1E&color=8A2BE2" alt="Download">
+    <img src="https://img.shields.io/badge/🔥_DOWNLOAD_KALKI_SETUP.EXE-000000?style=for-the-badge&logo=windows&logoColor=ff0000&labelColor=ff0000&color=000000" alt="Download">
   </a>
   <br>
   <h4><a href="https://youtu.be/vbUOy8oMqOM" target="_blank">📺 View System Integration Tutorial</a></h4>
@@ -42,7 +42,7 @@
 
 From deep-level OS execution and cybersecurity workflows to advanced code generation, KALKI transforms your machine into a proactive, highly intelligent entity.
 
-<div align="center" style="background: rgba(138, 43, 226, 0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(138, 43, 226, 0.2); backdrop-filter: blur(10px);">
+<div align="center">
   <table>
     <tr>
       <td align="center">⚡<br><strong>Sub-Millisecond UI</strong><br>Zero Electron overhead. Pure Canvas2D rendering.</td>
@@ -58,15 +58,15 @@ From deep-level OS execution and cybersecurity workflows to advanced code genera
 ## 🖼️ The HUD Interface
 
 <div align="center">
-  <img src="screenshots/marketing_1.png" width="32%" alt="HUD View 1" style="border-radius: 10px; box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);">
-  <img src="screenshots/marketing_2.png" width="32%" alt="HUD View 2" style="border-radius: 10px; box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);">
-  <img src="screenshots/marketing_3.png" width="32%" alt="HUD View 3" style="border-radius: 10px; box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);">
+  <img src="screenshots/marketing_1.png" width="32%" alt="HUD View 1">
+  <img src="screenshots/marketing_2.png" width="32%" alt="HUD View 2">
+  <img src="screenshots/marketing_3.png" width="32%" alt="HUD View 3">
   <br><br>
-  <img src="screenshots/marketing_4.png" width="32%" alt="Tactical Mode" style="border-radius: 10px; box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);">
-  <img src="screenshots/marketing_5.png" width="32%" alt="Cyber Mode" style="border-radius: 10px; box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);">
-  <img src="screenshots/marketing_6.png" width="32%" alt="Memory Bank" style="border-radius: 10px; box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);">
+  <img src="screenshots/marketing_4.png" width="32%" alt="Tactical Mode">
+  <img src="screenshots/marketing_5.png" width="32%" alt="Cyber Mode">
+  <img src="screenshots/marketing_6.png" width="32%" alt="Memory Bank">
   <br><br>
-  <img src="screenshots/marketing_7.png" width="80%" alt="System Core Dashboard" style="border-radius: 15px; box-shadow: 0 8px 30px rgba(138, 43, 226, 0.6); border: 1px solid rgba(255, 255, 255, 0.1);">
+  <img src="screenshots/marketing_7.png" width="80%" alt="System Core Dashboard">
 </div>
 
 ---
@@ -181,7 +181,7 @@ KALKI utilizes an automated, CI/CD-backed deployment pipeline. Microsoft Azure s
 
 1. **Download the Package**: Obtain `KALKI_Setup.exe` from the [Releases Page](https://github.com/Maher-Bhatt/KALKI/releases/latest).
 2. **Execute Setup**: The installer handles all dependencies, PATH configurations, and PWA manifest installations silently.
-3. **Initialize**: Launch the Launch the application and say **"Hi KALKI"**.
+3. **Initialize**: Launch the application and say **"Hi KALKI"**.
 4. **Dominate**: The DeepSeek-R1 core takes over instantly.
 
 ---
