@@ -1,51 +1,52 @@
 <div align="center">
   <img src="screenshots/poster_banner.png" alt="KALKI AI Assistant" width="100%">
 
-  <h1><img src="assets/kalki_logo.png" width="48" style="vertical-align: middle;"> KALKI — Tactical AI Desktop Assistant</h1>
+  <br><br>
 
-  <strong>A fully voice-controlled, autonomous AI assistant for Windows.</strong><br>
-  <em>Inspired by J.A.R.V.I.S. • Powered by Groq LLaMA • Engineered for power users & developers.</em>
+  <h1><img src="assets/kalki_logo.png" width="48" style="vertical-align: middle; border-radius: 50%;"> KALKI SYSTEM CORE</h1>
+
+  <strong>The Next-Generation Autonomous AI Command Center for Windows Environments.</strong><br>
+  <em>Engineered for Power Users, Developers, and Security Professionals.</em>
+
+  <br><br>
 
   <p>
-    <img src="https://img.shields.io/badge/release-v1.2.4-00c8ff?style=for-the-badge&logo=github" alt="release">
-    <img src="https://img.shields.io/badge/platform-Windows_10%2B-0078d4?style=for-the-badge&logo=windows" alt="platform">
-    <img src="https://img.shields.io/badge/brain-Groq_LLaMA_3.3-ff6b35?style=for-the-badge&logo=meta" alt="brain">
-    <img src="https://img.shields.io/badge/engine-Python_3.11+-3776AB?style=for-the-badge&logo=python" alt="python">
-    <img src="https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge" alt="license">
+    <img src="https://img.shields.io/badge/Release-v1.2.4-000000?style=for-the-badge&logo=github&logoColor=white" alt="release">
+    <img src="https://img.shields.io/badge/Platform-Windows_11_Ready-0078d4?style=for-the-badge&logo=windows&logoColor=white" alt="platform">
+    <img src="https://img.shields.io/badge/Engine-DeepSeek__R1_%7C_Groq_LLaMA-ff6b35?style=for-the-badge&logo=meta&logoColor=white" alt="brain">
+    <img src="https://img.shields.io/badge/Architecture-Python_3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="python">
   </p>
 
-  <h3><a href="https://github.com/Maher-Bhatt/KALKI/releases/latest">⬇️ Download KALKI_Setup.exe (Latest Release)</a></h3>
-  <h4>📺 <a href="https://youtu.be/vbUOy8oMqOM" target="_blank">Watch the Setup Tutorial</a></h4>
+  <br>
+
+  <h3><a href="https://github.com/Maher-Bhatt/KALKI/releases/latest">⬇️ Download KALKI Deployment Package (Latest Release)</a></h3>
+  <h4><a href="https://youtu.be/vbUOy8oMqOM" target="_blank">View System Integration Tutorial</a></h4>
 </div>
 
 ---
 
-## 📢 What's New in the Latest Updates (v1.2.4)
+## 🚀 Intelligent Autonomy, Redefined.
 
-> KALKI now features a fully overhauled Frameless UX/UI, a strict native Security Sandbox to prevent destructive AI hallucinations, an automated GitHub Actions CI/CD release pipeline, and seamless out-of-the-box integration with **DeepSeek-R1** entirely for free!
+**KALKI** is not a standard chatbot. It is a fully autonomous, voice-first desktop command center built entirely from the ground up. Operating with a seamless Heads-Up Display (HUD) and powered by the world's fastest inference engines, KALKI manages your entire digital infrastructure—from cybersecurity workflows and system operations to deep-level coding and schedule management.
 
-<details open>
-<summary><strong>🔥 Latest Features & Upgrades</strong></summary>
+By seamlessly bridging the gap between natural language and complex operating system execution, KALKI transforms your machine into a proactive, intelligent ecosystem.
 
-| Feature | Description |
-|:---|:---|
-| **Voice Response Repair** | TTS now defaults to fast Edge Neural playback, keeps Groq TTS opt-in with a short fallback timeout, and exposes a Voice Test button with diagnostics. |
-| **Installer Terms Update** | The setup wizard now shows the terms before install and bundles `TERMS.md` alongside the MIT license. |
-| **🛠 Installer HUD Fixes** | The Windows installer now ships the PWA manifest and service worker so installed buttons, cache refresh, and restart behavior stay stable. |
-| **⚙️ Settings Board Repair** | Restored missing settings controls, provider status labels, cloud restore controls, Spotify reconnect, cache size display, and semantic memory add/delete wiring. |
-| **🔁 Upgrade Cache Busting** | The service worker now clears old caches and never serves stale HTML/API responses after an app update. |
-| **🔐 Safer Secret Saves** | Settings saves no longer wipe existing API keys when password fields are left blank, and new secrets are persisted through the secure vault path. |
-| **☁️ Native Claude Support** | Implemented native Anthropic Claude completions (`ask_anthropic` and `ask_anthropic_stream`) with direct SSE token streaming. |
-| **⚙️ 12-Tab Settings Board** | Redesigned configurations board with 12 tabs to map role models (Chat, Vision, Coding, Voice), toggle alerts/telemetry, and manage backups. |
-| **🔒 Secure API Key Vault** | Integrated hardware-bound Windows DPAPI and native keyring storage so API secrets are encrypted and persistent across updates. |
-| **🧠 Semantic Memory Bank** | Added a fully interactive memory manager in the settings panel to inspect, store, or delete long-term facts. |
-| **📁 One-Click Local Backup** | Safeguard configurations, memories, and productivity history into secure encrypted ZIP files with full restore. |
-| **⚡ Real-Time Streaming** | Chat completions now stream tokens directly into the chat interface via Server-Sent Events (SSE), achieving sub-second response times. |
-| **Restored shortcuts** | mutex-backed launchers restore active instances, and input parameters are guarded to prevent OS crashes. |
+<div align="center">
+  <table>
+    <tr>
+      <td>⚡ <strong>Native Performance.</strong> Zero Electron overhead. Pure Canvas2D rendering for sub-millisecond UI response.</td>
+      <td>🧠 <strong>Cognitive Architecture.</strong> Built-in dynamic routing selects the optimal LLM for the task at hand.</td>
+    </tr>
+    <tr>
+      <td>🔒 <strong>Zero-Trust Security.</strong> Hardware-bound DPAPI encryption and strict sandbox execution environments.</td>
+      <td>⚡ <strong>Unprecedented Speed.</strong> Groq LPU integration delivers 70B parameter reasoning in under 500ms.</td>
+    </tr>
+  </table>
+</div>
 
-</details>
+---
 
-## 🖼️ Gallery & Marketing
+## 🖼️ Interface & Capabilities
 
 <div align="center">
   <img src="screenshots/marketing_1.png" width="30%" alt="Marketing 1">
@@ -55,276 +56,95 @@
   <img src="screenshots/marketing_4.png" width="30%" alt="Marketing 4">
   <img src="screenshots/marketing_5.png" width="30%" alt="Marketing 5">
   <img src="screenshots/marketing_6.png" width="30%" alt="Marketing 6">
-  <br>
-  <img src="screenshots/marketing_7.png" width="45%" alt="Marketing 7">
+  <br><br>
+  <img src="screenshots/marketing_7.png" width="50%" alt="Marketing 7">
 </div>
 
 ---
 
-## 🌌 What is KALKI?
+## ⚙️ Enterprise-Grade Feature Suite
 
-**KALKI** is an autonomous, voice-first personal AI assistant built entirely from scratch using **pure Python** and an embedded **Vanilla JS Heads-Up Display (HUD)**. It is not a chatbot — it is a fully integrated desktop command center.
+### 1. Multi-Model Intelligence Core
+KALKI is engineered with a dynamic cognitive router that automatically delegates tasks to the most efficient neural network.
+- **DeepSeek-R1 (Free Out-of-the-Box)**: Native integration for extreme technical reasoning and coding directly on installation.
+- **LLaMA-3.3-70B (Groq)**: Instantaneous, sub-second responses for system control and logic.
+- **Ollama Fallback**: Complete offline autonomy. KALKI detects network drops and routes internally to your GPU.
 
-KALKI lives on your machine, wakes on the command **"Hi KALKI"**, and manages your system, tasks, emails, calendar, music, cybersecurity workflows, and more — entirely via voice.
+### 2. Tactical Cybersecurity & Reconnaissance
+Equipped with a suite of OSINT and vulnerability analysis tools for security professionals.
+- **Deep Webscan**: Voice-triggered headless Chromium audits for SSL, headers, and DOM analysis.
+- **Shodan OSINT**: Real-time IP intelligence, open port mapping, and service banner scraping.
+- **Live CVE Intel**: Direct integration with the National Vulnerability Database (NVD).
 
-<div align="center">
-  <table>
-    <tr>
-      <td>🚫 <strong>No Electron.</strong> Pure Canvas2D + JS = blazing fast</td>
-      <td>🧠 <strong>Not a wrapper.</strong> Own cognitive router & memory</td>
-    </tr>
-    <tr>
-      <td>🔒 <strong>Data stays local.</strong> Windows DPAPI encryption</td>
-      <td>⚡ <strong>Sub-second.</strong> Groq LPU delivers 70B in <500ms</td>
-    </tr>
-  </table>
-</div>
+### 3. Developer Workflows & Automation
+Automate the mundane and execute code seamlessly.
+- **Clipboard AI Injection**: Copy broken code, command KALKI to repair it, and the optimized code is instantly written back.
+- **Isolated Execution**: Scripts generated by KALKI run in a heavily monitored, sandboxed environment.
+- **GitHub Integration**: Manage repositories, inspect commit histories, and execute CI/CD triggers verbally.
 
----
-
-## ✨ Feature Overview
-
-<details>
-<summary><strong>🎙️ Voice-First, Always-On</strong></summary>
-
-| Feature | Details |
-|:---|:---|
-| **Wake Word** | Say **"Hi KALKI"** from anywhere — no clicks, no keyboard |
-| **Smart Audio Pipeline** | Advanced signal processing prevents feedback loops |
-| **Offline Fallback** | Optional VOSK wake-word detection for zero-latency, privacy-first mode |
-| **Continuous Listening** | Background daemon captures speech and routes it to the AI brain |
-
-</details>
-
-<details>
-<summary><strong>🧠 Multi-Model Cognitive Router</strong></summary>
-
-| Model | Use Case |
-|:---|:---|
-| `LLaMA-3.1-8B` | Fast casual conversations, quick commands |
-| `LLaMA-3.3-70B-Versatile` | Deep reasoning, complex coding, debugging |
-| `LLaMA-4-Scout` | Vision tasks (screenshot analysis, image understanding) |
-| **Ollama (Local)** | Full offline autonomy — run entirely on your GPU |
-
-</details>
-
-<details>
-<summary><strong>🎭 Personality & Mood Engine</strong></summary>
-
-| Feature | Details |
-|:---|:---|
-| **Mood Detection** | Automatically detects aggressive, playful, or calm language |
-| **Persistent Moods** | Aggressive mode stays active for 5+ exchanges — no random de-escalation |
-| **Roast-Back Engine** | If you roast KALKI, it fires back harder |
-| **Adaptive Tone** | Professional by default, adjusts to match your energy exactly |
-| **Dynamic Greetings** | Randomized, time-aware, weather-aware greetings — never the same message twice |
-
-</details>
-
-<details>
-<summary><strong>🛡️ Tactical Cybersecurity Toolkit</strong></summary>
-
-| Tool | Capability |
-|:---|:---|
-| **Deep Webscan** | Voice-trigger a headless Chromium audit for security headers, SSL, cookies |
-| **Shodan OSINT** | Real-time IP intelligence, open ports, and service banners |
-| **CVE Intel** | Live NVD vulnerability tracking with severity ratings |
-| **Port Scanner** | Integrated port mapping with service detection |
-| **Source Viewer** | Download and analyze page source code on command |
-
-</details>
-
-<details>
-<summary><strong>💻 Developer Tools</strong></summary>
-
-| Feature | Details |
-|:---|:---|
-| **Clipboard AI Coding** | Copy broken code → say "Fix the code in my clipboard" → fixed code pasted back |
-| **Code Generation** | Generate Python scripts, web pages, and utilities via voice |
-| **Sandbox Execution** | Run generated scripts safely in an isolated environment |
-| **GitHub Integration** | Manage repositories, create gists, check commit history |
-
-</details>
-
-<details>
-<summary><strong>🤖 System & Life Integration</strong></summary>
-
-| Integration | What It Does |
-|:---|:---|
-| **PC Control** | Lock screen, adjust volume, clear recycle bin, open apps via voice |
-| **Google Calendar** | View, **create, and manage** events via voice (Two-way!) |
-| **Gmail** | Read inbox summaries, search emails, **send replies** (Two-way!) |
-| **Spotify** | Play, pause, skip tracks, and control music hands-free |
-| **Telegram Remote** | Secure, 2-way remote control of KALKI via Telegram Bot |
-| **Reminders & Tasks** | Set, list, and manage reminders — synced to memory |
-| **Vision Memory** | Searchable local OCR screen history (Privacy-first, opt-in) |
-
-</details>
-
-<details>
-<summary><strong>🎨 Premium HUD Interface</strong></summary>
-
-| Feature | Details |
-|:---|:---|
-| **Sci-Fi Design** | Canvas2D-rendered waveforms, particles, glowing elements |
-| **Adaptive Scaling** | Fluid REM-based layout — 1080p to 4K, any DPI |
-| **Dark Mode** | Premium dark theme with glassmorphism |
-| **Real-Time Telemetry** | CPU, RAM, GPU, network stats displayed live |
-| **Diagnostics Overlay** | `Ctrl+Shift+D` reveals FPS, memory, DPR, scale metrics |
-
-</details>
+### 4. Seamless OS & Cloud Integration
+Total control over your local machine and cloud services.
+- **System Orchestration**: Lock interfaces, terminate processes, adjust volume, and navigate the OS hands-free.
+- **Google Workspace**: Full two-way synchronization with Calendar and Gmail. Read, create, and dispatch data via voice.
+- **Semantic Memory**: A sophisticated long-term fact storage engine, inspectable and manageable via the HUD.
 
 ---
 
-## 🚀 Installation
+## 🔒 Security & Privacy Architecture
 
-KALKI requires **zero manual build steps**.
-
-| Step | Action |
-|:---|:---|
-| **1. Download** | Grab [`KALKI_Setup.exe`](https://github.com/Maher-Bhatt/KALKI/releases/latest) from Releases |
-| **2. Install** | Run the setup wizard — it handles everything automatically |
-| **3. Configure** | Get a free API key from [Groq Console](https://console.groq.com) |
-| **4. Launch** | Say **"Hi KALKI"** and your assistant is online |
-
-> **Optional Integrations:** Google Calendar/Gmail (OAuth2), Spotify (API key), Shodan (API key), Firebase (service account JSON)
+We built KALKI with an aggressive Zero-Trust security posture. 
+- **Native Sandbox Alerts**: Any attempt to execute a destructive command (process termination, file deletion) triggers a hardware-level Windows Security Alert requiring explicit human authorization.
+- **Encrypted Vault**: API keys and secrets are encrypted using the Windows Data Protection API (DPAPI) and native system keyrings.
+- **Offline By Design**: When privacy is paramount, switch to the VOSK wake-word engine and Ollama for a 100% air-gapped experience.
 
 ---
 
-## 💻 System Requirements
+## 📡 Deployment Instructions
 
-| Component | ☁️ Cloud Mode (Min) | 🖥️ Local Offline Mode |
+KALKI utilizes an automated, CI/CD-backed deployment pipeline. No manual building required.
+
+1. **Download the Package**: Obtain `KALKI_Setup.exe` from the [Latest Release](https://github.com/Maher-Bhatt/KALKI/releases/latest).
+2. **Execute Setup**: The installer handles all dependencies, PATH configurations, and PWA manifest installations.
+3. **Initialize**: Launch the application and say **"Hi KALKI"**.
+4. **Configure**: Insert your API keys (Groq, Anthropic, or OpenAI) in the Settings Board to unlock maximum performance, or rely on the free DeepSeek-R1 fallback.
+
+---
+
+## 📊 System Requirements
+
+| Component | Minimum Specification (Cloud Routed) | Recommended Specification (Offline AI) |
 |:---|:---|:---|
-| **OS** | Windows 10/11 (64-bit) | Windows 10/11 (64-bit) |
-| **CPU** | Intel i3 / Ryzen 3 | Intel i5 / Ryzen 5+ |
-| **RAM** | 4 GB DDR4 | 16 GB+ |
-| **GPU** | Not required | RTX 3060+ / RX 6600+ (8GB VRAM) |
-| **Storage** | 2 GB SSD | 15 GB+ NVMe SSD |
-| **Network** | Broadband internet | Not required |
+| **Operating System** | Windows 10 / 11 (64-bit architecture) | Windows 11 (64-bit architecture) |
+| **Processor (CPU)** | Intel Core i3 / AMD Ryzen 3 | Intel Core i5 / AMD Ryzen 5+ |
+| **Memory (RAM)** | 4 GB DDR4 | 16 GB+ DDR4/DDR5 |
+| **Graphics (GPU)** | Integrated Graphics | NVIDIA RTX 3060+ / 8GB VRAM |
+| **Storage** | 2 GB Available Space (SSD) | 15 GB+ NVMe SSD |
 
 ---
 
-## 📐 Architecture
+## 🏗️ System Architecture
 
-KALKI separates its **Brain** (Python backend) from its **Body** (JS HUD) — the interface never freezes while the AI is computing.
+KALKI decouples its complex Python computational backend from its lightweight JavaScript frontend, ensuring zero UI latency during heavy inference workloads.
 
-```
-┌──────────────────────────────────────────────────────┐
-│                   KALKI Architecture                  │
-├──────────────────────────────────────────────────────┤
-│                                                       │
-│  ┌─────────────┐      ┌───────────────────────┐      │
-│  │  Listener    │─────▶│    Server Core         │      │
-│  │  (Speech)    │      │    (server.py)         │      │
-│  │  VOSK/Google │      │                       │      │
-│  └─────────────┘      │  ┌─────────────────┐  │      │
-│                        │  │ Cognitive Router │  │      │
-│  ┌─────────────┐      │  │ (Multi-Model AI) │  │      │
-│  │  HUD        │◀────▶│  └─────────────────┘  │      │
-│  │  (Canvas2D)  │      │  ┌─────────────────┐  │      │
-│  │  Vanilla JS  │      │  │ Tool Engine     │  │      │
-│  └─────────────┘      │  │ (20+ modules)   │  │      │
-│                        │  └─────────────────┘  │      │
-│  ┌────────────────────────────────────────────┐      │
-│  │  core/ — state │ telemetry │ cloud_sync    │      │
-│  └────────────────────────────────────────────┘      │
-└──────────────────────────────────────────────────────┘
+```text
+[ Speech Interface ] ──▶ [ Python Core Engine ] ──▶ [ Cognitive Router ]
+                              │          │                 │
+      [ VOSK / STT ] ◀────────┘          │                 ▼
+                                         ▼        [ Groq / DeepSeek / Ollama ]
+[ Heads-Up Display ] ◀──────── [ Tool Executors ]
+  (Canvas2D HUD)               (OS / Web / Cyber)
 ```
 
 ---
 
-## 🛠️ Technology Stack
+## ⚖️ Legal & Licensing
 
-| Layer | Technology |
-|:---|:---|
-| **Frontend** | Vanilla JavaScript + HTML5 Canvas2D |
-| **Backend** | Pure Python 3.11+ (`http.server` + Threading) |
-| **AI Engine** | Groq API (`llama-3.3-70b`, `llama-4-scout`) / Ollama |
-| **Audio** | Microsoft `edge-tts` + `pygame` + Google STT |
-| **Cloud** | Firebase Realtime DB, Sentry Error Monitoring |
-| **Integrations** | Google APIs, `imaplib`, `spotipy`, Playwright |
-| **Security** | `psutil`, `pycaw`, Windows DPAPI (`win32crypt`) |
-| **Cyber Recon** | Playwright Chromium, Shodan API, `crt.sh`, NVD |
-| **Build** | PyInstaller + Inno Setup 6 |
+Copyright © 2026 Maher Bhatt. All rights reserved.
 
----
-
-## 📂 Repository Structure
-
-```
-KALKI/
-├── 📄 README.md              # You are here
-├── 📄 LICENSE                 # MIT License
-├── 📄 TERMS.md                # Use terms and responsible-use conditions
-├── 📄 release_notes.md       # changelogs
-│
-├── 📁 app/                   # ← All source code lives here
-│   ├── server.py             # Main backend — AI routing, tools, API
-│   ├── listener.py           # Background speech recognition daemon
-│   ├── main_app.py           # Desktop window host (pywebview)
-│   ├── index.html            # HUD frontend (Now a PWA!)
-│   ├── manifest.json         # PWA Manifest
-│   ├── service-worker.js     # PWA Service Worker
-│   ├── launcher.py           # Process orchestrator
-│   ├── config.example.py     # Template config file
-│   ├── requirements.txt      # Python dependencies
-│   │
-│   ├── core/                 # Core Python package
-│   │   ├── state.py          # Global state management
-│   │   ├── telemetry.py      # System metrics collection
-│   │   ├── cloud_sync.py     # Firebase sync engine
-│   │   ├── productivity.py   # Process-level time tracking
-│   │   ├── vision_memory.py  # Local OCR & Screen History
-│   │   ├── telegram_mod.py   # Two-way Telegram bot
-│   │   └── updater.py        # Auto-update checker
-│   │
-│   ├── plugins/              # 🔌 Drop-in extensible plugins folder!
-│   ├── cybertools.py         # CVE, ports, recon toolkit
-│   ├── webscan.py            # Web vulnerability scanner
-│   ├── deepscan.py           # Headless Chromium inspector
-│   ├── vision.py             # Screenshot & image analysis
-│   ├── coder.py              # AI code generation & sandbox
-│   │
-│   ├── gcal.py               # Google Calendar
-│   ├── mail.py               # Gmail IMAP
-│   ├── spotify_mod.py        # Spotify control
-│   ├── whatsapp_mod.py       # WhatsApp automation
-│   └── ...                   # 30+ modules total
-│
-├── 📁 assets/                # Icons, logos, branding
-└── 📁 screenshots/           # README visual assets
-```
-
----
-
-## 🤝 Contributing
-
-1. **Fork** this repository
-2. **Clone** your fork locally
-3. Run the setup wizard to generate `app/config.py`
-4. Install dependencies: `pip install -r app/requirements.txt`
-5. Run: `python app/launcher.py`
-6. Submit a **Pull Request**
-
----
-
-## 📜 License
-
-KALKI is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for full details. Installation and use are also covered by [TERMS.md](TERMS.md), including responsible-use conditions for cybersecurity and automation features.
-
----
-
-## 🙏 Acknowledgements
-
-- [Groq](https://groq.com) — Unprecedented LLaMA inference via LPU
-- [edge-tts](https://github.com/rany2/edge-tts) — High-quality Microsoft TTS
-- [Firebase](https://firebase.google.com) — Realtime Database sync
-- [Sentry](https://sentry.io) — Production error monitoring
-- [Playwright](https://playwright.dev) — Headless browser automation
-
----
+KALKI is distributed under the **MIT License**. See the [LICENSE](LICENSE) file for details. Installation and usage are governed by the conditions outlined in [TERMS.md](TERMS.md), which mandate responsible use of the integrated cybersecurity and automation features.
 
 <div align="center">
-  <strong>Built with 🔥 by <a href="https://github.com/Maher-Bhatt">Maher Bhatt</a></strong><br>
-  <em>"Sometimes you gotta run before you can walk." — Tony Stark</em>
+  <br>
+  <strong>Engineered by <a href="https://github.com/Maher-Bhatt">Maher Bhatt</a></strong><br>
+  <em>Next-Generation Intelligence.</em>
 </div>
