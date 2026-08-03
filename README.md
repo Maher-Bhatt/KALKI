@@ -45,6 +45,20 @@
 
 </details>
 
+## 🖼️ Gallery & Marketing
+
+<div align="center">
+  <img src="screenshots/marketing_1.png" width="30%" alt="Marketing 1">
+  <img src="screenshots/marketing_2.png" width="30%" alt="Marketing 2">
+  <img src="screenshots/marketing_3.png" width="30%" alt="Marketing 3">
+  <br>
+  <img src="screenshots/marketing_4.png" width="30%" alt="Marketing 4">
+  <img src="screenshots/marketing_5.png" width="30%" alt="Marketing 5">
+  <img src="screenshots/marketing_6.png" width="30%" alt="Marketing 6">
+  <br>
+  <img src="screenshots/marketing_7.png" width="45%" alt="Marketing 7">
+</div>
+
 ---
 
 ## 🌌 What is KALKI?
