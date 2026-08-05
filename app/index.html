@@ -247,8 +247,21 @@ body::after{
   transition: background .55s ease;
 }
 
-.row{display:flex;justify-content:space-between;padding:0.3rem 0;color:var(--text-dim);font-size:1.3rem;letter-spacing:0}
-.row .v{color:var(--text)}
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+  padding: 0.3rem 0;
+  color: var(--text-dim);
+  font-size: 1.3rem;
+  letter-spacing: 0;
+}
+.row .v {
+  color: var(--text);
+  text-align: right;
+  flex: 1;
+}
 .row .v.ok{color:var(--lime)}
 .row .v.warn{color:var(--orange)}
 .row .v.bad{color:var(--red)}
@@ -655,7 +668,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 button, input, select { min-height: 44px; }
 @media (max-width: 1050px) {
   .topbar { height:auto; min-height:4.8rem; padding:0.7rem 1rem; }
-  .top-meta > div:not(:last-child) { display:none; }
+  .top-meta { flex-wrap: wrap; height: auto; padding: 0.5rem 0; gap: 0.5rem; }
   .hud.left, .hud.right { display:none; }
   #center-container { left:0; right:0; }
   .composer { left:1rem; right:1rem; bottom:1rem; }
@@ -675,8 +688,273 @@ button, input, select { min-height: 44px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; transition-duration:.01ms !important; }
 }
-</style>
-</head>
+/* ─────────────────────────────────────────────────────────────
+   Premium Settings UI Redesign Overrides
+   ───────────────────────────────────────────────────────────── */
+#settingsModal.modal-overlay {
+  background: rgba(10, 10, 12, 0.4) !important;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  animation: modalEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+#settingsModal .modal-content {
+  background: rgba(15, 15, 18, 0.6) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border-radius: 12px !important;
+}
+
+#settingsModal > div > div:first-child {
+  /* Header */
+  background: transparent !important;
+  border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+}
+
+#settingsModal .no-scrollbar {
+  /* Sidebar */
+  background: rgba(0,0,0,0.2) !important;
+  border-right: 1px solid rgba(255,255,255,0.05) !important;
+}
+
+#settingsModal .tab-btn {
+  transition: all 0.25s ease !important;
+  color: var(--text-dim) !important;
+  border-left: 3px solid transparent !important;
+}
+#settingsModal .tab-btn:hover {
+  background: rgba(255,255,255,0.03) !important;
+  color: var(--text) !important;
+}
+#settingsModal .tab-btn.active {
+  color: var(--accent) !important;
+  background: rgba(255,255,255,0.02) !important;
+  border-left: 3px solid var(--accent) !important;
+  font-weight: 600 !important;
+  text-shadow: 0 0 12px var(--accent-glow) !important;
+}
+
+#settingsModal .tab-content > div[style*="border"] {
+  /* Cards */
+  background: rgba(255,255,255,0.02) !important;
+  border: 1px solid rgba(255,255,255,0.04) !important;
+  border-radius: 8px !important;
+  transition: border-color 0.3s ease !important;
+}
+#settingsModal .tab-content > div[style*="border"]:hover {
+  border-color: rgba(255,255,255,0.08) !important;
+}
+
+#settingsModal input, #settingsModal select {
+  background: rgba(0,0,0,0.3) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 6px !important;
+  color: var(--text) !important;
+  transition: all 0.3s ease !important;
+}
+#settingsModal input:focus, #settingsModal select:focus {
+  outline: none !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px var(--accent-glow), inset 0 1px 3px rgba(0,0,0,0.5) !important;
+  background: rgba(0,0,0,0.5) !important;
+}
+
+#settingsModal [style*="background:#0a0a0c"] {
+  background: transparent !important;
+}
+
+@keyframes modalEnter {
+  0% { opacity: 0; transform: scale(0.96) translateY(10px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+#settingsModal .tab-content {
+  animation: tabFadeIn 0.3s ease;
+}
+
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Premium HUD Redesign Overrides
+   ───────────────────────────────────────────────────────────── */
+.hud {
+  background: rgba(12, 12, 16, 0.4) !important;
+  backdrop-filter: blur(32px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(150%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+}
+
+.tags.capabilities {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.tag.cap-tag {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  padding: 0.6rem 1rem !important;
+  border-radius: 6px !important;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-weight: 500 !important;
+  color: var(--text-dim) !important;
+  letter-spacing: 0.1rem !important;
+  transition: all 0.3s ease !important;
+}
+
+.tag.cap-tag:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: var(--accent) !important;
+  color: var(--text) !important;
+  box-shadow: 0 0 16px var(--accent-glow) !important;
+}
+
+.tag.cap-tag .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  transition: all 0.3s ease;
+}
+
+.tag.cap-tag:hover .dot {
+  background: var(--text);
+  box-shadow: 0 0 12px var(--text);
+}
+.quick-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.qa-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-dim);
+  padding: 0.8rem;
+  border-radius: 6px;
+  font-family: "Inter", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+}
+
+.qa-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--accent);
+  color: var(--text);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.terminal-stream {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 1rem;
+  font-family: monospace;
+  font-size: 1.2rem;
+  color: var(--text-dim);
+  height: 10rem;
+  overflow-y: auto;
+  box-shadow: inset 0 4px 12px rgba(0,0,0,0.5);
+}
+
+.terminal-stream::-webkit-scrollbar { width: 0.4rem; }
+.terminal-stream::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
+.term-line {
+  margin-bottom: 0.4rem;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+/* DYNAMIC AUDIO VISUALIZER ORB */
+#centerOrb {
+  position: fixed;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent) 0%, rgba(0,0,0,0) 70%);
+  box-shadow: 0 0 40px var(--accent-glow), inset 0 0 30px rgba(255,255,255,0.1);
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0.1;
+  transition: all 0.5s ease;
+}
+
+body.mode-idle #centerOrb {
+  opacity: 0.1;
+  animation: orbIdlePulse 4s infinite ease-in-out;
+}
+
+body.mode-listening #centerOrb {
+  opacity: 0.4;
+  width: 140px;
+  height: 140px;
+  animation: orbListeningPulse 2s infinite ease-in-out;
+  box-shadow: 0 0 60px var(--accent-glow), inset 0 0 40px rgba(255,255,255,0.2);
+}
+
+body.mode-thinking #centerOrb {
+  opacity: 0.6;
+  width: 130px;
+  height: 130px;
+  animation: orbThinkingPulse 1s infinite alternate ease-in-out;
+  box-shadow: 0 0 70px var(--accent-glow);
+}
+
+body.mode-speaking #centerOrb {
+  opacity: 0.9;
+  width: 160px;
+  height: 160px;
+  animation: orbSpeakingPulse 0.3s infinite alternate ease-in-out;
+  box-shadow: 0 0 90px var(--accent-glow), inset 0 0 60px rgba(255,255,255,0.3);
+  background: radial-gradient(circle, var(--text) 0%, rgba(0,0,0,0) 70%);
+}
+
+@keyframes orbIdlePulse {
+  0% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.05); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes orbListeningPulse {
+  0% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.1); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes orbThinkingPulse {
+  0% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) scale(1.15) rotate(10deg); }
+}
+
+@keyframes orbSpeakingPulse {
+  0% { transform: translate(-50%, -50%) scale(1); }
+  100% { transform: translate(-50%, -50%) scale(1.2); }
+}
+.module-card:hover {
+  background: rgba(0, 255, 170, 0.05) !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 15px var(--accent-glow) !important;
+  transform: translateY(-2px);
+}
+</style></head>
 <body class="mode-idle">
 
 
@@ -702,16 +980,17 @@ button, input, select { min-height: 44px; }
       <div class="sub">System Core // Autonomous AI</div>
     </div>
   </div>
-  <div class="top-meta">
+  <div class="top-meta" style="align-items: center; margin-bottom: 0.5rem; font-size: 1.3rem;">
     <div>OPER <span class="v" id="topOwner">Sir</span></div>
     <div>LOC <span class="v" id="topLoc">—</span></div>
     <div>MODE <span class="v cy" id="topMode">SYSTEM</span></div>
-    <div>SYS <span class="v" id="topSys">v1.2.4 PRO</span></div>
+    <div>SYS <span class="v" id="topSys">v1.2.6 PRO</span></div>
     <div>NET <span class="v ok" id="topNet">ONLINE</span></div>
     <div><span class="v cy" id="topClock">00:00:00</span></div>
-    <button type="button" style="cursor:pointer; border:0.1rem solid var(--frame); padding:0.2rem 0.8rem; border-radius:0.3rem; background:transparent; color:var(--text); -webkit-app-region: no-drag;" id="topSettingsBtn">⚙ SETTINGS</button>
-    <div class="window-controls" style="display:flex; gap:0.5rem; margin-left: 1rem; align-items:center;">
+    <button type="button" style="cursor:pointer; border:0.1rem solid var(--frame); padding:0.4rem 1rem; border-radius:0.3rem; background:transparent; color:var(--text); font-size:1.1rem; font-weight:bold; letter-spacing:0.1rem; -webkit-app-region: no-drag;" id="topSettingsBtn">⚙ SETTINGS</button>
+    <div class="window-controls" style="display:flex; gap:0.5rem; margin-left: auto; align-items:center;">
       <button onclick="if(window.pywebview) pywebview.api.minimize()" style="cursor:pointer; border:0; background:transparent; color:var(--text); font-size:1rem; padding:0.2rem 0.6rem; -webkit-app-region: no-drag;" title="Minimize">—</button>
+      <button onclick="if(window.pywebview) pywebview.api.toggle_maximize()" style="cursor:pointer; border:0; background:transparent; color:var(--text); font-size:1rem; padding:0.2rem 0.6rem; -webkit-app-region: no-drag;" title="Maximize">◻</button>
       <button onclick="if(window.pywebview) pywebview.api.close()" style="cursor:pointer; border:0; background:transparent; color:#ff4444; font-size:1rem; padding:0.2rem 0.6rem; -webkit-app-region: no-drag;" title="Close">✕</button>
     </div>
   </div>
@@ -742,14 +1021,30 @@ button, input, select { min-height: 44px; }
   <div class="row"><span>MEM BANK</span><span class="v cy" id="sMem">0</span></div>
   <div class="row"><span>UPTIME</span><span class="v cy" id="sUp">0s</span></div>
 
-  <div class="title" style="margin-top:1.4rem">EXPERTISE</div>
-  <div class="tags">
-    <span class="tag">CYBER</span><span class="tag">PWN</span>
-    <span class="tag">PY</span><span class="tag">TS</span>
-    <span class="tag">REACT</span><span class="tag">NODE</span>
-    <span class="tag">RUST</span><span class="tag">AI</span>
-    <span class="tag">OSINT</span><span class="tag">CTF</span>
-    <span class="tag">SYSTEM</span><span class="tag">GUJARAT</span>
+  <div class="title" style="margin-top:1.4rem">SYSTEM CAPABILITIES</div>
+  <div class="tags capabilities">
+    <span class="tag cap-tag"><span class="dot"></span>THREAT INTEL</span>
+    <span class="tag cap-tag"><span class="dot"></span>DATA PARSING</span>
+    <span class="tag cap-tag"><span class="dot"></span>VOICE SYNTHESIS</span>
+    <span class="tag cap-tag"><span class="dot"></span>CODE ANALYSIS</span>
+    <span class="tag cap-tag"><span class="dot"></span>SYS INTEGRATION</span>
+  </div>
+
+  <div class="title" style="margin-top:1.4rem">TELEMETRY</div>
+  <div class="stream" id="stream" style="max-height:8rem;"></div>
+
+  <div class="title" style="margin-top:1.4rem">QUICK ACTIONS</div>
+  <div class="quick-actions">
+    <button class="qa-btn" onclick="pywebview.api.say_text('Flushing memory banks.');">FLUSH RAM</button>
+    <button class="qa-btn" onclick="document.getElementById('sVoice').innerText='SILENT';">SILENT MODE</button>
+    <button class="qa-btn" onclick="pywebview.api.say_text('Diagnostics running.');">DIAGNOSTICS</button>
+  </div>
+
+  <div class="title" style="margin-top:1.4rem">TERMINAL STREAM</div>
+  <div id="liveTerminal" class="terminal-stream">
+    <div class="term-line">&gt; DeepSeek AI linked.</div>
+    <div class="term-line">&gt; Encryption AES-256 active.</div>
+    <div class="term-line" style="color:var(--accent)">&gt; Waiting for command...</div>
   </div>
 </div>
 
@@ -784,7 +1079,7 @@ button, input, select { min-height: 44px; }
   <button class="qbtn" id="pauseListenerBtn">MIC: LISTENING</button>
   <button class="qbtn" id="settingsBtn" style="color:var(--accent);">SETTINGS</button>
   <button class="qbtn" id="dashboardBtn" style="color:var(--orange);">DASHBOARD</button>
-  <details class="advanced-actions">
+  <details class="advanced-actions" open>
     <summary>More tools</summary>
   <button class="qbtn" data-cmd="look at my screen and solve it">SCAN SCREEN</button>
   <button class="qbtn" data-cmd="what's on my calendar">CALENDAR</button>
@@ -812,13 +1107,13 @@ button, input, select { min-height: 44px; }
   <button class="qbtn" data-cmd="take a screenshot">SCREENSHOT</button>
   <button class="qbtn" data-cmd="what do you remember">MEMORY DUMP</button>
   </details>
-
-  <div class="title" style="margin-top:1.2rem">TELEMETRY</div>
-  <div class="stream" id="stream"></div>
 </div>
 
 <!-- READOUT TRANSCRIPT -->
 <div class="readout" id="readout"></div>
+
+<!-- DYNAMIC AUDIO VISUALIZER ORB -->
+<div id="centerOrb"></div>
 
 <!-- BOTTOM AUDIO WAVE -->
 <canvas id="wave"></canvas>
@@ -895,41 +1190,48 @@ button, input, select { min-height: 44px; }
         <div id="tab-ai" class="tab-content" style="display:none;">
           <h3 style="margin-bottom:1.5rem; color:var(--accent);">AI MODEL MANAGER & API VAULT</h3>
           
-          <div style="border:0.1rem solid #222; background:#111; padding:1.5rem; margin-bottom:1.5rem;">
-            <h4 style="margin-bottom:1rem; color:var(--accent);">ACTIVE LLM API KEYS</h4>
-            <div style="display:flex; gap:1rem; margin-bottom:1rem; font-size:1.05rem; color:var(--text-dim);">
-              <span>GROQ <b id="lbl_groq_status" style="color:var(--red);">[MISSING]</b></span>
-              <span>GOOGLE <b id="lbl_google_status" style="color:var(--orange);">[NOT CONFIGURED]</b></span>
-              <span>SPOTIFY <b id="lbl_spotify_status" style="color:var(--orange);">[NOT CONFIGURED]</b></span>
+          <div class="module-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
+            
+            <div class="module-card" style="background:rgba(0,0,0,0.4); border:1px solid rgba(0,255,170,0.2); border-radius:8px; padding:1.5rem; position:relative; overflow:hidden; transition:all 0.3s ease;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <span style="font-size:1.4rem; color:var(--text); font-weight:bold; letter-spacing:0.1rem;">GROQ LPU CORE</span>
+                <span id="lbl_groq_status" style="font-size:1rem; color:var(--red); border:1px solid; padding:0.2rem 0.6rem; border-radius:1rem;">MISSING</span>
+              </div>
+              <label style="font-size:1rem; color:var(--text-dim); display:block; margin-bottom:0.5rem;">PRIMARY SYSTEM MODEL</label>
+              <input type="password" id="set_groq_key" placeholder="Enter API Key..." style="width:100%; background:rgba(0,0,0,0.5); color:var(--text); border:1px solid rgba(255,255,255,0.1); padding:0.8rem; border-radius:4px; font-family:var(--mono);">
+              <a href="https://console.groq.com/" target="_blank" style="color:var(--accent); text-decoration:none; display:inline-block; margin-top:0.8rem; font-size:1.1rem;">GET UPLINK KEY ↗</a>
             </div>
-            <div style="margin-bottom:1rem;">
-              <label style="display:flex; justify-content:space-between; font-size:1.1rem; color:var(--text-dim);">
-                <span>PRIMARY SYSTEM MODEL (GROQ KEY)</span>
-                <a href="https://console.groq.com/" target="_blank" style="color:var(--cyan); text-decoration:none;">Get Key ↗</a>
-              </label>
-              <input type="password" id="set_groq_key" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem; font-family:var(--mono);">
+
+            <div class="module-card" style="background:rgba(0,0,0,0.4); border:1px solid rgba(0,255,170,0.2); border-radius:8px; padding:1.5rem; position:relative; overflow:hidden; transition:all 0.3s ease;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <span style="font-size:1.4rem; color:var(--text); font-weight:bold; letter-spacing:0.1rem;">GEMINI ENGINE</span>
+                <span id="lbl_gemini_status" style="font-size:1rem; color:var(--orange); border:1px solid; padding:0.2rem 0.6rem; border-radius:1rem;">INACTIVE</span>
+              </div>
+              <label style="font-size:1rem; color:var(--text-dim); display:block; margin-bottom:0.5rem;">SECONDARY AI FALLBACK</label>
+              <input type="password" id="set_gemini_key" placeholder="Enter API Key..." style="width:100%; background:rgba(0,0,0,0.5); color:var(--text); border:1px solid rgba(255,255,255,0.1); padding:0.8rem; border-radius:4px; font-family:var(--mono);">
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent); text-decoration:none; display:inline-block; margin-top:0.8rem; font-size:1.1rem;">GET UPLINK KEY ↗</a>
             </div>
-            <div style="margin-bottom:1rem;">
-              <label style="display:flex; justify-content:space-between; font-size:1.1rem; color:var(--text-dim);">
-                <span>GEMINI API KEY</span>
-                <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--cyan); text-decoration:none;">Get Key ↗</a>
-              </label>
-              <input type="password" id="set_gemini_key" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem; font-family:var(--mono);">
+
+            <div class="module-card" style="background:rgba(0,0,0,0.4); border:1px solid rgba(0,255,170,0.2); border-radius:8px; padding:1.5rem; position:relative; overflow:hidden; transition:all 0.3s ease;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <span style="font-size:1.4rem; color:var(--text); font-weight:bold; letter-spacing:0.1rem;">OPENAI NEURAL</span>
+                <span id="lbl_openai_status" style="font-size:1rem; color:var(--orange); border:1px solid; padding:0.2rem 0.6rem; border-radius:1rem;">INACTIVE</span>
+              </div>
+              <label style="font-size:1rem; color:var(--text-dim); display:block; margin-bottom:0.5rem;">GPT/VISION SUBSYSTEM</label>
+              <input type="password" id="set_openai_key" placeholder="Enter API Key..." style="width:100%; background:rgba(0,0,0,0.5); color:var(--text); border:1px solid rgba(255,255,255,0.1); padding:0.8rem; border-radius:4px; font-family:var(--mono);">
+              <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--accent); text-decoration:none; display:inline-block; margin-top:0.8rem; font-size:1.1rem;">GET UPLINK KEY ↗</a>
             </div>
-            <div style="margin-bottom:1rem;">
-              <label style="display:flex; justify-content:space-between; font-size:1.1rem; color:var(--text-dim);">
-                <span>OPENAI API KEY</span>
-                <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--cyan); text-decoration:none;">Get Key ↗</a>
-              </label>
-              <input type="password" id="set_openai_key" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem; font-family:var(--mono);">
+
+            <div class="module-card" style="background:rgba(0,0,0,0.4); border:1px solid rgba(0,255,170,0.2); border-radius:8px; padding:1.5rem; position:relative; overflow:hidden; transition:all 0.3s ease;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <span style="font-size:1.4rem; color:var(--text); font-weight:bold; letter-spacing:0.1rem;">ANTHROPIC LOGIC</span>
+                <span id="lbl_anthropic_status" style="font-size:1rem; color:var(--orange); border:1px solid; padding:0.2rem 0.6rem; border-radius:1rem;">INACTIVE</span>
+              </div>
+              <label style="font-size:1rem; color:var(--text-dim); display:block; margin-bottom:0.5rem;">CLAUDE API CONNECTION</label>
+              <input type="password" id="set_anthropic_key" placeholder="Enter API Key..." style="width:100%; background:rgba(0,0,0,0.5); color:var(--text); border:1px solid rgba(255,255,255,0.1); padding:0.8rem; border-radius:4px; font-family:var(--mono);">
+              <a href="https://console.anthropic.com/" target="_blank" style="color:var(--accent); text-decoration:none; display:inline-block; margin-top:0.8rem; font-size:1.1rem;">GET UPLINK KEY ↗</a>
             </div>
-            <div style="margin-bottom:1rem;">
-              <label style="display:flex; justify-content:space-between; font-size:1.1rem; color:var(--text-dim);">
-                <span>ANTHROPIC API KEY (CLAUDE)</span>
-                <a href="https://console.anthropic.com/" target="_blank" style="color:var(--cyan); text-decoration:none;">Get Key ↗</a>
-              </label>
-              <input type="password" id="set_anthropic_key" style="width:100%; background:#000; color:var(--text); border:0.1rem solid #333; padding:0.6rem; margin-top:0.2rem; font-family:var(--mono);">
-            </div>
+
           </div>
           
           <div style="border:0.1rem solid #222; background:#111; padding:1.5rem; margin-bottom:1.5rem;">
@@ -1258,9 +1560,8 @@ button, input, select { min-height: 44px; }
 </div>
 
 <!-- CENTER PIECE -->
-<div id="center-container">
-  
-  <canvas id="orb"></canvas>
+<div id="center-container" role="button" tabindex="0" aria-label="Toggle microphone">
+  <canvas id="orb" aria-label="KALKI arc reactor"></canvas>
 </div>
 
 <!-- File upload (hidden), drag-drop overlay, attachment strip -->
@@ -1381,6 +1682,20 @@ async function refreshStatus(){
     const r = await fetch("/api/status"); const d = await r.json();
     STATE.networkAlerted = false;
     if(typeof updateDashboard === "function") updateDashboard(d);
+
+    if (d.terminalLogs) {
+      const term = document.getElementById('liveTerminal');
+      if (term) {
+        term.innerHTML = '';
+        d.terminalLogs.forEach(log => {
+          const line = document.createElement('div');
+          line.className = 'term-line';
+          line.innerText = '> ' + log;
+          term.appendChild(line);
+        });
+        term.scrollTop = term.scrollHeight;
+      }
+    }
     
     // Resource overload detection
     if (d.cpu > 95) {
@@ -1439,6 +1754,7 @@ async function refreshStatus(){
     if (d.conversationSeq && d.conversationSeq > lastSeenSeq && d.recentExchange){
       addLine(d.recentExchange.user, "user");
       addLine(d.recentExchange.reply, "kalki");
+      speakInClient(d.recentExchange.reply);
       pushStream("voice command captured","hot");
       lastSeenSeq = d.conversationSeq;
     } else if (d.conversationSeq && lastSeenSeq === 0) {
@@ -1765,8 +2081,38 @@ document.addEventListener("paste", async (e) => {
 async function postChat(){
   return fetch("/api/chat", {
     method:"POST", headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({messages: STATE.history}),
+    body: JSON.stringify({
+      messages: STATE.history,
+      // WebView2's speech engine is local and does not depend on an online
+      // Edge-TTS request or a separately-opened audio device.
+      clientSpeech: canSpeakInClient(),
+    }),
   });
+}
+
+function canSpeakInClient(){
+  return "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+}
+
+function speakInClient(text){
+  if (!canSpeakInClient() || !text) return false;
+  const clean = text
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/[`*_#>]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!clean) return false;
+  try {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(clean);
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    window.speechSynthesis.speak(utterance);
+    return true;
+  } catch (error) {
+    console.warn("Client speech unavailable:", error);
+    return false;
+  }
 }
 
 async function send(text){
@@ -1794,6 +2140,7 @@ async function send(text){
       });
       const d = await r.json();
       addLine(d.reply || "...", "kalki");
+      speakInClient(d.reply || "");
       pushStream("vision reply received");
       setMode("speaking");
       const dur = Math.min(14000, Math.max(2200, (d.reply||"").length * 55));
@@ -1836,10 +2183,25 @@ async function send(text){
     const reply = d.reply || "...";
     STATE.history.push({role:"assistant", content:reply});
     addLine(reply, "kalki");
+    speakInClient(reply);
     pushStream("response received ("+(d.source||"ai")+")");
     setMode("speaking");
     const dur = Math.min(14000, Math.max(2200, reply.length * 55));
-    setTimeout(()=>setMode(STATE.micActive?"listening":"idle"), dur);
+    
+    // Auto-wake microphone if KALKI asks a question or requests confirmation
+    const isQuestion = reply.includes("?") || reply.toLowerCase().includes("say confirm");
+    if (isQuestion && typeof enableMic === "function") {
+      setTimeout(() => {
+        STATE.micActive = true;
+        if ($("micBtn")) $("micBtn").classList.add("active");
+        enableMic().then(() => {
+          if (recognizer){ try{recognizer.start()}catch(e){} }
+          setMode("listening");
+        });
+      }, dur);
+    } else {
+      setTimeout(()=>setMode(STATE.micActive?"listening":"idle"), dur);
+    }
   }catch(e){
     addLine("Reply parse failed: "+e.message,"error");
     triggerSystemError("response_parse", "malformed_json_payload", "Failed to parse response payload: " + e.message, "Check server logs for internal exceptions or python runtime logs.");
@@ -2210,6 +2572,11 @@ if ($("testVoiceBtn")) {
     try {
       if ($("lbl_tts_status")) $("lbl_tts_status").textContent = "TTS STATUS: STARTING TEST...";
       showNotice("Speaking test phrase...", false);
+      if (speakInClient("Voice check complete. KALKI is ready.")) {
+        if ($("lbl_tts_status")) $("lbl_tts_status").textContent = "TTS STATUS: WEBVIEW VOICE STARTED";
+        showNotice("Voice test started.", false);
+        return;
+      }
       const r = await fetch("/api/tts/test", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
@@ -2523,22 +2890,36 @@ function drawHistoryGraph(canvasId, dataArray, color) {
 }
 
 
-const orb = $("orb"), ox = orb.getContext("2d");
+const orb = $("orb");
+const ox = orb ? orb.getContext("2d") : null;
 // Cap pixel density: a full-screen mandala at 2-3x DPR is the main GPU/heat
 // cost. 1.5x still looks crisp but draws far fewer pixels.
 let W=0, H=0, DPR = Math.min(1.5, Math.max(1, window.devicePixelRatio||1));
+
 function resizeOrb(){
   const container = document.getElementById("center-container");
-  if (!container) return;
+  if (!container || !orb || !ox) return;
   W = container.clientWidth;
   H = container.clientHeight;
-  orb.width = W*DPR; orb.height = H*DPR;
-  orb.style.width = W+"px"; orb.style.height = H+"px";
-  ox.setTransform(DPR,0,0,DPR,0,0);
+  orb.width = W * DPR;
+  orb.height = H * DPR;
+  orb.style.width = W + "px";
+  orb.style.height = H + "px";
+  ox.setTransform(DPR, 0, 0, DPR, 0, 0);
 }
-window.addEventListener("resize", resizeOrb); resizeOrb();
+window.addEventListener("resize", resizeOrb);
+resizeOrb();
 
-document.getElementById("center-container").addEventListener("click", () => { if(typeof toggleMic === "function") toggleMic(); });
+const centerContainer = document.getElementById("center-container");
+if (centerContainer) {
+  centerContainer.addEventListener("click", () => { if(typeof toggleMic === "function") toggleMic(); });
+  centerContainer.addEventListener("keydown", event => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if(typeof toggleMic === "function") toggleMic();
+    }
+  });
+}
 
 const ORBIT = Array.from({length:120},()=>({
   a:Math.random()*Math.PI*2, r:0.85+Math.random()*0.95,
@@ -2624,9 +3005,10 @@ function drawOrb() {
     ox.beginPath();
     ox.strokeStyle = cAccent;
     ox.lineWidth = 1.5;
+    const freqArr = STATE.freqData || new Uint8Array(72);
     for(let i=0; i<72; i++) {
         let angle = (i/72) * Math.PI * 2 + (chakraAngle*0.5);
-        let v = STATE.freqData[i]/255;
+        let v = (freqArr[i] || 0) / 255;
         let ext = R + (v * R * 0.2);
         let px = cx + Math.cos(angle) * ext;
         let py = cy + Math.sin(angle) * ext;
@@ -2810,19 +3192,19 @@ function drawTrishul(cx,cy,h,color){
   ox.restore();
 }
 
-orb.addEventListener("click", toggleMic);
-
 /* ════════════════════════════════════════════════════════════════
    WAVEFORM
    ════════════════════════════════════════════════════════════════ */
-const wave = $("wave"), wx = wave.getContext("2d");
+const wave = $("wave"), wx = wave ? wave.getContext("2d") : null;
 function resizeWave(){
+  if (!wave || !wx) return;
   wave.width = window.innerWidth*DPR; wave.height = 34*DPR;
   wave.style.width = window.innerWidth+"px"; wave.style.height = "34px";
   wx.setTransform(DPR,0,0,DPR,0,0);
 }
 window.addEventListener("resize", resizeWave); resizeWave();
 function drawWave(){
+  if (!wave || !wx) return;
   sampleTime();
   const ww = window.innerWidth, wh = 34;
   wx.clearRect(0,0,ww,wh);
@@ -2983,16 +3365,17 @@ if (STATE.busyMode) {
 // FLUID ADAPTIVE UI SCALER
 // -------------------------------------------------------------------------
 function adaptUI() {
-  const baseW = 2560; // 2K Design Base Width
-  const baseH = 1440; // 2K Design Base Height
+  const baseW = 1920; // 1080p Base Width
+  const baseH = 1080; // 1080p Base Height
   let scale = Math.min(window.innerWidth / baseW, window.innerHeight / baseH);
-  if (scale > 1) scale = 1; // Don't scale up past 100%, only shrink for smaller laptops
+  if (scale > 1) scale = 1;
   
-  // Set global rem scale. 1rem = 10px * scale
-  document.documentElement.style.fontSize = `${10 * scale}px`;
+  // Root rem scale (1rem = 10px * scale).
+  // Floor at 9.5px so Chromium never clamps below min font size limits.
+  const rootFontSize = Math.max(9.5, 10 * scale);
+  document.documentElement.style.fontSize = `${rootFontSize}px`;
   document.documentElement.style.setProperty('--ui-scale', scale);
   
-  // Remove legacy transform scaling
   document.body.style.transform = "none";
   document.body.style.width = "100%";
   document.body.style.height = "100%";
@@ -3281,6 +3664,28 @@ if ('serviceWorker' in navigator) {
       .catch(err => console.log('ServiceWorker error:', err));
   });
 }
+// Live Terminal Stream Simulator
+function pushTerminalLog(text, color) {
+  const term = document.getElementById('liveTerminal');
+  if (!term) return;
+  const line = document.createElement('div');
+  line.className = 'term-line';
+  line.innerText = '> ' + text;
+  if (color) line.style.color = color;
+  term.appendChild(line);
+  if (term.children.length > 25) term.removeChild(term.firstChild);
+  term.scrollTop = term.scrollHeight;
+}
+
+// Live Terminal Stream JS exposed to python server
+
+// Prevent accidental browser zooming
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && (e.key === '=' || e.key === '-' || e.key === '0')) e.preventDefault();
+});
+document.addEventListener('wheel', e => {
+  if (e.ctrlKey) e.preventDefault();
+}, { passive: false });
 </script>
 </body>
 </html>

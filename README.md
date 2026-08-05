@@ -81,6 +81,7 @@ From deep-level OS execution and cybersecurity workflows to advanced code genera
 | **Wake Word** | Say **"Hi KALKI"** from anywhere — no clicks, no keyboard |
 | **Smart Audio Pipeline** | Advanced signal processing prevents feedback loops |
 | **Offline Fallback** | Optional VOSK wake-word detection for zero-latency, privacy-first mode |
+| **Local Speech Engine** | Automatically fails over to native Windows SpeechSynthesizer if cloud AI voices are down |
 | **Continuous Listening** | Background daemon captures speech and routes it to the AI brain |
 
 </details>
@@ -175,10 +176,15 @@ We built KALKI with an aggressive Zero-Trust security posture.
 
 ---
 
-## 📡 Automated CI/CD Deployment
+## 📡 Installation & Deployment
 
-KALKI utilizes an automated, CI/CD-backed deployment pipeline. Microsoft Azure servers compile the `.exe` every time code is pushed.
+KALKI utilizes an automated deployment pipeline, with builds compiled cleanly from source.
 
+**Option 1: Microsoft Store (Recommended)**
+1. Search for **KALKI AI Assistant** in the Microsoft Store or install the `.msix` package.
+2. The Store manages all background updates and dependencies seamlessly.
+
+**Option 2: Standalone Installer**
 1. **Download the Package**: Obtain `KALKI_Setup.exe` from the [Releases Page](https://github.com/Maher-Bhatt/KALKI/releases/latest).
 2. **Execute Setup**: The installer handles all dependencies, PATH configurations, and PWA manifest installations silently.
 3. **Initialize**: Launch the application and say **"Hi KALKI"**.

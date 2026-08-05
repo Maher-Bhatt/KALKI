@@ -37,10 +37,11 @@ def main():
     t = threading.Thread(target=server.main, daemon=True)
     t.start()
     
-    # Wait for the server to bind and start accepting requests (up to 15 seconds)
+    # This is a release gate: continuing after a failed startup can mask a
+    # broken build.
     print(f"[SMOKE TEST] Waiting for server on port {port} to start accepting connections...")
     server_started = False
-    for _ in range(30):
+    for _ in range(60):
         time.sleep(0.5)
         try:
             with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/status", timeout=1) as r:
@@ -51,7 +52,8 @@ def main():
             pass
 
     if not server_started:
-        print(f"[SMOKE TEST] WARNING: Server on port {port} did not respond within 15 seconds.")
+        print(f"[SMOKE TEST] FAILED: Server on port {port} did not respond within 30 seconds.")
+        sys.exit(1)
 
     failures = []
     for path, required_keys in [

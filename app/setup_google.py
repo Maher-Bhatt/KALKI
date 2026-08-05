@@ -9,17 +9,16 @@ Usage:
 
 import os
 import sys
+from runtime_paths import prepare_runtime
 
-BASE_DIR = os.path.dirname(os.path.abspath(
-    sys.executable if getattr(sys, "frozen", False) else __file__
-))
-sys.path.insert(0, BASE_DIR)
+_runtime = prepare_runtime()
+BASE_DIR = _runtime.app_root
 
 import gcal
 
 is_store = os.path.exists(os.path.join(BASE_DIR, "store_build.txt"))
 if is_store:
-    DATA_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "data")
+    DATA_DIR = os.path.join(_runtime.user_data_dir, "data")
 else:
     DATA_DIR = os.path.join(BASE_DIR, "data")
 

@@ -1,5 +1,5 @@
 #define MyAppName "KALKI"
-#define MyAppVersion "1.2.4"
+#define MyAppVersion "1.2.6"
 #define MyAppPublisher "KALKI Technologies"
 #define MyAppExeName "KALKI.exe"
 
@@ -12,7 +12,7 @@ DefaultDirName={localappdata}\Programs\KALKI
 DefaultGroupName={#MyAppName}
 PrivilegesRequired=lowest
 OutputDir=..\..\Output
-OutputBaseFilename=KALKI_Setup
+OutputBaseFilename=KALKI_Setup_v1.2.6
 LicenseFile=..\..\LICENSE
 InfoBeforeFile=..\..\TERMS.md
 SetupIconFile=..\..\assets\kalki_icon.ico
@@ -21,7 +21,7 @@ SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayIcon={app}\{#MyAppExeName}
 CloseApplications=force
-CloseApplicationsFilter=*.exe
+CloseApplicationsFilter=KALKI.exe,KALKI_Server.exe,KALKI_Listener.exe,KALKI_Setup_Wizard.exe
 RestartApplications=yes
 
 
@@ -30,13 +30,14 @@ Name: "core"; Description: "KALKI Core (required)"; Types: full compact custom; 
 Name: "deepscan"; Description: "Deep website scanner (Playwright + Chromium, ~300 MB)"; Types: full
 
 [Files]
-; The 4 EXEs
+; Keep every PyInstaller one-dir runtime isolated. Merging their _internal
+; folders corrupts the dependencies required by each executable.
 Source: "..\dist\KALKI\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
-Source: "..\dist\KALKI_Setup_Wizard\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
-Source: "..\dist\KALKI_Server\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
-Source: "..\dist\KALKI_Listener\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
-Source: "..\dist\KALKI_Setup_Google\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
-Source: "..\dist\KALKI_Setup_Spotify\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
+Source: "..\dist\KALKI_Setup_Wizard\*"; DestDir: "{app}\services\setup_wizard"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
+Source: "..\dist\KALKI_Server\*"; DestDir: "{app}\services\server"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
+Source: "..\dist\KALKI_Listener\*"; DestDir: "{app}\services\listener"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
+Source: "..\dist\KALKI_Setup_Google\*"; DestDir: "{app}\services\setup_google"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
+Source: "..\dist\KALKI_Setup_Spotify\*"; DestDir: "{app}\services\setup_spotify"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
 Source: "..\..\browsers\*"; DestDir: "{app}\browsers"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist; Components: deepscan
 
 ; Assets and structure
@@ -45,6 +46,7 @@ Source: "..\index.html"; DestDir: "{app}"; Flags: ignoreversion; Components: cor
 Source: "..\manifest.json"; DestDir: "{app}"; Flags: ignoreversion; Components: core
 Source: "..\service-worker.js"; DestDir: "{app}"; Flags: ignoreversion; Components: core
 Source: "..\config.example.py"; DestDir: "{app}"; Flags: ignoreversion; Components: core
+Source: "..\plugins\*"; DestDir: "{app}\plugins"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
 Source: "..\..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion; Components: core
 Source: "..\..\TERMS.md"; DestDir: "{app}"; Flags: ignoreversion; Components: core
 
@@ -58,9 +60,6 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-
-[Registry]
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "KALKI"; ValueData: """{app}\{#MyAppExeName}"""; Flags: uninsdeletevalue
 
 [Run]
 ; Run KALKI itself post-install

@@ -8,6 +8,7 @@ Uses Python stdlib http.server only (no Flask, no FastAPI)
 import os
 import sys
 import json
+import base64
 import time
 import glob
 import socket
@@ -34,12 +35,13 @@ from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 
-# Ensure local imports resolve when launched from any cwd
-BASE_DIR = os.path.dirname(os.path.abspath(
-    sys.executable if getattr(sys, "frozen", False) else __file__
-))
-os.chdir(BASE_DIR)
-sys.path.insert(0, BASE_DIR)
+# Ensure local imports and external resources resolve when launched from any
+# cwd. Packaged helper executables live below services/, while the web UI and
+# assets live at the package root.
+from runtime_paths import prepare_runtime
+_runtime = prepare_runtime()
+BASE_DIR = _runtime.entry_dir
+APP_ROOT = _runtime.app_root
 
 # Force UTF-8 stdout/stderr (pythonw.exe uses cp1252 by default — breaks on emoji/arrows)
 try:
@@ -48,27 +50,12 @@ try:
 except Exception:
     pass
 
-# --- Auto-bootstrap config.py from config.example.py on first run -----------
-_cfg_path = os.path.join(BASE_DIR, "config.py")
-_example_path = os.path.join(BASE_DIR, "config.example.py")
-_user_data_dir = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI")
-_user_cfg_path = os.path.join(_user_data_dir, "config.py")
-
-if not os.path.exists(_cfg_path):
-    try:
-        if os.path.exists(_example_path):
-            import shutil
-            shutil.copy(_example_path, _cfg_path)
-    except (PermissionError, OSError):
-        os.makedirs(_user_data_dir, exist_ok=True)
-        if not os.path.exists(_user_cfg_path) and os.path.exists(_example_path):
-            import shutil
-            shutil.copy(_example_path, _user_cfg_path)
-
-if not os.path.exists(_cfg_path) and os.path.exists(_user_cfg_path):
-    sys.path.insert(0, _user_data_dir)
-
 import config
+from core import api_vault
+for _k, _v in api_vault.list_secrets().items():
+    if _v:
+        setattr(config, _k, _v)
+
 _CONFIG_DEFAULTS = {
     "CURRENT_VERSION": "v1.2.1",
     "TTS_PROVIDER": "edge",
@@ -160,7 +147,7 @@ except Exception:
 # ─────────────────────────────────────────────────────────────
 # State
 # ─────────────────────────────────────────────────────────────
-_is_store = os.path.exists(os.path.join(BASE_DIR, "store_build.txt"))
+_is_store = os.path.exists(os.path.join(APP_ROOT, "store_build.txt"))
 _sandbox_data_dir = os.environ.get("KALKI_SANDBOX_DATA_DIR", "").strip()
 if _sandbox_data_dir:
     # The verification sandbox must never alter a user's real memories,
@@ -169,7 +156,7 @@ if _sandbox_data_dir:
 elif _is_store:
     DATA_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "data")
 else:
-    DATA_DIR = os.path.join(BASE_DIR, "data")
+    DATA_DIR = os.path.join(APP_ROOT, "data")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -226,57 +213,21 @@ if not os.environ.get("KALKI_SANDBOX"):
     threading.Thread(target=update_location_from_ip, daemon=True).start()
 
 def fetch_weather_line(timeout=5):
-    """Short weather string using Open-Meteo (GPS) or wttr.in (City), or None."""
+    """Short weather string using wttr.in (live IP geolocation)"""
     try:
-        import urllib.request, json
-        lat = getattr(config, "LATITUDE", None)
-        lon = getattr(config, "LONGITUDE", None)
-        city = (getattr(config, "OWNER_CITY", "") or "").strip()
-        
-        if lat is not None and lon is not None:
-            url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
-            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req, timeout=timeout) as r:
-                w_data = json.loads(r.read()).get("current_weather", {})
-                temp = w_data.get("temperature", "?")
-                code = w_data.get("weathercode", 0)
-                is_day = w_data.get("is_day", 1)
-                
-                # Mapping for WMO codes depending on day/night
-                if is_day == 0:  # Night
-                    icon = "🌙"
-                    if code in (1, 2): icon = "☁️🌙"
-                    elif code == 3: icon = "☁️"
-                    elif code in (45, 48): icon = "🌫️"
-                    elif 51 <= code <= 67: icon = "🌧️"
-                    elif 71 <= code <= 77: icon = "❄️"
-                    elif 95 <= code <= 99: icon = "⛈️"
-                else:  # Day
-                    icon = "☀️"
-                    if code in (1, 2, 3): icon = "⛅"
-                    elif code in (45, 48): icon = "🌫️"
-                    elif 51 <= code <= 67: icon = "🌧️"
-                    elif 71 <= code <= 77: icon = "❄️"
-                    elif 95 <= code <= 99: icon = "⛈️"
-                
-                loc_name = city if city else "Local"
-                return f"{loc_name}: {icon} +{temp}°C"
-        
-        if not city:
-            return None
-            
-        w = urllib.request.urlopen(
-            f"https://wttr.in/{urllib.parse.quote(city)}?format=3",
-            timeout=timeout,
-        ).read().decode().strip()
-        return w
+        import urllib.request
+        # Fetch live location weather using IP auto-routing from wttr.in
+        req = urllib.request.Request("https://wttr.in/?format=3", headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            w = r.read().decode('utf-8').strip()
+            return w
     except Exception:
         return None
 
 PLUGINS = {}
 def load_plugins():
     global PLUGINS
-    plugins_dir = os.path.join(BASE_DIR, "app", "plugins")
+    plugins_dir = os.path.join(APP_ROOT, "plugins")
     if not os.path.exists(plugins_dir):
         return
     import importlib.util
@@ -394,12 +345,16 @@ def ask_native_permission(description):
 
 def _consume_confirmation(command):
     global _pending_action
-    if command in ("cancel", "never mind", "nevermind"):
+    
+    # Strip punctuation and trailing/leading spaces
+    clean_command = "".join(c for c in command if c not in ".,!?").strip().lower()
+    
+    if clean_command in ("cancel", "never mind", "nevermind"):
         with _pending_lock:
             had_pending = _pending_action is not None
             _pending_action = None
         return (True, "Cancelled.") if had_pending else None
-    if command not in ("confirm", "yes confirm", "confirm it", "do it"):
+    if clean_command not in ("confirm", "yes confirm", "confirm it", "do it"):
         return None
     with _pending_lock:
         pending = _pending_action
@@ -421,6 +376,15 @@ def _recordable_exchange(user_text, reply):
     if _is_sensitive_command(user_text):
         return "[sensitive local command]", "[sensitive result hidden]"
     return user_text, reply
+
+def _get_recent_logs():
+    try:
+        if not os.path.exists(LOG_PATH): return []
+        with open(LOG_PATH, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            return [l.strip() for l in lines[-12:] if l.strip()]
+    except:
+        return []
 
 UI_ALIVE_GRACE = 8.0  # seconds — if no /api/status in this long, UI is "dead"
 
@@ -664,10 +628,19 @@ def copy_scan_to_desktop(result):
 async def _speak_async(text, voice, rate, volume, pitch="+0Hz"):
     with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
         tmp = f.name
-    communicate = edge_tts.Communicate(
-        text, voice, rate=rate, volume=volume, pitch=pitch)
-    await communicate.save(tmp)
-    return tmp
+    try:
+        communicate = edge_tts.Communicate(
+            text, voice, rate=rate, volume=volume, pitch=pitch)
+        # Edge TTS uses a remote websocket.  Without a deadline it can leave
+        # the audio worker stuck forever when the service is unreachable.
+        await asyncio.wait_for(communicate.save(tmp), timeout=8)
+        return tmp
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 import re as _re_speech
 
@@ -842,6 +815,31 @@ def _init_tts_mixer():
     raise RuntimeError("audio output init failed: " + "; ".join(errors))
 
 
+def _speak_with_windows_sapi(text):
+    """Use Windows' built-in voice when cloud TTS or pygame playback fails."""
+    if os.name != "nt":
+        raise RuntimeError("Windows SAPI fallback is unavailable on this platform")
+    try:
+        # Calling SpeechSynthesizer through Windows PowerShell avoids a
+        # pywin32/comtypes runtime dependency in the frozen server bundle.
+        # Base64 keeps user-provided text out of the PowerShell command line.
+        encoded = base64.b64encode(text.encode("utf-16le")).decode("ascii")
+        script = (
+            "Add-Type -AssemblyName System.Speech; "
+            "$voice = New-Object System.Speech.Synthesis.SpeechSynthesizer; "
+            f"$voice.Speak([Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('{encoded}')))"
+        )
+        flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+            check=True,
+            timeout=30,
+            creationflags=flags,
+        )
+    except Exception as e:
+        raise RuntimeError(f"Windows SAPI fallback failed: {e}") from e
+
+
 def is_urgent(text):
     text_lower = text.lower()
     # 1. Zero-delay keywords
@@ -907,8 +905,20 @@ def speak(text, is_notification=False):
                 while pygame.mixer.music.get_busy():
                     time.sleep(0.1)
             except Exception as e:
-                STATE["last_tts_error"] = str(e)
-                log(f"TTS error: {e}")
+                # A working voice matters more than preserving a particular
+                # cloud provider.  SAPI is present on supported Windows
+                # systems and bypasses both the Edge websocket and SDL mixer.
+                edge_error = str(e)
+                log(f"TTS primary provider failed: {edge_error}")
+                try:
+                    _speak_with_windows_sapi(text)
+                    STATE["last_tts_provider"] = "windows-sapi"
+                    STATE["last_tts_error"] = ""
+                    STATE["last_tts_latency_ms"] = int((time.perf_counter() - started_at) * 1000)
+                    log("TTS fallback: Windows SAPI")
+                except Exception as fallback_error:
+                    STATE["last_tts_error"] = f"{edge_error}; {fallback_error}"
+                    log(f"TTS error: {STATE['last_tts_error']}")
             finally:
                 # Release the audio device so a shared BT headset can switch
                 # back to the phone the moment KALKI stops talking.
@@ -1064,21 +1074,18 @@ def build_greeting():
     owner = config.OWNER_NAME
 
     morning_pool = [
-        f"A very pleasant morning, {title}. I have prepared your daily briefing. What would you like to focus on today?",
-        f"Good morning, {owner}. System initialized. What are our priorities for today?",
-        f"Top of the morning to you, {title}. Hope you're ready for a productive day. Shall we review your agenda?",
-        f"Good morning, {title}. Uplink secure. What should I add to your tasks or reminders for the day?"
+        f"A very pleasant morning, {title}. KALKI Neural Systems initialized. What are our priorities for today?",
+        f"Good morning, {owner}. All subsystems are online and synced. Shall we review your agenda?",
+        f"Top of the morning to you, {title}. Hope you're ready for a productive day. I am standing by.",
     ]
     afternoon_pool = [
-        f"Good afternoon, {title}. Hope your day is progressing smoothly.",
-        f"A beautiful afternoon to you, {title}.",
-        f"Good afternoon, {owner}. Online and ready to assist.",
+        f"Good afternoon, {title}. KALKI is online and ready to assist.",
+        f"A beautiful afternoon to you, {owner}. System diagnostics are optimal.",
         f"Good afternoon, {title}. Status check: all subsystems running optimal."
     ]
     evening_pool = [
-        f"Good evening, {title}. I hope your day went well.",
-        f"A pleasant evening to you, {owner}.",
-        f"Good evening, {title}. Systems active, standing by for night ops.",
+        f"Good evening, {title}. KALKI systems active, standing by for night ops.",
+        f"A pleasant evening to you, {owner}. I hope your day went well.",
         f"Good evening, {title}. Secure network active, awaiting your command."
     ]
 
@@ -2735,6 +2742,17 @@ def hardware_prompt_block():
     )
 
 
+def get_active_window_title():
+    try:
+        import ctypes
+        hwnd = ctypes.windll.user32.GetForegroundWindow()
+        length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
+        buf = ctypes.create_unicode_buffer(length + 1)
+        ctypes.windll.user32.GetWindowTextW(hwnd, buf, length + 1)
+        return buf.value
+    except Exception:
+        return ""
+
 def build_system_prompt(query=""):
     now = datetime.now()
     # removed local import
@@ -2746,9 +2764,13 @@ def build_system_prompt(query=""):
     elif workflows.ACTIVE_STATE == "dev":
         state_block = "\n\n*** DEVELOPER MODE ACTIVE: You are pair programming. Write clean, optimal code. Do not hallucinate dependencies. ***"
         
+    active_window = get_active_window_title()
+    context_block = f"\n\n*** USER CONTEXT: The user is currently looking at window: '{active_window}'. Use this context to answer vague questions. ***" if active_window else ""
+
     return (
         SYSTEM_PROMPT_BASE
         + state_block
+        + context_block
         + hardware_prompt_block()
         + get_memory_prompt(query)
         + f"\n\nCURRENT TIME: {now.strftime('%I:%M %p')}"
@@ -3051,6 +3073,8 @@ def execute_tool_call(tool_name, tool_args):
                     return "Process name required."
                 if not ask_native_permission(f"terminate process '{proc_name}'"):
                     return f"Security Sandbox: Blocked terminating '{proc_name}'."
+                if not psutil:
+                    return "psutil library is required to kill processes natively. Please install it."
                 killed = 0
                 for p in psutil.process_iter(['name', 'pid']):
                     try:
@@ -3063,6 +3087,8 @@ def execute_tool_call(tool_name, tool_args):
                     return f"Terminated {killed} instance(s) of '{proc_name}', Sir."
                 return f"No running process matching '{proc_name}' found."
             elif action == "battery_status":
+                if not psutil:
+                    return "psutil library is required to read battery status."
                 try:
                     batt = psutil.sensors_battery()
                     if not batt:
@@ -3224,6 +3250,38 @@ def pick_ollama_model():
             if n.startswith(p):
                 return n
     return names[0] if names else None
+
+
+# The HUD polls /api/status frequently.  Do not make that request wait for a
+# connection timeout when Ollama is not installed or is still starting.
+_ollama_status_lock = threading.Lock()
+_ollama_status = {"model": None, "checked_at": 0.0, "checking": False}
+_OLLAMA_STATUS_REFRESH_SEC = 10.0
+
+
+def _refresh_ollama_status():
+    try:
+        model = pick_ollama_model()
+        with _ollama_status_lock:
+            _ollama_status["model"] = model
+            _ollama_status["checked_at"] = time.time()
+            _ollama_status["checking"] = False
+    except Exception:
+        with _ollama_status_lock:
+            _ollama_status["checked_at"] = time.time()
+            _ollama_status["checking"] = False
+
+
+def cached_ollama_model():
+    """Return the last Ollama result and refresh it outside the HTTP request."""
+    now = time.time()
+    with _ollama_status_lock:
+        model = _ollama_status["model"]
+        needs_refresh = now - _ollama_status["checked_at"] >= _OLLAMA_STATUS_REFRESH_SEC
+        if needs_refresh and not _ollama_status["checking"]:
+            _ollama_status["checking"] = True
+            threading.Thread(target=_refresh_ollama_status, daemon=True).start()
+    return model
 
 def ask_ollama(messages):
     model = pick_ollama_model()
@@ -3775,9 +3833,23 @@ def ask_ai(user_messages, force_search=False):
         return ask_ollama(msgs)
     except Exception as e:
         log(f"[Ollama failed] {e}")
+        
+        # Fallback to keyless DeepSeek via g4f
+        try:
+            from g4f.client import Client
+            client = Client()
+            response = client.chat.completions.create(
+                model="deepseek-r1",
+                messages=user_messages
+            )
+            if response and response.choices and response.choices[0].message.content:
+                return response.choices[0].message.content
+        except Exception as deepseek_e:
+            log(f"DeepSeek fallback failed: {deepseek_e}")
+
         if groq_err == "no API key set":
             return ("I need an AI provider before I can answer. Open Settings, choose AI Models, "
-                    "and add your free Groq API key. If you already use Ollama, start it and try again.")
+                    "and add your free Groq API key. Alternatively, check your network connection for the DeepSeek fallback.")
         return (f"I could not reach an AI provider ({groq_err[:140]}). "
                 f"Check the connection and API key in Settings, then try again.")
 
@@ -3904,14 +3976,59 @@ class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
     allow_reuse_address = True
 
 
-_cpu_cache = {"value": 0.0, "ts": 0.0}
+_hw_cache = {"cpu": 0.0, "ram": 0.0, "disk": 0.0, "ts": 0.0}
 
-def get_cpu_percent_cached():
+def get_hardware_stats():
     now = time.time()
-    if now - _cpu_cache["ts"] > 0.9:
-        _cpu_cache["value"] = psutil.cpu_percent(interval=None)
-        _cpu_cache["ts"] = now
-    return _cpu_cache["value"]
+    # Try psutil first
+    if psutil:
+        try:
+            if now - _hw_cache["ts"] > 0.9:
+                _hw_cache["cpu"] = psutil.cpu_percent(interval=None)
+                _hw_cache["ts"] = now
+            return _hw_cache["cpu"], psutil.virtual_memory().percent, psutil.disk_usage(os.path.abspath(os.sep)).percent
+        except: pass
+    
+    # WMI Fallback
+    if now - _hw_cache["ts"] < 2.5:
+        return _hw_cache["cpu"], _hw_cache["ram"], _hw_cache["disk"]
+
+    try:
+        import subprocess
+        cpu = ram = disk = 0.0
+        
+        # CPU
+        try:
+            out = subprocess.check_output("wmic cpu get loadpercentage /Value", shell=True, stderr=subprocess.DEVNULL).decode()
+            for line in out.splitlines():
+                if "LoadPercentage=" in line:
+                    cpu = float(line.split("=")[1].strip())
+        except: pass
+        
+        # RAM
+        try:
+            out = subprocess.check_output("wmic OS get FreePhysicalMemory,TotalVisibleMemorySize /Value", shell=True, stderr=subprocess.DEVNULL).decode()
+            free = total = 0.0
+            for line in out.splitlines():
+                if "FreePhysicalMemory=" in line: free = float(line.split("=")[1].strip())
+                if "TotalVisibleMemorySize=" in line: total = float(line.split("=")[1].strip())
+            if total > 0: ram = ((total - free) / total) * 100
+        except: pass
+
+        # Disk
+        try:
+            out = subprocess.check_output("wmic logicaldisk where \"DeviceID='C:'\" get size,freespace /Value", shell=True, stderr=subprocess.DEVNULL).decode()
+            free = total = 0.0
+            for line in out.splitlines():
+                if "FreeSpace=" in line: free = float(line.split("=")[1].strip())
+                if "Size=" in line: total = float(line.split("=")[1].strip())
+            if total > 0: disk = ((total - free) / total) * 100
+        except: pass
+
+        _hw_cache["cpu"], _hw_cache["ram"], _hw_cache["disk"], _hw_cache["ts"] = cpu, ram, disk, now
+        return cpu, ram, disk
+    except:
+        return _hw_cache["cpu"], _hw_cache["ram"], _hw_cache["disk"]
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -4057,7 +4174,7 @@ class Handler(BaseHTTPRequestHandler):
                         try: os.remove(lock_path)
                         except: pass
 
-                with open(os.path.join(BASE_DIR, "index.html"), "rb") as f:
+                with open(os.path.join(APP_ROOT, "index.html"), "rb") as f:
                     self._text(f.read(), ctype="text/html; charset=utf-8")
             except Exception as e:
                 self._text(f"index.html missing: {e}", status=500)
@@ -4065,7 +4182,7 @@ class Handler(BaseHTTPRequestHandler):
             
         if path == "/manifest.json":
             try:
-                with open(os.path.join(BASE_DIR, "manifest.json"), "rb") as f:
+                with open(os.path.join(APP_ROOT, "manifest.json"), "rb") as f:
                     self._text(f.read(), ctype="application/manifest+json; charset=utf-8")
             except Exception:
                 self.send_response(404); self.end_headers()
@@ -4073,7 +4190,7 @@ class Handler(BaseHTTPRequestHandler):
             
         if path == "/service-worker.js":
             try:
-                with open(os.path.join(BASE_DIR, "service-worker.js"), "rb") as f:
+                with open(os.path.join(APP_ROOT, "service-worker.js"), "rb") as f:
                     self._text(f.read(), ctype="application/javascript; charset=utf-8")
             except Exception:
                 self.send_response(404); self.end_headers()
@@ -4139,16 +4256,13 @@ class Handler(BaseHTTPRequestHandler):
             wake_req = STATE.get("wake_pending", False)
             STATE["wake_pending"] = False
 
-            ollama_ok = pick_ollama_model() is not None
+            ollama_ok = cached_ollama_model() is not None
             now = datetime.now()
-            cpu = ram = disk = 0.0
+            cpu, ram, disk = get_hardware_stats()
             batt_pct = None
             batt_plugged = None
             if psutil:
                 try:
-                    cpu  = get_cpu_percent_cached()
-                    ram  = psutil.virtual_memory().percent
-                    disk = psutil.disk_usage(os.path.abspath(os.sep)).percent
                     b = psutil.sensors_battery()
                     if b:
                         batt_pct = int(b.percent)
@@ -4198,6 +4312,7 @@ class Handler(BaseHTTPRequestHandler):
                 "unreadImportant": STATE.get("cached_unread_count", 0),
                 "nowPlaying": STATE.get("cached_now_playing"),
                 "updateProgress": up_prog,
+                "terminalLogs": _get_recent_logs()
             })
             return
 
@@ -4335,9 +4450,9 @@ class Handler(BaseHTTPRequestHandler):
 
         if path.startswith("/assets/"):
             try:
-                local_path = os.path.join(BASE_DIR, path.lstrip("/"))
+                local_path = os.path.join(APP_ROOT, path.lstrip("/"))
                 if not os.path.exists(local_path):
-                    local_path = os.path.join(os.path.dirname(BASE_DIR), path.lstrip("/"))
+                    local_path = os.path.join(BASE_DIR, path.lstrip("/"))
                 with open(local_path, "rb") as f:
                     content = f.read()
                 ctype = "image/png" if local_path.endswith(".png") else "image/x-icon" if local_path.endswith(".ico") else "application/octet-stream"
@@ -4601,6 +4716,7 @@ class Handler(BaseHTTPRequestHandler):
             messages = body.get("messages") or []
             is_voice = (body.get("source") == "voice")
             stream_req = body.get("stream", False)
+            client_speech = bool(body.get("clientSpeech"))
             # Wake + command in one breath arrives here (not /api/wake), so
             # surface the HUD on any voice command too — otherwise the browser
             # only ever opens for a bare "Hey KALKI" with no follow-up.
@@ -4624,7 +4740,8 @@ class Handler(BaseHTTPRequestHandler):
             handled, local_reply = handle_local(user_text)
             if handled:
                 local_reply = maybe_add_joke_offer(user_text, local_reply)
-                speak(local_reply)
+                if not client_speech:
+                    speak(local_reply)
                 append_history(user_text, local_reply)
                 _record_exchange(local_reply)
                 if stream_req:
@@ -4654,7 +4771,8 @@ class Handler(BaseHTTPRequestHandler):
                     self.wfile.flush()
                 
                 reply_str = "".join(full_reply)
-                speak(reply_str)
+                if not client_speech:
+                    speak(reply_str)
                 append_history(user_text, reply_str)
                 _record_exchange(reply_str)
                 
@@ -4679,7 +4797,8 @@ class Handler(BaseHTTPRequestHandler):
                     reply = f"My link hiccuped, Sir — say that again? ({str(e)[:80]})"
                 
                 reply = maybe_add_joke_offer(user_text, reply)
-                speak(reply)
+                if not client_speech:
+                    speak(reply)
                 append_history(user_text, reply)
                 _record_exchange(reply)
                 
@@ -5134,7 +5253,7 @@ def main():
 
     try:
         import re
-        tmpl_path = os.path.join(BASE_DIR, "config.example.py")
+        tmpl_path = os.path.join(APP_ROOT, "config.example.py")
         if os.path.exists(tmpl_path):
             with open(tmpl_path, "r", encoding="utf-8") as f:
                 tmpl = f.read()
@@ -5150,7 +5269,7 @@ def main():
         import core.updater as updater
         def _on_update(version):
             speak(f"A background update for version {version} is now downloading.")
-        updater.start_update_daemon(BASE_DIR, _on_update)
+        updater.start_update_daemon(APP_ROOT, _on_update)
     except Exception as e:
         print(f"Failed to start auto-updater: {e}")
 
@@ -5486,15 +5605,21 @@ def main():
     except Exception as e:
         log(f"Failed to init telemetry: {e}")
 
-    try:
-        from core import location_provider
-        loc = location_provider.get_resolved_location()
-        config.OWNER_CITY = loc.get("city", config.OWNER_CITY)
-        config.OWNER_STATE = loc.get("state", config.OWNER_STATE)
-        config.OWNER_COUNTRY = loc.get("country", config.OWNER_COUNTRY)
-        print(f"Location resolved: {config.OWNER_CITY}, {config.OWNER_STATE}, {config.OWNER_COUNTRY}")
-    except Exception as e:
-        log(f"Failed to resolve location: {e}")
+    def _resolve_location_after_startup():
+        """Resolve optional GPS/IP location without delaying the local UI."""
+        try:
+            from core import location_provider
+            loc = location_provider.get_resolved_location()
+            config.OWNER_CITY = loc.get("city", config.OWNER_CITY)
+            config.OWNER_STATE = loc.get("state", config.OWNER_STATE)
+            config.OWNER_COUNTRY = loc.get("country", config.OWNER_COUNTRY)
+            print(f"Location resolved: {config.OWNER_CITY}, {config.OWNER_STATE}, {config.OWNER_COUNTRY}")
+        except Exception as e:
+            log(f"Failed to resolve location: {e}")
+
+    # Windows GPS and IP lookups can take several seconds. The dashboard can
+    # render with the configured/fallback location until this finishes.
+    threading.Thread(target=_resolve_location_after_startup, daemon=True).start()
 
     try:
         import core.productivity
@@ -5520,21 +5645,27 @@ def main():
     except Exception as e:
         log(f"Failed to init cloud sync: {e}")
 
-    import hardware_detect
-    hw = hardware_detect.detect_hardware()
-    config.HARDWARE_PROFILE = hw
-    cfg_path = USER_CONFIG_PATH
-    try:
-        user_cfg = {}
-        if os.path.exists(cfg_path):
-            with open(cfg_path, "r", encoding="utf-8") as f:
-                user_cfg = json.load(f)
-        user_cfg["HARDWARE_PROFILE"] = hw
-        os.makedirs(os.path.dirname(cfg_path), exist_ok=True)
-        with open(cfg_path, "w", encoding="utf-8") as f:
-            json.dump(user_cfg, f, indent=4)
-    except Exception as e:
-        print(f"Failed to save hardware profile: {e}")
+    def _detect_hardware_after_startup():
+        """Populate hardware telemetry without blocking the HTTP listener."""
+        try:
+            import hardware_detect
+            hw = hardware_detect.detect_hardware()
+            config.HARDWARE_PROFILE = hw
+            cfg_path = USER_CONFIG_PATH
+            user_cfg = {}
+            if os.path.exists(cfg_path):
+                with open(cfg_path, "r", encoding="utf-8") as f:
+                    user_cfg = json.load(f)
+            user_cfg["HARDWARE_PROFILE"] = hw
+            os.makedirs(os.path.dirname(cfg_path), exist_ok=True)
+            with open(cfg_path, "w", encoding="utf-8") as f:
+                json.dump(user_cfg, f, indent=4)
+        except Exception as e:
+            print(f"Failed to save hardware profile: {e}")
+
+    # WMI is slow or temporarily unavailable on some Windows installations.
+    # It is telemetry only, so it must never delay the desktop shell.
+    threading.Thread(target=_detect_hardware_after_startup, daemon=True).start()
 
     server = ThreadingHTTPServer(("127.0.0.1", config.PORT), Handler)
     print(f"KALKI server online -> http://localhost:{config.PORT}")

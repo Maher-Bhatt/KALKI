@@ -1,3 +1,13 @@
+# Fix log — 2026-08-05
+
+## v1.2.6 Robust Speech Synthesis & Microsoft Store Ready
+
+- Rewrote the TTS fallback engine. KALKI now automatically fails over to the built-in Windows SpeechSynthesizer (via PowerShell) if the cloud Edge TTS or Groq neural voices are unavailable or time out. You will never be left with a silent UI.
+- Switched the main voice path to use the desktop WebView’s local speech engine (`speechSynthesis`) for all chat and voice-command replies, removing the dependency on unreliable server-side text-to-speech for critical feedback.
+- Configured and validated a complete flat MSIX package for Microsoft Store deployment, including all FullTrust capabilities, AppxManifest identity parameters, and Store assets.
+- Prevented MSIX packaging corruption (where PyInstaller flattening overwrote DLLs) by isolating helper programs into named `_internal` service directories within the package.
+- Bumped version to `v1.2.6` across `AppxManifest.xml`, Python scripts, Inno Setup installer definitions, and index.html UI.
+
 # Fix log — 2026-07-15
 
 ## v1.2.1 major bugfixes and UX improvements

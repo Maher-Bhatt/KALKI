@@ -7,11 +7,12 @@ import webbrowser
 import subprocess
 import customtkinter as ctk
 from tkinter import messagebox
+from runtime_paths import prepare_runtime
 
-BASE_DIR = os.path.dirname(os.path.abspath(
-    sys.executable if getattr(sys, "frozen", False) else __file__
-))
-USER_DATA_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI")
+_runtime = prepare_runtime()
+BASE_DIR = _runtime.app_root
+ENTRY_DIR = _runtime.entry_dir
+USER_DATA_DIR = _runtime.user_data_dir
 os.makedirs(USER_DATA_DIR, exist_ok=True)
 _USER_CONFIG_PATH = os.path.join(USER_DATA_DIR, "user_config.json")
 
@@ -167,6 +168,40 @@ class KalkiSetupWizard(ctk.CTk):
             except:
                 pass
 
+        self.show_boot_sequence()
+
+    def show_boot_sequence(self):
+        self.boot_frame = ctk.CTkFrame(self, fg_color="#000000")
+        self.boot_frame.pack(fill="both", expand=True)
+        
+        self.boot_text = ctk.CTkTextbox(self.boot_frame, font=("Courier", 14, "bold"), fg_color="#000000", text_color="#00ffaa", state="disabled", wrap="word")
+        self.boot_text.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        lines = [
+            "KALKI SYSTEM CORE // AUTONOMOUS AI INIT",
+            "---------------------------------------",
+            "Loading Neural Core...",
+            "[OK] Memory Allocation: 8192 MB",
+            "[OK] Cryptographic Subsystems: AES-256",
+            "Probing LLM modules...",
+            "WARNING: API Uplink not detected.",
+            "Redirecting to Emergency Configuration protocol..."
+        ]
+        
+        def type_line(idx):
+            if idx < len(lines):
+                self.boot_text.configure(state="normal")
+                self.boot_text.insert("end", lines[idx] + "\n")
+                self.boot_text.see("end")
+                self.boot_text.configure(state="disabled")
+                self.after(500, type_line, idx + 1)
+            else:
+                self.after(1500, self.end_boot_sequence)
+                
+        self.after(500, type_line, 0)
+        
+    def end_boot_sequence(self):
+        self.boot_frame.destroy()
         self.setup_ui()
 
     def setup_ui(self):
@@ -311,11 +346,14 @@ class KalkiSetupWizard(ctk.CTk):
         self._link(f4, "Get a bot token via @BotFather on Telegram", "https://core.telegram.org/bots#how-do-i-create-a-bot")
 
         self.github_entry = self._create_input(f4, "GitHub Token:", self.config_data.get("GITHUB_TOKEN", ""), is_password=True)
+        self._link(f4, "Get a GitHub API Token", "https://github.com/settings/tokens/new")
         self.shodan_entry = self._create_input(f4, "Shodan API Key:", self.config_data.get("SHODAN_API_KEY", ""), is_password=True)
+        self._link(f4, "Get a Shodan API Key", "https://account.shodan.io/")
         
         self.spotify_id_entry = self._create_input(f4, "Spotify Client ID:", self.config_data.get("SPOTIFY_CLIENT_ID", ""))
         self.spotify_secret_entry = self._create_input(f4, "Spotify Secret:", self.config_data.get("SPOTIFY_CLIENT_SECRET", ""), is_password=True)
         self.spotify_redirect_entry = self._create_input(f4, "Redirect URI:", self.config_data.get("SPOTIFY_REDIRECT_URI", "http://127.0.0.1:8889/callback"))
+        self._link(f4, "How to get Spotify API keys", "https://developer.spotify.com/dashboard")
 
         btn_frame = ctk.CTkFrame(f4, fg_color="transparent")
         btn_frame.pack(fill="x", pady=10, padx=20)
@@ -454,7 +492,11 @@ class KalkiSetupWizard(ctk.CTk):
                 "setup_spotify": "KALKI_Setup_Spotify.exe"
             }
             exe_name = exe_map.get(script_name, f"{script_name}.exe")
-            target = os.path.join(BASE_DIR, exe_name)
+            tool_dirs = {
+                "setup_google": "setup_google",
+                "setup_spotify": "setup_spotify",
+            }
+            target = os.path.join(BASE_DIR, "services", tool_dirs[script_name], exe_name)
             if os.path.exists(target):
                 subprocess.Popen([target], creationflags=cflags)
         else:
