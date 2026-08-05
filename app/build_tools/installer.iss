@@ -1,6 +1,6 @@
 #define MyAppName "KALKI"
-#define MyAppVersion "1.2.6"
-#define MyAppPublisher "KALKI Technologies"
+#define MyAppVersion "1.2.7"
+#define MyAppPublisher "Maher Bhatt"
 #define MyAppExeName "KALKI.exe"
 
 [Setup]
@@ -12,7 +12,7 @@ DefaultDirName={localappdata}\Programs\KALKI
 DefaultGroupName={#MyAppName}
 PrivilegesRequired=lowest
 OutputDir=..\..\Output
-OutputBaseFilename=KALKI_Setup_v1.2.6
+OutputBaseFilename=KALKI_Setup_v1.2.7
 LicenseFile=..\..\LICENSE
 InfoBeforeFile=..\..\TERMS.md
 SetupIconFile=..\..\assets\kalki_icon.ico
@@ -22,8 +22,11 @@ WizardStyle=modern
 UninstallDisplayIcon={app}\{#MyAppExeName}
 CloseApplications=force
 CloseApplicationsFilter=KALKI.exe,KALKI_Server.exe,KALKI_Listener.exe,KALKI_Setup_Wizard.exe
-RestartApplications=yes
 
+[Types]
+Name: "full"; Description: "Full installation"
+Name: "compact"; Description: "Compact installation"
+Name: "custom"; Description: "Custom installation"; Flags: iscustom
 
 [Components]
 Name: "core"; Description: "KALKI Core (required)"; Types: full compact custom; Flags: fixed

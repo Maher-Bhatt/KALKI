@@ -79,6 +79,8 @@ From deep-level OS execution and cybersecurity workflows to advanced code genera
 | Feature | Details |
 |:---|:---|
 | **Wake Word** | Say **"Hi KALKI"** from anywhere — no clicks, no keyboard |
+| **Free Neural Voice** | Default high-quality British male voice (`en-GB-RyanNeural`) powered by Edge TTS — 100% free with zero API key required |
+| **Multi-Mode Sound Engine** | Dynamically adapts voice rate, pitch, volume, and style per workflow mode (`Gaming`, `CTF`, `Dev`, `Focus`, `Morning`, `Shutdown`) |
 | **Smart Audio Pipeline** | Advanced signal processing prevents feedback loops |
 | **Offline Fallback** | Optional VOSK wake-word detection for zero-latency, privacy-first mode |
 | **Local Speech Engine** | Automatically fails over to native Windows SpeechSynthesizer if cloud AI voices are down |
@@ -100,10 +102,11 @@ From deep-level OS execution and cybersecurity workflows to advanced code genera
 </details>
 
 <details open>
-<summary><strong>🎭 Personality & Mood Engine</strong></summary>
+<summary><strong>🎭 Personality, Mood & Multi-Mode Sound Engine</strong></summary>
 
 | Feature | Details |
 |:---|:---|
+| **Multi-Mode Voice Traits** | `Gaming` (Rapid `-10%` vol), `CTF` (Tactical `+2Hz` pitch), `Dev` (Crisp `+5%` rate), `Focus` (Calm `-5%` rate), `Shutdown` (Soothing `-10%` rate) |
 | **Mood Detection** | Automatically detects aggressive, playful, or calm language |
 | **Persistent Moods** | Aggressive mode stays active for 5+ exchanges — no random de-escalation |
 | **Roast-Back Engine** | If you roast KALKI, it fires back harder |

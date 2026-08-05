@@ -60,7 +60,7 @@ _CONFIG_DEFAULTS = {
     "CURRENT_VERSION": "v1.2.1",
     "TTS_PROVIDER": "edge",
     "TTS_GROQ_TIMEOUT_SEC": 3,
-    "TTS_VOICE": "en-US-BrianMultilingualNeural",
+    "TTS_VOICE": "en-GB-RyanNeural",
     "TTS_RATE": "+0%",
     "TTS_PITCH": "+0Hz",
     "TTS_VOLUME": "+0%",
@@ -740,12 +740,23 @@ def _tts_timeout_seconds():
 def _build_edge_tts_file(text):
     if edge_tts is None:
         raise RuntimeError("edge-tts is not installed")
+        
+    # Prevent Windows ProactorEventLoop deadlock when tearing down asyncio loops in background threads
+    import sys
+    if sys.platform == 'win32':
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+        
+    profile = workflows.get_mode_audio_profile() if hasattr(workflows, "get_mode_audio_profile") else None
+    voice = getattr(config, "TTS_VOICE", "en-GB-RyanNeural")
+    rate = (profile.get("rate") if profile else None) or getattr(config, "TTS_RATE", "+0%")
+    volume = (profile.get("volume") if profile else None) or getattr(config, "TTS_VOLUME", "+0%")
+    pitch = (profile.get("pitch") if profile else None) or getattr(config, "TTS_PITCH", "+0Hz")
     return asyncio.run(_speak_async(
         text,
-        getattr(config, "TTS_VOICE", "en-US-BrianMultilingualNeural"),
-        getattr(config, "TTS_RATE", "+0%"),
-        getattr(config, "TTS_VOLUME", "+0%"),
-        getattr(config, "TTS_PITCH", "+0Hz"),
+        voice,
+        rate,
+        volume,
+        pitch,
     ))
 
 
@@ -1048,12 +1059,6 @@ def maybe_add_joke_offer(user_text, reply):
     return (reply.rstrip() + " Want a joke?").strip()
 
 
-# Bigger, more human greeting pools. Each boot assembles a fresh multi-line
-# greeting — opener + optional check-in + day + weather + calendar + tasks +
-# optional sign-off — so two greetings almost never sound the same.
-# Bigger, more human greeting pools. Each boot assembles a fresh multi-line
-# greeting — opener + optional check-in + day + weather + calendar + tasks +
-# optional sign-off — so two greetings almost never sound the same.
 # ── TIME BUCKET UTILITY ──────────────────────────────────────
 def _time_bucket(hour):
     if 5 <= hour < 12:
@@ -1070,110 +1075,28 @@ FIRST_GREET_DONE = False
 def build_greeting():
     now = datetime.now()
     hour = now.hour
-    title = config.OWNER_TITLE
-    owner = config.OWNER_NAME
-
-    morning_pool = [
-        f"A very pleasant morning, {title}. KALKI Neural Systems initialized. What are our priorities for today?",
-        f"Good morning, {owner}. All subsystems are online and synced. Shall we review your agenda?",
-        f"Top of the morning to you, {title}. Hope you're ready for a productive day. I am standing by.",
-    ]
-    afternoon_pool = [
-        f"Good afternoon, {title}. KALKI is online and ready to assist.",
-        f"A beautiful afternoon to you, {owner}. System diagnostics are optimal.",
-        f"Good afternoon, {title}. Status check: all subsystems running optimal."
-    ]
-    evening_pool = [
-        f"Good evening, {title}. KALKI systems active, standing by for night ops.",
-        f"A pleasant evening to you, {owner}. I hope your day went well.",
-        f"Good evening, {title}. Secure network active, awaiting your command."
-    ]
-
+    title = getattr(config, "OWNER_TITLE", "Sir")
+    owner = getattr(config, "OWNER_NAME", "Maher")
     import random as _rnd_greet
     if hour < 12:
-        greeting = _rnd_greet.choice(morning_pool)
-    elif hour < 18:
-        greeting = _rnd_greet.choice(afternoon_pool)
-    else:
-        greeting = _rnd_greet.choice(evening_pool)
-
-    parts = [greeting]
-
-    # Weather sets an actual "mood" for the greeting instead of a flat status
-    # line — a rainy morning reads differently than a clear one.
-    w = fetch_weather_line(timeout=3)
-    if w:
-        parts.append(f"Outside right now: {w}.")
-
-    global FIRST_GREET_DONE
-    if not FIRST_GREET_DONE:
-        FIRST_GREET_DONE = True
-        parts.append("System check completed.")
-        try:
-            import mail
-
-            unread = mail.get_unread_count()
-            events = gcal.today_events()
-            n_events = len(events) if events else 0
-
-            # Tone follows how loaded the day actually is, rather than always
-            # reading the same regardless of what's ahead.
-            if unread > 0 and n_events >= 3:
-                parts.append(
-                    f"It's a full one — {n_events} calendar events and {unread} unread "
-                    f"important email{'s' if unread != 1 else ''}. I'd start with the inbox."
-                )
-            elif n_events >= 3:
-                parts.append(f"Busy day ahead — {n_events} calendar events on the books.")
-            elif unread > 0:
-                parts.append(f"You have {unread} important unread email{'s' if unread != 1 else ''}.")
-            elif n_events > 0:
-                parts.append(f"Light day — just {n_events} calendar event{'s' if n_events != 1 else ''} scheduled.")
-            else:
-                parts.append("Nothing on the calendar and inbox is quiet. Clear runway today.")
-
-            failures = []
-            if not gcal.is_configured():
-                failures.append("Google Calendar")
-            if not spotify_mod.is_configured():
-                failures.append("Spotify")
-
-            if failures:
-                parts.append(f"Notice: {', '.join(failures)} settings require alignment.")
-            else:
-                parts.append("All primary sync systems operational.")
-
-            try:
-                import core.productivity
-                prod_summary = core.productivity.get_daily_summary()
-                if prod_summary:
-                    parts.append(prod_summary)
-            except Exception as pe:
-                log(f"Error fetching productivity summary: {pe}")
-
-        except Exception as e:
-            log(f"Error checking config for greeting: {e}")
-            parts.append("All core systems operational.")
-
-        # Add morning briefing (calendar + unread emails)
-        if hour < 12:
-            try:
-                briefing = gcal.startup_summary()
-                if briefing:
-                    parts.append(briefing.strip())
-            except Exception as e:
-                log(f"Greeting briefing error: {e}")
-    else:
-        wake_pool = [
-            f"Online. How can I help you, {title}?",
-            f"Active. Standing by, {title}.",
-            f"Subsystems active. Command me, {title}.",
-            f"Yes, {title}?",
-            f"At your service, {title}."
+        greeting_pool = [
+            f"Good morning, {title}. KALKI online and standing by.",
+            f"Good morning, {owner}. All systems operational.",
+            f"A very pleasant morning, {title}. Ready for your command."
         ]
-        parts = [_rnd_greet.choice(wake_pool)]
-        
-    return " ".join(p for p in parts if p).strip()
+    elif hour < 18:
+        greeting_pool = [
+            f"Good afternoon, {title}. KALKI online and ready to assist.",
+            f"Good afternoon, {owner}. Systems optimal.",
+            f"A pleasant afternoon, {title}. Standing by."
+        ]
+    else:
+        greeting_pool = [
+            f"Good evening, {title}. KALKI active and standing by.",
+            f"Good evening, {owner}. All systems online.",
+            f"Good evening, {title}. Ready for your command."
+        ]
+    return _rnd_greet.choice(greeting_pool)
 
 
 def build_security_brief():

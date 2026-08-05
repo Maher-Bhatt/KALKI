@@ -13,10 +13,71 @@ ACTIVE_STATE = None
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CUSTOM_ROUTINES_PATH = os.path.join(BASE_DIR, "data", "custom_routines.json")
 
+MODE_AUDIO_PROFILES = {
+    "gaming": {
+        "rate": "+15%",
+        "pitch": "-3Hz",
+        "volume": "-10%",
+        "style": "chat",
+        "description": "Rapid, low-latency, subdued game-friendly voice"
+    },
+    "ctf": {
+        "rate": "+10%",
+        "pitch": "+2Hz",
+        "volume": "+0%",
+        "style": "alert",
+        "description": "Sharp, precise tactical hacker voice"
+    },
+    "dev": {
+        "rate": "+5%",
+        "pitch": "+0Hz",
+        "volume": "+0%",
+        "style": "assistant",
+        "description": "Crisp developer pair programmer voice"
+    },
+    "focus": {
+        "rate": "-5%",
+        "pitch": "-2Hz",
+        "volume": "-15%",
+        "style": "calm",
+        "description": "Calm, low-distraction deep work voice"
+    },
+    "study": {
+        "rate": "-5%",
+        "pitch": "-2Hz",
+        "volume": "-15%",
+        "style": "calm",
+        "description": "Relaxed study mode voice"
+    },
+    "morning": {
+        "rate": "+0%",
+        "pitch": "+1Hz",
+        "volume": "+0%",
+        "style": "cheerful",
+        "description": "Energetic morning briefing voice"
+    },
+    "shutdown": {
+        "rate": "-10%",
+        "pitch": "-4Hz",
+        "volume": "-20%",
+        "style": "whispering",
+        "description": "Soothing wind-down voice"
+    }
+}
+
+
+def get_mode_audio_profile(state=None):
+    st = state or ACTIVE_STATE
+    if st and str(st).lower() in MODE_AUDIO_PROFILES:
+        return MODE_AUDIO_PROFILES[str(st).lower()]
+    return None
+
+
 # Action chain definitions. Each step is a (action, *args) tuple.
 # Actions are interpreted by `run_mode` below.
 MODES = {
     "study mode": [
+        ("set_state", "study"),
         ("open_app", "code"),
         ("open_url", "https://open.spotify.com/playlist/37i9dQZF1DWWQRwui0ExPn"),
         ("set_volume", 40),
@@ -33,6 +94,7 @@ MODES = {
         ("speak", "Gaming rig ready, Sir. Background apps cleared and settings open for Do Not Disturb."),
     ],
     "shutdown routine": [
+        ("set_state", "shutdown"),
         ("kill_app", "chrome"),
         ("kill_app", "code"),
         ("kill_app", "spotify"),
@@ -41,11 +103,13 @@ MODES = {
         ("speak", "Closing things down, Sir. Locking the PC."),
     ],
     "focus mode": [
+        ("set_state", "focus"),
         ("set_volume", 25),
         ("kill_app", "discord"),
         ("speak", "Focus mode. Distractions silenced."),
     ],
     "morning routine": [
+        ("set_state", "morning"),
         ("open_url", "https://mail.google.com"),
         ("open_url", "https://calendar.google.com"),
         ("speak", "Good morning, Sir. Calendar and Gmail open."),
