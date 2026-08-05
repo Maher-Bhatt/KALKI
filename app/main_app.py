@@ -1,37 +1,14 @@
 import os
 import sys
+
 import json
 import time
 import subprocess
 import webview
 import psutil
+from runtime_paths import prepare_runtime
 
-# --- Auto-bootstrap config.py from config.example.py on first run -----------
-# Without this, a fresh clone has no config.py (it's gitignored) and the
-# `import config` below throws ModuleNotFoundError before the Setup Wizard
-# (which is supposed to run first) ever gets a chance to start.
-_boot_dir = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, "frozen", False) else __file__))
-_cfg_path = os.path.join(_boot_dir, "config.py")
-_example_path = os.path.join(_boot_dir, "config.example.py")
-
-_user_data_dir = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI")
-_user_cfg_path = os.path.join(_user_data_dir, "config.py")
-
-if not os.path.exists(_cfg_path):
-    try:
-        if os.path.exists(_example_path):
-            import shutil
-            shutil.copy(_example_path, _cfg_path)
-    except (PermissionError, OSError):
-        os.makedirs(_user_data_dir, exist_ok=True)
-        if not os.path.exists(_user_cfg_path) and os.path.exists(_example_path):
-            import shutil
-            shutil.copy(_example_path, _user_cfg_path)
-
-os.chdir(_boot_dir)
-sys.path.insert(0, _boot_dir)
-if not os.path.exists(_cfg_path) and os.path.exists(_user_cfg_path):
-    sys.path.insert(0, _user_data_dir)
+_runtime = prepare_runtime()
 
 import config
 
@@ -58,15 +35,23 @@ def add_to_startup():
         print(f"Failed to add to startup: {e}")
 
 
-BASE_DIR = os.path.dirname(os.path.abspath(
-    sys.executable if getattr(sys, "frozen", False) else __file__
-))
-USER_DATA_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI")
+BASE_DIR = _runtime.app_root
+USER_DATA_DIR = _runtime.user_data_dir
 USER_CONFIG_PATH = os.path.join(USER_DATA_DIR, "user_config.json")
 
 def get_exe_path(name):
     if getattr(sys, "frozen", False):
-        # In the distributed installer, everything is in the root directory
+        # Every helper keeps its matching PyInstaller runtime beside it. Do
+        # not flatten these directories during packaging: that corrupts the
+        # individual executables' dependency sets.
+        service_dirs = {
+            "KALKI_Server": "server",
+            "KALKI_Listener": "listener",
+            "KALKI_Setup_Wizard": "setup_wizard",
+        }
+        service_dir = service_dirs.get(name)
+        if service_dir:
+            return os.path.join(BASE_DIR, "services", service_dir, f"{name}.exe")
         return os.path.join(BASE_DIR, f"{name}.exe")
     else:
         # Map executable names to source file names for dev mode
@@ -119,9 +104,17 @@ def start_services():
         print(f"[KALKI] Failed to start server: {e}")
         server_process = None
     
-    # Give the server a moment to start
-    time.sleep(3)
-    
+    print("Waiting for server to bind to port...")
+    import socket
+    start_time = time.time()
+    while time.time() - start_time < 20:  # 20 seconds max timeout
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            if sock.connect_ex(('127.0.0.1', config.PORT)) == 0:
+                print(f"Server is up and listening on {config.PORT}!")
+                break
+        time.sleep(0.5)
+    else:
+        print("WARNING: Server did not start listening in time!")    
     print("Starting KALKI Listener...")
     try:
         listener_process = subprocess.Popen(listener_cmd, shell=shell, creationflags=flags)
@@ -187,7 +180,11 @@ def acquire_single_instance():
 
 def on_closing():
     print("Window close requested. Hiding to system tray instead...")
-    window.hide()
+    # Do not call a native window method from PyWebView's closing callback.
+    # On the Edge/WinForms backend that can re-enter the Windows message loop
+    # and leave the application marked as "Not responding".  Let the close
+    # notification return first, then hide the window on the next tick.
+    threading.Timer(0.05, window.hide).start()
     return False  # Prevent the window from actually being destroyed
 
 def restore_existing_instance():
@@ -207,6 +204,44 @@ def restore_existing_instance():
     except Exception as e:
         print(f"Error restoring existing window: {e}")
     return False
+
+def global_hotkey_listener(window_obj):
+    try:
+        import ctypes
+        from ctypes import wintypes
+        import win32gui
+        import win32con
+        user32 = ctypes.windll.user32
+        
+        # Register Alt + Space (VK_SPACE = 0x20, MOD_ALT = 0x0001)
+        HOTKEY_ID = 99
+        if not user32.RegisterHotKey(None, HOTKEY_ID, 0x0001, 0x20):
+            # Fallback to Alt + K (VK_K = 0x4B)
+            user32.RegisterHotKey(None, HOTKEY_ID, 0x0001, 0x4B)
+
+        msg = wintypes.MSG()
+        is_visible = True
+        
+        while user32.GetMessageA(ctypes.byref(msg), None, 0, 0) != 0:
+            if msg.message == 0x0312:  # WM_HOTKEY
+                try:
+                    hwnd = win32gui.FindWindow(None, "KALKI AI Assistant")
+                    if hwnd:
+                        if is_visible:
+                            win32gui.ShowWindow(hwnd, win32con.SW_HIDE)
+                            is_visible = False
+                        else:
+                            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                            win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
+                            win32gui.BringWindowToTop(hwnd)
+                            win32gui.SetForegroundWindow(hwnd)
+                            is_visible = True
+                except Exception as e:
+                    print(f"Hotkey toggle error: {e}")
+            user32.TranslateMessage(ctypes.byref(msg))
+            user32.DispatchMessageA(ctypes.byref(msg))
+    except Exception as e:
+        print(f"Hotkey listener error: {e}")
 
 if __name__ == '__main__':
     _lock = acquire_single_instance()
@@ -243,6 +278,8 @@ if __name__ == '__main__':
             self.window = None
         def minimize(self):
             if self.window: self.window.minimize()
+        def toggle_maximize(self):
+            if self.window: self.window.toggle_fullscreen()
         def close(self):
             if self.window: self.window.destroy()
             
@@ -264,6 +301,12 @@ if __name__ == '__main__':
     
     # Start the system tray in a background thread
     threading.Thread(target=setup_tray, daemon=True).start()
+    
+    # Global Windows hotkeys run outside PyWebView's event loop and can
+    # interfere with a frameless window. Keep this opt-in until it has a
+    # dedicated, native-safe dispatcher.
+    if getattr(config, "ENABLE_GLOBAL_HOTKEY", False):
+        threading.Thread(target=global_hotkey_listener, args=(window,), daemon=True).start()
     
     # Start the webview event loop
     webview.start(private_mode=False)

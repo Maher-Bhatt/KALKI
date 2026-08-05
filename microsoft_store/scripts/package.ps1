@@ -56,16 +56,29 @@ if (Test-Path $PackageRoot) {
 New-Item -ItemType Directory -Path $PackageRoot -Force | Out-Null
 New-Item -ItemType Directory -Path $AssetsOut -Force | Out-Null
 
-Log "Copying PyInstaller output..."
-$distFolders = @("KALKI", "KALKI_Server", "KALKI_Listener", "KALKI_Setup_Wizard", "KALKI_Setup_Google", "KALKI_Setup_Spotify")
-foreach ($folder in $distFolders) {
+Log "Copying isolated PyInstaller runtimes..."
+# Each one-dir application has its own _internal directory. Flattening them
+# overwrites DLLs and Python modules, which creates an MSIX that validates but
+# whose EXEs fail at launch. Keep the desktop shell at the root required by
+# AppxManifest and put helper programs in named service directories.
+$distFolders = [ordered]@{
+    "KALKI" = ""
+    "KALKI_Server" = "services\server"
+    "KALKI_Listener" = "services\listener"
+    "KALKI_Setup_Wizard" = "services\setup_wizard"
+    "KALKI_Setup_Google" = "services\setup_google"
+    "KALKI_Setup_Spotify" = "services\setup_spotify"
+}
+foreach ($folder in $distFolders.Keys) {
     $src = Join-Path $DistDir $folder
-    if (Test-Path $src) {
-        Log "  Copying $folder..."
-        Copy-Item -Path "$src\*" -Destination $PackageRoot -Recurse -Force
-    } else {
-        Log "  WARNING: dist/$folder not found, skipping."
+    if (-not (Test-Path $src)) {
+        Log "ERROR: Required dist/$folder is missing. Run build.ps1 first."
+        exit 1
     }
+    $destination = if ($distFolders[$folder]) { Join-Path $PackageRoot $distFolders[$folder] } else { $PackageRoot }
+    New-Item -ItemType Directory -Path $destination -Force | Out-Null
+    Log "  Copying $folder to $destination..."
+    Copy-Item -Path "$src\*" -Destination $destination -Recurse -Force
 }
 
 $browsersDir = Join-Path $ProjectRoot "browsers"
@@ -88,6 +101,12 @@ foreach ($webFile in @("index.html", "manifest.json", "service-worker.js", "conf
     if (Test-Path $src) {
         Copy-Item $src -Destination $PackageRoot -Force
     }
+}
+
+$pluginsDir = Join-Path $AppDir "plugins"
+if (Test-Path $pluginsDir) {
+    Log "Copying plugins..."
+    Copy-Item -Path $pluginsDir -Destination (Join-Path $PackageRoot "plugins") -Recurse -Force
 }
 
 foreach ($docFile in @("LICENSE", "TERMS.md")) {

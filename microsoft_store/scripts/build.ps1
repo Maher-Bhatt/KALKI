@@ -12,7 +12,8 @@
 #>
 
 param(
-    [switch]$Clean  # Force clean rebuild
+    [switch]$Clean,  # Force clean rebuild
+    [string]$PythonExe = $env:KALKI_PYTHON
 )
 
 $ErrorActionPreference = "Stop"
@@ -44,18 +45,31 @@ if ($Clean -and (Test-Path $DistDir)) {
     Remove-Item -Recurse -Force $DistDir
 }
 
+# Resolve a Python interpreter explicitly. The old `py build_installer.py`
+# command fails on machines without the Python launcher, even when Python is
+# installed and usable.
+if (-not $PythonExe) {
+    $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
+    if ($pythonCommand) {
+        $PythonExe = $pythonCommand.Source
+    }
+}
+if (-not $PythonExe -or -not (Test-Path $PythonExe)) {
+    Log "ERROR: Python was not found. Install Python 3.11+ or rerun with -PythonExe 'C:\path\to\python.exe'."
+    exit 1
+}
+
 # Run PyInstaller via the existing build script
 Log "Running build_installer.py..."
-Push-Location $BuildTools
 $ErrorActionPreference = "Continue"
 try {
-    py build_installer.py 2>&1 | Tee-Object -FilePath $LogFile -Append
+    & $PythonExe (Join-Path $BuildTools "build_installer.py") 2>&1 | Tee-Object -FilePath $LogFile -Append
     if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne $null) {
-        # build_installer.py may fail at the Inno Setup step - that's OK for Store builds
-        Log "WARNING: build_installer.py exited with code $LASTEXITCODE (Inno Setup step may have failed - acceptable for Store builds)"
+        Log "ERROR: build_installer.py exited with code $LASTEXITCODE"
+        exit $LASTEXITCODE
     }
 } finally {
-    Pop-Location
+    $ErrorActionPreference = "Stop"
 }
 
 # Verify critical dist folders exist

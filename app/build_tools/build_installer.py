@@ -2,19 +2,50 @@ import os
 import subprocess
 import sys
 
-APP_VERSION = "1.2.4"
+APP_VERSION = "1.2.6"
 VERSION_PARTS = tuple(int(part) for part in APP_VERSION.split(".")) + (0,)
 
 def run_cmd(cmd):
-    print(f"Running: {cmd}")
-    subprocess.run(cmd, shell=True, check=True)
+    """Run a build command without breaking paths that contain spaces."""
+    print("Running:", " ".join(f'"{part}"' if " " in str(part) else str(part) for part in cmd))
+    env = os.environ.copy()
+
+    # ``pip install --target`` does not process pywin32.pth automatically.
+    # Without these paths, PyInstaller cannot import pythoncom/pywintypes and
+    # aborts while packaging server.py. A normal site-packages installation is
+    # unaffected because Python has already processed its .pth file.
+    pywin32_roots = [
+        path for path in sys.path
+        if os.path.isfile(os.path.join(path, "pywin32.pth"))
+    ]
+    if pywin32_roots:
+        extra_paths = []
+        for root in pywin32_roots:
+            extra_paths.extend([
+                root,
+                os.path.join(root, "win32"),
+                os.path.join(root, "win32", "lib"),
+                os.path.join(root, "pywin32_system32"),
+            ])
+        existing = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = os.pathsep.join(extra_paths + ([existing] if existing else []))
+
+    subprocess.run(cmd, check=True, env=env)
+
+
+def ensure_pyinstaller():
+    try:
+        import PyInstaller  # noqa: F401
+        print("PyInstaller is already available.")
+    except ImportError:
+        print("Installing PyInstaller...")
+        run_cmd([sys.executable, "-m", "pip", "install", "pyinstaller"])
 
 def main():
     # Change to root directory since build_installer.py is in build_tools/
     os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     
-    print("Installing PyInstaller...")
-    run_cmd(f"{sys.executable} -m pip install pyinstaller")
+    ensure_pyinstaller()
 
     # Generate Version Info File for Windows executable metadata
     version_info_path = os.path.abspath(os.path.join("build_tools", "file_version_info.txt"))
@@ -61,14 +92,18 @@ def main():
     for script, name, windowed in targets:
         print(f"\n--- Building {name} ---")
         cmd = [
-            f"{sys.executable}", "-m", "PyInstaller",
+            sys.executable, "-m", "PyInstaller",
             "--noconfirm",
             "--onedir",
             "--clean",
             f"--name={name}",
-            f"--icon=\"{os.path.abspath('../assets/kalki_icon.ico')}\"",
-            f"--version-file=\"{version_info_path}\"",
+            f"--icon={os.path.abspath('../assets/kalki_icon.ico')}",
+            f"--version-file={version_info_path}",
             "--specpath=build_tools",
+            # User settings and API keys must never be frozen into a release.
+            # runtime_paths.py provisions config.py from the packaged example
+            # (or the user's writable AppData directory) on first launch.
+            "--exclude-module=config",
         ]
         
         if windowed:
@@ -88,11 +123,14 @@ def main():
             cmd.append("--collect-all=speech_recognition")
             
         cmd.append(script)
-        run_cmd(" ".join(cmd))
+        run_cmd(cmd)
         
     # Copy config.example.py to build dist folders
     import shutil
-    for folder in ["KALKI", "KALKI_Setup_Wizard", "KALKI_Server", "KALKI_Listener"]:
+    for folder in [
+        "KALKI", "KALKI_Setup_Wizard", "KALKI_Server", "KALKI_Listener",
+        "KALKI_Setup_Google", "KALKI_Setup_Spotify",
+    ]:
         dest = os.path.join("dist", folder, "config.example.py")
         if os.path.exists(os.path.join("dist", folder)):
             shutil.copy("config.example.py", dest)
@@ -111,7 +149,7 @@ def main():
             inno_compiler = p
             break
     if inno_compiler:
-        run_cmd(f'"{inno_compiler}" build_tools\\installer.iss')
+        run_cmd([inno_compiler, "build_tools\\installer.iss"])
         print("\nSUCCESS! Installer is in the Output folder.")
     else:
         print(f"\nWARNING: Inno Setup compiler not found.")

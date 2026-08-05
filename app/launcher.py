@@ -18,32 +18,10 @@ import subprocess
 from datetime import datetime
 from typing import Optional, Any
 
-# Ensure we operate in the base directory where the script resides
-BASE_DIR = os.path.dirname(os.path.abspath(
-    sys.executable if getattr(sys, "frozen", False) else __file__
-))
-os.chdir(BASE_DIR)
-sys.path.insert(0, BASE_DIR)
+from runtime_paths import prepare_runtime
 
-# --- Auto-bootstrap config.py from config.example.py on first run -----------
-_cfg_path = os.path.join(BASE_DIR, "config.py")
-_example_path = os.path.join(BASE_DIR, "config.example.py")
-_user_data_dir = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI")
-_user_cfg_path = os.path.join(_user_data_dir, "config.py")
-
-if not os.path.exists(_cfg_path):
-    try:
-        if os.path.exists(_example_path):
-            import shutil
-            shutil.copy(_example_path, _cfg_path)
-    except (PermissionError, OSError):
-        os.makedirs(_user_data_dir, exist_ok=True)
-        if not os.path.exists(_user_cfg_path) and os.path.exists(_example_path):
-            import shutil
-            shutil.copy(_example_path, _user_cfg_path)
-
-if not os.path.exists(_cfg_path) and os.path.exists(_user_cfg_path):
-    sys.path.insert(0, _user_data_dir)
+_runtime = prepare_runtime()
+BASE_DIR = _runtime.app_root
 
 import config
 
@@ -95,9 +73,9 @@ def find_service_exe(name: str) -> str:
     # If frozen, we map the script name to the PyInstaller EXE in the same folder
     if getattr(sys, 'frozen', False):
         mapping = {
-            "server.py": "KALKI_Server.exe",
-            "listener.py": "KALKI_Listener.exe",
-            "kalki_setup_wizard.py": "KALKI_Setup_Wizard.exe"
+            "server.py": os.path.join("services", "server", "KALKI_Server.exe"),
+            "listener.py": os.path.join("services", "listener", "KALKI_Listener.exe"),
+            "kalki_setup_wizard.py": os.path.join("services", "setup_wizard", "KALKI_Setup_Wizard.exe")
         }
         exe_name = mapping.get(name, name.replace(".py", ".exe"))
         return os.path.join(BASE_DIR, exe_name)

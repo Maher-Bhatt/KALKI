@@ -13,15 +13,17 @@ import json
 import urllib.request
 from datetime import datetime
 
-BASE_DIR = os.path.dirname(os.path.abspath(
-    sys.executable if getattr(sys, "frozen", False) else __file__
-))
-os.chdir(BASE_DIR)
-sys.path.insert(0, BASE_DIR)
+from runtime_paths import prepare_runtime
+
+_runtime = prepare_runtime()
+BASE_DIR = _runtime.app_root
+ENTRY_DIR = _runtime.entry_dir
 
 import config
 
-LOG_PATH = os.path.join(BASE_DIR, "data", "listener.log")
+is_store = os.path.exists(os.path.join(BASE_DIR, "store_build.txt"))
+_data_dir = os.path.join(_runtime.user_data_dir, "data") if is_store else os.path.join(BASE_DIR, "data")
+LOG_PATH = os.path.join(_data_dir, "listener.log")
 os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
 
 
@@ -683,4 +685,3 @@ if __name__ == "__main__":
         log(f"FATAL CRASH: {e}")
         import traceback
         log(traceback.format_exc())
-
