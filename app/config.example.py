@@ -43,7 +43,7 @@ TTS_GROQ_TIMEOUT_SEC = 3
 #   en-US-AndrewMultilingualNeural — newest neural models, very natural.
 # British butler (JARVIS vibe): en-GB-RyanNeural, en-GB-ThomasNeural
 # Other US males: en-US-GuyNeural, en-US-TonyNeural (deep)
-TTS_VOICE  = "en-US-BrianMultilingualNeural"
+TTS_VOICE  = "en-GB-RyanNeural"
 TTS_RATE   = "+0%"                # +N% faster, -N% slower
 TTS_PITCH  = "+0Hz"               # +/-N Hz to shift pitch
 TTS_VOLUME = "+0%"

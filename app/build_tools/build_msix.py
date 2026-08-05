@@ -7,7 +7,7 @@ from xml.dom import minidom
 
 # Configuration
 APP_NAME = "KALKI"
-APP_VERSION = "1.2.6.0" # Must be X.X.X.X
+APP_VERSION = "1.2.7.0" # Must be X.X.X.X
 PUBLISHER_NAME = "CN=KALKI_Developer"
 PUBLISHER_DISPLAY_NAME = "KALKI Developer"
 APP_DESCRIPTION = "Advanced AI Assistant"
@@ -144,11 +144,13 @@ def build_msix():
         shutil.rmtree(MSIX_STAGING)
     os.makedirs(MSIX_STAGING)
     
-    print("Copying compiled binaries...")
+    print("Copying compiled binaries and payload...")
+    dist_root = os.path.join(BASE_DIR, "dist")
     if not os.path.exists(DIST_DIR):
         print(f"Error: {DIST_DIR} not found. Please run PyInstaller first.")
         return False
         
+    # 1. Copy main KALKI bundle
     for item in os.listdir(DIST_DIR):
         s = os.path.join(DIST_DIR, item)
         d = os.path.join(MSIX_STAGING, item)
@@ -156,12 +158,51 @@ def build_msix():
             shutil.copytree(s, d)
         else:
             shutil.copy2(s, d)
+
+    # 2. Copy all supporting service binaries
+    service_map = {
+        "KALKI_Setup_Wizard": os.path.join(MSIX_STAGING, "services", "setup_wizard"),
+        "KALKI_Server": os.path.join(MSIX_STAGING, "services", "server"),
+        "KALKI_Listener": os.path.join(MSIX_STAGING, "services", "listener"),
+        "KALKI_Setup_Google": os.path.join(MSIX_STAGING, "services", "setup_google"),
+        "KALKI_Setup_Spotify": os.path.join(MSIX_STAGING, "services", "setup_spotify"),
+    }
+    for svc_folder, dest in service_map.items():
+        src = os.path.join(dist_root, svc_folder)
+        if os.path.exists(src):
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            shutil.copytree(src, dest)
+
+    # 3. Copy Assets, Frontend UI, and Browser binaries
+    root_project = os.path.dirname(BASE_DIR)
+    
+    assets_src = os.path.join(root_project, "assets")
+    if os.path.exists(assets_src):
+        shutil.copytree(assets_src, os.path.join(MSIX_STAGING, "assets"))
+
+    plugins_src = os.path.join(BASE_DIR, "plugins")
+    if os.path.exists(plugins_src):
+        shutil.copytree(plugins_src, os.path.join(MSIX_STAGING, "plugins"))
+
+    browsers_src = os.path.join(root_project, "browsers")
+    if os.path.exists(browsers_src):
+        shutil.copytree(browsers_src, os.path.join(MSIX_STAGING, "browsers"))
+
+    for f in ["index.html", "manifest.json", "service-worker.js", "config.example.py"]:
+        src_file = os.path.join(BASE_DIR, f)
+        if os.path.exists(src_file):
+            shutil.copy2(src_file, os.path.join(MSIX_STAGING, f))
+
+    for f in ["LICENSE", "TERMS.md"]:
+        src_file = os.path.join(root_project, f)
+        if os.path.exists(src_file):
+            shutil.copy2(src_file, os.path.join(MSIX_STAGING, f))
             
     build_manifest()
     create_assets()
     
     print("Packing MSIX...")
-    msix_out = os.path.join(OUTPUT_DIR, f"{APP_NAME}_v1.2.6.msix")
+    msix_out = os.path.join(OUTPUT_DIR, f"{APP_NAME}_v1.2.7.msix")
     if os.path.exists(msix_out):
         os.remove(msix_out)
         
@@ -177,10 +218,17 @@ def build_msix():
         '''
         subprocess.run(["powershell", "-Command", ps_cmd], check=True)
         
+    # Trust self-signed certificate in CurrentUser\TrustedPeople for seamless local installation
+    ps_trust_cmd = f'''
+    $pwd = ConvertTo-SecureString -String "{CERT_PASS}" -Force -AsPlainText
+    Import-PfxCertificate -FilePath "{cert_path}" -CertStoreLocation "Cert:\\CurrentUser\\TrustedPeople" -Password $pwd -ErrorAction SilentlyContinue
+    '''
+    subprocess.run(["powershell", "-Command", ps_trust_cmd], check=False)
+        
     print("Signing MSIX...")
     subprocess.run([signtool, "sign", "/fd", "SHA256", "/a", "/f", cert_path, "/p", CERT_PASS, msix_out], check=True)
     
-    print(f"\\nSUCCESS! MSIX generated at: {msix_out}")
+    print(f"\nSUCCESS! MSIX generated at: {msix_out}")
 
 if __name__ == "__main__":
     os.makedirs(OUTPUT_DIR, exist_ok=True)
