@@ -1,8 +1,15 @@
 import os
+
 import subprocess
 import sys
+from pathlib import Path
 
-APP_VERSION = "1.2.7"
+try:
+    from version import APP_VERSION
+except ImportError:
+    APP_VERSION = "1.3.0"
+
+
 VERSION_PARTS = tuple(int(part) for part in APP_VERSION.split(".")) + (0,)
 
 def run_cmd(cmd):
@@ -152,9 +159,10 @@ def main():
         run_cmd([inno_compiler, "build_tools\\installer.iss"])
         print("\nSUCCESS! Installer is in the Output folder.")
     else:
-        print(f"\nWARNING: Inno Setup compiler not found.")
-        print("Please download and install Inno Setup from https://jrsoftware.org/isinfo.php")
-        print("Then run 'ISCC.exe build_tools\\installer.iss' manually.")
+        # The GitHub release path remains usable without Inno Setup: the
+        # onedir bundles under dist/ are still valid portable artifacts.
+        print("\nWARNING: Inno Setup compiler not found; portable bundles remain in dist/.")
+        print("Install Inno Setup 6 to generate the optional single-file installer.")
 
 if __name__ == "__main__":
     main()

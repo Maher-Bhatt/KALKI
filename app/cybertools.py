@@ -844,8 +844,6 @@ def http_headers(url: str) -> Dict[str, Any]:
         url = "https://" + url
     try:
         ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
         req = urllib.request.Request(url, method="HEAD",
                                      headers={"User-Agent": "KALKI"})
         with urllib.request.urlopen(req, timeout=10, context=ctx) as r:

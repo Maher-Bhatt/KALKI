@@ -13,6 +13,19 @@ from typing import Optional, Dict, Any, Tuple, Callable, List
 SCRIPTS_DIR: Optional[str] = None  # set by server.py
 
 
+def host_execution_enabled() -> bool:
+    """Return whether the user explicitly enabled host code execution.
+
+    The default is fail-closed. A timeout is not a security sandbox, so callers
+    should only enable this in a deliberately isolated development environment.
+    """
+    try:
+        import config
+        return bool(getattr(config, "ALLOW_HOST_CODE_EXECUTION", False))
+    except Exception:
+        return False
+
+
 # Extension map
 LANG_EXT: Dict[str, str] = {
     "python": "py", "py": "py",
@@ -86,6 +99,8 @@ def run_script(path: str, lang: str = "python", timeout: int = 60) -> Dict[str, 
     Returns:
         Dict[str, Any]: A dictionary containing stdout, stderr, and the return code, or an error string.
     """
+    if not host_execution_enabled():
+        return {"error": "host code execution is disabled; use an isolated runner"}
     lang = lang.lower()
     if lang in ("python", "py"):
         cmd = [sys.executable, path]
@@ -123,6 +138,8 @@ def run_inline(code: str, lang: str = "python", name: str = "inline", timeout: i
     Returns:
         Dict[str, Any]: The execution results.
     """
+    if not host_execution_enabled():
+        return {"error": "host code execution is disabled; use an isolated runner"}
     code = strip_code_fence(code)
     path = save_script(name, code, lang)
     out = run_script(path, lang, timeout)

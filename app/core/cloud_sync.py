@@ -1,6 +1,7 @@
 import os
 import json
 import base64
+import tempfile
 import threading
 
 from cryptography.fernet import Fernet
@@ -15,6 +16,25 @@ except ImportError:
     FIREBASE_AVAILABLE = False
 
 _db = None
+
+
+def _atomic_json_write(path: str, data):
+    """Write validated JSON without leaving a half-written state."""
+    directory = os.path.dirname(os.path.abspath(path)) or "."
+    os.makedirs(directory, exist_ok=True)
+    fd, temp_path = tempfile.mkstemp(prefix=".kalki_restore_", suffix=".json", dir=directory)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            json.dump(data, stream, indent=4)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temp_path, path)
+    finally:
+        if os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
 
 
 def _derive_key(passphrase: str, salt: bytes) -> bytes:
@@ -96,8 +116,9 @@ def restore_memory_from_cloud(user_id, local_memory_path, passphrase):
             payload = doc.to_dict().get("facts")
             if payload:
                 data = json.loads(_decrypt(payload, passphrase))
-                with open(local_memory_path, "w", encoding="utf-8") as f:
-                    json.dump(data, f, indent=4)
+                if not isinstance(data, list):
+                    raise ValueError("cloud memory payload must be a list")
+                _atomic_json_write(local_memory_path, data)
                 return True
     except Exception as e:
         print(f"[CLOUD SYNC] Memory restore failed: {e}")
@@ -113,8 +134,9 @@ def restore_history_from_cloud(user_id, local_history_path, passphrase):
             payload = doc.to_dict().get("messages")
             if payload:
                 data = json.loads(_decrypt(payload, passphrase))
-                with open(local_history_path, "w", encoding="utf-8") as f:
-                    json.dump(data, f, indent=4)
+                if not isinstance(data, list):
+                    raise ValueError("cloud history payload must be a list")
+                _atomic_json_write(local_history_path, data)
                 return True
     except Exception as e:
         print(f"[CLOUD SYNC] History restore failed: {e}")

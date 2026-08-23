@@ -50,6 +50,7 @@ class VerificationSandbox:
     SAFE_GET = {
         "/", "/manifest.json", "/service-worker.js", "/api/health",
         "/api/status", "/api/models", "/api/settings/get", "/api/metrics",
+        "/api/github/status", "/api/focus",
         "/api/dashboard", "/api/memories", "/api/memory/list",
     }
     SAFE_POST = {
@@ -70,6 +71,7 @@ class VerificationSandbox:
         self.thread: threading.Thread | None = None
         self.port = 0
         self.temp_dir: tempfile.TemporaryDirectory[str] | None = None
+        self.api_token = ""
 
     def record(self, name: str, check: Callable[[], str]) -> None:
         try:
@@ -81,6 +83,8 @@ class VerificationSandbox:
                  headers: dict[str, str] | None = None) -> tuple[int, dict[str, str], bytes]:
         payload = json.dumps(body or {}).encode("utf-8") if method == "POST" else None
         request_headers = dict(headers or {})
+        if self.api_token:
+            request_headers.setdefault("X-KALKI-Token", self.api_token)
         if payload is not None:
             request_headers.setdefault("Content-Type", "application/json")
             request_headers["Content-Length"] = str(len(payload))
@@ -110,6 +114,7 @@ class VerificationSandbox:
         config = importlib.import_module("config")
         server_module = importlib.import_module("server")
         self.server = server_module.ThreadingHTTPServer(("127.0.0.1", 0), server_module.Handler)
+        self.api_token = server_module.API_TOKEN
         self.port = self.server.server_address[1]
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -135,7 +140,11 @@ class VerificationSandbox:
             os.environ.pop(key, None)
 
     def _check_static_sources(self) -> str:
-        source_files = [p for p in APP_DIR.rglob("*.py") if "dist" not in p.parts and "build" not in p.parts]
+        excluded_dirs = {"dist", "build", ".build_packages", ".build-venv", "__pycache__"}
+        source_files = [
+            p for p in APP_DIR.rglob("*.py")
+            if not any(part in excluded_dirs for part in p.parts)
+        ]
         for path in source_files:
             compile(path.read_text(encoding="utf-8"), str(path), "exec")
         return f"compiled {len(source_files)} Python source files"
@@ -172,14 +181,33 @@ class VerificationSandbox:
         unclassified = [route for route in routes if route not in covered]
         return f"inventoried {len(routes)} API routes ({len(covered & set(routes))} automated; {len(unclassified)} guarded/external)"
 
-    def _check_safe_get_routes(self) -> str:
+    def _check_authentication(self) -> str:
+        status, _, body = self._request_without_auth("GET", "/api/status")
+        if status != 401:
+            raise AssertionError(f"expected 401 for unauthenticated status request, got {status}: {body[:200]!r}")
+        return "unauthenticated privileged GET rejected with 401"
+
+    def _request_without_auth(self, method: str, path: str, body: dict[str, Any] | None = None):
+        payload = json.dumps(body or {}).encode("utf-8") if method == "POST" else None
+        headers = {"Content-Type": "application/json"} if payload is not None else {}
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=8)
+        try:
+            connection.request(method, path, body=payload, headers=headers)
+            response = connection.getresponse()
+            return response.status, dict(response.getheaders()), response.read()
+        finally:
+            connection.close()
+
+    def _check_safe_routes(self) -> str:
         checks: dict[str, set[str] | None] = {
             "/api/health": {"ok", "ts"},
             "/api/status": {"uptimeSec", "cpu", "ram"},
             "/api/models": {"models"},
             "/api/settings/get": {"ok", "settings", "secretStatus"},
             "/api/metrics": {"ok"},
-            "/api/dashboard": {"ok"},
+            "/api/dashboard": None,
+            "/api/github/status": {"ok", "configured", "count"},
+            "/api/focus": {"ok", "active", "remainingSec"},
             "/api/memories": None,
             "/api/memory/list": None,
         }
@@ -229,11 +257,12 @@ class VerificationSandbox:
         self.record("Python source compilation", self._check_static_sources)
         try:
             self._start_server()
+            self.record("API authentication", self._check_authentication)
             self.record("Tool schema contracts", self._check_tool_contracts)
             self.record("Local utility functions", self._check_local_utilities)
             self.record("API route inventory", self._check_route_inventory)
             self.record("Static HTTP assets", self._check_static_http_assets)
-            self.record("Safe API read routes", self._check_safe_get_routes)
+            self.record("Safe API read routes", self._check_safe_routes)
             self.record("Safe API write routes", self._check_safe_post_routes)
             self.record("Local origin protection", self._check_origin_protection)
         except Exception as exc:

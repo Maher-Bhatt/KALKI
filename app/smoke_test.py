@@ -3,6 +3,7 @@ Run before packaging any release. Boots the real server module in-process
 and hits its two most basic endpoints. Exits non-zero on any failure so it
 can gate a build script.
 """
+import os
 import sys
 import threading
 import time
@@ -33,7 +34,8 @@ def main():
         port = 8888
 
     import server  # importing this alone will surface any broken top-level import
-
+    runtime_security = server.runtime_security
+    auth_headers = {runtime_security.TOKEN_HEADER: runtime_security.get_api_token()}
     t = threading.Thread(target=server.main, daemon=True)
     t.start()
     
@@ -44,7 +46,7 @@ def main():
     for _ in range(60):
         time.sleep(0.5)
         try:
-            with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/status", timeout=1) as r:
+            with urllib.request.urlopen(urllib.request.Request(f"http://127.0.0.1:{port}/api/status", headers=auth_headers), timeout=1) as r:
                 if r.status == 200:
                     server_started = True
                     break
@@ -61,7 +63,7 @@ def main():
         ("/api/models", None),
     ]:
         try:
-            with urllib.request.urlopen(f"http://127.0.0.1:{port}{path}", timeout=5) as r:
+            with urllib.request.urlopen(urllib.request.Request(f"http://127.0.0.1:{port}{path}", headers=auth_headers), timeout=5) as r:
                 data = json.loads(r.read().decode("utf-8"))
                 if required_keys:
                     missing = [k for k in required_keys if k not in data]

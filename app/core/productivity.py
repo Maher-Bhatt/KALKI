@@ -2,6 +2,9 @@ import os
 import json
 import time
 import threading
+from runtime_paths import prepare_runtime
+
+_runtime = prepare_runtime()
 from datetime import datetime, date
 try:
     import win32gui
@@ -11,11 +14,11 @@ try:
 except ImportError:
     HAS_WIN32 = False
 
-DATA_FILE = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "productivity.json")
+DATA_FILE = os.path.join(_runtime.user_data_dir, "data", "productivity.json")
 _lock = threading.RLock()
 _running = False
 
-# Categorized by the actual process (.exe) name, not the window title — a
+# Categorized by the actual process (.exe) name, not the window title â€” a
 # window titled "Untitled - Notepad" and one titled "budget.xlsx - Excel"
 # both come from generic titles, but the process name always tells the truth.
 _EXE_CATEGORIES = {
@@ -80,7 +83,7 @@ def _categorize(exe_name, title):
     if any(k in low for k in ["youtube", "spotify", "netflix", "vlc", "player"]):
         return "Media / Music", exe_name or title
 
-    # Genuinely unrecognized — keep the real app name rather than "Other",
+    # Genuinely unrecognized â€” keep the real app name rather than "Other",
     # so the daily summary can name it instead of hiding it.
     display = (exe_name or title or "Unknown").replace(".exe", "")
     return "Other", display
@@ -138,6 +141,10 @@ def _tracker_loop():
         except Exception:
             pass
 
+def tracking_status():
+    return {"available": HAS_WIN32, "active": _running, "dataFile": DATA_FILE}
+
+
 def start_tracking():
     global _running
     if not _running and HAS_WIN32:
@@ -182,7 +189,7 @@ def get_daily_summary():
         line = f"{_fmt(secs)} {cat.lower()}"
         apps_here = category_apps.get(cat, {})
         top_apps = sorted(apps_here.items(), key=lambda x: x[1], reverse=True)
-        # "Other" is exactly the bucket that used to be a black box — always
+        # "Other" is exactly the bucket that used to be a black box â€” always
         # name what was actually in it. For recognized categories, only add
         # the app name if one app clearly dominates (otherwise it's noise).
         if cat == "Other" and top_apps:
@@ -197,3 +204,7 @@ def get_daily_summary():
 
     prefix = "Yesterday, you spent " if target_date != today_str else "So far today, you've spent "
     return prefix + ", ".join(parts) + "."
+
+
+
+

@@ -35,8 +35,9 @@ def _find_app_root(entry_dir: str) -> str:
     """Return the package root when this process is a bundled helper."""
 
     candidate = entry_dir
-    for _ in range(3):
-        if os.path.isfile(os.path.join(candidate, "KALKI.exe")):
+    bundle_markers = ("KALKI.exe", "KALKI", "index.html")
+    for _ in range(4):
+        if any(os.path.isfile(os.path.join(candidate, marker)) for marker in bundle_markers):
             return candidate
         parent = os.path.dirname(candidate)
         if parent == candidate:
@@ -55,7 +56,13 @@ def prepare_runtime() -> RuntimePaths:
 
     entry_dir = _entry_dir()
     app_root = _find_app_root(entry_dir)
-    user_data_dir = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI")
+    if sys.platform == "win32":
+        data_base = os.environ.get("APPDATA") or os.path.expanduser("~\\AppData\\Roaming")
+    elif sys.platform == "darwin":
+        data_base = os.path.expanduser("~/Library/Application Support")
+    else:
+        data_base = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+    user_data_dir = os.path.join(data_base, "KALKI")
     app_config = os.path.join(app_root, "config.py")
     config_example = os.path.join(app_root, "config.example.py")
     user_config = os.path.join(user_data_dir, "config.py")

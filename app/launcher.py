@@ -26,8 +26,8 @@ BASE_DIR = _runtime.app_root
 import config
 
 _is_store = os.path.exists(os.path.join(BASE_DIR, "store_build.txt"))
-if _is_store:
-    _data_root = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "data")
+if _is_store or sys.platform != "win32":
+    _data_root = os.path.join(_runtime.user_data_dir, "data")
 else:
     _data_root = os.path.join(BASE_DIR, "data")
 
@@ -72,12 +72,13 @@ def find_service_exe(name: str) -> str:
     # If running from source (unfrozen), we run `python name.py`
     # If frozen, we map the script name to the PyInstaller EXE in the same folder
     if getattr(sys, 'frozen', False):
+        suffix = ".exe" if sys.platform == "win32" else ""
         mapping = {
-            "server.py": os.path.join("services", "server", "KALKI_Server.exe"),
-            "listener.py": os.path.join("services", "listener", "KALKI_Listener.exe"),
-            "kalki_setup_wizard.py": os.path.join("services", "setup_wizard", "KALKI_Setup_Wizard.exe")
+            "server.py": os.path.join("services", "server", f"KALKI_Server{suffix}"),
+            "listener.py": os.path.join("services", "listener", f"KALKI_Listener{suffix}"),
+            "kalki_setup_wizard.py": os.path.join("services", "setup_wizard", f"KALKI_Setup_Wizard{suffix}"),
         }
-        exe_name = mapping.get(name, name.replace(".py", ".exe"))
+        exe_name = mapping.get(name, name.replace(".py", suffix))
         return os.path.join(BASE_DIR, exe_name)
     else:
         return os.path.join(BASE_DIR, name)
@@ -184,15 +185,17 @@ def register_startup_folder(enabled: bool = True) -> bool:
 
 
 def acquire_single_instance() -> Optional[Any]:
-    """
-    Ensure only a single instance of this launcher is running at a time.
-    Uses a Windows named mutex.
-
-    Returns:
-        Optional[Any]: Returns a handle to the mutex if successfully acquired, 
-                       or None if another instance is already running.
-                       Returns True if the check was skipped (e.g. pywin32 missing).
-    """
+    """Acquire a Linux file lock or a Windows named mutex for this launcher."""
+    if os.name != "nt":
+        try:
+            import fcntl
+            lock_path = os.path.join(_data_root, "launcher.lock")
+            handle = open(lock_path, "a+", encoding="utf-8")
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return handle
+        except (BlockingIOError, OSError) as e:
+            log(f"single-instance lock unavailable: {e}")
+            return None
     try:
         import win32event
         import win32api

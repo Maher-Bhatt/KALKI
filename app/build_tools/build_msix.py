@@ -1,13 +1,18 @@
 import os
 import shutil
 import subprocess
+import tempfile
 import glob
 from xml.etree.ElementTree import Element, SubElement, tostring
 from xml.dom import minidom
 
 # Configuration
 APP_NAME = "KALKI"
-APP_VERSION = "1.2.7.0" # Must be X.X.X.X
+try:
+    from version import APP_VERSION as _APP_VERSION
+except ImportError:
+    _APP_VERSION = "1.3.0"
+APP_VERSION = _APP_VERSION + ".0" # Must be X.X.X.X
 PUBLISHER_NAME = "CN=KALKI_Developer"
 PUBLISHER_DISPLAY_NAME = "KALKI Developer"
 APP_DESCRIPTION = "Advanced AI Assistant"
@@ -21,7 +26,7 @@ ASSETS_SRC_ICON = os.path.join(os.path.dirname(BASE_DIR), "assets", "kalki_logo.
 
 # Certificate Info
 CERT_NAME = "KALKI_Dev_Cert.pfx"
-CERT_PASS = "kalkipass"
+CERT_PASS = os.environ.get("KALKI_DEV_CERT_PASSWORD", "")
 
 def find_sdk_tool(tool_name):
     # Find Windows 10 SDK path
@@ -202,13 +207,16 @@ def build_msix():
     create_assets()
     
     print("Packing MSIX...")
-    msix_out = os.path.join(OUTPUT_DIR, f"{APP_NAME}_v1.2.7.msix")
+    msix_out = os.path.join(OUTPUT_DIR, f"{APP_NAME}_v{_APP_VERSION}.msix")
     if os.path.exists(msix_out):
         os.remove(msix_out)
         
     subprocess.run([makeappx, "pack", "/d", MSIX_STAGING, "/p", msix_out, "/o"], check=True)
     
-    cert_path = os.path.join(BASE_DIR, "build_tools", CERT_NAME)
+    cert_path = os.environ.get("KALKI_DEV_CERT_PATH", os.path.join(tempfile.gettempdir(), CERT_NAME))
+    if not CERT_PASS:
+        print("Error: set KALKI_DEV_CERT_PASSWORD for local development signing.")
+        return False
     if not os.path.exists(cert_path):
         print("Generating self-signed certificate for local testing...")
         ps_cmd = f'''

@@ -1,223 +1,208 @@
-<div align="center">
+# KALKI AI Assistant
 
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:000000,100:ff0000&height=250&section=header&text=K.A.L.K.I.&fontSize=90&fontColor=ffffff&animation=twinkling&fontAlignY=35&desc=SYSTEM%20CORE%20//%20AUTONOMOUS%20AI&descAlignY=60&descSize=20" />
+KALKI is a local-first, voice-capable AI desktop assistant with a secure localhost API, responsive HUD dashboard, configurable model providers, memory and task workflows, cybersecurity utilities, and platform-aware system integrations.
 
-  <a href="https://github.com/Maher-Bhatt/KALKI">
-    <img src="https://readme-typing-svg.demolab.com?font=Orbitron&weight=700&size=28&duration=4000&pause=1000&color=FF0000&center=true&vCenter=true&width=800&height=60&lines=System+Core+Online...;Powered+by+DeepSeek-R1+%26+Groq+LPU;Zero-Trust+Security+Protocol+Enabled;Welcome+to+the+Future." alt="Typing SVG" />
-  </a>
+Version **1.3.0** focuses on reliable startup, consistent voice identity, protected local APIs, safe user-data storage, improved full-screen behavior, and a practical Linux execution path.
 
-  <br>
+<p align="center">
+  <img src="marketing/promotional/promo_github_hero.png" alt="KALKI AI Assistant — Intelligence, Within Reach" width="900">
+</p>
 
-  <img src="screenshots/poster_banner.png" alt="KALKI AI Assistant" width="100%">
+## Platform status
 
-  <br><br>
+| Platform | Primary experience | Status |
+|---|---|---|
+| Windows 10/11 | PyWebView desktop shell with packaged helper services | Validated for v1.3.0 release |
+| Linux | Supervised local server with browser-backed dashboard | Validated in an Ubuntu-like sandbox; hardware acceptance pass recommended |
+| macOS | Source-compatible runtime path and browser mode | Not claimed as fully validated in this release |
 
-  <strong>The Apex Autonomous AI Command Center for Windows.</strong><br>
-  <em>Engineered to perfection for Power Users, Elite Developers, and Security Professionals.</em>
+Linux deliberately uses the default browser for the dashboard instead of forcing an unverified GTK/WebKit desktop wrapper. This provides a dependable installation path while preserving the same local server, authenticated API, dashboard, workflows, and configuration model.
 
-  <br><br>
+## Highlights
 
-  <p>
-    <a href="https://github.com/Maher-Bhatt/KALKI/releases/latest"><img src="https://img.shields.io/github/v/release/Maher-Bhatt/KALKI?style=for-the-badge&logo=github&color=ff0000&labelColor=000000" alt="Release"></a>
-    <img src="https://img.shields.io/badge/Platform-Windows_11_Ready-ff0000?style=for-the-badge&logo=windows&logoColor=ffffff&labelColor=000000" alt="Platform">
-    <img src="https://img.shields.io/badge/Brain-DeepSeek_R1_%7C_Llama_3.3-ff0000?style=for-the-badge&logo=meta&logoColor=ffffff&labelColor=000000" alt="Brain">
-    <img src="https://img.shields.io/badge/Speed-%3C500ms_Latency-ff0000?style=for-the-badge&logo=lightning&logoColor=ffffff&labelColor=000000" alt="Speed">
-  </p>
+KALKI provides a responsive Canvas-based HUD with full-screen and window controls, typed chat, optional browser microphone input, configurable AI providers, local memory, task management, notifications, vision workflows, cybersecurity helpers, and controlled system actions. The default voice identity is the British English neural voice `en-GB-RyanNeural`, used consistently across normal responses, notifications, and workflow modes. Mode context changes delivery and wording without silently changing the configured assistant identity.
 
-  <br>
+The local server binds to loopback and requires the installation-specific `X-KALKI-Token` header for privileged API operations. Host code execution is disabled by default. Destructive or system-changing actions remain guarded by explicit confirmation and platform capability checks.
 
-  <a href="https://github.com/Maher-Bhatt/KALKI/releases/latest">
-    <img src="https://img.shields.io/badge/🔥_DOWNLOAD_KALKI_SETUP.EXE-000000?style=for-the-badge&logo=windows&logoColor=ff0000&labelColor=ff0000&color=000000" alt="Download">
-  </a>
-  <br>
-  <h4><a href="https://youtu.be/vbUOy8oMqOM" target="_blank">📺 View System Integration Tutorial</a></h4>
+## Installation
 
-</div>
+### Windows source development
 
----
+Install Python 3.11 or newer, create a virtual environment, and install the Windows dependency set:
 
-## 🚀 Intelligent Autonomy, Redefined.
-
-**KALKI** is not a standard chatbot. It is a **fully autonomous, voice-first desktop command center** built entirely from the ground up. Operating with a seamless Canvas2D Heads-Up Display (HUD) and powered by the world's fastest inference engines, KALKI takes absolute control of your digital infrastructure.
-
-From deep-level OS execution and cybersecurity workflows to advanced code generation, KALKI transforms your machine into a proactive, highly intelligent entity.
-
-<div align="center">
-  <table>
-    <tr>
-      <td align="center">⚡<br><strong>Sub-Millisecond UI</strong><br>Zero Electron overhead. Pure Canvas2D rendering.</td>
-      <td align="center">🧠<br><strong>Cognitive Architecture</strong><br>Dynamic routing targets the optimal LLM matrix.</td>
-      <td align="center">🔒<br><strong>Zero-Trust Sandbox</strong><br>Hardware-bound DPAPI encryption & strict execution.</td>
-      <td align="center">🌐<br><strong>DeepSeek-R1 Core</strong><br>671B parameter reasoning injected out-of-the-box.</td>
-    </tr>
-  </table>
-</div>
-
----
-
-## 🖼️ The HUD Interface
-
-<div align="center">
-  <img src="screenshots/marketing_1.png" width="32%" alt="HUD View 1">
-  <img src="screenshots/marketing_2.png" width="32%" alt="HUD View 2">
-  <img src="screenshots/marketing_3.png" width="32%" alt="HUD View 3">
-  <br><br>
-  <img src="screenshots/marketing_4.png" width="32%" alt="Tactical Mode">
-  <img src="screenshots/marketing_5.png" width="32%" alt="Cyber Mode">
-  <img src="screenshots/marketing_6.png" width="32%" alt="Memory Bank">
-  <br><br>
-  <img src="screenshots/marketing_7.png" width="80%" alt="System Core Dashboard">
-</div>
-
----
-
-## ✨ Feature Overview
-
-<details open>
-<summary><strong>🎙️ Voice-First, Always-On</strong></summary>
-
-| Feature | Details |
-|:---|:---|
-| **Wake Word** | Say **"Hi KALKI"** from anywhere — no clicks, no keyboard |
-| **Free Neural Voice** | Default high-quality British male voice (`en-GB-RyanNeural`) powered by Edge TTS — 100% free with zero API key required |
-| **Multi-Mode Sound Engine** | Dynamically adapts voice rate, pitch, volume, and style per workflow mode (`Gaming`, `CTF`, `Dev`, `Focus`, `Morning`, `Shutdown`) |
-| **Smart Audio Pipeline** | Advanced signal processing prevents feedback loops |
-| **Offline Fallback** | Optional VOSK wake-word detection for zero-latency, privacy-first mode |
-| **Local Speech Engine** | Automatically fails over to native Windows SpeechSynthesizer if cloud AI voices are down |
-| **Continuous Listening** | Background daemon captures speech and routes it to the AI brain |
-
-</details>
-
-<details open>
-<summary><strong>🧠 Multi-Model Cognitive Router</strong></summary>
-
-| Model | Use Case |
-|:---|:---|
-| `DeepSeek-R1 (g4f)` | Highly capable reasoning, heavy coding tasks, completely free out-of-the-box |
-| `LLaMA-3.3-70B-Versatile` | Deep reasoning, system orchestration, complex API logic |
-| `LLaMA-3.1-8B` | Fast casual conversations, quick OS commands |
-| `LLaMA-4-Scout` | Vision tasks (screenshot analysis, image understanding) |
-| **Ollama (Local)** | Full offline autonomy — run entirely on your GPU during network drops |
-
-</details>
-
-<details open>
-<summary><strong>🎭 Personality, Mood & Multi-Mode Sound Engine</strong></summary>
-
-| Feature | Details |
-|:---|:---|
-| **Multi-Mode Voice Traits** | `Gaming` (Rapid `-10%` vol), `CTF` (Tactical `+2Hz` pitch), `Dev` (Crisp `+5%` rate), `Focus` (Calm `-5%` rate), `Shutdown` (Soothing `-10%` rate) |
-| **Mood Detection** | Automatically detects aggressive, playful, or calm language |
-| **Persistent Moods** | Aggressive mode stays active for 5+ exchanges — no random de-escalation |
-| **Roast-Back Engine** | If you roast KALKI, it fires back harder |
-| **Adaptive Tone** | Professional by default, adjusts to match your energy exactly |
-| **Dynamic Greetings** | Randomized, time-aware, weather-aware greetings — never the same message twice |
-
-</details>
-
-<details open>
-<summary><strong>🛡️ Tactical Cybersecurity Toolkit</strong></summary>
-
-| Tool | Capability |
-|:---|:---|
-| **Deep Webscan** | Voice-trigger a headless Chromium audit for security headers, SSL, cookies |
-| **Shodan OSINT** | Real-time IP intelligence, open ports, and service banners |
-| **CVE Intel** | Live NVD vulnerability tracking with severity ratings |
-| **Port Scanner** | Integrated port mapping with service detection |
-| **Source Viewer** | Download and analyze page source code on command |
-
-</details>
-
-<details open>
-<summary><strong>💻 Developer Tools</strong></summary>
-
-| Feature | Details |
-|:---|:---|
-| **Clipboard AI Coding** | Copy broken code → say "Fix the code in my clipboard" → fixed code pasted back |
-| **Code Generation** | Generate Python scripts, web pages, and utilities via voice |
-| **Sandbox Execution** | Run generated scripts safely in an isolated environment |
-| **GitHub Integration** | Manage repositories, create gists, check commit history |
-
-</details>
-
-<details open>
-<summary><strong>🤖 System & Life Integration</strong></summary>
-
-| Integration | What It Does |
-|:---|:---|
-| **PC Control** | Lock screen, adjust volume, clear recycle bin, open apps via voice |
-| **Google Calendar** | View, **create, and manage** events via voice (Two-way!) |
-| **Gmail** | Read inbox summaries, search emails, **send replies** (Two-way!) |
-| **Spotify** | Play, pause, skip tracks, and control music hands-free |
-| **Telegram Remote** | Secure, 2-way remote control of KALKI via Telegram Bot |
-| **Reminders & Tasks** | Set, list, and manage reminders — synced to memory |
-| **Vision Memory** | Searchable local OCR screen history (Privacy-first, opt-in) |
-
-</details>
-
-<details open>
-<summary><strong>🎨 Premium HUD Interface</strong></summary>
-
-| Feature | Details |
-|:---|:---|
-| **Sci-Fi Design** | Canvas2D-rendered waveforms, particles, glowing elements |
-| **Adaptive Scaling** | Fluid REM-based layout — 1080p to 4K, any DPI |
-| **Dark Mode** | Premium dark theme with glassmorphism |
-| **Real-Time Telemetry** | CPU, RAM, GPU, network stats displayed live |
-| **Diagnostics Overlay** | `Ctrl+Shift+D` reveals FPS, memory, DPR, scale metrics |
-
-</details>
-
----
-
-## 🔒 Zero-Trust Security Protocol
-
-We built KALKI with an aggressive Zero-Trust security posture. 
-- **Native Sandbox Alerts**: Any attempt by the AI to execute a destructive command (process termination, file deletion) triggers a hardware-level Windows Security Alert requiring your explicit click authorization.
-- **Encrypted Vault**: API keys and secrets are encrypted using the Windows Data Protection API (DPAPI).
-- **Offline By Design**: Unplug the router, switch to the VOSK wake-word engine and Ollama, and experience a 100% air-gapped, untraceable AI assistant.
-
----
-
-## 📡 Installation & Deployment
-
-KALKI utilizes an automated deployment pipeline, with builds compiled cleanly from source.
-
-**Option 1: Microsoft Store (Recommended)**
-1. Search for **KALKI AI Assistant** in the Microsoft Store or install the `.msix` package.
-2. The Store manages all background updates and dependencies seamlessly.
-
-**Option 2: Standalone Installer**
-1. **Download the Package**: Obtain `KALKI_Setup.exe` from the [Releases Page](https://github.com/Maher-Bhatt/KALKI/releases/latest).
-2. **Execute Setup**: The installer handles all dependencies, PATH configurations, and PWA manifest installations silently.
-3. **Initialize**: Launch the application and say **"Hi KALKI"**.
-4. **Dominate**: The DeepSeek-R1 core takes over instantly.
-
----
-
-## 🏗️ Technical Architecture
-
-KALKI decouples its heavy Python computational backend from its lightweight JavaScript frontend, ensuring zero UI latency during massive inference workloads.
-
-```text
-[ Speech Interface ] ──▶ [ Python Core Engine ] ──▶ [ Cognitive Router ]
-                              │          │                 │
-      [ VOSK / STT ] ◀────────┘          │                 ▼
-                                         ▼        [ Groq / DeepSeek / Ollama ]
-[ Heads-Up Display ] ◀──────── [ Tool Executors ]
-  (Canvas2D HUD)               (OS / Web / Cyber)
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r app\requirements.txt
+python app\main_app.py
 ```
 
----
+The first-run setup wizard stores ordinary preferences in the per-user KALKI data directory and credentials in the secure vault. Do not place personal credentials in `config.py` or commit them to Git.
 
-## ⚖️ Legal & Licensing
+### Linux release
 
-Copyright © 2026 Maher Bhatt. All rights reserved.
+Extract the Linux release archive, enter the extracted directory, and run:
 
-KALKI is distributed under the **MIT License**. See the [LICENSE](LICENSE) file for details. Installation and usage are governed by the conditions outlined in [TERMS.md](TERMS.md), which strictly mandate the responsible and ethical use of the integrated cybersecurity features.
+```bash
+chmod +x install.sh
+./install.sh
+```
 
-<div align="center">
-  <br>
-  <strong>Forged by <a href="https://github.com/Maher-Bhatt">Maher Bhatt</a></strong><br>
-  <em>Next-Generation Intelligence.</em>
-</div>
+The installer creates a private virtual environment under `~/.local/share/kalki/venv`, installs `app/requirements-linux.txt`, and writes an XDG desktop entry. The launcher supervises the local server, opens the dashboard at `http://127.0.0.1:<port>/`, and stores mutable data under `$XDG_DATA_HOME/KALKI` or `~/.local/share/KALKI`.
+
+The Linux microphone listener is optional. Continuous listening requires SpeechRecognition, PyAudio, PortAudio, and a visible input device. If those capabilities are unavailable, KALKI skips the failing listener rather than restarting it indefinitely and shows a capability notice in the dashboard. Typed and browser-based workflows remain available. Linux speech uses Edge TTS when available, with `espeak-ng` or `espeak` as a local synthesis fallback and `ffplay`, `mpv`, or `mpg123` as supported playback backends.
+
+For a server without a graphical display, the setup path is headless-safe:
+
+```bash
+python app/kalki_setup_wizard.py --headless
+```
+
+The headless path creates a safe quick configuration, defaults to push-to-talk, writes the setup marker, and never requires Tkinter.
+
+### Windows release artifacts
+
+The Windows release pipeline creates a portable GitHub ZIP and an unsigned MSIX suitable for Microsoft Store submission. Development signing is intentionally opt-in and is never performed by the default release command. The generated archives and build directories are ignored by Git.
+
+## Campaign gallery
+
+The KALKI campaign is built around a single visual language: graphite-black surfaces, platinum typography, restrained crimson signal accents, and the KALKI eye as a recognizable product anchor. These standalone high-resolution posters are suitable for launch posts, product pages, release announcements, and social promotion.
+
+### Launch and product positioning
+
+<p align="center">
+  <img src="marketing/promotional/poster_01_launch.png" alt="KALKI launch poster" width="31%">
+  <img src="marketing/promotional/poster_02_voice.png" alt="KALKI voice poster" width="31%">
+  <img src="marketing/promotional/poster_03_workflows.png" alt="KALKI workflows poster" width="31%">
+</p>
+
+### Capability stories
+
+<p align="center">
+  <img src="marketing/promotional/poster_04_memory.png" alt="KALKI memory poster" width="31%">
+  <img src="marketing/promotional/poster_05_developer.png" alt="KALKI developer tools poster" width="31%">
+  <img src="marketing/promotional/poster_06_security.png" alt="KALKI security poster" width="31%">
+</p>
+
+### Cross-platform and privacy
+
+<p align="center">
+  <img src="marketing/promotional/poster_07_cross_platform.png" alt="KALKI cross-platform poster" width="31%">
+  <img src="marketing/promotional/poster_08_privacy.png" alt="KALKI privacy poster" width="31%">
+</p>
+
+### Promotional banners
+
+<p align="center">
+  <img src="marketing/promotional/promo_product_banner.png" alt="KALKI product banner" width="70%"><br>
+  <img src="marketing/promotional/promo_linux_banner.png" alt="KALKI Linux banner" width="42%">
+</p>
+
+## Configuration
+
+Copying `app/config.example.py` to `app/config.py` is supported for source development, but the application also provisions a writable configuration path when the installation directory is read-only. Runtime paths are resolved centrally by `app/runtime_paths.py`:
+
+| Platform | User data base directory |
+|---|---|
+| Windows | `%APPDATA%` |
+| macOS | `~/Library/Application Support` |
+| Linux | `$XDG_DATA_HOME` or `~/.local/share` |
+
+The active configuration loads ordinary user preferences from the per-user KALKI directory and retrieves API credentials from the secure vault. Environment variables remain supported for deployment and local development. Keep provider keys, OAuth credentials, tokens, vault files, and personal memory outside version control.
+
+## Architecture
+
+The application consists of a Python standard-library HTTP server, a static dashboard, optional helper processes, a secure vault, and platform adapters. The Windows entry point uses PyWebView and packaged helper executables. The Linux entry point uses `app/linux_launcher.py` to supervise `server.py` and the optional `listener.py`, while opening the static dashboard in the default browser.
+
+```text
+KALKI launcher
+    |
+    +-- first-run setup wizard / headless setup
+    |
+    +-- authenticated localhost server
+    |       |
+    |       +-- static HUD dashboard
+    |       +-- AI provider and workflow routes
+    |       +-- secure vault and per-user runtime data
+    |
+    +-- optional microphone listener
+    +-- platform-specific adapters and guarded system actions
+```
+
+| Path | Purpose |
+|---|---|
+| `app/main_app.py` | Windows desktop entry point; delegates to Linux browser mode on non-Windows systems |
+| `app/linux_launcher.py` | Linux supervisor and browser launcher |
+| `app/server.py` | Local HTTP API, dashboard serving, workflows, TTS, and guarded actions |
+| `app/listener.py` | Optional continuous microphone listener |
+| `app/kalki_setup_wizard.py` | GUI setup wizard and headless-safe setup path |
+| `app/runtime_paths.py` | Shared application, configuration, and user-data path resolution |
+| `app/core/api_vault.py` | Secure credential storage and migration behavior |
+| `app/index.html` | HUD dashboard and browser-side interaction logic |
+| `linux/install.sh` | Linux virtual-environment and desktop-entry installer |
+| `linux/package_linux.sh` | Portable Linux source-release builder |
+| `microsoft_store/release.ps1` | Windows EXE, ZIP, MSIX, and validation pipeline |
+
+## Security model
+
+KALKI is designed for local use and follows a defense-in-depth model. The server uses a per-installation token for privileged requests and rejects unauthenticated access. Browser-origin checks prevent untrusted web pages from calling protected local routes. Credentials are kept out of ordinary configuration exports and are stored through the vault abstraction. Generated host code execution is disabled by default, and system-changing actions are guarded.
+
+The local API should never be exposed through port forwarding, a public reverse proxy, or an untrusted network interface. Treat the token file and runtime data directory as private user data. Before sharing logs or diagnostic archives, remove tokens, credentials, personal memory, task data, and provider responses.
+
+## Testing
+
+The deterministic verification gate can be run from the repository root:
+
+```bash
+python app/verification_sandbox.py --report Output/verification.json
+python -m unittest app/sandbox_tool_test.py
+```
+
+For JavaScript syntax validation, extract each inline script block from `app/index.html` and run `node --check` on the resulting files. The Linux CI workflow performs compilation, dashboard syntax checks, verification tests, tool tests, and Linux archive creation on Ubuntu 24.04.
+
+The v1.3.0 release gates recorded the following results:
+
+| Gate | Result |
+|---|---:|
+| Windows source verification | 9 passed, 0 failed |
+| Windows MSIX validation | 16 passed, 0 warnings, 0 errors |
+| Linux source verification | 9 passed, 0 failed |
+| Linux tool tests | 10/10 passed |
+| Linux headless setup | Passed in a fresh XDG home |
+| Linux first-run launcher | Passed without listener restart loop |
+| Linux TTS state cleanup | Passed under simulated playback failure |
+| Linux package manifest | Passed; no private signing material, caches, bytecode, logs, or mutable data |
+
+A sandbox without a graphical display, physical microphone, or audio device cannot validate human-perceived GUI rendering, microphone capture, or audible playback. Those scenarios require a final acceptance pass on the target workstation.
+
+## Release and CI
+
+The Linux workflow is defined in `.github/workflows/linux.yml`. It validates the source on Ubuntu 24.04 and builds a portable Linux archive. The Windows release workflow is driven by `microsoft_store/release.ps1` and keeps Store packaging separate from optional development signing.
+
+To build the Linux archive locally:
+
+```bash
+chmod +x linux/package_linux.sh
+linux/package_linux.sh
+```
+
+The resulting archive contains the maintained application, Linux installer, documentation, and required assets. It excludes private signing material, runtime data, generated caches, bytecode, logs, and Windows build output.
+
+## Platform boundaries
+
+Some functions are inherently platform-specific and are intentionally guarded rather than falsely advertised as equivalent everywhere. Windows-only integrations include WMI and pycaw hardware/audio control, registry startup, Windows global hotkeys, Windows SAPI, active-browser URL extraction tied to Windows APIs, and Microsoft Store MSIX packaging. Linux users receive capability detection and usable browser or typed workflows when those integrations are unavailable.
+
+## Repository hygiene
+
+Generated environments, downloaded browsers, build trees, packaged executables, MSIX staging files, runtime data, logs, signing certificates, private keys, and release outputs are excluded by `.gitignore`. Only source code, maintained scripts, tests, documentation, and intentional visual assets belong in Git.
+
+## License
+
+KALKI is distributed under the license in [`LICENSE`](LICENSE). Review [`TERMS.md`](TERMS.md) for additional project terms and [`CHANGES.md`](CHANGES.md) for release history.
+
+## References
+
+[1]: https://specifications.freedesktop.org/basedir-spec/latest/ "XDG Base Directory Specification"
+[2]: https://docs.python.org/3/library/venv.html "Python virtual environment documentation"
+[3]: https://docs.github.com/en/actions "GitHub Actions documentation"

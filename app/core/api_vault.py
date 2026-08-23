@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import base64
 import hashlib
@@ -24,7 +25,13 @@ except ImportError:
     HAS_CRYPTO = False
 
 _lock = threading.RLock()
-VAULT_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI")
+if os.name == "nt":
+    _vault_base = os.environ.get("APPDATA") or os.path.expanduser("~\\AppData\\Roaming")
+elif sys.platform == "darwin":
+    _vault_base = os.path.expanduser("~/Library/Application Support")
+else:
+    _vault_base = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+VAULT_DIR = os.path.join(_vault_base, "KALKI")
 VAULT_FILE = os.path.join(VAULT_DIR, "secure_api_vault.enc")
 MASTER_KEY_FILE = os.path.join(VAULT_DIR, "vault_master.key")
 INTEGRITY_FILE = os.path.join(VAULT_DIR, "vault_integrity.sha256")
@@ -39,7 +46,9 @@ def set_master_password(password: str) -> None:
 
 
 def _derive_fernet_key(salt: bytes, password: str) -> bytes:
-    """Derive a 32-byte key for Fernet from the password and salt."""
+    """Derive a Fernet key from a per-entry random salt and master password."""
+    if not password:
+        raise ValueError("vault master password is required")
     hasher = hashlib.sha256()
     hasher.update(password.encode("utf-8") + salt)
     return base64.urlsafe_b64encode(hasher.digest())
@@ -71,20 +80,18 @@ def _encrypt_val(val: Any) -> str:
         except Exception:
             pass
 
-    # 3. Fallback to Fernet with master password or auto-generated key
-    if HAS_CRYPTO:
+    # 3. Password-based fallback requires an explicit master password and a
+    # fresh random salt for every value. Never silently store plaintext.
+    if HAS_CRYPTO and _master_password:
         try:
-            salt = b"kalki_default_salt_123"
-            pw = _master_password or "kalki_local_fallback_pw_default"
-            key = _derive_fernet_key(salt, pw)
-            f = Fernet(key)
-            encrypted = f.encrypt(val.encode("utf-8"))
-            return "AES:" + encrypted.decode()
+            salt = os.urandom(16)
+            key = _derive_fernet_key(salt, _master_password)
+            encrypted = Fernet(key).encrypt(val.encode("utf-8"))
+            return "FERNET:" + base64.b64encode(salt).decode() + ":" + encrypted.decode()
         except Exception:
             pass
 
-    # 4. Final insecure fallback if absolutely nothing works (should never happen)
-    return "PLAIN:" + val
+    raise RuntimeError("secure vault storage is unavailable; refusing to store secret")
 
 
 def _decrypt_val(enc_str: str) -> str:
@@ -108,20 +115,29 @@ def _decrypt_val(enc_str: str) -> str:
         except Exception:
             pass
 
-    if enc_str.startswith("AES:") and HAS_CRYPTO:
+    if enc_str.startswith("FERNET:") and HAS_CRYPTO and _master_password:
         try:
-            salt = b"kalki_default_salt_123"
-            pw = _master_password or "kalki_local_fallback_pw_default"
-            key = _derive_fernet_key(salt, pw)
-            f = Fernet(key)
-            return f.decrypt(enc_str[4:].encode()).decode("utf-8")
+            _, salt_b64, ciphertext = enc_str.split(":", 2)
+            salt = base64.b64decode(salt_b64)
+            key = _derive_fernet_key(salt, _master_password)
+            return Fernet(key).decrypt(ciphertext.encode()).decode("utf-8")
         except Exception:
             pass
 
-    if enc_str.startswith("PLAIN:"):
-        return enc_str[6:]
+    # Legacy AES entries can be read only when the user supplied the old
+    # master password; new writes never use this deterministic format.
+    if enc_str.startswith("AES:") and HAS_CRYPTO and _master_password:
+        try:
+            key = _derive_fernet_key(b"kalki_default_salt_123", _master_password)
+            return Fernet(key).decrypt(enc_str[4:].encode()).decode("utf-8")
+        except Exception:
+            pass
 
-    return enc_str
+    # Plaintext legacy values are intentionally not returned.
+    if enc_str.startswith("PLAIN:"):
+        return ""
+
+    return ""
 
 
 def _load_vault() -> Dict[str, str]:

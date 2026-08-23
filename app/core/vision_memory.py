@@ -38,31 +38,32 @@ def _vision_loop():
                 # 3. Store in semantic memory with timestamp tag
                 now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 memory_text = f"[SCREENSHOT {now_str}]\n{text}"
-                semantic_memory.add_memory(memory_text, source="vision")
+                semantic_memory.memory.add_memory(memory_text, tags=["vision"], memory_type="vision")
                 
                 # 4. Cleanup old memories based on retention policy
                 retention_days = getattr(config, "VISION_RETENTION_DAYS", 7)
                 cutoff = datetime.datetime.now() - datetime.timedelta(days=retention_days)
                 
-                # Find and remove vision nodes older than cutoff
+                # Find and remove vision nodes older than cutoff using the
+                # instance-level API and lock exposed by SemanticMemory.
                 with semantic_memory._lock:
-                    memories = semantic_memory._load()
+                    memories = semantic_memory.memory.documents
                     to_keep = []
                     for m in memories:
-                        if m.get("source") == "vision":
+                        if m.get("type") == "vision":
                             try:
-                                # Extract timestamp
                                 ts_str = m["text"].split("]")[0].replace("[SCREENSHOT ", "")
                                 ts = datetime.datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S")
                                 if ts >= cutoff:
                                     to_keep.append(m)
-                            except:
+                            except Exception:
                                 to_keep.append(m)
                         else:
                             to_keep.append(m)
                     
                     if len(to_keep) < len(memories):
-                        semantic_memory._save(to_keep)
+                        semantic_memory.memory.documents = to_keep
+                        semantic_memory.memory._save()
                         
         except Exception as e:
             # Log error but don't spam. Wait next interval.
