@@ -6,17 +6,16 @@
 
 import os
 import json
+from runtime_paths import prepare_runtime
 
-CURRENT_VERSION = "v1.2.1"
+CURRENT_VERSION = "v1.3.0"
 
 # ── INTERNAL PATHS (do not change) ───────────────────────────
 # Where the Setup Wizard and hardware auto-detect persist their own data.
-# Keep this in sync with USER_DATA_DIR in main_app.py / kalki_setup_wizard.py —
-# without this, server.py's hardware-profile save falls back to a different,
-# unused path and never actually lines up with what the wizard writes.
-_USER_CONFIG_PATH = os.path.join(
-    os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "user_config.json"
-)
+# Keep this in sync with USER_DATA_DIR in main_app.py / kalki_setup_wizard.py.
+# The resolver uses APPDATA on Windows, Application Support on macOS, and
+# XDG_DATA_HOME (or ~/.local/share) on Linux.
+_USER_CONFIG_PATH = os.path.join(prepare_runtime().user_data_dir, "user_config.json")
 
 # ── GROQ AI (required for the LLM brain) ────────────────────
 # Get a free key at https://console.groq.com
@@ -35,14 +34,11 @@ OWNER_STATE   = "YourState"
 OWNER_COUNTRY = "YourCountry"
 
 # ── VOICE (edge-tts) ────────────────────────────────────────
-# Default to Edge TTS for fastest local-feeling playback. Groq TTS is available
-# as an opt-in provider, but it has a short timeout and falls back to Edge.
-TTS_PROVIDER = "edge"             # edge | groq
+# Edge neural TTS is the single supported voice path in the desktop build so
+# modes and notifications never switch to a different assistant identity.
+TTS_PROVIDER = "edge"
 TTS_GROQ_TIMEOUT_SEC = 3
-# Most human / least robotic: en-US-BrianMultilingualNeural (default),
-#   en-US-AndrewMultilingualNeural — newest neural models, very natural.
-# British butler (JARVIS vibe): en-GB-RyanNeural, en-GB-ThomasNeural
-# Other US males: en-US-GuyNeural, en-US-TonyNeural (deep)
+# Stable British-English neural voice used everywhere.
 TTS_VOICE  = "en-GB-RyanNeural"
 TTS_RATE   = "+0%"                # +N% faster, -N% slower
 TTS_PITCH  = "+0Hz"               # +/-N Hz to shift pitch
@@ -61,6 +57,8 @@ GROQ_MODEL  = "llama-3.3-70b-versatile"   # smart default
 OLLAMA_URL  = "http://localhost:11434"     # used only if Groq fails
 MAX_HISTORY = 20
 REQUIRE_DANGEROUS_CONFIRMATION = True
+# Direct host execution is disabled by default; use an isolated runner instead.
+ALLOW_HOST_CODE_EXECUTION = False
 LOG_TRANSCRIPTS = False
 
 # Personality seasoning. Keep these low so KALKI feels personal, not noisy.

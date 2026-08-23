@@ -164,7 +164,7 @@ TOOLS_SCHEMA = [
         "type": "function",
         "function": {
             "name": "system_control",
-            "description": "Controls the Windows operating system (lock screen, sleep, restart, shutdown, volume, brightness, media playback, kill process, battery status, open apps). For sleep/restart/shutdown this only queues the action — it still requires the user to say 'confirm' before anything actually happens.",
+            "description": "Controls the Windows operating system. Lock, sleep, restart, shutdown, process termination, and other high-impact actions always require an explicit confirmation in the KALKI UI before execution.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -240,7 +240,7 @@ TOOLS_SCHEMA = [
         "type": "function",
         "function": {
             "name": "create_routine",
-            "description": "Creates a new custom voice routine/mode for KALKI. Parses user instructions into a list of actions.",
+            "description": "Creates a new custom voice routine/mode for KALKI. Destructive actions are confirmation-gated, and raw shell execution is disabled unless an isolated development runner is explicitly enabled.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -254,7 +254,7 @@ TOOLS_SCHEMA = [
                             "type": "array",
                             "items": {"type": "string"}
                         },
-                        "description": "List of actions. Each action is a tuple/list: [action_name, arg1, arg2]. Valid actions: open_app (arg: app_name), open_url (arg: url), set_volume (arg: 0-100), kill_app (arg: app_name), run_cmd (arg: cmd), lock_pc, speak (arg: text)."
+                        "description": "List of actions. Each action is a tuple/list: [action_name, arg1, arg2]. Valid actions: open_app (arg: app_name), open_url (arg: url), set_volume (arg: 0-100), kill_app (arg: app_name), lock_pc, speak (arg: text). Raw run_cmd is disabled in production."
                     },
                     "aliases": {
                         "type": "array",

@@ -1,4 +1,12 @@
-# 🚀 KALKI v1.2.7 — Multi-Mode Sound Engine & Bug Fixes
+# 🚀 KALKI v1.3.0 — Stability, Consistent Voice, and Professional Desktop UX
+
+## ✦ v1.3.0 Stability and Professional UX Release
+
+KALKI 1.3.0 prioritizes a responsive desktop shell and a consistent assistant identity. Service startup no longer blocks the first UI paint while waiting for the local server or listener, the desktop close callback no longer re-enters the PyWebView message loop, and the launcher now verifies its runtime imports before packaging.
+
+The voice path is now deliberately consistent: Edge neural TTS uses `en-GB-RyanNeural` with neutral rate, pitch, and volume in every mode and notification. Mode profiles no longer change the assistant’s voice identity. The dashboard uses the supplied KALKI eye background as its visual presence layer, removes the heavy center orb animation, adds lightweight bounded waveform rendering, supports full-screen and minimize controls, and adds an explicit close control for the frameless window.
+
+The release pipeline produces a GitHub-ready portable ZIP and a Microsoft Store-ready MSIX, validates the manifest and assets, and writes SHA-256 checksums. The MSIX is unsigned for Store submission unless `-SignDevelopment` is explicitly used with a local development certificate.
 
 ## 🔥 v1.2.7 Patch Notes
 

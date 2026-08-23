@@ -7,16 +7,16 @@
   IgnorableNamespaces="uap rescap desktop">
 
   <!--
-    ╔══════════════════════════════════════════════════════════════╗
-    ║  PARTNER CENTER PRODUCT IDENTITY                            ║
-    ║  Replace the 3 PLACEHOLDER values below with the real       ║
-    ║  values from Partner Center → Product Identity page.        ║
-    ╚══════════════════════════════════════════════════════════════╝
+    â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—
+    â•‘  PARTNER CENTER PRODUCT IDENTITY                            â•‘
+    â•‘  Replace the 3 PLACEHOLDER values below with the real       â•‘
+    â•‘  values from Partner Center â†’ Product Identity page.        â•‘
+    â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   -->
   <Identity
     Name="MaherBhatt.Kalki"
     Publisher="CN=5077752A-5182-4523-A5DB-4EBB2626926D"
-    Version="1.2.7.0"
+    Version="1.3.0.0"
     ProcessorArchitecture="x64" />
 
   <Properties>

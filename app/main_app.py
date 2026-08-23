@@ -4,13 +4,15 @@ import sys
 import json
 import time
 import subprocess
-import webview
 import psutil
 from runtime_paths import prepare_runtime
 
 _runtime = prepare_runtime()
 
 import config
+import runtime_security
+runtime_security.TOKEN_PATH = os.path.join(_runtime.user_data_dir, "data", "api_token.txt")
+
 
 def add_to_startup():
     if sys.platform != 'win32':
@@ -86,53 +88,100 @@ def kill_process_tree(pid):
 
 server_process = None
 listener_process = None
+server_ready = None
+_allow_window_close = False
 
 def start_services():
-    global server_process, listener_process
-    
+    """Start helpers without blocking the desktop GUI before first paint."""
+    global server_process, listener_process, server_ready
+    server_ready = threading.Event()
     server_cmd = get_exe_path("KALKI_Server")
     listener_cmd = get_exe_path("KALKI_Listener")
-    
     flags = subprocess.CREATE_NO_WINDOW if getattr(sys, "frozen", False) else 0
     shell = not getattr(sys, "frozen", False)
-    
-    print("Starting KALKI Server...")
     os.environ["KALKI_DESKTOP_MODE"] = "1"
+
+    print("Starting KALKI Server...")
     try:
         server_process = subprocess.Popen(server_cmd, shell=shell, creationflags=flags)
     except (FileNotFoundError, OSError) as e:
         print(f"[KALKI] Failed to start server: {e}")
         server_process = None
-    
-    print("Waiting for server to bind to port...")
-    import socket
-    start_time = time.time()
-    while time.time() - start_time < 20:  # 20 seconds max timeout
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            if sock.connect_ex(('127.0.0.1', config.PORT)) == 0:
-                print(f"Server is up and listening on {config.PORT}!")
-                break
-        time.sleep(0.5)
-    else:
-        print("WARNING: Server did not start listening in time!")    
-    print("Starting KALKI Listener...")
-    try:
-        listener_process = subprocess.Popen(listener_cmd, shell=shell, creationflags=flags)
-    except (FileNotFoundError, OSError) as e:
-        print(f"[KALKI] Failed to start listener: {e}")
-        listener_process = None
+
+    def start_listener_when_ready():
+        nonlocal listener_cmd, shell, flags
+        import socket
+        deadline = time.time() + 12
+        while time.time() < deadline:
+            try:
+                with socket.create_connection(("127.0.0.1", config.PORT), timeout=0.4):
+                    print(f"Server is up and listening on {config.PORT}!")
+                    server_ready.set()
+                    break
+            except OSError:
+                time.sleep(0.25)
+        else:
+            print("WARNING: Server did not start listening in time; opening UI anyway.")
+        global listener_process
+        print("Starting KALKI Listener...")
+        try:
+            listener_process = subprocess.Popen(listener_cmd, shell=shell, creationflags=flags)
+        except (FileNotFoundError, OSError) as e:
+            print(f"[KALKI] Failed to start listener: {e}")
+            listener_process = None
+
+    threading.Thread(target=start_listener_when_ready, name="kalki-service-wait", daemon=True).start()
+    threading.Thread(target=_supervise_services, name="kalki-service-supervisor", daemon=True).start()
+
+
+def _supervise_services():
+    """Keep the local helpers alive without blocking the desktop UI."""
+    global server_process, listener_process
+    time.sleep(15)
+    while True:
+        try:
+            if server_process is not None and server_process.poll() is not None:
+                print("[KALKI] server stopped; restarting it")
+                server_process = subprocess.Popen(
+                    get_exe_path("KALKI_Server"),
+                    shell=not getattr(sys, "frozen", False),
+                    creationflags=subprocess.CREATE_NO_WINDOW if getattr(sys, "frozen", False) else 0,
+                )
+                time.sleep(3)
+            listen_mode = (getattr(config, "LISTEN_MODE", "always") or "always").lower()
+            if (listener_process is not None and listener_process.poll() is not None
+                    and listen_mode == "always"):
+                print("[KALKI] listener stopped; retrying in 10 seconds")
+                time.sleep(10)
+                listener_process = subprocess.Popen(
+                    get_exe_path("KALKI_Listener"),
+                    shell=not getattr(sys, "frozen", False),
+                    creationflags=subprocess.CREATE_NO_WINDOW if getattr(sys, "frozen", False) else 0,
+                )
+        except Exception as exc:
+            print(f"[KALKI] service supervisor warning: {exc}")
+        time.sleep(5)
 
 import threading
-import pystray
-from PIL import Image
+try:
+    import pystray
+except Exception:
+    pystray = None
+try:
+    from PIL import Image
+except Exception:
+    Image = None
 
 def get_icon_image():
+    if Image is None:
+        return None
     # Attempt to load the actual icon, fallback to a simple colored square if missing
     icon_path = os.path.join(BASE_DIR, "assets", "kalki_icon.ico")
     if os.path.exists(icon_path):
         try:
             return Image.open(icon_path)
-        except: pass
+        except Exception:
+            pass
     return Image.new('RGB', (64, 64), color=(10, 10, 10))
 
 window = None
@@ -143,6 +192,8 @@ def show_window(icon, item):
         window.show()
 
 def quit_app(icon, item):
+    global _allow_window_close
+    _allow_window_close = True
     icon.stop()
     if window:
         window.destroy()
@@ -156,6 +207,9 @@ def quit_app(icon, item):
 
 def setup_tray():
     global tray
+    if pystray is None or Image is None:
+        print("System tray integration unavailable on this platform.")
+        return
     image = get_icon_image()
     menu = pystray.Menu(
         pystray.MenuItem("Open KALKI", show_window, default=True),
@@ -179,13 +233,19 @@ def acquire_single_instance():
         return True
 
 def on_closing():
-    print("Window close requested. Hiding to system tray instead...")
-    # Do not call a native window method from PyWebView's closing callback.
-    # On the Edge/WinForms backend that can re-enter the Windows message loop
-    # and leave the application marked as "Not responding".  Let the close
-    # notification return first, then hide the window on the next tick.
-    threading.Timer(0.05, window.hide).start()
-    return False  # Prevent the window from actually being destroyed
+    """Hide the window instead of killing background listening and services."""
+    global _allow_window_close
+    if _allow_window_close:
+        return True
+    try:
+        if window:
+            window.hide()
+            print("KALKI hidden to the tray; background services remain active.")
+            return False
+    except Exception as exc:
+        print(f"Could not hide KALKI window: {exc}")
+    _allow_window_close = True
+    return True
 
 def restore_existing_instance():
     try:
@@ -243,6 +303,10 @@ def global_hotkey_listener(window_obj):
     except Exception as e:
         print(f"Hotkey listener error: {e}")
 
+if __name__ == '__main__' and sys.platform != 'win32':
+    from linux_launcher import main as _linux_main
+    raise SystemExit(_linux_main())
+
 if __name__ == '__main__':
     _lock = acquire_single_instance()
     if _lock is None:
@@ -267,8 +331,11 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"Error checking startup configuration: {e}")
     
-    # 2. Start background services
+    # 2. Start background services. Wait only briefly so the first paint is
+    # not held hostage by a slow provider import or a broken helper.
     start_services()
+    if server_ready is not None:
+        server_ready.wait(timeout=3.0)
     
     # 3. Open Native Application Window
     print("Opening KALKI Desktop Interface...")
@@ -281,18 +348,44 @@ if __name__ == '__main__':
         def toggle_maximize(self):
             if self.window: self.window.toggle_fullscreen()
         def close(self):
-            if self.window: self.window.destroy()
+            # The HUD close button is a background/minimize action. The tray
+            # Quit command is the explicit full-process exit path.
+            if self.window:
+                self.window.hide()
+        def say_text(self, text):
+            """Speak a short UI-triggered command without exposing a shell bridge."""
+            import urllib.request
+            import json as _json
+            payload = _json.dumps({"cmd": str(text or "")}).encode("utf-8")
+            request = urllib.request.Request(
+                f"http://127.0.0.1:{config.PORT}/api/command",
+                data=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    runtime_security.TOKEN_HEADER: runtime_security.get_api_token(),
+                },
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(request, timeout=5):
+                    return True
+            except Exception as exc:
+                print(f"[KALKI] quick action failed: {exc}")
+                return False
             
     api = WebApi()
-    
+
+    import webview
     window = webview.create_window(
         title='KALKI AI Assistant', 
         url=f'http://127.0.0.1:{config.PORT}',
-        width=1280, 
-        height=800,
-        min_size=(800, 600),
-        background_color='#121212',
+        width=1440,
+        height=900,
+        min_size=(960, 680),
+        background_color='#f4ecdf',
+        resizable=True,
         frameless=True,
+        easy_drag=False,
         js_api=api
     )
     api.window = window

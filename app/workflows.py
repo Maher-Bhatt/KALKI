@@ -300,8 +300,16 @@ def run_mode(mode_name, *, speak_fn=None, set_volume_fn=None,
                 log.append(f"state set to {args[0]}")
                 
             elif action == "run_cmd":
-                subprocess.Popen(args[0], shell=True)
-                log.append(f"ran command {args[0][:20]}")
+                try:
+                    import config
+                    enabled = bool(getattr(config, "ALLOW_HOST_CODE_EXECUTION", False))
+                except Exception:
+                    enabled = False
+                if not enabled:
+                    log.append("blocked raw command: host execution is disabled")
+                else:
+                    subprocess.Popen(args[0], shell=True)
+                    log.append(f"ran command {args[0][:20]}")
 
             else:
                 log.append(f"unknown action {action}")

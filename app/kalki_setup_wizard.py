@@ -5,8 +5,25 @@ import json
 import shutil
 import webbrowser
 import subprocess
-import customtkinter as ctk
-from tkinter import messagebox
+try:
+    import customtkinter as ctk
+    from tkinter import messagebox
+    _GUI_AVAILABLE = True
+except (ImportError, ModuleNotFoundError):
+    _GUI_AVAILABLE = False
+    messagebox = None
+    class _HeadlessThemeManager:
+        theme = {name: {} for name in ("CTk", "CTkToplevel", "CTkFrame", "CTkButton", "CTkLabel", "CTkEntry", "CTkCheckBox", "CTkOptionMenu", "CTkSegmentedButton", "CTkProgressBar", "CTkScrollableFrame")}
+    class _HeadlessCTK:
+        ThemeManager = _HeadlessThemeManager
+        CTk = object
+        @staticmethod
+        def set_appearance_mode(_mode):
+            pass
+        @staticmethod
+        def set_default_color_theme(_theme):
+            pass
+    ctk = _HeadlessCTK()
 from runtime_paths import prepare_runtime
 
 _runtime = prepare_runtime()
@@ -132,6 +149,46 @@ def _apply_to_config_py(updates: dict) -> None:
         f.write(text)
 
 
+def run_headless_setup() -> int:
+    """Create a safe quick configuration when no graphical display exists."""
+    values = {
+        "OWNER_NAME": os.environ.get("KALKI_OWNER_NAME", "User"),
+        "OWNER_TITLE": os.environ.get("KALKI_OWNER_TITLE", "Sir"),
+        "OWNER_CITY": os.environ.get("KALKI_OWNER_CITY", ""),
+        "OWNER_STATE": os.environ.get("KALKI_OWNER_STATE", ""),
+        "OWNER_COUNTRY": os.environ.get("KALKI_OWNER_COUNTRY", ""),
+        "PERSONALITY_SPICE": "professional",
+        "TTS_PROVIDER": "edge",
+        "TTS_VOICE": "en-GB-RyanNeural",
+        "TTS_RATE": "+0%",
+        "TTS_PITCH": "+0Hz",
+        "TTS_VOLUME": "+0%",
+        # A headless install must never pretend a microphone is available.
+        "LISTEN_MODE": os.environ.get("KALKI_LISTEN_MODE", "push").lower(),
+        "VISION_RECALL_ENABLED": True,
+        "VISION_RETENTION_DAYS": 30,
+    }
+    os.makedirs(USER_DATA_DIR, exist_ok=True)
+    persisted = dict(values)
+    try:
+        with open(_USER_CONFIG_PATH, "w", encoding="utf-8") as handle:
+            json.dump(persisted, handle, indent=4)
+        _apply_to_config_py(persisted)
+    except (OSError, PermissionError) as exc:
+        print(f"KALKI setup could not persist settings: {exc}", file=sys.stderr)
+        return 1
+    marker_path = os.path.join(USER_DATA_DIR, "setup_complete.marker")
+    try:
+        with open(marker_path, "w", encoding="utf-8") as handle:
+            handle.write("Setup complete (headless)")
+    except OSError as exc:
+        print(f"KALKI setup could not create the completion marker: {exc}", file=sys.stderr)
+        return 1
+    print(f"KALKI headless setup complete. Settings: {_USER_CONFIG_PATH}")
+    print("Microphone listening defaults to push-to-talk; add PyAudio and set LISTEN_MODE=always to enable continuous listening.")
+    return 0
+
+
 class KalkiSetupWizard(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -239,7 +296,7 @@ class KalkiSetupWizard(ctk.CTk):
         # Step 0: Welcome
         f0 = ctk.CTkFrame(self.main_container, fg_color="transparent")
         ctk.CTkLabel(f0, text="Welcome to KALKI", font=ctk.CTkFont(size=30, weight="bold")).pack(pady=(28, 8))
-        ctk.CTkLabel(f0, text="Your personal AI assistant for Windows.", font=ctk.CTkFont(size=15)).pack(pady=(0, 8))
+        ctk.CTkLabel(f0, text="Your personal AI assistant for Windows, Linux, and macOS.", font=ctk.CTkFont(size=15)).pack(pady=(0, 8))
         ctk.CTkLabel(f0, text="Start in seconds with the included managed AI. You can connect your own providers and services later in Settings.", font=ctk.CTkFont(size=12), text_color="#aeb4bd", wraplength=440, justify="center").pack(pady=(0, 22))
         
         btn_quick = ctk.CTkButton(
@@ -300,17 +357,17 @@ class KalkiSetupWizard(ctk.CTk):
         voice_frame.pack(fill="x", pady=5)
         ctk.CTkLabel(voice_frame, text="Voice:", width=170, anchor="w").pack(side="left")
         self.voice_options = {
-            "Brian (US, natural male — default)": "en-US-BrianMultilingualNeural",
-            "Andrew (US, natural male, newer)": "en-US-AndrewMultilingualNeural",
-            "Ryan (British, JARVIS-style butler)": "en-GB-RyanNeural",
-            "Thomas (British, formal butler)": "en-GB-ThomasNeural",
+            "Ryan (British, stable KALKI voice)": "en-GB-RyanNeural",
+            "Brian (US, natural male)": "en-US-BrianMultilingualNeural",
+            "Andrew (US, natural male)": "en-US-AndrewMultilingualNeural",
+            "Thomas (British, formal)": "en-GB-ThomasNeural",
             "Guy (US, standard male)": "en-US-GuyNeural",
             "Tony (US, deep male)": "en-US-TonyNeural",
         }
-        current_voice = self.config_data.get("TTS_VOICE", "en-US-BrianMultilingualNeural")
+        current_voice = self.config_data.get("TTS_VOICE", "en-GB-RyanNeural")
         current_voice_label = next(
             (label for label, val in self.voice_options.items() if val == current_voice),
-            "Brian (US, natural male — default)",
+            "Ryan (British, stable KALKI voice)",
         )
         self.voice_var = ctk.StringVar(value=current_voice_label)
         ctk.CTkOptionMenu(voice_frame, values=list(self.voice_options.keys()),
@@ -488,10 +545,10 @@ class KalkiSetupWizard(ctk.CTk):
         cflags = subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0
         if getattr(sys, 'frozen', False):
             exe_map = {
-                "setup_google": "KALKI_Setup_Google.exe",
-                "setup_spotify": "KALKI_Setup_Spotify.exe"
+                "setup_google": f"KALKI_Setup_Google{'.exe' if os.name == 'nt' else ''}",
+                "setup_spotify": f"KALKI_Setup_Spotify{'.exe' if os.name == 'nt' else ''}"
             }
-            exe_name = exe_map.get(script_name, f"{script_name}.exe")
+            exe_name = exe_map.get(script_name, f"{script_name}{'.exe' if os.name == 'nt' else ''}")
             tool_dirs = {
                 "setup_google": "setup_google",
                 "setup_spotify": "setup_spotify",
@@ -516,7 +573,7 @@ class KalkiSetupWizard(ctk.CTk):
             "OWNER_COUNTRY": self.country_entry.get(),
             "MANAGED_AI_ENABLED": self.managed_ai_var.get(),
             "GROQ_API_KEY": self.groq_entry.get().strip(),
-            "TTS_VOICE": self.voice_options.get(self.voice_var.get(), "en-US-BrianMultilingualNeural"),
+            "TTS_VOICE": self.voice_options.get(self.voice_var.get(), "en-GB-RyanNeural"),
             "LISTEN_MODE": self.listen_mode_var.get(),
             "PERSONALITY_SPICE": self.spice_var.get(),
             "EMAIL_ADDRESS": self.email_entry.get(),
@@ -574,7 +631,7 @@ class KalkiSetupWizard(ctk.CTk):
         
         main_script = os.path.join(BASE_DIR, "main_app.py")
         if getattr(sys, 'frozen', False):
-            target = os.path.join(BASE_DIR, "KALKI.exe")
+            target = os.path.join(BASE_DIR, "KALKI.exe" if os.name == "nt" else "KALKI")
             if os.path.exists(target):
                 subprocess.Popen([target])
         else:
@@ -583,5 +640,9 @@ class KalkiSetupWizard(ctk.CTk):
 
 
 if __name__ == "__main__":
+    force_headless = "--headless" in sys.argv
+    display_available = bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+    if force_headless or not _GUI_AVAILABLE or (os.name != "nt" and not display_available):
+        raise SystemExit(run_headless_setup())
     app = KalkiSetupWizard()
     app.mainloop()

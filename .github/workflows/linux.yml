@@ -1,0 +1,71 @@
+name: Linux compatibility and release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: app/requirements-linux.txt
+
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg espeak-ng portaudio19-dev python3-tk
+
+      - name: Install Python dependencies
+        run: python -m pip install -r app/requirements-linux.txt
+
+      - name: Compile Python sources
+        run: python -m compileall -q app
+
+      - name: Validate dashboard JavaScript
+        shell: bash
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          html = Path('app/index.html').read_text(encoding='utf-8')
+          blocks = re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>', html)
+          for index, block in enumerate(blocks, 1):
+              Path(f'/tmp/kalki-ui-{index}.js').write_text(block, encoding='utf-8')
+          print(f'validated {len(blocks)} script blocks for node --check')
+          PY
+          for file in /tmp/kalki-ui-*.js; do node --check "$file"; done
+
+      - name: Run project verification and tool tests
+        working-directory: app
+        run: |
+          python verification_sandbox.py --report ../Output/verification_linux_ci.json
+          python -m unittest sandbox_tool_test.py
+
+      - name: Build Linux source release
+        run: |
+          chmod +x linux/package_linux.sh
+          linux/package_linux.sh "${RUNNER_TEMP}/kalki-linux-release"
+
+      - name: Upload Linux release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kalki-linux-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/kalki-linux-release/*.tar.gz
+            ${{ runner.temp }}/kalki-linux-release/SHA256SUMS.txt

@@ -13,16 +13,19 @@ import json
 import urllib.request
 from datetime import datetime
 
+import runtime_security
+
 from runtime_paths import prepare_runtime
 
 _runtime = prepare_runtime()
+runtime_security.TOKEN_PATH = os.path.join(_runtime.user_data_dir, "data", "api_token.txt")
 BASE_DIR = _runtime.app_root
 ENTRY_DIR = _runtime.entry_dir
 
 import config
 
 is_store = os.path.exists(os.path.join(BASE_DIR, "store_build.txt"))
-_data_dir = os.path.join(_runtime.user_data_dir, "data") if is_store else os.path.join(BASE_DIR, "data")
+_data_dir = os.path.join(_runtime.user_data_dir, "data") if (is_store or sys.platform != "win32") else os.path.join(BASE_DIR, "data")
 LOG_PATH = os.path.join(_data_dir, "listener.log")
 os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
 
@@ -64,7 +67,10 @@ def _post(endpoint, body=None, timeout=15):
         req = urllib.request.Request(
             f"{SERVER}{endpoint}",
             data=data,
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                runtime_security.TOKEN_HEADER: runtime_security.get_api_token(),
+            },
             method="POST",
         )
         with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -104,7 +110,11 @@ _last_speaking_start = 0
 def _status():
     global LAST_STATUS
     try:
-        with urllib.request.urlopen(f"{SERVER}/api/status", timeout=2) as r:
+        request = urllib.request.Request(
+            f"{SERVER}/api/status",
+            headers={runtime_security.TOKEN_HEADER: runtime_security.get_api_token()},
+        )
+        with urllib.request.urlopen(request, timeout=2) as r:
             data = json.loads(r.read())
             if isinstance(data, dict):
                 LAST_STATUS = data
@@ -146,7 +156,10 @@ def post_mic_state(muted: bool):
         data = json.dumps({"muted": muted}).encode("utf-8")
         req = urllib.request.Request(
             SERVER + "/api/listener_state", data=data,
-            headers={"Content-Type": "application/json"}, method="POST"
+            headers={
+                "Content-Type": "application/json",
+                runtime_security.TOKEN_HEADER: runtime_security.get_api_token(),
+            }, method="POST"
         )
         urllib.request.urlopen(req, timeout=2)
     except Exception:
@@ -155,7 +168,11 @@ def post_mic_state(muted: bool):
 
 def server_alive():
     try:
-        urllib.request.urlopen(f"{SERVER}/api/health", timeout=2).read()
+        request = urllib.request.Request(
+            f"{SERVER}/api/health",
+            headers={runtime_security.TOKEN_HEADER: runtime_security.get_api_token()},
+        )
+        urllib.request.urlopen(request, timeout=2).read()
         return True
     except Exception:
         return False

@@ -15,20 +15,16 @@ import socket
 import threading
 import ssl
 
-# Compatibility mode: some packaged Windows installs cannot locate a usable
-# certificate store, which prevents TTS and provider requests from responding.
-# Keep this global override because the app's integrations share urllib.
-try:
-    ssl.create_default_context = ssl._create_unverified_context
-    ssl._create_default_https_context = ssl._create_unverified_context
-except AttributeError:
-    pass
+# Keep the platform certificate store and hostname verification enabled for
+# every provider, OAuth, and telemetry request. If a packaged installation
+# cannot locate certificates, surface that error instead of weakening TLS.
 import subprocess
 import urllib.request
 import urllib.parse
 import urllib.error
 import webbrowser
 import tempfile
+import shutil
 import asyncio
 import ctypes
 from datetime import datetime
@@ -57,7 +53,7 @@ for _k, _v in api_vault.list_secrets().items():
         setattr(config, _k, _v)
 
 _CONFIG_DEFAULTS = {
-    "CURRENT_VERSION": "v1.2.1",
+    "CURRENT_VERSION": getattr(config, "CURRENT_VERSION", "v1.3.0"),
     "TTS_PROVIDER": "edge",
     "TTS_GROQ_TIMEOUT_SEC": 3,
     "TTS_VOICE": "en-GB-RyanNeural",
@@ -153,10 +149,11 @@ if _sandbox_data_dir:
     # The verification sandbox must never alter a user's real memories,
     # settings, backups, or task files.
     DATA_DIR = os.path.abspath(_sandbox_data_dir)
-elif _is_store:
-    DATA_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "data")
 else:
-    DATA_DIR = os.path.join(APP_ROOT, "data")
+    # All normal builds use the per-user runtime directory. Keeping mutable
+    # state outside the source/install tree prevents app updates, parallel
+    # instances, and antivirus scans from locking the project files.
+    DATA_DIR = os.path.join(_runtime.user_data_dir, "data")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -181,6 +178,12 @@ notesmod.NOTES_PATH = os.path.join(DATA_DIR, "notes.json")
 webscan.SCANS_DIR = os.path.join(DATA_DIR, "scans")
 watchdog.WATCHLIST_PATH = os.path.join(DATA_DIR, "watchlist.json")
 deepscan.SCANS_DIR = os.path.join(DATA_DIR, "scans")
+# All privileged state and API authentication live in the same writable runtime
+# directory in both source and Store builds.
+runtime_security.TOKEN_PATH = os.path.join(DATA_DIR, "api_token.txt")
+API_TOKEN = runtime_security.get_api_token()
+workflows.CUSTOM_ROUTINES_PATH = os.path.join(DATA_DIR, "custom_routines.json")
+workflows.load_custom_routines()
 
 
 def log(msg):
@@ -306,6 +309,8 @@ STATE = {
     "joke_offer_pending": False,
     "mood_aggressive": False,
     "mood_aggressive_streak": 0,
+    "focus_until": 0.0,
+    "focus_minutes": 25,
 }
 
 _pending_lock = threading.Lock()
@@ -722,8 +727,10 @@ def _tts_output_device():
 
 
 def _tts_provider():
-    provider = str(getattr(config, "TTS_PROVIDER", "edge") or "edge").strip().lower()
-    return provider if provider in ("edge", "groq") else "edge"
+    # KALKI deliberately keeps one reply voice across chat, notifications,
+    # workflows, and voice commands. Groq voice is not selected here because
+    # it can use a different voice identity from the configured Ryan voice.
+    return "edge"
 
 
 def _groq_tts_available():
@@ -746,11 +753,13 @@ def _build_edge_tts_file(text):
     if sys.platform == 'win32':
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         
-    profile = workflows.get_mode_audio_profile() if hasattr(workflows, "get_mode_audio_profile") else None
-    voice = getattr(config, "TTS_VOICE", "en-GB-RyanNeural")
-    rate = (profile.get("rate") if profile else None) or getattr(config, "TTS_RATE", "+0%")
-    volume = (profile.get("volume") if profile else None) or getattr(config, "TTS_VOLUME", "+0%")
-    pitch = (profile.get("pitch") if profile else None) or getattr(config, "TTS_PITCH", "+0Hz")
+    # One voice identity and one neutral delivery across every mode. Mode
+    # changes may alter UI color/status, but never make KALKI sound like a
+    # different assistant.
+    voice = "en-GB-RyanNeural"
+    rate = getattr(config, "TTS_RATE", "+0%")
+    volume = getattr(config, "TTS_VOLUME", "+0%")
+    pitch = getattr(config, "TTS_PITCH", "+0Hz")
     return asyncio.run(_speak_async(
         text,
         voice,
@@ -800,6 +809,53 @@ def _build_tts_file(text):
             STATE["last_tts_error"] = f"Groq TTS failed, falling back to Edge: {e}"
             log(STATE["last_tts_error"])
     return _build_edge_tts_file(text), "edge"
+
+
+def _play_audio_file_linux(path: str) -> None:
+    """Play an Edge-generated MP3 through a desktop Linux player."""
+    if os.name == "nt":
+        raise RuntimeError("Linux audio fallback is not available on Windows")
+    for command, args in (
+        ("ffplay", ["-nodisp", "-autoexit", "-loglevel", "quiet"]),
+        ("mpv", ["--no-video", "--really-quiet"]),
+        ("mpg123", ["-q"]),
+    ):
+        executable = shutil.which(command)
+        if not executable:
+            continue
+        subprocess.run(
+            [executable, *args, path],
+            check=True,
+            timeout=45,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return
+    raise RuntimeError("No Linux MP3 player found; install ffmpeg, mpv, or mpg123")
+
+
+def _speak_local_linux(text: str) -> bool:
+    """Use an installed local synthesizer when Edge TTS is unavailable."""
+    if os.name == "nt":
+        return False
+    executable = shutil.which("espeak-ng") or shutil.which("espeak")
+    if not executable:
+        return False
+
+    def _run_local():
+        try:
+            subprocess.run(
+                [executable, "-v", "en", text],
+                check=True,
+                timeout=30,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except Exception as exc:
+            log(f"Linux local TTS failed: {exc}")
+
+    threading.Thread(target=_run_local, name="kalki-linux-tts", daemon=True).start()
+    return True
 
 
 def _init_tts_mixer():
@@ -892,7 +948,11 @@ def speak(text, is_notification=False):
     if not text:
         return False
     if edge_tts is None:
-        STATE["last_tts_error"] = "edge-tts is not installed"
+        if _speak_local_linux(text):
+            STATE["last_tts_provider"] = "linux-local"
+            STATE["last_tts_error"] = ""
+            return True
+        STATE["last_tts_error"] = "edge-tts is not installed and no local Linux synthesizer is available"
         log(f"[TTS missing] {text} ({STATE['last_tts_error']})")
         return False
 
@@ -910,11 +970,15 @@ def speak(text, is_notification=False):
                 # Open the audio device only now, for the duration of speech.
                 # If TTS_OUTPUT_DEVICE is set, try that output first and then
                 # fall back to the Windows default output.
-                _init_tts_mixer()
-                pygame.mixer.music.load(tmp)
-                pygame.mixer.music.play()
-                while pygame.mixer.music.get_busy():
-                    time.sleep(0.1)
+                if os.name != "nt" and not PYGAME_OK:
+                    _play_audio_file_linux(tmp)
+                    STATE["last_tts_provider"] = "edge-linux-player"
+                else:
+                    _init_tts_mixer()
+                    pygame.mixer.music.load(tmp)
+                    pygame.mixer.music.play()
+                    while pygame.mixer.music.get_busy():
+                        time.sleep(0.1)
             except Exception as e:
                 # A working voice matters more than preserving a particular
                 # cloud provider.  SAPI is present on supported Windows
@@ -922,6 +986,11 @@ def speak(text, is_notification=False):
                 edge_error = str(e)
                 log(f"TTS primary provider failed: {edge_error}")
                 try:
+                    if os.name != "nt" and tmp:
+                        _play_audio_file_linux(tmp)
+                        STATE["last_tts_provider"] = "edge-linux-player"
+                        STATE["last_tts_error"] = ""
+                        return
                     _speak_with_windows_sapi(text)
                     STATE["last_tts_provider"] = "windows-sapi"
                     STATE["last_tts_error"] = ""
@@ -1073,30 +1142,33 @@ def _time_bucket(hour):
 FIRST_GREET_DONE = False
 
 def build_greeting():
+    """Create a concise local-time greeting without making a remote AI call."""
     now = datetime.now()
     hour = now.hour
     title = getattr(config, "OWNER_TITLE", "Sir")
     owner = getattr(config, "OWNER_NAME", "Maher")
-    import random as _rnd_greet
-    if hour < 12:
-        greeting_pool = [
-            f"Good morning, {title}. KALKI online and standing by.",
-            f"Good morning, {owner}. All systems operational.",
-            f"A very pleasant morning, {title}. Ready for your command."
-        ]
-    elif hour < 18:
-        greeting_pool = [
-            f"Good afternoon, {title}. KALKI online and ready to assist.",
-            f"Good afternoon, {owner}. Systems optimal.",
-            f"A pleasant afternoon, {title}. Standing by."
-        ]
+    clock = now.strftime("%I:%M %p").lstrip("0")
+    if hour < 5:
+        period = "late night"
+        lead = f"Still up at {clock}, {title}?"
+    elif hour < 12:
+        period = "morning"
+        lead = f"Good morning, {title}."
+    elif hour < 17:
+        period = "afternoon"
+        lead = f"Good afternoon, {title}."
+    elif hour < 21:
+        period = "evening"
+        lead = f"Good evening, {title}."
     else:
-        greeting_pool = [
-            f"Good evening, {title}. KALKI active and standing by.",
-            f"Good evening, {owner}. All systems online.",
-            f"Good evening, {title}. Ready for your command."
-        ]
-    return _rnd_greet.choice(greeting_pool)
+        period = "night"
+        lead = f"Good night, {title}."
+    options = [
+        f"{lead} It is {clock}. KALKI is online and ready to help.",
+        f"{lead} {owner}, it is {clock}. I am here and standing by.",
+        f"{lead} A calm {period}. KALKI is ready whenever you are.",
+    ]
+    return options[hour % len(options)]
 
 
 def build_security_brief():
@@ -1164,6 +1236,53 @@ def set_mute(mute):
 # ─────────────────────────────────────────────────────────────
 import re as _re_local
 
+
+def _focus_active():
+    return float(STATE.get("focus_until") or 0) > time.time()
+
+
+def _focus_status_text():
+    if not _focus_active():
+        return "No focus session is active."
+    remaining = max(0, int(float(STATE["focus_until"]) - time.time()))
+    minutes, seconds = divmod(remaining, 60)
+    return f"Focus session active: {minutes:02d}:{seconds:02d} remaining."
+
+
+def _daily_plan_reply():
+    tasks = taskmod.list_tasks()[:5]
+    reminders = taskmod.list_reminders()[:5]
+    parts = []
+    if tasks:
+        parts.append("Top tasks: " + "; ".join(str(item.get("text", "")).strip() for item in tasks if item.get("text")))
+    if reminders:
+        parts.append("Upcoming reminders: " + "; ".join(str(item.get("text", "")).strip() for item in reminders if item.get("text")))
+    try:
+        from core import productivity
+        summary = productivity.get_daily_summary()
+    except Exception:
+        summary = ""
+    if summary:
+        parts.append(summary)
+    if not parts:
+        return f"Your slate is clear, {config.OWNER_TITLE}. Add a task or reminder and I will help you shape the day."
+    return f"Here is your local plan, {config.OWNER_TITLE}. " + " ".join(parts)
+
+
+def _attention_reply():
+    tasks = taskmod.list_tasks()
+    reminders = taskmod.list_reminders()
+    focus = _focus_status_text()
+    if not tasks and not reminders:
+        return f"Nothing urgent is stored locally, {config.OWNER_TITLE}. {focus}"
+    parts = []
+    if reminders:
+        parts.append(f"{len(reminders)} reminder{'s' if len(reminders) != 1 else ''} waiting")
+    if tasks:
+        parts.append(f"{len(tasks)} open task{'s' if len(tasks) != 1 else ''}")
+    return f"Attention brief, {config.OWNER_TITLE}: " + ", ".join(parts) + ". " + focus
+
+
 def _strip_for_value(raw, anchors):
     """Pull the value after the first matching anchor word."""
     low = raw.lower()
@@ -1207,6 +1326,32 @@ def handle_local(text):
              "silence", "shush", "cancel", "stop it", "enough"):
         stop_speaking()
         return True, ""
+
+    # ════════════════════════════════════════════════════
+    # FOCUS + PERSONAL PLANNING (local and deterministic)
+    # ════════════════════════════════════════════════════
+    if t in ("plan my day", "daily plan", "plan the day", "morning brief"):
+        return True, _daily_plan_reply()
+
+    if t in ("what needs my attention", "attention brief", "what needs attention", "anything urgent"):
+        return True, _attention_reply()
+
+    if t in ("start a focus session", "start focus", "begin focus", "focus session", "focus timer"):
+        STATE["focus_minutes"] = 25
+        STATE["focus_until"] = time.time() + (STATE["focus_minutes"] * 60)
+        STATE["workflow"] = "focus"
+        workflows.ACTIVE_STATE = "focus"
+        return True, f"Focus session started for 25 minutes, {config.OWNER_TITLE}. { _focus_status_text() }"
+
+    if t in ("end focus session", "stop focus", "cancel focus", "finish focus"):
+        was_active = _focus_active()
+        STATE["focus_until"] = 0.0
+        STATE["workflow"] = "idle"
+        workflows.ACTIVE_STATE = None
+        return True, "Focus session ended." if was_active else "No focus session was active."
+
+    if t in ("focus status", "how long is left", "how much focus time"):
+        return True, _focus_status_text()
 
     # ════════════════════════════════════════════════════
     # SMALL TALK & PERSONALITY (instant, no API call)
@@ -1856,19 +2001,17 @@ def handle_local(text):
 
     # ── SYSTEM AUTOMATION ──
     if t in ("lock my pc", "lock pc", "lock the computer", "lock the pc", "lock the screen"):
-        try:
+        def _lock_pc():
             import ctypes
             ctypes.windll.user32.LockWorkStation()
-            return True, "PC locked, Sir."
-        except Exception as e:
-            return True, f"Failed to lock PC: {e}"
+            return True, "Locking your PC."
+        return _queue_confirmation("Lock your PC", _lock_pc)
             
     if t in ("shut down the pc", "shut down pc", "shutdown pc", "shut down", "shutdown the pc"):
-        try:
-            os.system("shutdown /s /t 0")
-            return True, "Shutting down the PC, Sir."
-        except Exception as e:
-            return True, f"Failed to shut down: {e}"
+        def _shutdown_exact():
+            subprocess.Popen(["shutdown.exe", "/s", "/t", "30"])
+            return True, "Shutting down in thirty seconds, Sir."
+        return _queue_confirmation("Shut down your PC", _shutdown_exact)
 
     if t in ("mute audio", "mute volume", "mute the audio", "mute pc", "toggle mute"):
         try:
@@ -1879,12 +2022,10 @@ def handle_local(text):
             return True, f"Failed to mute audio: {e}"
 
     if t in ("empty recycle bin", "empty the recycle bin", "clear recycle bin"):
-        try:
-            import subprocess
-            subprocess.run(["powershell", "-command", "Clear-RecycleBin -Force -ErrorAction SilentlyContinue"], capture_output=True)
+        def _clear_recycle_bin():
+            subprocess.run(["powershell", "-NoProfile", "-Command", "Clear-RecycleBin -Force -ErrorAction Stop"], capture_output=True, timeout=15)
             return True, "Recycle bin emptied, Sir."
-        except Exception as e:
-            return True, f"Failed to empty recycle bin: {e}"
+        return _queue_confirmation("Empty the recycle bin", _clear_recycle_bin)
 
     if t in ("open visual studio code", "open vs code", "start visual studio code"):
         try:
@@ -2702,7 +2843,25 @@ def build_system_prompt(query=""):
 
 import re as _re
 
+def _safe_public_url(url):
+    try:
+        parsed = urllib.parse.urlparse(str(url or ""))
+        if parsed.scheme not in ("http", "https") or parsed.username or parsed.password or not parsed.hostname:
+            return False
+        addresses = socket.getaddrinfo(parsed.hostname, parsed.port or (443 if parsed.scheme == "https" else 80), type=socket.SOCK_STREAM)
+        for item in addresses:
+            addr = item[4][0]
+            ip = __import__("ipaddress").ip_address(addr)
+            if any((ip.is_private, ip.is_loopback, ip.is_link_local, ip.is_multicast, ip.is_reserved, ip.is_unspecified)):
+                return False
+        return True
+    except Exception:
+        return False
+
+
 def _http_get(url, timeout=5):
+    if not _safe_public_url(url):
+        raise ValueError("blocked non-public URL")
     import urllib.request
     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
     return urllib.request.urlopen(req, timeout=timeout).read().decode('utf-8', 'ignore')
@@ -3061,7 +3220,10 @@ def execute_tool_call(tool_name, tool_args):
         elif tool_name == "read_url":
             import urllib.request
             try:
-                req = urllib.request.Request(args.get("url"), headers={'User-Agent': 'Mozilla/5.0'})
+                target_url = args.get("url") or ""
+                if not _safe_public_url(target_url):
+                    return "Blocked: URL must be a public HTTP(S) destination."
+                req = urllib.request.Request(target_url, headers={'User-Agent': 'Mozilla/5.0'})
                 html = urllib.request.urlopen(req, timeout=10).read().decode('utf-8', 'ignore')
                 import re
                 text = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.IGNORECASE | re.DOTALL)
@@ -3850,7 +4012,12 @@ def open_browser_to_ui():
     """Bring existing KALKI tab forward, OR launch Chrome to it."""
     global _browser_opened_once
     if os.environ.get("KALKI_DESKTOP_MODE") == "1":
-        log("Desktop mode active - suppressing Chrome tab launch.")
+        # In the native Windows shell, restore the existing PyWebView window
+        # rather than opening Chrome or silently ignoring the wake event.
+        if _focus_kalki_window():
+            log("desktop wake restored the KALKI window")
+        else:
+            log("desktop wake received; KALKI window was not discoverable")
         return
 
     url = f"http://localhost:{config.PORT}/"
@@ -3971,6 +4138,29 @@ class Handler(BaseHTTPRequestHandler):
     # visit from POSTing to localhost:8888 (which could run code / read vault).
     ALLOWED_HOSTS = ("localhost", "127.0.0.1")
     MAX_BODY = 32 * 1024 * 1024   # 32 MB cap (images come through here)
+    PUBLIC_GET_PATHS = {"/", "/index.html", "/manifest.json", "/service-worker.js", "/api/health", "/favicon.ico"}
+
+    def _is_public_path(self, path):
+        return path in self.PUBLIC_GET_PATHS or path.startswith("/assets/")
+
+    def _authorized(self):
+        candidate = self.headers.get(runtime_security.TOKEN_HEADER, "")
+        if not candidate:
+            cookie = self.headers.get("Cookie", "")
+            for item in cookie.split(";"):
+                name, sep, value = item.strip().partition("=")
+                if sep and name == runtime_security.TOKEN_COOKIE:
+                    candidate = value
+                    break
+        return runtime_security.token_matches(candidate)
+
+    def _require_auth(self, path):
+        if self._is_public_path(path):
+            return True
+        if self._authorized():
+            return True
+        self._json({"ok": False, "error": "authentication required"}, status=401)
+        return False
 
     def _origin_host(self):
         origin = self.headers.get("Origin")
@@ -3995,7 +4185,7 @@ class Handler(BaseHTTPRequestHandler):
                              self.headers.get("Origin"))
             self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-KALKI-Token")
 
     def _json(self, obj, status=200):
         body = json.dumps(obj).encode()
@@ -4011,6 +4201,16 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
+        self._cors()
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _public_html(self, html):
+        body = html.encode("utf-8") if isinstance(html, str) else html
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Set-Cookie", f"{runtime_security.TOKEN_COOKIE}={API_TOKEN}; HttpOnly; SameSite=Strict; Path=/")
         self._cors()
         self.end_headers()
         self.wfile.write(body)
@@ -4062,6 +4262,8 @@ class Handler(BaseHTTPRequestHandler):
     def _do_get_inner(self):
         # removed local import
         path = urllib.parse.urlparse(self.path).path
+        if not self._require_auth(path):
+            return
 
         if path == "/api/health":
             self._json({"ok": True, "ts": time.time()}); return
@@ -4081,7 +4283,7 @@ class Handler(BaseHTTPRequestHandler):
                     <pre style="background:#000; padding:1rem; border:1px solid #333; overflow-x:auto;">{crash_details}</pre>
                     <button onclick="fetch('/api/recovery/clear', {{method:'POST'}}).then(()=>location.reload())">Clear Log & Reboot</button>
                     </body></html>"""
-                    self._text(html.encode("utf-8"), ctype="text/html; charset=utf-8")
+                    self._public_html(html)
                     return
                 
                 lock_path = os.path.join(DATA_DIR, "updating.lock")
@@ -4091,14 +4293,15 @@ class Handler(BaseHTTPRequestHandler):
                         <meta http-equiv="refresh" content="3">
                         <style>body { background: #111; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; }</style>
                         </head><body><h2>KALKI is updating... Please wait.</h2></body></html>"""
-                        self._text(html.encode("utf-8"), ctype="text/html; charset=utf-8")
+                        self._public_html(html)
                         return
                     else:
                         try: os.remove(lock_path)
                         except: pass
 
                 with open(os.path.join(APP_ROOT, "index.html"), "rb") as f:
-                    self._text(f.read(), ctype="text/html; charset=utf-8")
+                    html = f.read()
+                self._public_html(html)
             except Exception as e:
                 self._text(f"index.html missing: {e}", status=500)
             return
@@ -4135,16 +4338,52 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": str(e)})
             return
 
+        if path == "/api/focus":
+            remaining = max(0, int(float(STATE.get("focus_until") or 0) - time.time()))
+            self._json({
+                "ok": True,
+                "active": remaining > 0,
+                "remainingSec": remaining,
+                "minutes": int(STATE.get("focus_minutes") or 25),
+            })
+            return
+
+        if path == "/api/github/status":
+            try:
+                result = github_mod.get_notifications(limit=5)
+                self._json({
+                    "ok": bool(result.get("ok")),
+                    "configured": bool(result.get("configured")),
+                    "count": result.get("count", 0),
+                    "notifications": result.get("notifications", []),
+                    "pollInterval": result.get("pollInterval", 60),
+                    "notModified": result.get("notModified", False),
+                    "error": result.get("error", ""),
+                })
+            except Exception as e:
+                self._json({"ok": False, "configured": False, "error": str(e)})
+            return
+
         if path == "/api/dashboard":
             try:
                 import core.productivity
                 with core.productivity._lock:
                     prod_data = core.productivity._load_data()
                 
+                try:
+                    tracker_status = core.productivity.tracking_status()
+                except Exception:
+                    tracker_status = {"available": False, "active": False}
                 dashboard_data = {
                     "productivity": prod_data,
+                    "screenTime": tracker_status,
                     "uptimeSec": int(time.time() - STATE["started_at"]),
                     "state": STATE.get("workflow", STATE.get("current_routine", "idle")),
+                    "focus": {
+                        "active": _focus_active(),
+                        "remainingSec": max(0, int(float(STATE.get("focus_until") or 0) - time.time())),
+                        "minutes": int(STATE.get("focus_minutes") or 25),
+                    },
                     "memCount": len(load_memory())
                 }
                 self._json({"ok": True, "data": dashboard_data})
@@ -4207,7 +4446,7 @@ class Handler(BaseHTTPRequestHandler):
                 "ollamaOnline": ollama_ok,
                 "speaking": STATE["speaking"],
                 "ttsProvider": _tts_provider(),
-                "ttsVoice": getattr(config, "TTS_VOICE", ""),
+                "ttsVoice": "en-GB-RyanNeural",
                 "ttsLastProvider": STATE.get("last_tts_provider", ""),
                 "ttsLastError": STATE.get("last_tts_error", ""),
                 "ttsLastLatencyMs": STATE.get("last_tts_latency_ms", 0),
@@ -4228,6 +4467,8 @@ class Handler(BaseHTTPRequestHandler):
                 "recentExchange": STATE.get("recent_exchange"),
                 "listenerPaused": STATE.get("listener_paused", False),
                 "listenerMicMuted": STATE.get("listener_mic_muted"),
+                "listenerCapabilityNotice": os.environ.get("KALKI_LISTENER_NOTICE", ""),
+                "platform": sys.platform,
                 "cpuAlertsEnabled": getattr(config, "CPU_ALERTS_ENABLED", False),
                 "gcalConfigured": gcal.is_configured(),
                 "spotifyConfigured": spotify_mod.is_configured(),
@@ -4396,6 +4637,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def _do_post_inner(self):
         path = urllib.parse.urlparse(self.path).path
+
+        if not self._authorized():
+            self._json({"ok": False, "error": "authentication required"}, status=401)
+            return
 
         # Reject cross-site requests (CSRF / DNS-rebinding to localhost).
         if not self._origin_allowed():
@@ -5105,13 +5350,19 @@ class Handler(BaseHTTPRequestHandler):
 
         # ── Workflows ──────────────────────────────────
         if path == "/api/workflow":
-            r = workflows.run_mode(
-                body.get("mode") or "",
-                speak_fn=speak,
-                set_volume_fn=set_volume,
-                open_url_fn=webbrowser.open,
-            )
-            self._json(r); return
+            mode_name = body.get("mode") or ""
+            def _run_workflow():
+                return workflows.run_mode(
+                    mode_name,
+                    speak_fn=speak,
+                    set_volume_fn=set_volume,
+                    open_url_fn=webbrowser.open,
+                )
+            if workflows.requires_confirmation(mode_name.lower().strip()):
+                result = _queue_confirmation(f"Run the destructive workflow {mode_name}", _run_workflow)
+            else:
+                result = _run_workflow()
+            self._json(result if isinstance(result, dict) else {"ok": True, "result": result}); return
 
         # ── Cyber (extended) ───────────────────────────
         if path == "/api/cyber/cve":

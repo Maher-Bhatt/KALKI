@@ -71,12 +71,9 @@ def _norm_url(url: str) -> str:
     return url
 
 
-def _ctx_insecure() -> ssl.SSLContext:
-    """Create a completely unverified SSL context for security probing."""
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    return ctx
+def _ctx_secure() -> ssl.SSLContext:
+    """Use normal certificate validation for scan requests."""
+    return ssl.create_default_context()
 
 
 def _request(url: str, method: str = "GET", timeout: int = TIMEOUT) -> Tuple[int, Dict[str, str], str, str]:
@@ -94,7 +91,7 @@ def _request(url: str, method: str = "GET", timeout: int = TIMEOUT) -> Tuple[int
     req = urllib.request.Request(url, method=method,
                                  headers={"User-Agent": UA, "Accept": "*/*"})
     try:
-        with urllib.request.urlopen(req, timeout=timeout, context=_ctx_insecure()) as r:
+        with urllib.request.urlopen(req, timeout=timeout, context=_ctx_secure()) as r:
             body = b""
             try:
                 body = r.read(200_000)  # cap body read

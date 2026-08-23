@@ -5,9 +5,13 @@ import urllib.request
 import threading
 import tempfile
 import subprocess
+import hashlib
 
 REPO = "Maher-Bhatt/KALKI"
-CURRENT_VERSION = "v1.2.1"
+try:
+    from version import VERSION as CURRENT_VERSION
+except ImportError:
+    CURRENT_VERSION = "v1.3.0"
 
 # Microsoft Store builds must not self-update — the Store handles updates.
 if getattr(sys, "frozen", False):
@@ -40,10 +44,16 @@ def check_for_updates():
                     is_newer = latest != CURRENT_VERSION
                 
                 if is_newer:
-                    # Find the executable asset
+                    # Use an exact release asset name. If GitHub supplies its
+                    # artifact digest, carry it through for verification.
+                    expected_name = f"KALKI_Setup_v{latest.lstrip('v')}.exe"
                     for asset in data.get("assets", []):
-                        if asset.get("name", "").endswith(".exe"):
-                            return True, latest, asset.get("browser_download_url")
+                        if asset.get("name") == expected_name:
+                            return True, latest, {
+                                "url": asset.get("browser_download_url"),
+                                "digest": asset.get("digest", ""),
+                                "name": expected_name,
+                            }
                         
             return False, CURRENT_VERSION, None
     except Exception as e:
@@ -56,11 +66,15 @@ def _progress_hook(block_num, block_size, total_size):
     if total_size > 0:
         STATE_UPDATE_PROGRESS["pct"] = min(100, int(block_num * block_size * 100 / total_size))
 
-def download_and_run_update(download_url, version, base_dir):
-    """
-    Downloads the new setup exe in the background and executes it.
-    """
+def download_and_run_update(download, version, base_dir):
+    """Download and execute a verified release installer."""
     try:
+        if isinstance(download, str):
+            download = {"url": download, "digest": ""}
+        download_url = download.get("url", "")
+        digest = download.get("digest", "")
+        if not download_url.startswith("https://api.github.com/") and "github.com/" not in download_url:
+            raise ValueError("update URL is not an approved GitHub release URL")
         print(f"[UPDATER] Downloading update {version} from {download_url}...")
         temp_dir = tempfile.gettempdir()
         installer_path = os.path.join(temp_dir, f"KALKI_Setup_{version}.exe")
@@ -68,6 +82,16 @@ def download_and_run_update(download_url, version, base_dir):
         STATE_UPDATE_PROGRESS["active"] = True
         STATE_UPDATE_PROGRESS["pct"] = 0
         urllib.request.urlretrieve(download_url, installer_path, reporthook=_progress_hook)
+        if digest.startswith("sha256:"):
+            expected = digest.split(":", 1)[1].lower()
+            actual = hashlib.sha256()
+            with open(installer_path, "rb") as stream:
+                for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                    actual.update(chunk)
+            if actual.hexdigest().lower() != expected:
+                raise ValueError("downloaded update failed SHA-256 verification")
+        else:
+            raise ValueError("release has no SHA-256 digest; refusing to execute update")
         STATE_UPDATE_PROGRESS["pct"] = 100
         
         lock_path = os.path.join(base_dir, "data", "updating.lock")
