@@ -14,6 +14,7 @@ import glob
 import socket
 import threading
 import ssl
+import re
 
 # Keep the platform certificate store and hostname verification enabled for
 # every provider, OAuth, and telemetry request. If a packaged installation
@@ -289,6 +290,42 @@ def _public_settings_value(key, value):
 
 def _settings_status(keys):
     return {k: _is_configured_secret(getattr(config, k, "")) for k in keys}
+
+
+_THEME_COLOR_KEYS = ("THEME_PRIMARY", "THEME_PEACOCK", "THEME_INDIGO", "THEME_SAFFRON")
+_THEME_DEFAULTS = {
+    "THEME_PRESET": "Diya Dawn",
+    "THEME_PRIMARY": "#b6553f",
+    "THEME_PEACOCK": "#1c6d70",
+    "THEME_INDIGO": "#263a63",
+    "THEME_SAFFRON": "#db7d37",
+    "THEME_MOTION": 0.78,
+    "THEME_GLOW": True,
+}
+
+
+def _sanitize_theme_updates(updates):
+    """Validate client-provided appearance settings before persisting them."""
+    clean = dict(updates or {})
+    for key in _THEME_COLOR_KEYS:
+        if key in clean:
+            value = str(clean[key] or "").strip()
+            if not re.fullmatch(r"#[0-9a-fA-F]{6}", value):
+                clean[key] = _THEME_DEFAULTS[key]
+            else:
+                clean[key] = value.lower()
+    if "THEME_PRESET" in clean:
+        value = str(clean["THEME_PRESET"] or "").strip()
+        clean["THEME_PRESET"] = value[:40] or _THEME_DEFAULTS["THEME_PRESET"]
+    if "THEME_MOTION" in clean:
+        try:
+            clean["THEME_MOTION"] = max(0.25, min(1.0, float(clean["THEME_MOTION"])))
+        except (TypeError, ValueError):
+            clean["THEME_MOTION"] = _THEME_DEFAULTS["THEME_MOTION"]
+    if "THEME_GLOW" in clean:
+        clean["THEME_GLOW"] = bool(clean["THEME_GLOW"])
+    return clean
+
 
 STATE = {
     "speaking": False,
@@ -4529,7 +4566,14 @@ class Handler(BaseHTTPRequestHandler):
                 "TTS_PITCH": getattr(config, "TTS_PITCH", "+0Hz"),
                 "TTS_VOLUME": getattr(config, "TTS_VOLUME", "+0%"),
                 "TTS_OUTPUT_DEVICE": getattr(config, "TTS_OUTPUT_DEVICE", ""),
-                "TTS_GROQ_TIMEOUT_SEC": getattr(config, "TTS_GROQ_TIMEOUT_SEC", 3)
+                "TTS_GROQ_TIMEOUT_SEC": getattr(config, "TTS_GROQ_TIMEOUT_SEC", 3),
+                "THEME_PRESET": getattr(config, "THEME_PRESET", "Diya Dawn"),
+                "THEME_PRIMARY": getattr(config, "THEME_PRIMARY", "#b6553f"),
+                "THEME_PEACOCK": getattr(config, "THEME_PEACOCK", "#1c6d70"),
+                "THEME_INDIGO": getattr(config, "THEME_INDIGO", "#263a63"),
+                "THEME_SAFFRON": getattr(config, "THEME_SAFFRON", "#db7d37"),
+                "THEME_MOTION": getattr(config, "THEME_MOTION", 0.78),
+                "THEME_GLOW": getattr(config, "THEME_GLOW", True)
             }
             public_keys = {k: _public_settings_value(k, v) for k, v in keys.items()}
             # removed local import
@@ -4692,7 +4736,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/settings/save":
             try:
-                updates = body.get("updates", {})
+                updates = _sanitize_theme_updates(body.get("updates", {}))
                 new_conf = {}
                 cfg_path = USER_CONFIG_PATH
                 if os.path.exists(cfg_path):

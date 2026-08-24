@@ -21,7 +21,30 @@ SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayIcon={app}\{#MyAppExeName}
 CloseApplications=force
-CloseApplicationsFilter=KALKI.exe,KALKI_Server.exe,KALKI_Listener.exe,KALKI_Setup_Wizard.exe
+CloseApplicationsFilter=KALKI.exe,KALKI_Server.exe,KALKI_Listener.exe,KALKI_Setup_Wizard.exe,KALKI_Setup_Google.exe,KALKI_Setup_Spotify.exe
+RestartApplications=no
+
+[Code]
+procedure StopKalkiProcesses;
+var
+  ResultCode: Integer;
+begin
+  { Inno's close-app filter handles normal windows. These explicit taskkill
+    calls cover tray-hidden and helper processes that still hold DLL/EXE files. }
+  Exec(ExpandConstant('{cmd}'), '/C taskkill /F /T /IM KALKI.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec(ExpandConstant('{cmd}'), '/C taskkill /F /T /IM KALKI_Server.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec(ExpandConstant('{cmd}'), '/C taskkill /F /T /IM KALKI_Listener.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec(ExpandConstant('{cmd}'), '/C taskkill /F /T /IM KALKI_Setup_Wizard.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec(ExpandConstant('{cmd}'), '/C taskkill /F /T /IM KALKI_Setup_Google.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec(ExpandConstant('{cmd}'), '/C taskkill /F /T /IM KALKI_Setup_Spotify.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Sleep(1200);
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  StopKalkiProcesses;
+  Result := '';
+end;
 
 [Types]
 Name: "full"; Description: "Full installation"
