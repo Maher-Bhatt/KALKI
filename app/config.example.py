@@ -82,6 +82,16 @@ CYBER_SCAN_TIMEOUT_SEC = 0.45
 CYBER_SCAN_PORT_LIMIT = 64
 HUD_EFFECT_QUALITY = "balanced"
 
+# ── APPEARANCE / THEME ───────────────────────────────────────
+# These values are editable from Setup & Settings > Theme Lab.
+THEME_PRESET = "Diya Dawn"
+THEME_PRIMARY = "#b6553f"
+THEME_PEACOCK = "#1c6d70"
+THEME_INDIGO = "#263a63"
+THEME_SAFFRON = "#db7d37"
+THEME_MOTION = 0.78
+THEME_GLOW = True
+
 # ── WAKE WORDS ──────────────────────────────────────────────
 WAKE_WORDS = ["hey kalki", "kalki", "hey sir", "ok kalki"]
 
