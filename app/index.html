@@ -20,7 +20,7 @@ body.mode-idle{--accent:var(--terracotta);--accent-glow:rgba(182,85,63,.18)}
 body.mode-listening{--accent:var(--peacock);--accent-glow:rgba(28,109,112,.24)}
 body.mode-thinking{--accent:var(--indigo);--accent-glow:rgba(38,58,99,.2)}
 body.mode-speaking{--accent:var(--saffron);--accent-glow:rgba(219,125,55,.24)}
-body.mode-busy{--accent:var(--vermilion);--accent-glow:rgba(184,74,56,.25)}
+body.mode-busy{--accent:var(--vermilion);--accent-glow:rgba(184,74,56,.25)}body.mode-listening .center-caption{transform:translateY(-3px);box-shadow:0 20px 46px rgba(28,109,112,.18)}body.mode-thinking .center-caption{transform:translateY(-2px);box-shadow:0 20px 46px rgba(38,58,99,.16)}body.mode-speaking .center-caption{transform:translateY(-3px);box-shadow:0 20px 46px rgba(219,125,55,.18)}body.mode-busy .center-caption{transform:translateY(0);opacity:.82}
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;min-height:100%;margin:0;overflow:hidden}
 body{font-family:var(--mono);color:var(--ink);background:linear-gradient(115deg,rgba(244,236,223,.58),rgba(245,235,220,.16) 40%,rgba(226,239,234,.18)),url('/assets/kalki-eye-background.png') center/cover fixed no-repeat;font-size:14px;letter-spacing:.01em;position:relative;isolation:isolate}
@@ -37,7 +37,7 @@ button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}bu
 .focus-card{background:linear-gradient(135deg,rgba(38,58,99,.94),rgba(28,109,112,.88));color:#fff;border:0}.focus-card .kicker,.focus-card .muted{color:rgba(255,255,255,.72)}.focus-card .card-title{color:#fff}.focus-ring{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;float:right;margin:-2px 0 8px 10px;border:1px solid rgba(255,255,255,.4);background:conic-gradient(var(--saffron) 0 23%,rgba(255,255,255,.12) 23% 100%);position:relative}.focus-ring::after{content:"";position:absolute;inset:7px;border-radius:50%;background:rgba(38,58,99,.94)}.focus-ring span{position:relative;z-index:1;font-size:11px;font-weight:700}.focus-copy{line-height:1.6;font-size:12px}.focus-line{clear:both;padding-top:13px;border-top:1px solid rgba(255,255,255,.18);font-size:11px;color:rgba(255,255,255,.82)}
 .quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.quick-grid button{min-height:54px;text-align:left;border:1px solid var(--line);background:rgba(255,255,255,.34);border-radius:14px;padding:10px;font-size:11px}.quick-grid button strong{display:block;color:var(--indigo);font-size:12px;margin-bottom:3px}.quick-grid button:hover{background:#fff8ee;border-color:rgba(219,125,55,.55)}.tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}.tool-btn{min-height:34px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.45);color:var(--indigo);font-size:10px;font-weight:700;text-align:left;padding:8px}.tool-btn:hover,.tool-btn:focus-visible{background:#fff7e9;border-color:var(--terracotta);outline:none}.tools-card{overflow:visible}
 .stage{display:flex;flex-direction:column;gap:14px}.stage-header{display:flex;justify-content:space-between;align-items:end;padding:6px 8px}.stage-header h2{margin:5px 0 0;font:700 clamp(25px,3vw,40px)/1.05 var(--serif);letter-spacing:-.04em;color:#3e2d2c}.stage-header p{margin:0;color:var(--muted);max-width:470px;line-height:1.5;font-size:12px}.stage-header .thread-count{text-align:right;color:var(--terracotta);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em}.assistant-panel{min-height:0;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid rgba(91,64,45,.18);border-radius:34px;background:linear-gradient(145deg,rgba(255,251,245,.40),rgba(255,250,242,.18));backdrop-filter:blur(22px);box-shadow:0 30px 80px rgba(87,61,45,.16);position:relative;overflow:hidden;padding:26px 24px 18px}.assistant-panel::before,.assistant-panel::after{content:"";position:absolute;inset:18px;border:1px solid rgba(28,109,112,.12);border-radius:26px;pointer-events:none}.assistant-panel::after{inset:auto 22% 15px;height:1px;border:0;background:linear-gradient(90deg,transparent,rgba(182,85,63,.42),transparent)}
-#center-container{width:100%;height:min(58vh,520px);min-height:180px;position:relative;z-index:1;display:grid;place-items:center;cursor:pointer;border-radius:28px;overflow:hidden;background:linear-gradient(180deg,rgba(255,251,245,.02),rgba(255,251,245,.18))}#center-container::after{content:"";position:absolute;inset:12% 8%;border:1px solid rgba(28,109,112,.14);border-radius:32px;pointer-events:none;box-shadow:inset 0 0 80px rgba(255,251,245,.16)}#center-container:focus-visible{outline:3px solid var(--peacock);outline-offset:4px}#kalkiEye{position:absolute;inset:3% 7%;width:86%;height:94%;object-fit:cover;object-position:center;opacity:.72;mix-blend-mode:multiply;filter:saturate(.9) contrast(.98) brightness(1.04);pointer-events:none;mask-image:radial-gradient(ellipse at center,rgba(0,0,0,1) 38%,rgba(0,0,0,.92) 64%,transparent 94%);-webkit-mask-image:radial-gradient(ellipse at center,rgba(0,0,0,1) 38%,rgba(0,0,0,.92) 64%,transparent 94%)}.center-caption{position:relative;z-index:2;text-align:center;pointer-events:none;padding:20px 28px;background:rgba(255,251,245,.43);border:1px solid rgba(255,255,255,.55);border-radius:22px;backdrop-filter:blur(10px);box-shadow:0 16px 36px rgba(87,61,45,.08)}.center-caption .eyebrow{color:var(--peacock);font-size:10px;letter-spacing:.22em;text-transform:uppercase;font-weight:700}.center-caption h3{margin:8px 0 4px;font:600 clamp(20px,2.3vw,28px) var(--serif);color:#503432}.center-caption p{margin:0;color:var(--muted);font-size:11px}.readout{position:absolute;z-index:3;top:23px;left:25px;right:25px;text-align:center;min-height:24px;color:var(--accent);font-size:11px;letter-spacing:.09em;text-transform:uppercase}.wave-wrap{height:28px;width:100%;position:relative;z-index:2;opacity:.65}.wave-wrap #wave{width:100%;height:28px;display:block}
+#center-container{width:100%;height:min(58vh,520px);min-height:220px;position:relative;z-index:1;display:grid;place-items:center;cursor:pointer;border-radius:28px;overflow:hidden;background:radial-gradient(circle at 50% 48%,rgba(255,251,245,.62),rgba(255,251,245,.18) 48%,rgba(28,109,112,.05) 100%);isolation:isolate}#center-container::before{content:"";position:absolute;inset:8%;border:1px solid rgba(28,109,112,.16);border-radius:50%;pointer-events:none;box-shadow:0 0 0 16px rgba(28,109,112,.025),0 0 0 34px rgba(182,85,63,.025),inset 0 0 72px rgba(255,251,245,.2);animation:centerHalo 8s ease-in-out infinite}#center-container::after{content:"";position:absolute;inset:12% 8%;border:1px solid rgba(182,85,63,.12);border-radius:32px;pointer-events:none;box-shadow:inset 0 0 80px rgba(255,251,245,.16)}#center-container:focus-visible{outline:3px solid var(--peacock);outline-offset:4px}#kalkiEye{position:absolute;inset:3% 7%;width:86%;height:94%;object-fit:cover;object-position:center;opacity:.38;mix-blend-mode:multiply;filter:saturate(1.12) contrast(1.02) brightness(1.05);pointer-events:none;mask-image:radial-gradient(ellipse at center,rgba(0,0,0,.98) 22%,rgba(0,0,0,.86) 56%,transparent 94%);-webkit-mask-image:radial-gradient(ellipse at center,rgba(0,0,0,.98) 22%,rgba(0,0,0,.86) 56%,transparent 94%)}#orb{position:absolute;inset:0;width:100%;height:100%;z-index:1;display:block;pointer-events:none;filter:drop-shadow(0 0 12px var(--accent-glow))}.center-caption{position:relative;z-index:3;text-align:center;pointer-events:none;padding:20px 28px;background:rgba(255,251,245,.48);border:1px solid rgba(255,255,255,.7);border-radius:22px;backdrop-filter:blur(11px);box-shadow:0 16px 36px rgba(87,61,45,.1);transition:transform .5s ease,box-shadow .5s ease}.center-caption h3{transition:color .35s ease}.center-caption .eyebrow{color:var(--peacock);font-size:10px;letter-spacing:.22em;text-transform:uppercase;font-weight:700}.center-caption h3{margin:8px 0 4px;font:600 clamp(20px,2.3vw,28px) var(--serif);color:#503432}.center-caption p{margin:0;color:var(--muted);font-size:11px}.readout{position:absolute;z-index:4;top:23px;left:25px;right:25px;text-align:center;min-height:24px;color:var(--accent);font-size:11px;letter-spacing:.09em;text-transform:uppercase}.wave-wrap{height:28px;width:100%;position:relative;z-index:2;opacity:.65}.wave-wrap #wave{width:100%;height:28px;display:block}@keyframes centerHalo{0%,100%{transform:scale(.98);opacity:.7}50%{transform:scale(1.02);opacity:1}}@media(prefers-reduced-motion:reduce){#center-container::before{animation:none}.center-caption{transition:none}}
 .composer{width:100%;display:flex;gap:9px;align-items:center;padding:9px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.68);position:relative;z-index:3}.composer input{flex:1;min-width:0;border:0;background:transparent;padding:10px 12px;font-size:13px}.composer input::placeholder{color:#9b8d83}.composer button{height:38px;min-width:38px;border-radius:11px;border:1px solid var(--line);background:rgba(247,240,229,.8)}.composer button:hover{background:#fff7e9;border-color:rgba(182,85,63,.45)}#sendBtn{background:var(--terracotta);color:#fff;border-color:var(--terracotta);font-size:18px}.active{background:rgba(28,109,112,.16)!important;border-color:var(--peacock)!important;color:var(--peacock)!important}.attach-strip{width:100%;display:flex;gap:7px;min-height:0}.attach-strip:empty{display:none}
 .health-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.health-item{padding:10px 11px;border-radius:14px;background:rgba(255,255,255,.34);border:1px solid var(--line)}.health-item .label{font-size:9px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}.health-item .value{font-weight:700;color:var(--indigo);font-size:13px;margin-top:5px}.meter{height:4px;background:rgba(91,64,45,.12);border-radius:99px;overflow:hidden;margin-top:8px}.meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--peacock),var(--saffron));border-radius:inherit;transition:width .4s ease}.timeline{display:flex;flex-direction:column;gap:7px;font-size:11px;line-height:1.45;max-height:116px;overflow:auto}.timeline div{padding-bottom:7px;border-bottom:1px solid rgba(91,64,45,.09)}.timeline .hot{color:var(--terracotta)}.timeline .warn{color:var(--vermilion)}.terminal{max-height:110px;overflow:auto;font-size:10px;line-height:1.5;color:var(--peacock);background:rgba(38,58,99,.06);padding:9px;border-radius:12px}.terminal .term-line{border-bottom:1px solid rgba(38,58,99,.07);padding:2px 0}
 .bottom-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 14px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.12em}.bottom-bar .links{display:flex;gap:8px}.bottom-bar button{border:0;background:transparent;color:var(--indigo);font-size:10px;text-transform:uppercase;letter-spacing:.1em}.bottom-bar button:hover{color:var(--terracotta)}
@@ -66,7 +66,7 @@ button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}bu
   </aside>
   <section class="stage">
     <div class="stage-header"><div><div class="kicker">Personal intelligence / conversation</div><h2>A warm place to think out loud.</h2><p>Ask naturally. Use your voice, attach a file, or let KALKI turn a busy moment into a clear next step.</p></div><div class="thread-count">Local thread<br><span id="sMem">0</span> memories</div></div>
-    <div class="assistant-panel"><div id="readout" class="readout">Ready when you are</div><div id="center-container" role="button" tabindex="0" aria-label="Toggle microphone"><img id="kalkiEye" src="/assets/kalki-eye-background.png" alt="" aria-hidden="true"><div class="center-caption"><div class="eyebrow">KALKI / उपस्थित</div><h3>Listen. Understand. Move lightly.</h3><p>Tap anywhere here to speak</p></div></div><div class="wave-wrap"><canvas id="wave" aria-label="Voice activity"></canvas></div><div id="attachStrip" class="attach-strip"></div><div class="composer"><input id="input" aria-label="Message KALKI" placeholder="Ask KALKI anything…" autocomplete="off"><button class="icon-button" id="attachBtn" aria-label="Attach file or image" title="Attach file or image">＋</button><button class="icon-button" id="stopBtn" aria-label="Stop speaking" title="Stop speaking">■</button><button class="icon-button" id="micBtn" aria-label="Toggle microphone" title="Toggle microphone">◉</button><button class="icon-button" id="sendBtn" aria-label="Send message" title="Send message">→</button></div></div>
+    <div class="assistant-panel"><div id="readout" class="readout">Ready when you are</div><div id="center-container" role="button" tabindex="0" aria-label="Toggle microphone"><img id="kalkiEye" src="/assets/kalki-eye-background.png" alt="" aria-hidden="true"><canvas id="orb" aria-label="Animated KALKI intelligence core"></canvas><div class="center-caption"><div class="eyebrow">KALKI / उपस्थित</div><h3 id="centerTitle">Listen. Understand. Move lightly.</h3><p id="centerHint">Tap the core to speak · type below to begin</p></div></div><div class="wave-wrap"><canvas id="wave" aria-label="Voice activity"></canvas></div><div id="attachStrip" class="attach-strip"></div><div class="composer"><input id="input" aria-label="Message KALKI" placeholder="Ask KALKI anything…" autocomplete="off"><button class="icon-button" id="attachBtn" aria-label="Attach file or image" title="Attach file or image">＋</button><button class="icon-button" id="stopBtn" aria-label="Stop speaking" title="Stop speaking">■</button><button class="icon-button" id="micBtn" aria-label="Toggle microphone" title="Toggle microphone">◉</button><button class="icon-button" id="sendBtn" aria-label="Send message" title="Send message">→</button></div></div>
   </section>
   <aside id="rightHud" class="rail right-rail">
     <section class="glass-card"><div class="kicker">Today, at a glance</div><h2 class="card-title">A softer dashboard.</h2><div class="muted" id="calMailLine">📬 Checking important mail…</div><div id="calEvents" class="timeline" style="margin-top:12px"><span class="muted">Calendar will appear here.</span></div><div id="calNowPlaying" class="muted" style="display:none;margin-top:10px"></div></section>
@@ -161,6 +161,20 @@ const STATE = {
 };
 
 const pill = $("statusPill"), pillText = $("statusText");
+const CENTER_STATES = {
+  idle: {title:"Listen. Understand. Move lightly.", hint:"Tap the core to speak · type below to begin"},
+  listening: {title:"I’m listening.", hint:"Speak naturally · KALKI is ready"},
+  thinking: {title:"Let me work through that.", hint:"Local tools and intelligence are coordinating"},
+  speaking: {title:"Here is what I found.", hint:"You can interrupt, ask a follow-up, or continue"},
+  busy: {title:"Quiet mode is active.", hint:"Microphone paused · your workspace remains protected"},
+};
+function updateCenterCopy(){
+  const state = CENTER_STATES[STATE.mode] || CENTER_STATES.idle;
+  const title = $("centerTitle"), hint = $("centerHint"), center = $("center-container");
+  if (title) title.textContent = state.title;
+  if (hint) hint.textContent = state.hint;
+  if (center) center.setAttribute("aria-label", state.hint);
+}
 
 function flashWake(){
   const f = document.createElement("div");
@@ -172,6 +186,7 @@ function flashWake(){
 function setMode(m){
   if (STATE.mode === m) return;
   STATE.mode = m; STATE.pulse = 1.0;
+  updateCenterCopy();
   document.body.classList.remove("mode-idle","mode-listening","mode-thinking","mode-speaking","mode-busy");
   document.body.classList.add("mode-" + m);
   pillText.textContent =
@@ -1524,8 +1539,8 @@ function accentRgba(alpha){
 
 function modeColors(){
   const a = getComputedStyle(document.body).getPropertyValue("--accent").trim();
-  const speeds = {idle:0.6, listening:2.0, thinking:4.0, speaking:2.5};
-  return { core:"#ffffff", ring:a, accent:a, speed: speeds[STATE.mode]||1 };
+  const speeds = {idle:0.6, listening:2.0, thinking:4.0, speaking:2.5, busy:0.35};
+  return { core:"#3d4f73", ring:a, accent:a, speed: speeds[STATE.mode]||1 };
 }
 
 function sampleFreq(){
@@ -1555,6 +1570,7 @@ function drawOrb() {
   if (!ox) return;
   try {
     t++;
+    STATE.pulse *= 0.94;
     const cx = W/2, cy = H/2;
     const R = Math.min(W,H) * 0.35;
     
@@ -1607,12 +1623,21 @@ function drawOrb() {
     // 5) Inner Lotus / Geometrics
     drawLotusRing(cx, cy, R*0.3, R*0.65, 12, -chakraAngle, cAccent, 0.5 + vol*0.3, false);
     
-    // 6) Center Core pulse
-    ox.beginPath();
-    ox.arc(cx, cy, R*0.2 + vol*R*0.1, 0, Math.PI*2);
+    // 6) Center Core pulse — a quiet heartbeat that reacts to voice and state.
+    const coreR = R * (0.2 + vol*0.1 + STATE.pulse*0.04);
+    const coreGlow = ox.createRadialGradient(cx, cy, coreR*0.1, cx, cy, coreR*1.8);
+    coreGlow.addColorStop(0, "rgba(255,255,255,.98)");
+    coreGlow.addColorStop(.42, "rgba(255,251,245,.8)");
+    coreGlow.addColorStop(1, accentRgba(0));
+    ox.fillStyle = coreGlow;
+    ox.beginPath(); ox.arc(cx, cy, coreR*1.8, 0, Math.PI*2); ox.fill();
+    ox.save();
+    ox.shadowColor = cAccent; ox.shadowBlur = 10 + STATE.pulse*18;
+    ox.beginPath(); ox.arc(cx, cy, coreR, 0, Math.PI*2);
     ox.fillStyle = cCore;
     ox.globalAlpha = 0.8 + vol*0.2;
     ox.fill();
+    ox.restore();
     ox.globalAlpha = 1;
     
   } catch (err) {
@@ -1905,6 +1930,7 @@ function frameInterval(){
   // keep the laptop cool. Mic/listening/thinking/speaking = active.
   const active = STATE.micActive || (STATE.mode && STATE.mode !== "idle")
                  || STATE.pulse > 0.02;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 1000/8;
   return active ? (1000/30) : (1000/12);
 }
 function loop(ts){
@@ -1912,7 +1938,8 @@ function loop(ts){
   if (!_lastFrame) _lastFrame = ts;
   if (ts - _lastFrame >= frameInterval()){
     _lastFrame = ts;
-    // The architectural eye is the presence layer; keep only the lightweight waveform.
+    // The eye image remains the atmospheric layer; this canvas is the active intelligence core.
+    drawOrb();
     drawWave();
     if (++_dialFrame >= 6){ _dialFrame = 0; drawDial(); drawGauge(); }
   }
