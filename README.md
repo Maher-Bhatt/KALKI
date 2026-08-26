@@ -2,7 +2,7 @@
 
 KALKI is a local-first, voice-capable AI desktop assistant with a secure localhost API, responsive HUD dashboard, configurable model providers, memory and task workflows, cybersecurity utilities, and platform-aware system integrations.
 
-Version **1.3.0** focuses on reliable startup, consistent voice identity, protected local APIs, safe user-data storage, improved full-screen behavior, and a practical Linux execution path.
+Version **1.3.5** focuses on reliable Windows startup, a native desktop window, conservative WebView2 rendering, consistent voice identity, protected local APIs, safe user-data storage, installer replacement safety, and a practical Linux execution path.
 
 <p align="center">
   <img src="marketing/promotional/promo_github_hero.png" alt="KALKI AI Assistant — Intelligence, Within Reach" width="900">
@@ -12,7 +12,7 @@ Version **1.3.0** focuses on reliable startup, consistent voice identity, protec
 
 | Platform | Primary experience | Status |
 |---|---|---|
-| Windows 10/11 | PyWebView desktop shell with packaged helper services | Validated for v1.3.0 release |
+| Windows 10/11 | Native-framed PyWebView desktop shell with packaged helper services | Validated for v1.3.5 release; target-device acceptance recommended |
 | Linux | Supervised local server with browser-backed dashboard | Validated in an Ubuntu-like sandbox; hardware acceptance pass recommended |
 | macOS | Source-compatible runtime path and browser mode | Not claimed as fully validated in this release |
 
@@ -20,7 +20,7 @@ Linux deliberately uses the default browser for the dashboard instead of forcing
 
 ## Highlights
 
-KALKI provides a responsive Canvas-based HUD with full-screen and window controls, typed chat, optional browser microphone input, configurable AI providers, local memory, task management, notifications, vision workflows, cybersecurity helpers, and controlled system actions. The default voice identity is the British English neural voice `en-GB-RyanNeural`, used consistently across normal responses, notifications, and workflow modes. Mode context changes delivery and wording without silently changing the configured assistant identity.
+KALKI provides a responsive CSS-rendered HUD with native window controls, typed chat, optional browser microphone input, configurable AI providers, local memory, task management, notifications, vision workflows, cybersecurity helpers, and controlled system actions. The v1.3.5 center avoids continuous canvas redraws and uses a lightweight eye-based presence treatment for better compatibility on Windows graphics drivers. The default voice identity is the British English neural voice `en-GB-RyanNeural`, used consistently across normal responses, notifications, and workflow modes. Mode context changes delivery and wording without silently changing the configured assistant identity.
 
 The local server binds to loopback and requires the installation-specific `X-KALKI-Token` header for privileged API operations. Host code execution is disabled by default. Destructive or system-changing actions remain guarded by explicit confirmation and platform capability checks.
 
@@ -63,7 +63,7 @@ The headless path creates a safe quick configuration, defaults to push-to-talk, 
 
 ### Windows release artifacts
 
-The Windows release pipeline creates a portable GitHub ZIP and an unsigned MSIX suitable for Microsoft Store submission. Development signing is intentionally opt-in and is never performed by the default release command. The generated archives and build directories are ignored by Git.
+The Windows release pipeline creates a standalone EXE, a portable GitHub ZIP, and an unsigned MSIX suitable for Microsoft Store submission. Version 1.3.5 uses the native Windows frame and conservative WebView2 rendering, and the installer stops KALKI helper processes before replacing locked files. Development signing is intentionally opt-in and is never performed by the default release command. The generated archives and build directories are ignored by Git.
 
 ## Campaign gallery
 
@@ -161,12 +161,12 @@ python -m unittest app/sandbox_tool_test.py
 
 For JavaScript syntax validation, extract each inline script block from `app/index.html` and run `node --check` on the resulting files. The Linux CI workflow performs compilation, dashboard syntax checks, verification tests, tool tests, and Linux archive creation on Ubuntu 24.04.
 
-The v1.3.0 release gates recorded the following results:
+The v1.3.5 release gates recorded the following results:
 
 | Gate | Result |
 |---|---:|
-| Windows source verification | 9 passed, 0 failed |
-| Windows MSIX validation | 16 passed, 0 warnings, 0 errors |
+| Windows source verification | 9 passed, 0 failed; 57 Python files compiled |
+| Windows MSIX validation | 16 passed, 0 warnings, 0 errors; package identity 1.3.5.0 |
 | Linux source verification | 9 passed, 0 failed |
 | Linux tool tests | 10/10 passed |
 | Linux headless setup | Passed in a fresh XDG home |
@@ -195,11 +195,11 @@ Some functions are inherently platform-specific and are intentionally guarded ra
 
 ## Repository hygiene
 
-Generated environments, downloaded browsers, build trees, packaged executables, MSIX staging files, runtime data, logs, signing certificates, private keys, and release outputs are excluded by `.gitignore`. Only source code, maintained scripts, tests, documentation, and intentional visual assets belong in Git.
+Generated environments, downloaded browsers, build trees, packaged executables, MSIX staging files, runtime data, logs, signing certificates, private keys, and release outputs are excluded by `.gitignore`. Only source code, maintained scripts, tests, documentation, legal terms, and intentional visual assets belong in Git. The v1.3.5 Store package is validated locally but receives production signing and certification through Microsoft Partner Center.
 
 ## License
 
-KALKI is distributed under the license in [`LICENSE`](LICENSE). Review [`TERMS.md`](TERMS.md) for additional project terms and [`CHANGES.md`](CHANGES.md) for release history.
+KALKI is distributed under the license in [`LICENSE`](LICENSE). Review [`TERMS.md`](TERMS.md) for responsible-use and distribution terms, [`PRIVACY.md`](PRIVACY.md) for data-handling information, and [`CHANGES.md`](CHANGES.md) for release history.
 
 ## References
 

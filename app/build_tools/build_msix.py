@@ -11,7 +11,7 @@ APP_NAME = "KALKI"
 try:
     from version import APP_VERSION as _APP_VERSION
 except ImportError:
-    _APP_VERSION = "1.3.0"
+    _APP_VERSION = "1.3.5"
 APP_VERSION = _APP_VERSION + ".0" # Must be X.X.X.X
 PUBLISHER_NAME = "CN=KALKI_Developer"
 PUBLISHER_DISPLAY_NAME = "KALKI Developer"
