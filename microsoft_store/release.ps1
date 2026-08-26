@@ -1,6 +1,6 @@
 <##
 .SYNOPSIS
-    Build the KALKI 1.3.2 GitHub and Microsoft Store release artifacts.
+    Build the KALKI 1.3.3 GitHub and Microsoft Store release artifacts.
 .DESCRIPTION
     Runs the reproducible PyInstaller build, creates a portable GitHub ZIP,
     assembles and validates an MSIX, optionally signs it for local sideloading,
@@ -21,11 +21,11 @@ $StoreDir = $PSScriptRoot
 $ProjectRoot = (Get-Item (Join-Path $StoreDir '..')).FullName
 $AppDir = Join-Path $ProjectRoot 'app'
 $OutputDir = Join-Path $StoreDir 'output'
-$ReleaseDir = Join-Path $OutputDir 'release-v1.3.2'
-$GitHubStage = Join-Path $OutputDir 'KALKI_v1.3.2_GitHub'
-$GitHubZip = Join-Path $ReleaseDir 'KALKI_v1.3.2_GitHub.zip'
+$ReleaseDir = Join-Path $OutputDir 'release-v1.3.3'
+$GitHubStage = Join-Path $OutputDir 'KALKI_v1.3.3_GitHub'
+$GitHubZip = Join-Path $ReleaseDir 'KALKI_v1.3.3_GitHub.zip'
 $MsixSource = Join-Path $OutputDir 'KALKI.msix'
-$MsixRelease = Join-Path $ReleaseDir 'KALKI_v1.3.2.msix'
+$MsixRelease = Join-Path $ReleaseDir 'KALKI_v1.3.3.msix'
 $Checksums = Join-Path $ReleaseDir 'SHA256SUMS.txt'
 
 New-Item -ItemType Directory -Path $ReleaseDir -Force | Out-Null
@@ -40,7 +40,7 @@ if (-not $PythonExe -or -not (Test-Path $PythonExe)) {
     throw "Python was not found. Set KALKI_PYTHON or pass -PythonExe."
 }
 
-Write-Host '=== KALKI 1.3.2 Release Pipeline ===' -ForegroundColor Cyan
+Write-Host '=== KALKI 1.3.3 Release Pipeline ===' -ForegroundColor Cyan
 Write-Host "Project: $ProjectRoot"
 Write-Host "Python:  $PythonExe"
 
@@ -87,7 +87,7 @@ foreach ($name in @('README.md','LICENSE','TERMS.md','CHANGES.md')) {
 }
 
 $portableReadme = @"
-KALKI v1.3.2 — portable Windows package
+KALKI v1.3.3 — portable Windows package
 
 Run KALKI.exe. Runtime data and API credentials are stored in %APPDATA%\KALKI.
 The local API requires its per-installation token; do not expose it or forward

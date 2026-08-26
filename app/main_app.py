@@ -122,6 +122,10 @@ def start_services():
                 time.sleep(0.25)
         else:
             print("WARNING: Server did not start listening in time; opening UI anyway.")
+        # Start microphone capture only after the desktop window has had time to
+        # paint. This prevents audio-device enumeration from competing with the
+        # first WebView message loop on machines with slow or virtual devices.
+        time.sleep(8)
         global listener_process
         print("Starting KALKI Listener...")
         try:
@@ -384,7 +388,10 @@ if __name__ == '__main__':
         min_size=(960, 680),
         background_color='#f4ecdf',
         resizable=True,
-        frameless=True,
+        # Use the native frame for reliable Windows message handling. The
+        # frameless WebView drag path has been removed because it can leave the
+        # packaged process marked "not responding" after first paint.
+        frameless=False,
         easy_drag=False,
         js_api=api
     )
@@ -392,8 +399,12 @@ if __name__ == '__main__':
     
     window.events.closing += on_closing
     
-    # Start the system tray in a background thread
-    threading.Thread(target=setup_tray, daemon=True).start()
+    # Let the WebView settle before starting optional tray integration. Some
+    # Windows shell environments load tray extensions synchronously.
+    def _start_optional_tray():
+        time.sleep(8)
+        setup_tray()
+    threading.Thread(target=_start_optional_tray, name="kalki-tray", daemon=True).start()
     
     # Global Windows hotkeys run outside PyWebView's event loop and can
     # interfere with a frameless window. Keep this opt-in until it has a
