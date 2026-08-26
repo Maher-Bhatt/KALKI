@@ -7,7 +7,7 @@ from pathlib import Path
 try:
     from version import APP_VERSION
 except ImportError:
-    APP_VERSION = "1.3.0"
+    APP_VERSION = "1.3.5"
 
 
 VERSION_PARTS = tuple(int(part) for part in APP_VERSION.split(".")) + (0,)
