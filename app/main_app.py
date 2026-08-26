@@ -379,6 +379,15 @@ if __name__ == '__main__':
             
     api = WebApi()
 
+    # Prefer a conservative WebView2 renderer for packaged Windows builds.
+    # KALKI is intentionally CSS-only now; disabling GPU compositing avoids
+    # driver-specific WebView hangs after first paint while preserving the
+    # full dashboard interaction model.
+    if sys.platform == "win32":
+        extra_args = "--disable-gpu"
+        existing_args = os.environ.get("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "").strip()
+        if extra_args not in existing_args:
+            os.environ["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = (existing_args + " " + extra_args).strip()
     import webview
     window = webview.create_window(
         title='KALKI AI Assistant', 
