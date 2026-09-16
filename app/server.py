@@ -164,6 +164,7 @@ VAULT_PATH   = os.path.join(DATA_DIR, "vault.json")
 SCRIPTS_DIR  = os.path.join(DATA_DIR, "scripts")
 TASKS_PATH   = os.path.join(DATA_DIR, "tasks.json")
 REMINDERS_PATH = os.path.join(DATA_DIR, "reminders.json")
+REPORTS_PATH = os.path.join(DATA_DIR, "ai_reports.jsonl")
 LOG_PATH     = os.path.join(DATA_DIR, "kalki.log")
 USER_CONFIG_PATH = getattr(config, "_USER_CONFIG_PATH", os.path.join(os.path.dirname(DATA_DIR), "user_config.json"))
 os.makedirs(SCRIPTS_DIR, exist_ok=True)
@@ -294,7 +295,8 @@ def _settings_status(keys):
 
 _THEME_COLOR_KEYS = ("THEME_PRIMARY", "THEME_PEACOCK", "THEME_INDIGO", "THEME_SAFFRON")
 _THEME_DEFAULTS = {
-    "THEME_PRESET": "Diya Dawn",
+    "THEME_PRESET": "Obsidian K",
+    "THEME_MODE": "dark",
     "THEME_PRIMARY": "#b6553f",
     "THEME_PEACOCK": "#1c6d70",
     "THEME_INDIGO": "#263a63",
@@ -314,6 +316,8 @@ def _sanitize_theme_updates(updates):
                 clean[key] = _THEME_DEFAULTS[key]
             else:
                 clean[key] = value.lower()
+    if "THEME_MODE" in clean:
+        clean["THEME_MODE"] = "light" if str(clean["THEME_MODE"]).strip().lower() == "light" else "dark"
     if "THEME_PRESET" in clean:
         value = str(clean["THEME_PRESET"] or "").strip()
         clean["THEME_PRESET"] = value[:40] or _THEME_DEFAULTS["THEME_PRESET"]
@@ -4567,7 +4571,8 @@ class Handler(BaseHTTPRequestHandler):
                 "TTS_VOLUME": getattr(config, "TTS_VOLUME", "+0%"),
                 "TTS_OUTPUT_DEVICE": getattr(config, "TTS_OUTPUT_DEVICE", ""),
                 "TTS_GROQ_TIMEOUT_SEC": getattr(config, "TTS_GROQ_TIMEOUT_SEC", 3),
-                "THEME_PRESET": getattr(config, "THEME_PRESET", "Diya Dawn"),
+                "THEME_PRESET": getattr(config, "THEME_PRESET", "Obsidian K"),
+                "THEME_MODE": getattr(config, "THEME_MODE", "dark"),
                 "THEME_PRIMARY": getattr(config, "THEME_PRIMARY", "#b6553f"),
                 "THEME_PEACOCK": getattr(config, "THEME_PEACOCK", "#1c6d70"),
                 "THEME_INDIGO": getattr(config, "THEME_INDIGO", "#263a63"),
@@ -5024,6 +5029,36 @@ class Handler(BaseHTTPRequestHandler):
                 
                 self._json({"reply": reply, "source": "ai", "model": STATE["model"]})
                 return
+
+        if path == "/api/report":
+            response = str(body.get("response") or "").strip()
+            reason = str(body.get("reason") or "other").strip().lower()
+            details = str(body.get("details") or "").strip()
+            prompt = str(body.get("prompt") or "").strip()
+            allowed_reasons = {"harmful", "hateful", "sexual", "privacy", "misleading", "other"}
+            if not response:
+                self._json({"ok": False, "error": "response is required"}, status=400)
+                return
+            if reason not in allowed_reasons:
+                self._json({"ok": False, "error": "invalid report reason"}, status=400)
+                return
+            report = {
+                "id": f"report-{int(time.time() * 1000)}",
+                "createdAt": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+                "reason": reason,
+                "details": details[:1200],
+                "prompt": prompt[:4000],
+                "response": response[:12000],
+                "model": STATE.get("model", "auto"),
+            }
+            try:
+                with open(REPORTS_PATH, "a", encoding="utf-8") as report_file:
+                    report_file.write(json.dumps(report, ensure_ascii=False) + "\n")
+                log(f"AI response report saved: {report['id']} ({reason})")
+                self._json({"ok": True, "reportId": report["id"]})
+            except Exception as exc:
+                self._json({"ok": False, "error": f"could not save report: {exc}"}, status=500)
+            return
 
         if path == "/api/command":
             cmd = (body.get("cmd") or "").strip()

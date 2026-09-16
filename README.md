@@ -1,8 +1,8 @@
 # KALKI AI Assistant
 
-KALKI is a local-first, voice-capable AI desktop assistant with a secure localhost API, responsive HUD dashboard, configurable model providers, memory and task workflows, cybersecurity utilities, and platform-aware system integrations.
+KALKI is a local-first, voice-capable AI desktop assistant with a secure localhost API, responsive HUD dashboard, configurable model providers, memory and task workflows, cybersecurity utilities, and platform-aware system integrations. The dashboard now opens in a dark-first **Obsidian K** theme centered on the K monogram, with an explicit light-mode switch for user preference.
 
-Version **1.3.5** focuses on reliable Windows startup, a native desktop window, conservative WebView2 rendering, consistent voice identity, protected local APIs, safe user-data storage, installer replacement safety, and a practical Linux execution path.
+Version **1.3.5** focuses on reliable Windows startup, a native desktop window, conservative WebView2 rendering, consistent voice identity, protected local APIs, safe user-data storage, installer replacement safety, a dark-first K-branded dashboard, and a practical Linux execution path.
 
 <p align="center">
   <img src="marketing/promotional/promo_github_hero.png" alt="KALKI AI Assistant — Intelligence, Within Reach" width="900">

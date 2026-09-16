@@ -52,6 +52,12 @@ Features:
 KALKI runs locally on your Windows PC and connects to cloud AI services
 (Groq, Google Gemini, OpenAI, Anthropic) for intelligent responses.
 
+KALKI uses live generative AI to respond to user prompts. AI responses may be
+incorrect or inappropriate. Each generated response includes an in-app
+**Report this response** action. Reports are saved to KALKI's local review
+queue with the selected reason and are available to the developer for review.
+Users should review important information before acting on it.
+
 Powered by Python, edge-tts, and modern web technologies.
 ```
 
@@ -63,6 +69,8 @@ Powered by Python, edge-tts, and modern web technologies.
 ### Screenshots
 - Upload at least 1 screenshot (1366x768 recommended)
 - Use the screenshots from your `screenshots/` folder or take new ones
+- Include a screenshot where the **Report this response** action is visible
+  below a generated answer.
 
 ### Privacy Policy
 - URL: `https://github.com/Maher-Bhatt/KALKI/blob/main/TERMS.md`
@@ -81,6 +89,16 @@ Powered by Python, edge-tts, and modern web technologies.
 ---
 
 ## 4. Submit for Review
+
+### Certification notes for requirement 11.16
+
+In Partner Center, disclose that KALKI contains live generative AI. During
+testing, enter any prompt in the central conversation composer. After KALKI
+returns an answer, select **Report this response**, choose a reason, and submit
+the report. The app confirms receipt and writes the report to the protected
+per-user local data directory for developer review. The interface also shows a
+plain-language disclosure above the composer explaining that responses are
+AI-generated and may be incorrect.
 
 - Click **Submit to the Store**
 - Microsoft will review your app (typically 1-3 business days)

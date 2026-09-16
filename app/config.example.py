@@ -84,7 +84,8 @@ HUD_EFFECT_QUALITY = "balanced"
 
 # ── APPEARANCE / THEME ───────────────────────────────────────
 # These values are editable from Setup & Settings > Theme Lab.
-THEME_PRESET = "Diya Dawn"
+THEME_PRESET = "Obsidian K"
+THEME_MODE = "dark"
 THEME_PRIMARY = "#b6553f"
 THEME_PEACOCK = "#1c6d70"
 THEME_INDIGO = "#263a63"
