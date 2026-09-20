@@ -7,7 +7,7 @@ from pathlib import Path
 try:
     from version import APP_VERSION
 except ImportError:
-    APP_VERSION = "1.3.5"
+    APP_VERSION = "2.1.0"
 
 
 VERSION_PARTS = tuple(int(part) for part in APP_VERSION.split(".")) + (0,)
@@ -124,6 +124,7 @@ def main():
         if script == "server.py":
             cmd.append("--hidden-import=pytesseract")
             cmd.append("--hidden-import=spotipy")
+            cmd.append("--hidden-import=plyer")
             
         if script == "listener.py":
             cmd.append("--hidden-import=pyaudio")

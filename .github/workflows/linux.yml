@@ -37,19 +37,41 @@ jobs:
       - name: Compile Python sources
         run: python -m compileall -q app
 
-      - name: Validate dashboard JavaScript
+      - name: Validate frontend JavaScript
         shell: bash
         run: |
+          # The frontend is now a 27-module ES-module tree under app/ui/,
+          # not inline <script> blocks in index.html (that file now only
+          # loads /ui/main.js and a tiny <script nomodule> fallback). Check
+          # every real module for syntax errors, then confirm the nomodule
+          # fallback and every static import in the module graph resolves.
+          count=0
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+            count=$((count + 1))
+          done < <(find app/ui -name '*.js' -print0)
+          echo "checked ${count} frontend modules with node --check"
+
           python - <<'PY'
           import re
           from pathlib import Path
           html = Path('app/index.html').read_text(encoding='utf-8')
           blocks = re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>', html)
+          blocks = [b for b in blocks if b.strip()]
           for index, block in enumerate(blocks, 1):
-              Path(f'/tmp/kalki-ui-{index}.js').write_text(block, encoding='utf-8')
-          print(f'validated {len(blocks)} script blocks for node --check')
+              Path(f'/tmp/kalki-inline-{index}.js').write_text(block, encoding='utf-8')
+          print(f'validated {len(blocks)} inline script block(s) in index.html')
           PY
-          for file in /tmp/kalki-ui-*.js; do node --check "$file"; done
+          for file in /tmp/kalki-inline-*.js; do [ -f "$file" ] && node --check "$file"; done
+
+      - name: Validate frontend module resolution
+        shell: bash
+        run: |
+          # Every static and dynamic import in app/ui/ must resolve to a real
+          # file and a real named export. This is the check that would have
+          # caught a typo'd import path or a renamed export before it ever
+          # reached a browser.
+          node --experimental-vm-modules .github/scripts/validate-ui-modules.mjs
 
       - name: Run project verification and tool tests
         working-directory: app

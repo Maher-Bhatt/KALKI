@@ -1,6 +1,6 @@
 # KALKI Privacy Notice
 
-**Version:** 1.3.5
+**Version:** 2.0.0
 **Last updated:** August 26, 2026
 
 KALKI is designed as a local-first desktop assistant for Windows and Linux. This Privacy Notice explains what may be stored on the device, what may leave the device when optional features are enabled, and the controls available to the person using KALKI.
@@ -9,7 +9,7 @@ KALKI is designed as a local-first desktop assistant for Windows and Linux. This
 
 KALKI may store ordinary runtime data in the platform user-data directory. Depending on the features you use, this may include configuration, conversation history, memories, notes, tasks, reminders, productivity and screen-time summaries, logs, backups, temporary files, and local service state. The application uses a per-installation API token to protect privileged localhost routes. Runtime data and credentials should be treated as private device data.
 
-KALKI does not require a cloud account for its basic local dashboard, typed interaction, local settings, or guarded local workflows. The application cannot guarantee that data will survive an operating-system failure, disk failure, accidental deletion, malware, or a failed update. Maintain independent backups of important information.
+KALKI does not require a cloud account for its basic local interface, typed interaction, local settings, or guarded local workflows. The application cannot guarantee that data will survive an operating-system failure, disk failure, accidental deletion, malware, or a failed update. Maintain independent backups of important information.
 
 ## Optional providers and integrations
 
@@ -29,7 +29,7 @@ KALKI can offer actions that read a selected screen region, selected file, or cl
 
 ## Location, weather, and diagnostics
 
-If enabled or required by a configured feature, KALKI may request approximate location from an IP-location service or request weather data. The local dashboard may also display device health information such as CPU, memory, disk, battery, and application uptime. Screen-time summaries are intended to remain local to the device runtime data directory.
+If enabled or required by a configured feature, KALKI may request approximate location from an IP-location service or request weather data. The local interface may also display device health information such as CPU, memory, disk, battery, and application uptime. Screen-time summaries are intended to remain local to the device runtime data directory.
 
 ## Security controls
 

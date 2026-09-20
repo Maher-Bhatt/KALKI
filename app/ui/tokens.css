@@ -1,0 +1,156 @@
+/* KALKI — Filament design tokens.
+   Single source of truth for colour, type, space, radius, elevation, motion.
+   Never hardcode a value outside this file. */
+
+:root {
+  color-scheme: dark;
+
+  /* ── Surfaces: cold graphite, hue ~215, very low chroma ───────────── */
+  --surface-void:    #070809;
+  --surface-inset:   #0a0c0e;
+  --surface-base:    #0d0f12;
+  --surface-raised:  #191d22;
+  --surface-overlay: #262c33;
+  --surface-float:   #323941;
+
+  /* ── Lines. --line-strong is the WCAG 1.4.11 floor (3.14:1 on base) ─ */
+  --line-subtle: #232930;
+  --line:        #333b44;
+  --line-strong: #59636f;
+  --line-focus:  #fff4e2;
+
+  /* ── Text. --text-faint is banned on overlay/float (drops below AA) ─ */
+  --text:          #e6ebef;
+  --text-2:        #b3bcc6;
+  --text-muted:    #8a95a1;
+  --text-faint:    #7e8894;
+  --text-disabled: #4a535d;
+
+  /* ── Filament: the signature. Presence, active indicator, focus only. */
+  --filament:      #fff4e2;
+  --filament-2:    #e2d6c2;
+  --filament-3:    #9c9384;
+  --filament-halo: rgba(255, 244, 226, .13);
+
+  /* ── Semantic. Status only — never branding, never decoration. ────── */
+  --danger:       #f0565b;
+  --danger-text:  #ff8a8e;
+  --danger-bg:    rgba(240, 86, 91, .12);
+  --danger-line:  rgba(240, 86, 91, .32);
+  --success:      #4cc061;
+  --success-text: #7bd98a;
+  --success-bg:   rgba(76, 192, 97, .12);
+  --success-line: rgba(76, 192, 97, .30);
+  --warning:      #e08c33;
+  --warning-text: #efa95f;
+  --warning-bg:   rgba(224, 140, 51, .12);
+  --warning-line: rgba(224, 140, 51, .30);
+
+  /* ── Type ─────────────────────────────────────────────────────────── */
+  --font-ui: "Instrument Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, ui-monospace, SFMono-Regular, monospace;
+
+  --fs-display: 1.75rem;  --lh-display: 2.125rem;
+  --fs-title-1: 1.25rem;  --lh-title-1: 1.625rem;
+  --fs-title-2: 1rem;     --lh-title-2: 1.375rem;
+  --fs-body:    .875rem;  --lh-body:    1.3125rem;
+  --fs-body-sm: .8125rem; --lh-body-sm: 1.1875rem;
+  --fs-label:   .75rem;   --lh-label:   1rem;
+  --fs-meta:    .6875rem; --lh-meta:    .9375rem;
+  --fs-mono:    .8125rem; --lh-mono:    1.25rem;
+
+  /* ── Space ────────────────────────────────────────────────────────── */
+  --space-1: .125rem; --space-2: .25rem;  --space-3: .375rem; --space-4: .5rem;
+  --space-5: .75rem;  --space-6: 1rem;    --space-7: 1.25rem; --space-8: 1.5rem;
+  --space-9: 2rem;    --space-10: 2.5rem; --space-11: 3.5rem;
+
+  /* ── Control sizes. 24px is the WCAG 2.5.8 target floor. ──────────── */
+  --size-xs: 1.25rem; --size-sm: 1.5rem; --size-md: 1.75rem;
+  --size-lg: 2rem;    --size-xl: 2.5rem;
+
+  /* ── Radius encodes hierarchy. One radius everywhere is the tell. ─── */
+  --radius-xs: 3px; --radius-sm: 6px; --radius-md: 10px;
+  --radius-lg: 14px; --radius-full: 999px;
+
+  /* ── Elevation. Only e3/e4 spend a real shadow (CPU raster). ──────── */
+  --elev-2: 0 1px 2px rgba(0, 0, 0, .45);
+  --elev-3: 0 8px 24px rgba(0, 0, 0, .55), 0 0 0 1px var(--line);
+  --elev-4: 0 24px 64px rgba(0, 0, 0, .68), 0 0 0 1px var(--line);
+
+  /* ── Motion ───────────────────────────────────────────────────────── */
+  --dur-instant: 80ms; --dur-fast: 140ms; --dur-base: 200ms;
+  --dur-slow: 320ms;   --dur-presence: 600ms;
+  --ease-out:      cubic-bezier(.16, 1, .3, 1);
+  --ease-in:       cubic-bezier(.7, 0, .84, 0);
+  --ease-standard: cubic-bezier(.4, 0, .2, 1);
+  --ease-filament: cubic-bezier(.37, 0, .63, 1);
+
+  /* ── Layout ───────────────────────────────────────────────────────── */
+  --rail-w: 3.5rem;
+  --rail-w-open: 13rem;
+  --context-w: 17.5rem;
+  --titlebar-h: 2.25rem;
+  --measure: 72ch;
+}
+
+/* ── Light theme: designed, not inverted. Warmth still means KALKI. ─── */
+[data-theme="light"] {
+  color-scheme: light;
+  --surface-void:    #e8eaed;
+  --surface-inset:   #edf0f3;
+  --surface-base:    #f4f6f8;
+  --surface-raised:  #ffffff;
+  --surface-overlay: #ffffff;
+  --surface-float:   #e4e8ec;
+  --line-subtle: #e2e6ea;
+  --line:        #d5dadf;
+  --line-strong: #949da8;
+  --line-focus:  #7a5e2e;
+  --text:          #14181d;
+  --text-2:        #3e464f;
+  --text-muted:    #5d6874;
+  --text-faint:    #6e7884;
+  --text-disabled: #a4adb6;
+  --filament:      #7a5e2e;
+  --filament-2:    #96794a;
+  --filament-3:    #b5a184;
+  --filament-halo: rgba(122, 94, 46, .12);
+  --danger:  #c22a2f; --danger-text:  #a32126;
+  --success: #1f7a30; --success-text: #16652a;
+  --warning: #9a5c12; --warning-text: #7f4b0d;
+  --elev-2: 0 1px 2px rgba(20, 24, 29, .10);
+  --elev-3: 0 8px 24px rgba(20, 24, 29, .14), 0 0 0 1px var(--line);
+  --elev-4: 0 24px 64px rgba(20, 24, 29, .20), 0 0 0 1px var(--line);
+}
+
+/* ── Density ──────────────────────────────────────────────────────── */
+[data-density="compact"] { --space-6: .875rem; --space-8: 1.25rem; }
+
+/* ── Motion off: app setting or OS preference. State stays legible. ── */
+[data-motion="off"] {
+  --dur-instant: 0ms; --dur-fast: 0ms; --dur-base: 0ms;
+  --dur-slow: 0ms; --dur-presence: 0ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-instant: 0ms; --dur-fast: 0ms; --dur-base: 0ms;
+    --dur-slow: 0ms; --dur-presence: 0ms;
+  }
+}
+@media (prefers-contrast: more) {
+  :root { --line: #4a535d; --line-subtle: #333b44; --text-faint: #98a2ad; }
+}
+
+/* ── Optional local fonts ─────────────────────────────────────────────
+   Uncomment after dropping the .woff2 files into ui/fonts/ (see the README
+   there). KALKI never loads a font over the network: the packaged app must
+   render correctly offline, and the fallback stack is a designed-for case,
+   not a degradation.
+
+@font-face { font-family: "Instrument Sans"; font-weight: 400; font-style: normal;
+  font-display: swap; src: url("/ui/fonts/InstrumentSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "Instrument Sans"; font-weight: 500; font-style: normal;
+  font-display: swap; src: url("/ui/fonts/InstrumentSans-Medium.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-style: normal;
+  font-display: swap; src: url("/ui/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+*/

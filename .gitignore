@@ -23,6 +23,8 @@ app/config.py
 *.key
 *.pfx
 *.cer
+# No signing certificate belongs in this repository. Development signing
+# resolves KALKI_DEV_CERT_PATH / KALKI_DEV_CERT_PASSWORD from the environment.
 
 # Runtime and personal data
 /data/
@@ -45,7 +47,7 @@ user_config.json
 **/vosk-model/
 **/wordlist.txt
 **/rockyou.txt
-**/scripts/
+app/data/scripts/
 **/scans/
 **/voice_samples/
 
@@ -91,3 +93,7 @@ Thumbs.db
 node_modules/
 package-lock.json
 sync_to_github.py
+
+# Optional local font binaries (see app/ui/fonts/README.md)
+app/ui/fonts/*.woff2
+app/ui/fonts/*.woff

@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="1.3.0"
+VERSION="2.0.0"
 OUT_DIR="${1:-$ROOT/output/linux-v$VERSION}"
 STAGE="$OUT_DIR/KALKI-v$VERSION-linux"
 ARCHIVE="$OUT_DIR/KALKI_v${VERSION}_Linux.tar.gz"
