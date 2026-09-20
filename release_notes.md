@@ -1,3 +1,26 @@
+# KALKI v2.0.0 — Filament: a rebuilt frontend
+
+## v2.0.0 Frontend Rebuild
+
+KALKI's interface has been rebuilt from a single 2,529-line HTML file into a 27-module, no-build-step application under `app/ui/`, following the Filament design language: cold graphite surfaces, one warm-platinum presence mark that lives in the navigation rail rather than at screen center, and a command palette (`Ctrl/Cmd+K`) as a core interaction system rather than an afterthought.
+
+The backend is unchanged in substance. Three additive routes were added to `server.py` — a `/ui/*` static route with a content-type allowlist and a directory-traversal guard, `GET /api/history` for reconciling voice turns recorded while the window was closed, and 5-second caching on the memory count and hardware stats that `/api/status` was previously recomputing on every poll (roughly 2,400 times an hour under the old fixed timer). No existing route changed behavior, and no route was removed.
+
+The most significant change is exposure: an audit of the previous interface found 56 of the server's 83 API endpoints had never been given a UI — tasks, reminders, notes, calendar, mail, Spotify, WhatsApp, GitHub, workflows, the credential vault, code generation, screen vision, and thirteen cybersecurity routes. All of them now have one. The cybersecurity workspace is gated behind a configured key or an explicit Settings toggle rather than shown to every user by default.
+
+The service worker's caching policy is also fixed: the previous cache-first rule for non-API assets meant a shipped frontend file could never be updated once installed. The shell and API traffic are now network-only; application code is network-first; other assets are stale-while-revalidate.
+
+The Windows installer, MSIX staging, GitHub-release staging, and Linux packager now all ship `app/ui/`; previously only `index.html` was copied. No development signing certificate ships in this repository — local signing resolves `KALKI_DEV_CERT_PATH` and `KALKI_DEV_CERT_PASSWORD` from the environment, and an MSIX built without them is left unsigned, which is what Microsoft Partner Center expects on submission.
+
+## 📦 Binaries
+
+Built by the release pipeline (`microsoft_store/release.ps1`); this repository does not commit binaries. SHA-256 checksums are written alongside each generated artifact.
+
+**KALKI_Setup_v2.0.0.exe** (Standalone Installer)
+**KALKI_v2.0.0.msix** (Microsoft Store Package, unsigned pending Partner Center)
+
+---
+
 # 🚀 KALKI v1.3.0 — Stability, Consistent Voice, and Professional Desktop UX
 
 ## ✦ v1.3.0 Stability and Professional UX Release

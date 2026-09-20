@@ -395,7 +395,10 @@ if __name__ == '__main__':
         width=1440,
         height=900,
         min_size=(960, 680),
-        background_color='#f4ecdf',
+        # Painted before index.html loads, so it's what the user sees for the
+        # first frame. Must track --surface-void in ui/tokens.css or every
+        # launch flashes the old cream theme before the page takes over.
+        background_color='#070809',
         resizable=True,
         # Use the native frame for reliable Windows message handling. The
         # frameless WebView drag path has been removed because it can leave the

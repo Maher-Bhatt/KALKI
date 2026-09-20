@@ -96,6 +96,15 @@ if (Test-Path $appAssets) {
 }
 
 Log "Copying web files..."
+# Frontend application bundle. index.html alone renders a blank window.
+$uiDir = Join-Path $AppDir "ui"
+if (Test-Path $uiDir) {
+    Copy-Item -Path $uiDir -Destination (Join-Path $PackageRoot "ui") -Recurse -Force
+} else {
+    Log "ERROR: app/ui is missing - the frontend bundle must be packaged."
+    exit 1
+}
+
 foreach ($webFile in @("index.html", "manifest.json", "service-worker.js", "config.example.py")) {
     $src = Join-Path $AppDir $webFile
     if (Test-Path $src) {

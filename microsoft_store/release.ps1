@@ -1,6 +1,6 @@
 <##
 .SYNOPSIS
-    Build the KALKI 1.3.5 GitHub and Microsoft Store release artifacts.
+    Build the KALKI 2.0.0 GitHub and Microsoft Store release artifacts.
 .DESCRIPTION
     Runs the reproducible PyInstaller build, creates a portable GitHub ZIP,
     assembles and validates an MSIX, optionally signs it for local sideloading,
@@ -21,11 +21,11 @@ $StoreDir = $PSScriptRoot
 $ProjectRoot = (Get-Item (Join-Path $StoreDir '..')).FullName
 $AppDir = Join-Path $ProjectRoot 'app'
 $OutputDir = Join-Path $StoreDir 'output'
-$ReleaseDir = Join-Path $OutputDir 'release-v1.3.5'
-$GitHubStage = Join-Path $OutputDir 'KALKI_v1.3.5_GitHub'
-$GitHubZip = Join-Path $ReleaseDir 'KALKI_v1.3.5_GitHub.zip'
+$ReleaseDir = Join-Path $OutputDir 'release-v2.0.0'
+$GitHubStage = Join-Path $OutputDir 'KALKI_v2.0.0_GitHub'
+$GitHubZip = Join-Path $ReleaseDir 'KALKI_v2.0.0_GitHub.zip'
 $MsixSource = Join-Path $OutputDir 'KALKI.msix'
-$MsixRelease = Join-Path $ReleaseDir 'KALKI_v1.3.5.msix'
+$MsixRelease = Join-Path $ReleaseDir 'KALKI_v2.0.0.msix'
 $Checksums = Join-Path $ReleaseDir 'SHA256SUMS.txt'
 
 New-Item -ItemType Directory -Path $ReleaseDir -Force | Out-Null
@@ -40,7 +40,7 @@ if (-not $PythonExe -or -not (Test-Path $PythonExe)) {
     throw "Python was not found. Set KALKI_PYTHON or pass -PythonExe."
 }
 
-Write-Host '=== KALKI 1.3.5 Release Pipeline ===' -ForegroundColor Cyan
+Write-Host '=== KALKI 2.0.0 Release Pipeline ===' -ForegroundColor Cyan
 Write-Host "Project: $ProjectRoot"
 Write-Host "Python:  $PythonExe"
 
@@ -77,6 +77,9 @@ $assetSource = Join-Path $ProjectRoot 'assets'
 if (Test-Path $assetSource) { Copy-Item (Join-Path $assetSource '*') $githubAssets -Recurse -Force }
 $appAssetSource = Join-Path $AppDir 'assets'
 if (Test-Path $appAssetSource) { Copy-Item (Join-Path $appAssetSource '*') $githubAssets -Recurse -Force }
+$uiSource = Join-Path $AppDir 'ui'
+if (Test-Path $uiSource) { Copy-Item $uiSource (Join-Path $GitHubStage 'ui') -Recurse -Force }
+else { throw 'app/ui is missing - the frontend bundle must be packaged.' }
 foreach ($name in @('index.html','manifest.json','service-worker.js','config.example.py')) {
     $src = Join-Path $AppDir $name
     if (Test-Path $src) { Copy-Item $src $GitHubStage -Force }
@@ -87,7 +90,7 @@ foreach ($name in @('README.md','LICENSE','TERMS.md','CHANGES.md')) {
 }
 
 $portableReadme = @"
-KALKI v1.3.5 — portable Windows package
+KALKI v2.0.0 — portable Windows package
 
 Run KALKI.exe. Runtime data and API credentials are stored in %APPDATA%\KALKI.
 The local API requires its per-installation token; do not expose it or forward

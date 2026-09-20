@@ -48,6 +48,8 @@ except Exception:
     pass
 
 import config
+import oversight
+import notify
 from core import api_vault
 for _k, _v in api_vault.list_secrets().items():
     if _v:
@@ -164,6 +166,7 @@ VAULT_PATH   = os.path.join(DATA_DIR, "vault.json")
 SCRIPTS_DIR  = os.path.join(DATA_DIR, "scripts")
 TASKS_PATH   = os.path.join(DATA_DIR, "tasks.json")
 REMINDERS_PATH = os.path.join(DATA_DIR, "reminders.json")
+REPORTS_PATH = os.path.join(DATA_DIR, "ai_reports.jsonl")
 LOG_PATH     = os.path.join(DATA_DIR, "kalki.log")
 USER_CONFIG_PATH = getattr(config, "_USER_CONFIG_PATH", os.path.join(os.path.dirname(DATA_DIR), "user_config.json"))
 os.makedirs(SCRIPTS_DIR, exist_ok=True)
@@ -294,7 +297,8 @@ def _settings_status(keys):
 
 _THEME_COLOR_KEYS = ("THEME_PRIMARY", "THEME_PEACOCK", "THEME_INDIGO", "THEME_SAFFRON")
 _THEME_DEFAULTS = {
-    "THEME_PRESET": "Diya Dawn",
+    "THEME_PRESET": "Obsidian K",
+    "THEME_MODE": "dark",
     "THEME_PRIMARY": "#b6553f",
     "THEME_PEACOCK": "#1c6d70",
     "THEME_INDIGO": "#263a63",
@@ -314,6 +318,8 @@ def _sanitize_theme_updates(updates):
                 clean[key] = _THEME_DEFAULTS[key]
             else:
                 clean[key] = value.lower()
+    if "THEME_MODE" in clean:
+        clean["THEME_MODE"] = "light" if str(clean["THEME_MODE"]).strip().lower() == "light" else "dark"
     if "THEME_PRESET" in clean:
         value = str(clean["THEME_PRESET"] or "").strip()
         clean["THEME_PRESET"] = value[:40] or _THEME_DEFAULTS["THEME_PRESET"]
@@ -3771,21 +3777,21 @@ def ask_ai_stream(user_messages):
                             yield token
                     except Exception:
                         pass
-    except urllib.error.HTTPError as e:
-        if e.code == 429:
-            log(f"Rate limit hit on {chosen}, falling back to alternative...")
-            has_gemini = bool(getattr(config, "GEMINI_API_KEY", "") and not getattr(config, "GEMINI_API_KEY", "").startswith("PASTE_"))
-            has_openai = bool(getattr(config, "OPENAI_API_KEY", "") and not getattr(config, "OPENAI_API_KEY", "").startswith("PASTE_"))
-            fallback = "gemini-2.5-flash" if has_gemini else "gpt-4o-mini" if has_openai else "ollama"
-            if fallback != chosen:
-                STATE["model"] = fallback
-                for token in ask_ai_stream(user_messages): yield token
-                return
-        log(f"Cloud stream HTTP Error for {chosen}: {e}")
-        yield f"API link failed, Sir: {e}"
     except Exception as e:
         log(f"Cloud stream failed for {chosen}: {e}")
-        yield f"API link failed, Sir: {e}"
+        has_gemini = bool(getattr(config, "GEMINI_API_KEY", "") and not getattr(config, "GEMINI_API_KEY", "").startswith("PASTE_"))
+        has_openai = bool(getattr(config, "OPENAI_API_KEY", "") and not getattr(config, "OPENAI_API_KEY", "").startswith("PASTE_"))
+        fallback = "gemini-2.5-flash" if has_gemini and not chosen.startswith("gemini") else "gpt-4o-mini" if has_openai and not chosen.startswith("gpt") else "ollama"
+        if fallback != chosen and not getattr(ask_ai_stream, "_fallback_active", False):
+            ask_ai_stream._fallback_active = True
+            log(f"Falling back from {chosen} to {fallback}...")
+            STATE["model"] = fallback
+            try:
+                for token in ask_ai_stream(user_messages): yield token
+            finally:
+                ask_ai_stream._fallback_active = False
+            return
+        raise RuntimeError(f"Provider {chosen} failed: {e}")
 
 def ask_ai(user_messages, force_search=False):
     """Returns the AI text reply. Routes based on active model and falls back to Ollama."""
@@ -3970,10 +3976,8 @@ def ask_ai(user_messages, force_search=False):
             log(f"DeepSeek fallback failed: {deepseek_e}")
 
         if groq_err == "no API key set":
-            return ("I need an AI provider before I can answer. Open Settings, choose AI Models, "
-                    "and add your free Groq API key. Alternatively, check your network connection for the DeepSeek fallback.")
-        return (f"I could not reach an AI provider ({groq_err[:140]}). "
-                f"Check the connection and API key in Settings, then try again.")
+            raise RuntimeError("I need an AI provider before I can answer. Open Settings, choose AI Models, and add your free Groq API key. Alternatively, check your network connection for the DeepSeek fallback.")
+        raise RuntimeError(f"I could not reach an AI provider ({groq_err[:140]}). Check the connection and API key in Settings, then try again.")
 
 
 # ─────────────────────────────────────────────────────────────
@@ -4158,6 +4162,36 @@ def get_hardware_stats():
         return _hw_cache["cpu"], _hw_cache["ram"], _hw_cache["disk"]
 
 
+
+_STATUS_CACHE = {"mem_count": 0, "mem_at": 0.0, "hw": (0, 0, 0), "hw_at": 0.0}
+_STATUS_CACHE_TTL = 5.0
+
+
+def cached_mem_count():
+    """len(load_memory()) used to run on every /api/status hit, which meant
+    reading and JSON-parsing the whole memory file ~2400 times an hour. The
+    number does not need to be that fresh."""
+    now = time.time()
+    if now - _STATUS_CACHE["mem_at"] > _STATUS_CACHE_TTL:
+        try:
+            _STATUS_CACHE["mem_count"] = len(load_memory())
+        except Exception:
+            pass
+        _STATUS_CACHE["mem_at"] = now
+    return _STATUS_CACHE["mem_count"]
+
+
+def cached_hardware_stats():
+    """psutil sampling is also too expensive to run per request."""
+    now = time.time()
+    if now - _STATUS_CACHE["hw_at"] > _STATUS_CACHE_TTL:
+        try:
+            _STATUS_CACHE["hw"] = get_hardware_stats()
+        except Exception:
+            pass
+        _STATUS_CACHE["hw_at"] = now
+    return _STATUS_CACHE["hw"]
+
 class Handler(BaseHTTPRequestHandler):
     """
     Primary Request Handler for the KALKI API.
@@ -4251,6 +4285,66 @@ class Handler(BaseHTTPRequestHandler):
         self._cors()
         self.end_headers()
         self.wfile.write(body)
+
+    # Extension -> Content-Type for the frontend bundle. Anything not listed
+    # is refused rather than served as octet-stream: app/ui/ holds only these
+    # file types, so an unexpected extension means something is wrong.
+    UI_CONTENT_TYPES = {
+        ".js":    "application/javascript; charset=utf-8",
+        ".mjs":   "application/javascript; charset=utf-8",
+        ".css":   "text/css; charset=utf-8",
+        ".json":  "application/json; charset=utf-8",
+        ".svg":   "image/svg+xml",
+        ".png":   "image/png",
+        ".webp":  "image/webp",
+        ".woff2": "font/woff2",
+        ".woff":  "font/woff",
+        ".ico":   "image/x-icon",
+        ".map":   "application/json; charset=utf-8",
+        ".md":    "text/markdown; charset=utf-8",
+    }
+
+    def _serve_ui_asset(self, path):
+        """Serve one file from app/ui/ with a correct MIME type.
+
+        Two things this must not do: escape the ui directory, and expose the
+        rest of the filesystem. The realpath prefix check below is the guard;
+        do not replace it with a string test on `path`, which %2e%2e and
+        symlinks can both defeat.
+        """
+        ui_root = os.path.realpath(os.path.join(APP_ROOT, "ui"))
+        rel = urllib.parse.unquote(path[len("/ui/"):])
+        target = os.path.realpath(os.path.join(ui_root, rel))
+
+        if target != ui_root and not target.startswith(ui_root + os.sep):
+            self._text("Not found", status=404)
+            return
+        if not os.path.isfile(target):
+            self._text("Not found", status=404)
+            return
+
+        ctype = self.UI_CONTENT_TYPES.get(os.path.splitext(target)[1].lower())
+        if not ctype:
+            self._text("Not found", status=404)
+            return
+
+        try:
+            with open(target, "rb") as f:
+                content = f.read()
+        except OSError:
+            self._text("Not found", status=404)
+            return
+
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(content)))
+        # The service worker handles freshness for /ui/*; tell the HTTP cache
+        # to revalidate so a reinstall never paints a previous build.
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self._cors()
+        self.end_headers()
+        self.wfile.write(content)
 
     def do_OPTIONS(self):
         self.send_response(204)
@@ -4421,7 +4515,7 @@ class Handler(BaseHTTPRequestHandler):
                         "remainingSec": max(0, int(float(STATE.get("focus_until") or 0) - time.time())),
                         "minutes": int(STATE.get("focus_minutes") or 25),
                     },
-                    "memCount": len(load_memory())
+                    "memCount": cached_mem_count()
                 }
                 self._json({"ok": True, "data": dashboard_data})
             except Exception as e:
@@ -4448,7 +4542,28 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": True})
             return
 
+
+        if path == "/api/oversight/status":
+            import oversight
+            import watchdog
+            self._json({
+                "ok": True,
+                "alerts": oversight.recent_alerts(),
+                "watchedSites": watchdog.list_sites(),
+                "thresholds": {
+                    "cpu": getattr(config, "CPU_HIGH_PCT", 85),
+                    "ram": getattr(config, "RAM_HIGH_PCT", 85),
+                    "disk_gb": getattr(config, "DISK_LOW_GB", 5),
+                    "battery_low": getattr(config, "BATTERY_LOW_PCT", 20)
+                }
+            })
+            return
+
         if path == "/api/status":
+            from urllib.parse import urlparse, parse_qs
+            qs = parse_qs(urlparse(self.path).query)
+            hidden = qs.get("hidden", ["0"])[0] == "1"
+            STATE["frontend_hidden"] = hidden
             # Mark UI alive
             STATE["ui_last_ping"] = time.time()
             # Consume wake signal
@@ -4457,7 +4572,7 @@ class Handler(BaseHTTPRequestHandler):
 
             ollama_ok = cached_ollama_model() is not None
             now = datetime.now()
-            cpu, ram, disk = get_hardware_stats()
+            cpu, ram, disk = cached_hardware_stats()
             batt_pct = None
             batt_plugged = None
             if psutil:
@@ -4488,7 +4603,7 @@ class Handler(BaseHTTPRequestHandler):
                 "ttsLastError": STATE.get("last_tts_error", ""),
                 "ttsLastLatencyMs": STATE.get("last_tts_latency_ms", 0),
                 "ttsProbeError": PYGAME_PROBE_ERROR,
-                "memCount": len(load_memory()),
+                "memCount": cached_mem_count(),
                 "time": now.strftime("%I:%M %p"),
                 "timeFull": now.strftime("%H:%M:%S"),
                 "date": now.strftime("%A, %B %d, %Y"),
@@ -4567,7 +4682,8 @@ class Handler(BaseHTTPRequestHandler):
                 "TTS_VOLUME": getattr(config, "TTS_VOLUME", "+0%"),
                 "TTS_OUTPUT_DEVICE": getattr(config, "TTS_OUTPUT_DEVICE", ""),
                 "TTS_GROQ_TIMEOUT_SEC": getattr(config, "TTS_GROQ_TIMEOUT_SEC", 3),
-                "THEME_PRESET": getattr(config, "THEME_PRESET", "Diya Dawn"),
+                "THEME_PRESET": getattr(config, "THEME_PRESET", "Obsidian K"),
+                "THEME_MODE": getattr(config, "THEME_MODE", "dark"),
                 "THEME_PRIMARY": getattr(config, "THEME_PRIMARY", "#b6553f"),
                 "THEME_PEACOCK": getattr(config, "THEME_PEACOCK", "#1c6d70"),
                 "THEME_INDIGO": getattr(config, "THEME_INDIGO", "#263a63"),
@@ -4641,6 +4757,18 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": "No config file exists."})
             return
 
+        if path == "/api/history":
+            # The rolling context window the model actually sees. The frontend
+            # owns conversation organisation in IndexedDB; this lets it
+            # reconcile voice turns recorded while the window was closed.
+            hist = load_history()
+            self._json({
+                "ok": True,
+                "history": hist,
+                "maxHistory": getattr(config, "MAX_HISTORY", 20),
+            })
+            return
+
         if path == "/api/memories":
             self._json({"memories": load_memory()})
             return
@@ -4655,6 +4783,17 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/favicon.ico":
             path = "/assets/kalki_icon.ico"
+
+        # ── Frontend application bundle ────────────────────────────
+        # The new multi-file frontend lives in app/ui/. /assets/ cannot serve
+        # it: that branch types every file as png/ico/octet-stream, and a
+        # browser refuses <script type="module"> served as octet-stream.
+        # This route sits after _require_auth, so it inherits the existing
+        # token model unchanged — index.html is public and sets the session
+        # cookie, and module loads from within the page carry it.
+        if path.startswith("/ui/"):
+            self._serve_ui_asset(path)
+            return
 
         if path.startswith("/assets/"):
             try:
@@ -4924,6 +5063,29 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": True, "reply": greet, "greeting": True})
             return
 
+
+        if path == "/api/oversight/watchdog/add":
+            import watchdog
+            url = data.get("url", "")
+            label = data.get("label", url)
+            watchdog.add_site(url, label)
+            self._json({"ok": True})
+            return
+
+        if path == "/api/oversight/watchdog/remove":
+            import watchdog
+            url = data.get("url", "")
+            watchdog.remove_site(url)
+            self._json({"ok": True})
+            return
+
+        if path == "/api/oversight/watchdog/check":
+            import watchdog
+            url = data.get("url", "")
+            res = watchdog.check_site(url)
+            self._json({"ok": True, "result": res})
+            return
+
         if path == "/api/chat":
             messages = body.get("messages") or []
             is_voice = (body.get("source") == "voice")
@@ -4969,6 +5131,16 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
             if stream_req:
+                start_time = time.time()
+                generator = ask_ai_stream(messages)
+                try:
+                    first_token = next(generator)
+                except StopIteration:
+                    first_token = ""
+                except Exception as e:
+                    self._json({"ok": False, "error": str(e)})
+                    return
+                    
                 self.send_response(200)
                 self.send_header('Content-Type', 'text/event-stream')
                 self.send_header('Cache-Control', 'no-cache')
@@ -4976,8 +5148,11 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 
                 full_reply = []
-                start_time = time.time()
-                for token in ask_ai_stream(messages):
+                if first_token:
+                    full_reply.append(first_token)
+                    self.wfile.write(f"data: {json.dumps({'token': first_token})}\n\n".encode())
+                    self.wfile.flush()
+                for token in generator:
                     full_reply.append(token)
                     self.wfile.write(f"data: {json.dumps({'token': token})}\n\n".encode())
                     self.wfile.flush()
@@ -5006,7 +5181,8 @@ class Handler(BaseHTTPRequestHandler):
                     convo = load_history()[-8:] + messages
                     reply = ask_ai(convo)
                 except Exception as e:
-                    reply = f"My link hiccuped, Sir — say that again? ({str(e)[:80]})"
+                    self._json({"ok": False, "error": str(e)})
+                    return
                 
                 reply = maybe_add_joke_offer(user_text, reply)
                 if not client_speech:
@@ -5024,6 +5200,36 @@ class Handler(BaseHTTPRequestHandler):
                 
                 self._json({"reply": reply, "source": "ai", "model": STATE["model"]})
                 return
+
+        if path == "/api/report":
+            response = str(body.get("response") or "").strip()
+            reason = str(body.get("reason") or "other").strip().lower()
+            details = str(body.get("details") or "").strip()
+            prompt = str(body.get("prompt") or "").strip()
+            allowed_reasons = {"harmful", "hateful", "sexual", "privacy", "misleading", "other"}
+            if not response:
+                self._json({"ok": False, "error": "response is required"}, status=400)
+                return
+            if reason not in allowed_reasons:
+                self._json({"ok": False, "error": "invalid report reason"}, status=400)
+                return
+            report = {
+                "id": f"report-{int(time.time() * 1000)}",
+                "createdAt": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+                "reason": reason,
+                "details": details[:1200],
+                "prompt": prompt[:4000],
+                "response": response[:12000],
+                "model": STATE.get("model", "auto"),
+            }
+            try:
+                with open(REPORTS_PATH, "a", encoding="utf-8") as report_file:
+                    report_file.write(json.dumps(report, ensure_ascii=False) + "\n")
+                log(f"AI response report saved: {report['id']} ({reason})")
+                self._json({"ok": True, "reportId": report["id"]})
+            except Exception as exc:
+                self._json({"ok": False, "error": f"could not save report: {exc}"}, status=500)
+            return
 
         if path == "/api/command":
             cmd = (body.get("cmd") or "").strip()
@@ -5506,7 +5712,7 @@ def main():
             try:
                 due = taskmod.pop_due_reminders()
                 for r in due:
-                    speak(f"Reminder, {config.OWNER_TITLE}: {r['text']}")
+                    speak(f"Reminder, {config.OWNER_TITLE}: {r['text']}"); import oversight, notify; oversight.record_alert("reminder", r['text'], "info"); notify.notify_desktop("Reminder", r['text']) if STATE.get("frontend_hidden", False) else None
                     log(f"reminder fired: {r['text']}")
             except Exception as e:
                 log(f"reminder loop error: {e}")
@@ -5550,9 +5756,9 @@ def main():
 
                 net_ok = check_network()
                 if net_ok and not last_network_ok:
-                    speak(f"Internet connection restored, {config.OWNER_TITLE}.")
+                    speak(f"Internet connection restored, {config.OWNER_TITLE}."); import oversight, notify; oversight.record_alert("network", "Internet connection restored", "info"); notify.notify_desktop("Network", "Internet connection restored") if STATE.get("frontend_hidden", False) else None
                 elif not net_ok and last_network_ok:
-                    speak(f"Internet connection lost, {config.OWNER_TITLE}.")
+                    speak(f"Internet connection lost, {config.OWNER_TITLE}."); import oversight, notify; oversight.record_alert("network", "Internet connection lost", "warning"); notify.notify_desktop("Network", "Internet connection lost") if STATE.get("frontend_hidden", False) else None
                 last_network_ok = net_ok
 
                 # Clipboard Monitor expiration check
@@ -5588,37 +5794,36 @@ def main():
                             if pct < 100:
                                 if getattr(b, 'secsleft', psutil.POWER_TIME_UNLIMITED) not in (psutil.POWER_TIME_UNLIMITED, -1):
                                     mins = b.secsleft // 60
-                                    speak(f"Charging started. Estimated time to full is {mins} minutes.")
+                                    speak(f"Charging started. Estimated time to full is {mins} minutes."); import oversight, notify; oversight.record_alert("battery", f"Charging started. {mins}m to full.", "info"); notify.notify_desktop("Battery", f"Charging started. {mins}m to full.") if STATE.get("frontend_hidden", False) else None
                                 else:
-                                    speak("Charging started.")
+                                    speak("Charging started."); import oversight, notify; oversight.record_alert("battery", "Charging started.", "info"); notify.notify_desktop("Battery", "Charging started.") if STATE.get("frontend_hidden", False) else None
                             else:
-                                speak("Power connected. Battery is already fully charged.")
+                                speak("Power connected. Battery is already fully charged."); import oversight, notify; oversight.record_alert("battery", "Power connected. Battery full.", "info"); notify.notify_desktop("Battery", "Power connected. Battery full.") if STATE.get("frontend_hidden", False) else None
                         elif not b.power_plugged and last_power_plugged:
-                            speak("Running on battery power.")
+                            speak("Running on battery power."); import oversight, notify; oversight.record_alert("battery", "Running on battery power.", "info"); notify.notify_desktop("Battery", "Running on battery power.") if STATE.get("frontend_hidden", False) else None
                     last_power_plugged = b.power_plugged
 
                     if b.power_plugged and pct == 100 and \
                        now_t - last_alert.get("battery_full", 0) > 60 * 60:
-                        speak("Battery is fully charged. You may disconnect the power.")
+                        speak("Battery is fully charged. You may disconnect the power."); import oversight, notify; oversight.record_alert("battery", "Battery is fully charged.", "info"); notify.notify_desktop("Battery", "Battery is fully charged.") if STATE.get("frontend_hidden", False) else None
                         last_alert["battery_full"] = now_t
                         
                     if not b.power_plugged:
                         if pct <= getattr(config, 'BATTERY_SUPER_CRITICAL_PCT', 5) and \
                            now_t - last_alert.get("battery_super_critical", 0) > cooldowns["battery_super_critical"]:
-                            speak(f"Warning! Battery at {pct} percent. System will shut down soon.")
+                            speak(f"Warning! Battery at {pct} percent. System will shut down soon."); import oversight, notify; oversight.record_alert("battery", f"Battery at {pct}%. Shutting down soon.", "critical"); notify.notify_desktop("Battery Critical", f"Battery at {pct}%. Shutting down soon.") if STATE.get("frontend_hidden", False) else None
                             last_alert["battery_super_critical"] = now_t
                         elif pct <= config.BATTERY_CRITICAL_PCT and \
                            now_t - last_alert.get("battery_critical", 0) > cooldowns["battery_critical"]:
-                            speak(f"Critical battery, {config.OWNER_TITLE}. "
-                                  f"{pct} percent. Plug in immediately.")
+                            speak(f"Critical battery, {config.OWNER_TITLE}. {pct} percent. Plug in immediately."); import oversight, notify; oversight.record_alert("battery", f"Critical battery: {pct}%", "critical"); notify.notify_desktop("Battery Critical", f"Critical battery: {pct}%") if STATE.get("frontend_hidden", False) else None
                             last_alert["battery_critical"] = now_t
                         elif pct <= config.BATTERY_LOW_PCT and \
                              now_t - last_alert.get("battery_low", 0) > cooldowns["battery_low"]:
-                            speak(f"Battery is at {pct} percent, {config.OWNER_TITLE}.")
+                            speak(f"Battery is at {pct} percent, {config.OWNER_TITLE}."); import oversight, notify; oversight.record_alert("battery", f"Battery low: {pct}%", "warning"); notify.notify_desktop("Battery Low", f"Battery low: {pct}%") if STATE.get("frontend_hidden", False) else None
                             last_alert["battery_low"] = now_t
                         elif pct <= getattr(config, 'BATTERY_HALF_PCT', 50) and \
                              now_t - last_alert.get("battery_half", 0) > cooldowns["battery_half"]:
-                            speak(f"Battery is at half capacity, {pct} percent.")
+                            speak(f"Battery is at half capacity, {pct} percent."); import oversight, notify; oversight.record_alert("battery", f"Battery at {pct}%", "info"); notify.notify_desktop("Battery", f"Battery at {pct}%") if STATE.get("frontend_hidden", False) else None
                             last_alert["battery_half"] = now_t
 
                 try:
@@ -5626,7 +5831,7 @@ def main():
                     free_gb = disk.free / (1024 ** 3)
                     if free_gb < getattr(config, 'DISK_LOW_GB', 5) and \
                        now_t - last_alert.get("disk_low", 0) > cooldowns["disk_low"]:
-                        speak(f"Warning: Local disk space is critically low. Only {int(free_gb)} gigabytes remaining.")
+                        speak(f"Warning: Local disk space is critically low. Only {int(free_gb)} gigabytes remaining."); import oversight, notify; oversight.record_alert("disk", f"Low disk space: {int(free_gb)} GB remaining", "critical"); notify.notify_desktop("Disk Space", f"Low disk space: {int(free_gb)} GB remaining") if STATE.get("frontend_hidden", False) else None
                         last_alert["disk_low"] = now_t
                 except Exception:
                     pass
@@ -5634,7 +5839,7 @@ def main():
                 ram = psutil.virtual_memory().percent
                 if ram >= config.RAM_HIGH_PCT and \
                    now_t - last_alert.get("ram_high", 0) > cooldowns["ram_high"]:
-                    speak(f"Suspicious activity detected. Memory usage is abnormally high at {int(ram)} percent.")
+                    speak(f"Suspicious activity detected. Memory usage is abnormally high at {int(ram)} percent."); import oversight, notify; oversight.record_alert("ram", f"High memory usage: {int(ram)}%", "warning"); notify.notify_desktop("Memory Usage", f"High memory usage: {int(ram)}%") if STATE.get("frontend_hidden", False) else None
                     last_alert["ram_high"] = now_t
 
                 cpu = psutil.cpu_percent(interval=1)
@@ -5650,7 +5855,7 @@ def main():
 
                     if cpu_high_streak >= limit_streak and \
                        now_t - last_alert.get("cpu_sustained", 0) > cooldowns["cpu_sustained"]:
-                        speak(f"Suspicious activity detected on your computer, {config.OWNER_TITLE}. CPU is sustained at {int(cpu)} percent.")
+                        speak(f"Suspicious activity detected on your computer, {config.OWNER_TITLE}. CPU is sustained at {int(cpu)} percent."); import oversight, notify; oversight.record_alert("cpu", f"High CPU usage: {int(cpu)}%", "warning"); notify.notify_desktop("CPU Usage", f"High CPU usage: {int(cpu)}%") if STATE.get("frontend_hidden", False) else None
                         last_alert["cpu_sustained"] = now_t
                         cpu_high_streak = 0
                 else:
@@ -5668,9 +5873,9 @@ def main():
                         short_from = latest["from"].split("<")[0].strip().strip('"')
                         short_subj = latest["subject"][:60]
                         if new_count == 1:
-                            speak(f"Excuse me Sir, you have a new important email from {short_from} about {short_subj}.")
+                            speak(f"Excuse me Sir, you have a new important email from {short_from} about {short_subj}."); import oversight, notify; oversight.record_alert("email", f"Important email from {short_from}", "info"); notify.notify_desktop("Email", f"Important email from {short_from}") if STATE.get("frontend_hidden", False) else None
                         else:
-                            speak(f"Excuse me Sir, you have {new_count} new important emails, including one from {short_from}.")
+                            speak(f"Excuse me Sir, you have {new_count} new important emails, including one from {short_from}."); import oversight, notify; oversight.record_alert("email", f"{new_count} new important emails", "info"); notify.notify_desktop("Email", f"{new_count} new important emails") if STATE.get("frontend_hidden", False) else None
                     last_email_count = important_count
                     
                 # Proactive GitHub Alert
@@ -5685,7 +5890,7 @@ def main():
                             if nums:
                                 count = int(nums[0])
                                 if last_github_count != -1 and count > last_github_count:
-                                    speak(f"Sir, you have {count - last_github_count} new GitHub notifications.")
+                                    speak(f"Sir, you have {count - last_github_count} new GitHub notifications."); import oversight, notify; oversight.record_alert("github", f"{count - last_github_count} new GitHub notifications", "info"); notify.notify_desktop("GitHub", f"{count - last_github_count} new GitHub notifications") if STATE.get("frontend_hidden", False) else None
                                 last_github_count = count
             except Exception as e:
                 log(f"alerts loop error: {e}")
@@ -5755,9 +5960,7 @@ def main():
                         if -1 < delta_min <= 16:
                             title = e.get("summary", "an event")
                             mins = max(1, int(round(delta_min)))
-                            speak(f"Reminder, {config.OWNER_TITLE}. "
-                                  f"{title} starts in {mins} minute"
-                                  f"{'s' if mins != 1 else ''}.", is_notification=True)
+                            speak(f"Reminder, {config.OWNER_TITLE}. {title} starts in {mins} minute{'s' if mins != 1 else ''}.", is_notification=True); import oversight, notify; oversight.record_alert("calendar", f"Event '{title}' starts in {mins} min", "info"); notify.notify_desktop("Calendar", f"Event '{title}' starts in {mins} min") if STATE.get("frontend_hidden", False) else None
                             log(f"calendar alert fired: {title} in {mins} min")
                             STATE["announced_events"].add(eid)
             except Exception as e:
@@ -5775,17 +5978,16 @@ def main():
                     url = r["url"]
                     prev = last.get(url, {"up": True, "cert_alerted": set()})
                     if not r["up"] and prev["up"]:
-                        speak(f"Alert, {config.OWNER_TITLE}. {r['host']} is down.", is_notification=True)
+                        speak(f"Alert, {config.OWNER_TITLE}. {r['host']} is down.", is_notification=True); import oversight, notify; oversight.record_alert("site-down", f"{r['host']} is down", "critical"); notify.notify_desktop("Site Down", f"{r['host']} is down") if STATE.get("frontend_hidden", False) else None
                         log(f"watchdog: {r['host']} DOWN ({r.get('error')})")
                     elif r["up"] and not prev["up"]:
-                        speak(f"{r['host']} is back up, {config.OWNER_TITLE}.", is_notification=True)
+                        speak(f"{r['host']} is back up, {config.OWNER_TITLE}.", is_notification=True); import oversight, notify; oversight.record_alert("site-down", f"{r['host']} is back up", "info"); notify.notify_desktop("Site Recovered", f"{r['host']} is back up") if STATE.get("frontend_hidden", False) else None
                     alerted = set(prev.get("cert_alerted", set()))
                     cd = r.get("cert_days")
                     if cd is not None and cd >= 0:
                         for th in (2, 7, 14):
                             if cd <= th and th not in alerted:
-                                speak(f"Heads up, {config.OWNER_TITLE}. {r['host']} "
-                                      f"SSL certificate expires in {cd} days.", is_notification=True)
+                                speak(f"Heads up, {config.OWNER_TITLE}. {r['host']} SSL certificate expires in {cd} days.", is_notification=True); import oversight, notify; oversight.record_alert("cert-expiring", f"{r['host']} SSL expires in {cd} days", "warning"); notify.notify_desktop("SSL Expiry", f"{r['host']} SSL expires in {cd} days") if STATE.get("frontend_hidden", False) else None
                                 alerted.add(th)
                                 break
                     last[url] = {"up": r["up"], "cert_alerted": alerted}

@@ -1,5 +1,5 @@
 #define MyAppName "KALKI"
-#define MyAppVersion "1.3.5"
+#define MyAppVersion "2.0.0"
 #define MyAppPublisher "KALKI Technologies"
 #define MyAppExeName "KALKI.exe"
 
@@ -12,7 +12,7 @@ DefaultDirName={localappdata}\Programs\KALKI
 DefaultGroupName={#MyAppName}
 PrivilegesRequired=lowest
 OutputDir=..\..\Output
-OutputBaseFilename=KALKI_Setup_v1.3.5
+OutputBaseFilename=KALKI_Setup_v2.1.0
 LicenseFile=..\..\LICENSE
 InfoBeforeFile=..\..\TERMS.md
 SetupIconFile=..\..\assets\kalki_icon.ico
@@ -69,6 +69,8 @@ Source: "..\..\browsers\*"; DestDir: "{app}\browsers"; Flags: ignoreversion recu
 ; Assets and structure
 Source: "..\..\assets\*"; DestDir: "{app}\assets"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
 Source: "..\index.html"; DestDir: "{app}"; Flags: ignoreversion; Components: core
+; Frontend application bundle. Shipping index.html without ui/ produces a blank window.
+Source: "..\ui\*"; DestDir: "{app}\ui"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
 Source: "..\manifest.json"; DestDir: "{app}"; Flags: ignoreversion; Components: core
 Source: "..\service-worker.js"; DestDir: "{app}"; Flags: ignoreversion; Components: core
 Source: "..\config.example.py"; DestDir: "{app}"; Flags: ignoreversion; Components: core

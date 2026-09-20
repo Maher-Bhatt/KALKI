@@ -1,6 +1,6 @@
 # KALKI Terms and Conditions
 
-**Version:** 1.3.5
+**Version:** 2.0.0
 **Last updated:** August 26, 2026
 
 These Terms and Conditions govern the installation and use of **KALKI**, a local-first desktop intelligence companion for Windows and Linux. KALKI can support personal productivity, research, development, accessibility, local system workflows, and authorized security testing. By installing, copying, or using KALKI, you agree to these terms. If you do not agree, do not install or use the software.

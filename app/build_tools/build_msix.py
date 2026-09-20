@@ -11,7 +11,7 @@ APP_NAME = "KALKI"
 try:
     from version import APP_VERSION as _APP_VERSION
 except ImportError:
-    _APP_VERSION = "1.3.5"
+    _APP_VERSION = "2.1.0"
 APP_VERSION = _APP_VERSION + ".0" # Must be X.X.X.X
 PUBLISHER_NAME = "CN=KALKI_Developer"
 PUBLISHER_DISPLAY_NAME = "KALKI Developer"
@@ -24,9 +24,26 @@ OUTPUT_DIR = os.path.join(os.path.dirname(BASE_DIR), "Output")
 MSIX_STAGING = os.path.join(BASE_DIR, "build", "msix_staging")
 ASSETS_SRC_ICON = os.path.join(os.path.dirname(BASE_DIR), "assets", "kalki_logo.png")
 
-# Certificate Info
-CERT_NAME = "KALKI_Dev_Cert.pfx"
+# Signing certificate.
+#
+# No certificate ships in this repository. Development signing is opt-in and
+# resolved from the environment so that no private key or password ever enters
+# source control or a distributed archive:
+#
+#   KALKI_DEV_CERT_PATH      absolute path to a .pfx outside the repo
+#   KALKI_DEV_CERT_PASSWORD  its password
+#
+# Production Store signing is performed by Microsoft Partner Center and needs
+# neither of these. Leaving them unset produces an unsigned MSIX, which is
+# exactly what Store submission expects.
+CERT_PATH = os.environ.get("KALKI_DEV_CERT_PATH", "")
 CERT_PASS = os.environ.get("KALKI_DEV_CERT_PASSWORD", "")
+CERT_NAME = os.path.basename(CERT_PATH) if CERT_PATH else ""
+
+
+def dev_signing_available():
+    """True only when the maintainer has pointed at an external certificate."""
+    return bool(CERT_PATH and CERT_PASS and os.path.isfile(CERT_PATH))
 
 def find_sdk_tool(tool_name):
     # Find Windows 10 SDK path
@@ -81,6 +98,8 @@ def build_manifest():
     Dependencies = SubElement(Package, "Dependencies")
     SubElement(Dependencies, "TargetDeviceFamily", {
         "Name": "Windows.Desktop",
+        "--hidden-import=spotipy": "",
+        "--hidden-import=plyer": "",
         "MinVersion": "10.0.17763.0",
         "MaxVersionTested": "10.0.22000.0"
     })
@@ -193,6 +212,13 @@ def build_msix():
     if os.path.exists(browsers_src):
         shutil.copytree(browsers_src, os.path.join(MSIX_STAGING, "browsers"))
 
+    # Frontend application bundle. index.html alone renders a blank window.
+    ui_src = os.path.join(BASE_DIR, "ui")
+    if os.path.exists(ui_src):
+        shutil.copytree(ui_src, os.path.join(MSIX_STAGING, "ui"))
+    else:
+        raise SystemExit("app/ui is missing - the frontend bundle must be packaged")
+
     for f in ["index.html", "manifest.json", "service-worker.js", "config.example.py"]:
         src_file = os.path.join(BASE_DIR, f)
         if os.path.exists(src_file):
@@ -213,10 +239,16 @@ def build_msix():
         
     subprocess.run([makeappx, "pack", "/d", MSIX_STAGING, "/p", msix_out, "/o"], check=True)
     
-    cert_path = os.environ.get("KALKI_DEV_CERT_PATH", os.path.join(tempfile.gettempdir(), CERT_NAME))
+    # Development signing is opt-in. With no certificate configured the MSIX is
+    # left unsigned, which is what Microsoft Partner Center expects on
+    # submission - it applies production signing itself.
     if not CERT_PASS:
-        print("Error: set KALKI_DEV_CERT_PASSWORD for local development signing.")
-        return False
+        print("Unsigned MSIX produced. Set KALKI_DEV_CERT_PATH and "
+              "KALKI_DEV_CERT_PASSWORD to sign it for local testing.")
+        print(f"\nSUCCESS! MSIX generated at: {msix_out}")
+        return True
+
+    cert_path = CERT_PATH or os.path.join(tempfile.gettempdir(), "KALKI_Dev_Cert.pfx")
     if not os.path.exists(cert_path):
         print("Generating self-signed certificate for local testing...")
         ps_cmd = f'''

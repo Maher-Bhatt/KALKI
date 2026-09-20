@@ -8,7 +8,7 @@ import os
 import json
 from runtime_paths import prepare_runtime
 
-CURRENT_VERSION = "v1.3.5"
+CURRENT_VERSION = "v2.1.0"
 
 # ── INTERNAL PATHS (do not change) ───────────────────────────
 # Where the Setup Wizard and hardware auto-detect persist their own data.
@@ -84,7 +84,8 @@ HUD_EFFECT_QUALITY = "balanced"
 
 # ── APPEARANCE / THEME ───────────────────────────────────────
 # These values are editable from Setup & Settings > Theme Lab.
-THEME_PRESET = "Diya Dawn"
+THEME_PRESET = "Obsidian K"
+THEME_MODE = "dark"
 THEME_PRIMARY = "#b6553f"
 THEME_PEACOCK = "#1c6d70"
 THEME_INDIGO = "#263a63"
