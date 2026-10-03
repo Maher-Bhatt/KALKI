@@ -43,7 +43,13 @@ function mountView(route) {
     currentName = route.name;
     const spec = VIEWS[route.name] || VIEWS.ask;
     currentView = spec.build();
-    shell.viewSlot.replaceChildren(currentView);
+    if (currentView.main) {
+      shell.viewSlot.replaceChildren(currentView.main);
+      shell.contextEl.replaceChildren(currentView.aside || '');
+    } else {
+      shell.viewSlot.replaceChildren(currentView);
+      shell.contextEl.replaceChildren();
+    }
     spec.load();
   }
   currentView?.render?.();

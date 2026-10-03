@@ -29,14 +29,8 @@ export function onExchange(fn) { onVoiceExchange = fn; }
  *  whether the microphone is capturing, and animating an unverified state
  *  would be a lie. */
 function deriveVoice(s) {
-  const now = Date.now();
-  if (!s) return 'unavailable';
-  if (store.conv.streaming) return 'thinking';
-  if (s.speaking) return 'speaking';
-  if (attending && now - attending < 4000) return 'attending';
-  if (s.listenerPaused) return 'mic-released';
-  if (s.listenerMicMuted) return 'mic-muted';
-  return 'ready';
+  if (!s || !s.ok) return 'error';
+  return s.listenerState || 'idle';
 }
 
 function ttsTrouble(s) {
