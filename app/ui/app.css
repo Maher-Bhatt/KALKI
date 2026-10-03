@@ -88,25 +88,54 @@
               transform var(--dur-presence) var(--ease-filament);
   will-change: opacity, transform;
 }
-.presence-core { width: .75rem; height: .75rem; background: var(--filament); opacity: .22; }
+.presence-core { width: 1.5rem; height: 1.5rem; opacity: .22; }
 .presence-halo { width: 1.75rem; height: 1.75rem; background: radial-gradient(circle, var(--filament-halo) 0%, transparent 70%); opacity: .5; }
 
-.presence[data-state="dormant"]     .presence-core { opacity: .10; }
-.presence[data-state="ready"]       .presence-core { opacity: .22; }
-.presence[data-state="attending"]   .presence-core { opacity: .60; transform: scale(1.06); }
-.presence[data-state="thinking"]    .presence-core { animation: filament-think 2.4s var(--ease-filament) infinite; }
-.presence[data-state="speaking"]    .presence-core { animation: filament-speak .9s var(--ease-filament) infinite; }
-.presence[data-state="interrupted"] .presence-core { opacity: .20; transform: scale(.98); transition-duration: 120ms; }
-.presence[data-state="unavailable"] .presence-core { opacity: .10; background: var(--text-disabled); transform: scale(.96); }
-.presence[data-state="mic-released"] .presence-core,
-.presence[data-state="mic-muted"]   .presence-core { opacity: .12; }
+.presence-aperture {
+  width: 100%; height: 100%;
+  display: block;
+  overflow: visible;
+}
+.presence-aperture circle {
+  fill: none;
+  stroke: var(--filament);
+  transform-origin: 50% 50%;
+  transition: opacity var(--dur-presence) var(--ease-filament),
+              transform var(--dur-presence) var(--ease-filament);
+}
+.ring-outer { stroke-width: 2px; opacity: 0.4; }
+.ring-mid { stroke-width: 3px; opacity: 0.6; }
+.ring-inner { stroke-width: 5px; opacity: 0.8; }
+.core-dot { fill: var(--filament); stroke: none; opacity: 1; }
 
-@keyframes filament-think { 0%, 100% { opacity: .45; transform: scale(1); } 50% { opacity: .65; transform: scale(1.03); } }
-@keyframes filament-speak { 0%, 100% { opacity: .55; transform: scale(1); } 50% { opacity: .75; transform: scale(1.05); } }
-[data-motion="off"] .presence-core { animation: none !important; }
-@media (prefers-reduced-motion: reduce) { .presence-core { animation: none !important; } }
-.presence[data-state="thinking"]  .presence-core.no-anim { opacity: .55; }
-.presence[data-state="speaking"]  .presence-core.no-anim { opacity: .65; }
+.presence[data-state="unavailable"] .presence-core { opacity: .15; filter: grayscale(1); transform: scale(.90); }
+.presence[data-state="mic-released"] .presence-core,
+.presence[data-state="mic-muted"] .presence-core { opacity: .25; transform: scale(.95); }
+
+.presence[data-state="ready"] .presence-core { opacity: .6; }
+
+.presence[data-state="attending"] .presence-core { opacity: 1; /* scale controlled by JS */ }
+.presence[data-state="attending"] .ring-outer { opacity: .8; transform: scale(1.05); }
+
+.presence[data-state="thinking"] .presence-core { opacity: 1; animation: aperture-think 2.4s var(--ease-filament) infinite; }
+.presence[data-state="thinking"] .ring-mid { animation: ring-pulse 2.4s var(--ease-filament) infinite; }
+.presence[data-state="thinking"] .ring-inner { animation: ring-pulse-inv 2.4s var(--ease-filament) infinite; }
+
+.presence[data-state="speaking"] .presence-core { opacity: 1; animation: aperture-speak 0.9s var(--ease-filament) infinite; }
+.presence[data-state="speaking"] .ring-inner { animation: ring-pulse 0.9s var(--ease-filament) infinite; }
+.presence[data-state="speaking"] .core-dot { animation: ring-pulse-inv 0.9s var(--ease-filament) infinite; }
+
+.presence[data-state="interrupted"] .presence-core { opacity: .3; transform: scale(.92); transition-duration: 120ms; }
+
+@keyframes aperture-think { 0%, 100% { transform: scale(1); opacity: .7; } 50% { transform: scale(1.03); opacity: 1; } }
+@keyframes aperture-speak { 0%, 100% { transform: scale(1); opacity: .8; } 50% { transform: scale(1.08); opacity: 1; } }
+@keyframes ring-pulse { 0%, 100% { transform: scale(1); opacity: 0.6; } 50% { transform: scale(1.06); opacity: 1; } }
+@keyframes ring-pulse-inv { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.94); opacity: 0.7; } }
+
+[data-motion="off"] .presence-core, [data-motion="off"] circle { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .presence-core, circle { animation: none !important; } }
+.presence[data-state="thinking"]  .presence-core.no-anim { opacity: .7; }
+.presence[data-state="speaking"]  .presence-core.no-anim { opacity: .8; }
 
 .presence-badge {
   position: absolute; right: -1px; bottom: -1px;
