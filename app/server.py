@@ -5066,22 +5066,22 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/oversight/watchdog/add":
             import watchdog
-            url = data.get("url", "")
-            label = data.get("label", url)
+            url = body.get("url", "")
+            label = body.get("label", url)
             watchdog.add_site(url, label)
             self._json({"ok": True})
             return
 
         if path == "/api/oversight/watchdog/remove":
             import watchdog
-            url = data.get("url", "")
+            url = body.get("url", "")
             watchdog.remove_site(url)
             self._json({"ok": True})
             return
 
         if path == "/api/oversight/watchdog/check":
             import watchdog
-            url = data.get("url", "")
+            url = body.get("url", "")
             res = watchdog.check_site(url)
             self._json({"ok": True, "result": res})
             return

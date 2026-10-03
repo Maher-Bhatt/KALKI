@@ -1,0 +1,81 @@
+name: Windows EXE and MSIX build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed only to attach files to a GitHub release on tags
+
+jobs:
+  windows-build:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: app/requirements.txt
+
+      - name: Set up Node (frontend checks)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r app/requirements.txt pyinstaller
+
+      - name: Version consistency
+        run: python tests/version_check.py
+
+      - name: Compile Python sources
+        run: python -m compileall -q app
+
+      - name: Validate frontend modules
+        shell: bash
+        run: |
+          find app/ui -name '*.js' -print0 | xargs -0 -n1 node --check
+          node --experimental-vm-modules .github/scripts/validate-ui-modules.mjs
+
+      - name: Smoke test and feature check (includes the Windows-only vault)
+        working-directory: app
+        run: |
+          python smoke_test.py
+          python ../tests/feature_check.py
+
+      - name: Build EXE, portable ZIP and MSIX
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File microsoft_store\release.ps1 -Clean
+
+      - name: Collect artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist-out | Out-Null
+          Copy-Item microsoft_store\output\release-v*\* dist-out\ -Recurse
+          Get-ChildItem dist-out | Format-Table Name, Length
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: KALKI-windows-${{ github.sha }}
+          path: dist-out/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Attach to GitHub release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist-out/*
