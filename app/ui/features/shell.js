@@ -10,7 +10,7 @@ import { h, mount } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { duration, modelLabel } from '../lib/format.js';
 import { label as keyLabel } from '../lib/keys.js';
-import { store, applyUi, notify } from '../state/store.js';
+import { store, applyUi, notify, subscribe } from '../state/store.js';
 import { dismiss } from '../state/toasts.js';
 import { createPresence, presenceLabel } from '../components/presence.js';
 import { openDialog } from '../components/dialog.js';
@@ -109,28 +109,70 @@ export function buildShell(root) {
     // we don't clear it here anymore.
   }
 
-  subscribe((state, prev) => {
-    if (state.route.name !== prev.route.name || state.ui.securityEnabled !== prev.ui.securityEnabled || state.status?.listenerState !== prev.status?.listenerState) paintRail();
-    if (state.online !== prev.online || state.status?.updateProgress !== prev.status?.updateProgress) paintBanner();
-    
-    if (state.status?.listenerState !== prev.status?.listenerState) {
-        const s = state.status?.listenerState || 'idle';
-        if (s === 'listening') {
-            micChip.className = 'chip warn';
-            micChip.textContent = 'Mic live';
-        } else if (s === 'asleep') {
-            micChip.className = 'chip';
-            micChip.textContent = 'Mic off';
-        } else {
-            micChip.className = 'chip ok';
-            micChip.textContent = 'Mic ready';
-        }
+  /* ── Toasts ───────────────────────────────────────────────────────── */
+  function paintToasts() {
+    mount(toastsEl, ...store.toasts.map((t) => h('div.toast', { class: `toast toast-${t.kind}`, role: t.kind === 'error' ? 'alert' : 'status' },
+      h('div', { style: { flex: '1' } },
+        h('div', null, t.text),
+        t.detail && store.ui.debug ? h('div.t-meta.faint', { style: { marginTop: 'var(--space-2)' } }, String(t.detail).slice(0, 160)) : null,
+      ),
+      t.action ? h('button.btn.btn-sm.btn-ghost', { type: 'button', onClick: () => { t.action.run(); dismiss(t.id); } }, t.action.label) : null,
+      t.detail ? h('button.icon-btn', { type: 'button', 'aria-label': 'View details', title: 'Details', onClick: () => openDiagnostics(t.detail) }, icon('info', 14)) : null,
+      h('button.icon-btn', { type: 'button', 'aria-label': 'Dismiss', onClick: () => dismiss(t.id) }, icon('close', 14)),
+    )));
+  }
+
+  /* ── Voice overlay ────────────────────────────────────────────────── */
+  function openVoiceOverlay() {
+    if (voiceDialog) return;
+    overlayPresence = createPresence();
+    store.voice.sessionOpen = true;
+    refreshStatus();
+
+    const caption = h('p.t-title-2', null, presenceLabel(store.voice.state));
+    const hint = h('p.t-body-sm.muted', null, 'Say "Hey KALKI", or close this and keep typing.');
+
+    const { close } = openDialog({
+      title: 'Voice',
+      width: '24rem',
+      body: h('div', { id: 'voice-overlay', style: { textAlign: 'center' } },
+        overlayPresence.el, caption, hint,
+      ),
+      actions: [
+        h('button.btn.btn-secondary', { type: 'button', onClick: async () => { await system.stop(); refreshStatus(); } }, 'Stop speaking'),
+        h('button.btn.btn-primary', { type: 'button', onClick: async () => { const r = await system.wake(''); if (r.ok) refreshStatus(); } }, 'Wake KALKI'),
+      ],
+      onClose: () => { voiceDialog = null; overlayPresence = null; store.voice.sessionOpen = false; },
+    });
+    voiceDialog = { close, caption };
+  }
+
+  window.addEventListener('kalki:voice-toggle', () => (voiceDialog ? voiceDialog.close() : openVoiceOverlay()));
+  window.addEventListener('kalki:nav-changed', () => { paintRail(); notify(); });
+
+  function render() {
+    paintRail();
+    paintBanner();
+    paintToasts();
+    if (store.status?.listenerState) {
+      const s = store.status.listenerState;
+      if (s === 'listening') {
+        micChip.className = 'chip warn';
+        micChip.textContent = 'Mic live';
+      } else if (s === 'asleep') {
+        micChip.className = 'chip';
+        micChip.textContent = 'Mic off';
+      } else {
+        micChip.className = 'chip ok';
+        micChip.textContent = 'Mic ready';
+      }
     }
-  });
-  
-  paintRail();
-  paintBanner();
-  
+    overlayPresence?.update?.(store.voice.state, { ttsTrouble: store.voice.ttsTrouble });
+    if (voiceDialog) voiceDialog.caption.textContent = presenceLabel(store.voice.state);
+  }
+
+  render();
+
   return {
     railNav,
     banner,
@@ -138,6 +180,10 @@ export function buildShell(root) {
     contextEl,
     toastsEl,
     announcer,
-    presence: { el: h('div') } // dummy presence since we put mark in rail directly
+    presence: { el: h('div') },
+    paintRail,
+    render,
+    openVoiceOverlay,
+    toggleRail() { store.ui.railOpen = !store.ui.railOpen; applyUi(); paintRail(); },
   };
 }

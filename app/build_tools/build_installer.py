@@ -125,6 +125,7 @@ def main():
             cmd.append("--hidden-import=pytesseract")
             cmd.append("--hidden-import=spotipy")
             cmd.append("--hidden-import=plyer")
+            cmd.append("--hidden-import=media_mod")
             
         if script == "listener.py":
             cmd.append("--hidden-import=pyaudio")
