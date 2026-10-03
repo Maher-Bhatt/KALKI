@@ -18,6 +18,16 @@ import deepscan
 import tools
 import hardware_detect
 import watchdog
+import urllib.request
+
+def check_internet():
+    try:
+        urllib.request.urlopen('http://google.com', timeout=2)
+        return True
+    except Exception:
+        return False
+
+HAS_INTERNET = check_internet()
 
 
 class TestKalkiToolSandbox(unittest.TestCase):
@@ -34,6 +44,7 @@ class TestKalkiToolSandbox(unittest.TestCase):
             self.assertTrue("parameters" in func)
         print("[SANDBOX TEST 1/10] tools.py schema validation PASSED")
 
+    @unittest.skipIf(not HAS_INTERNET, "No internet connection")
     def test_02_cybertools_dns_and_ip(self):
         """Verify DNS resolution, public IP, and IP info lookup."""
         dns_res = cybertools.dns_lookup("google.com")
@@ -64,6 +75,7 @@ class TestKalkiToolSandbox(unittest.TestCase):
         self.assertIsInstance(wifi_res, list)
         print("[SANDBOX TEST 3/10] cybertools recon helpers PASSED")
 
+    @unittest.skipIf(not HAS_INTERNET, "No internet connection")
     def test_04_cybertools_cve_and_subdomain(self):
         """Verify CVE lookup and Certificate Transparency subdomain enum."""
         cve_res = cybertools.cve_lookup("CVE-2024-3094")
