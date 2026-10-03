@@ -13,7 +13,7 @@ os.environ["KALKI_TEST"] = "1"
 sys.path.insert(0, APP); os.chdir(APP)
 
 import config  # noqa: E402
-PORT = 9998; config.PORT = PORT
+PORT = 10000; config.PORT = PORT
 import server  # noqa: E402
 rs = server.runtime_security
 H = {rs.TOKEN_HEADER: rs.get_api_token(), "Content-Type": "application/json"}
@@ -107,6 +107,39 @@ c, d = call("POST", "/api/backup/create", {}, 30); check("backup: create", c == 
 # ---- history / telemetry / listener
 for p in ("/api/history",):
     c, d = call("GET", p); check(f"GET {p}", c == 200, f"{c} {str(d)[:80]}", "WARN")
+
+
+# ---- activity log
+c, d = call("POST", "/api/activity/list", {})
+check("activity: list returns 200", c == 200, f"{c} {d}")
+# It would be empty now, so let's check it doesn't crash.
+
+# ---- approvals
+c, d = call("POST", "/api/approvals/list", {})
+check("approvals: list returns 200", c == 200, f"{c} {d}")
+
+# ---- briefing
+c, d = call("POST", "/api/briefing/get", {})
+check("briefing: disabled by default", c == 400, f"{c} {d}", "WARN")
+
+# ---- skills
+c, d = call("POST", "/api/skills/list", {})
+check("skills: list", c == 200 and "skills" in d, f"{c} {d}")
+c, d = call("POST", "/api/skills/toggle", {"id": "calendar", "enabled": False})
+check("skills: toggle", c == 200, f"{c} {d}")
+
+# ---- listener state
+c, d = call("GET", "/api/status", {})
+check("status: includes listenerState", c == 200 and "listenerState" in d, f"{c} {d}")
+
+# ---- Phase 4 New Endpoints
+c, d = call("POST", "/api/activity/list", {}); check("activity: list", c == 200, f"{c} {str(d)[:80]}")
+c, d = call("POST", "/api/approvals/list", {}); check("approvals: list", c == 200, f"{c} {str(d)[:80]}")
+config.BRIEFING_ENABLED = True
+c, d = call("POST", "/api/briefing/get", {}); check("briefing: get", c == 200, f"{c} {str(d)[:80]}")
+c, d = call("POST", "/api/skills/list", {}); check("skills: list", c == 200, f"{c} {str(d)[:80]}")
+c, d = call("POST", "/api/skills/toggle", {"id": "web_search", "enabled": False}); check("skills: toggle", c == 200, f"{c} {str(d)[:80]}")
+c, d = call("GET", "/api/status"); check("status: listenerState and micLevel", c == 200 and "listenerState" in json.dumps(d) and "micLevel" in json.dumps(d), f"{c} {str(d)[:80]}")
 
 hard = [r for r in res if not r[1] and r[3] == "HARD"]; warn = [r for r in res if not r[1] and r[3] != "HARD"]
 print(f"\n{len(res)-len(hard)-len(warn)} passed, {len(warn)} warnings, {len(hard)} hard failures")
