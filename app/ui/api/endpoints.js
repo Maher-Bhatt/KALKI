@@ -173,3 +173,13 @@ export const oversight = {
   watchdogRemove: (url) => post('/api/oversight/watchdog/remove', { url }),
   watchdogCheck: (url) => post('/api/oversight/watchdog/check', { url }),
 };
+
+export const activity = {
+  list: () => get('/api/activity/list'),
+  undo: (id) => post('/api/activity/undo', { id })
+};
+
+export const approvals = {
+  list: () => get('/api/approvals/list'),
+  decide: (id, decision) => post('/api/approvals/decide', { id, decision })
+};
