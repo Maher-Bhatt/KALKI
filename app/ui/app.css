@@ -435,3 +435,32 @@ dialog[open] { animation: dlg-in var(--dur-slow) var(--ease-out); }
   .settings-layout { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 680px) { .settings-nav { flex-direction: row; overflow-x: auto; } }
+
+/* Jarvis HUD Dark Theme - Palette */
+dialog#palette.jarvis-hud {
+  background: rgba(10, 15, 20, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 200, 255, 0.3);
+  box-shadow: 0 0 20px rgba(0, 200, 255, 0.15), inset 0 0 15px rgba(0, 200, 255, 0.1);
+}
+dialog#palette.jarvis-hud .palette-input {
+  border-bottom: 1px solid rgba(0, 200, 255, 0.3);
+  color: #41e6f5;
+  text-shadow: 0 0 8px rgba(65, 230, 245, 0.4);
+}
+dialog#palette.jarvis-hud .palette-input::placeholder {
+  color: rgba(65, 230, 245, 0.4);
+}
+dialog#palette.jarvis-hud .palette-group {
+  color: #41e6f5;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+dialog#palette.jarvis-hud .palette-item[aria-selected="true"] {
+  background: rgba(0, 200, 255, 0.15);
+}
+dialog#palette.jarvis-hud .palette-item[aria-selected="true"]::before {
+  background: #41e6f5;
+  box-shadow: 0 0 8px #41e6f5;
+}
