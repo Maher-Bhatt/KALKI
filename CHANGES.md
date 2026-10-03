@@ -2,6 +2,13 @@
 
 ## 2.1.0 build and verification fixes
 
+- **New Jarvis HUD:** A transparent overlay HUD displaying voice status, activity log, approvals queue, and notifications.
+- **Activity Log & Approvals Queue:** Added logging for reversible actions and an approvals queue for sensitive commands.
+- **Morning Briefing:** A new AI-generated morning briefing covering weather, calendar, and news.
+- **Skills Management:** Added ability to toggle individual skills on/off via UI and API.
+- **Cyber Tools Fixes:** Fixed and stabilized cyber tools functionality.
+- **Cleanup:** Removed obsolete patch scripts and fixed duplicate imports in server.py.
+
 - Fixed: the Oversight "watch a site", "remove site" and "check site" routes crashed with HTTP 500 (undefined variable `data`; the request body is `body`). Watching a website from the UI now works.
 - Fixed: release files disagreed on the version. The MSIX manifest and Inno Setup script said 2.0.0 while the app is 2.1.0; `release.ps1` now reads the version from `app/version.py` so artifact names and the manifest cannot drift.
 - Added: `tests/feature_check.py` boots the real server with an isolated profile and checks authentication, tasks, notes, reminders, memory, settings, oversight, cyber tools, graceful behaviour without credentials, backup and the vault (Windows only).
