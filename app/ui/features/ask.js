@@ -8,7 +8,7 @@ import { icon } from '../lib/icons.js';
 import { renderMarkdown, toPlain } from '../lib/markdown.js';
 import { relative, bytes, modelLabel } from '../lib/format.js';
 import { streamChat } from '../api/stream.js';
-import { system, vision } from '../api/endpoints.js';
+import { system, vision, tasks } from '../api/endpoints.js';
 import { store, set, notify } from '../state/store.js';
 import { refreshStatus, loadModels } from '../state/status.js';
 import * as conv from '../state/conversations.js';
@@ -56,7 +56,7 @@ function renderMessage(msg) {
         h('p', null, msg.content),
         msg.attachments?.length
           ? h('div.attachments', null, ...msg.attachments.map((a) =>
-              h('span.attachment', null, icon('attach', 12), h('span', null, a.name))))
+              h('span.attachment', null, icon('attach', 12), h('span', null, a.name), a.size ? h('span.faint', null, bytes(a.size)) : null)))
           : null,
       ),
       messageActions(msg),
@@ -75,8 +75,63 @@ function renderMessage(msg) {
       h('span', null, 'Reaching the model'),
     ));
   } else {
-    mount(body, renderMarkdown(msg.content || '', { streaming: !!msg.streaming, onCopy: () => ok('Code copied') }));
+    let rawText = msg.content || '';
+    const createdTasks = [];
+    rawText = rawText.replace(/\[TASK:\s*(.+?)\]/g, (m, t) => { createdTasks.push(t); return ''; });
+    
+    const rendered = renderMarkdown(rawText, { streaming: !!msg.streaming, onCopy: () => ok('Code copied') });
+    
+    rendered.querySelectorAll('.code-block').forEach(block => {
+      const head = block.querySelector('header span');
+      if (head && head.textContent === 'json') {
+        const code = block.querySelector('code').textContent;
+        const card = h('div.toolrun.toolrun-confirm', null,
+          h('div.toolrun-head', null, icon('check', 16), h('span', null, 'Tool data'), h('span.spacer')),
+          h('details', { style: { marginTop: 'var(--space-3)' } },
+            h('summary', { style: { cursor: 'pointer', fontSize: 'var(--fs-meta)', color: 'var(--text-muted)' } }, 'View JSON'),
+            h('pre', { style: { fontSize: 'var(--fs-meta)', color: 'var(--text-faint)', overflowX: 'auto', marginTop: 'var(--space-2)' } }, code)
+          )
+        );
+        block.replaceWith(card);
+      }
+    });
+
+    if (msg.streaming) {
+      rendered.querySelectorAll('p.dim.t-mono').forEach(p => {
+        if (p.textContent.includes('{"') || p.textContent.includes('[\n')) {
+          const card = h('div.toolrun', null,
+            h('div.toolrun-head', null, icon('cpu', 16), h('span', null, 'Receiving data...')),
+            h('div.toolrun-bar', null, h('i'))
+          );
+          p.replaceWith(card);
+        }
+      });
+    }
+
+    mount(body, rendered);
     if (msg.streaming) body.appendChild(h('span.caret', { 'aria-hidden': 'true' }));
+
+    for (const t of createdTasks) {
+      body.appendChild(
+        h('div.toolrun.toolrun-confirm', { style: { marginTop: 'var(--space-4)' } },
+          h('div.toolrun-head', null,
+            icon('check', 16),
+            h('span', null, `Task created: ${t}`),
+            h('span.spacer'),
+            h('button.btn.btn-sm.btn-secondary', {
+              type: 'button',
+              onClick: async (e) => {
+                const btn = e.currentTarget;
+                btn.disabled = true;
+                const r = await tasks.remove(t);
+                if (r.ok) btn.textContent = 'Undone';
+                else { btn.disabled = false; toast({ kind: 'error', text: 'Could not undo task' }); }
+              }
+            }, 'Undo')
+          )
+        )
+      );
+    }
   }
 
   return h('div.msg.msg-assistant', { dataset: { id: msg.id } },
@@ -136,6 +191,12 @@ async function send(text, attachments = []) {
         announce(acc);
       },
       onDone: async (info) => {
+        const tasksToCreate = [];
+        acc.replace(/\[TASK:\s*(.+?)\]/g, (m, t) => { tasksToCreate.push(t); return ''; });
+        for (const t of tasksToCreate) {
+          await tasks.add(t);
+        }
+
         await conv.updateMessage(assistant.id, {
           content: acc, streaming: false, done: true,
           model: info.model || store.models.current, stopped: !!info.stopped,
