@@ -44,7 +44,7 @@ function updateCountdowns() {
     if (ms <= 0) {
       span.textContent = 'Expired';
     } else {
-      span.textContent = Math.ceil(ms / 1000) + 's';
+      span.textContent = 'expires in ' + Math.ceil(ms / 1000) + ' s';
     }
   });
 }
@@ -79,9 +79,9 @@ async function checkSite(btn, url) {
   btn.textContent = '...';
   const r = await oversight.watchdogCheck(url);
   if (r.ok && r.data.result?.up) {
-    btn.classList.add('is-success');
+    btn.classList.add('ok');
     btn.innerHTML = '&#10003;';
-    setTimeout(() => { btn.classList.remove('is-success'); btn.innerHTML = orig; btn.disabled = false; }, 2000);
+    setTimeout(() => { btn.classList.remove('ok'); btn.innerHTML = orig; btn.disabled = false; }, 2000);
   } else {
     err('Site down or unreachable', r.detail);
     btn.innerHTML = orig;
@@ -99,131 +99,130 @@ async function decideApproval(id, decision) {
   if (r.ok) { ok(decision === 'approve' ? 'Approved' : 'Denied'); loadOversight(); } else err(r.message, r.detail);
 }
 
-function section(title, actionLabel, onAction, body) {
-  return h('section.panel', null,
-    h('div.panel-head', null,
-      h('h2', null, title),
-      h('span.spacer'),
-      onAction ? h('button.btn.btn-sm.btn-ghost', { type: 'button', onClick: onAction }, icon('plus', 14), actionLabel) : null,
-    ),
-    h('div.panel-body', null, body),
-  );
-}
-
 function formatTimeLeft(expiresAt) {
   const ms = expiresAt * 1000 - Date.now();
   if (ms <= 0) return 'Expired';
   return Math.ceil(ms / 1000) + 's';
 }
 
+function formatTime(ts) {
+  return new Date((ts || Date.now() / 1000) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 export function oversightView() {
-  const view = h('section.work.view', { 'aria-label': 'Oversight' });
+  const main = h('div.pad', { 'aria-label': 'Oversight' });
+  const aside = h('div', { style: { display: 'contents' } });
 
-  const left = h('div.hud-left');
-  const center = h('div.hud-center');
-  const right = h('div.hud-right');
-  
-  mount(view, left, center, right);
+  main.addEventListener('kalki:view-enter', startPolling);
+  main.addEventListener('kalki:view-leave', stopPolling);
 
-  view.render = () => {
-    left.innerHTML = '';
-    center.innerHTML = '';
-    right.innerHTML = '';
-
+  function render() {
     if (data.loading && !data.alerts.length && !data.activityList.length && !data.approvalsList.length) {
-      mount(center, skeletonRows(5));
+      mount(main, skeletonRows(5));
+      mount(aside);
       return;
     }
     if (data.error && !data.alerts.length && !data.activityList.length && !data.approvalsList.length) {
-      mount(center, errorState({ title: "Oversight didn't load", message: data.error.message, detail: data.error.detail, onRetry: loadOversight }));
+      mount(main, errorState({ title: "Oversight didn't load", message: data.error.message, detail: data.error.detail, onRetry: loadOversight }));
+      mount(aside);
       return;
     }
 
-    // Left HUD: Live Activity + Thresholds
-    const s = store.status || {};
-    mount(left, 
-      section('Live Activity', null, null,
-        h('div.stack', null,
-          h('div.row', null, h('span', null, 'System Uptime'), h('span.t-meta.muted', null, `${Math.round((s.uptimeSec||0)/60)} min`)),
-          h('div.row', null, h('span', null, 'KALKI Memory'), h('span.t-meta.muted', null, s.memUsz ? `${s.memUsz} MB` : 'N/A')),
-          h('div.row', null, h('span', null, 'Provider'), h('span.t-meta.muted', null, store.models?.current || 'auto'))
-        )
-      ),
-      h('div', {style:{height: 'var(--space-6)'}}),
-      section('Thresholds', null, null,
-        h('div.stack', null,
-          h('div.row', null, h('span', null, 'CPU Alert Level'), h('span.t-meta.muted', null, `${data.thresholds.cpu || 85}%`)),
-          h('div.row', null, h('span', null, 'RAM Alert Level'), h('span.t-meta.muted', null, `${data.thresholds.ram || 85}%`)),
-          h('div.row', null, h('span', null, 'Disk Warning'), h('span.t-meta.muted', null, `< ${data.thresholds.disk_gb || 5} GB`)),
-          h('div.row', null, h('span', null, 'Battery Low'), h('span.t-meta.muted', null, `${data.thresholds.battery_low || 20}%`))
-        )
-      )
-    );
-
-    // Center HUD: Header + Approvals + Activity Log
-    const centerHead = h('header.view-head', null,
-      h('h1', { tabindex: '-1', id: 'view-title' }, 'Oversight'),
-      h('span.spacer'),
-      h('button.btn.btn-sm.btn-ghost', { type: 'button', onClick: loadOversight }, icon('refresh', 14), 'Refresh'),
-    );
-    const centerBody = h('div.view-body.scroll', {style: {display: 'flex', flexDirection: 'column', gap: 'var(--space-6)'}});
-
-    const approvalsSection = section('Pending Approvals', null, null,
-      data.approvalsList.length ? h('div.stack', null, ...data.approvalsList.map(a => h('div.toolrun', {style: {borderColor: 'var(--warning-line)'}},
-        h('div.toolrun-head', null,
-          icon('alert-triangle', 16, {color: 'var(--warning-text)'}),
-          h('span', {style: {fontWeight: 500}}, a.action || a.title || 'Risky Action'),
-          h('span.spacer'),
-          h('span.t-meta.muted.approval-countdown', { 'data-expires-at': a.expiresAt }, a.expiresAt ? formatTimeLeft(a.expiresAt) : 'Pending')
+    mount(main,
+      h('div.hd', null,
+        h('div', null,
+          h('h1', null, 'Oversight'),
+          h('div.sub', null, 'KALKI watches in the background and tells you when something needs you.')
         ),
-        a.description ? h('div', {style: {marginTop: 'var(--space-2)', color: 'var(--text-muted)'}}, a.description) : null,
-        h('div', {style: {display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-4)'}},
-          h('button.btn.btn-sm', {type: 'button', onClick: () => decideApproval(a.id, 'approve'), style: {background: 'var(--warning-bg)', color: 'var(--warning-text)', borderColor: 'var(--warning-line)'}}, 'Approve'),
-          h('button.btn.btn-sm.btn-ghost', {type: 'button', onClick: () => decideApproval(a.id, 'deny')}, 'Deny')
-        )
-      ))) : emptyState({ iconName: 'check', title: 'No pending approvals', body: 'All secure.' })
-    );
-
-    const activitySection = section('Activity Log', null, null,
-      data.activityList.length ? h('div.stack', null, ...data.activityList.map(act => h('div.row', {style: {alignItems: 'flex-start'}},
-        h('div', {style: {flex: 1}},
-          h('div', null, act.action || act.title || act.description || 'System action'),
-          h('div.t-meta.muted', null, 
-            act.source ? `Source: ${act.source} • ` : '',
-            new Date((act.ts || Date.now() / 1000) * 1000).toLocaleTimeString()
+        h('button.btn.pri', { onClick: addSite }, h('i', { 'data-i': 'plus' }), 'Watch a site')
+      ),
+      h('div.grid2', null,
+        h('div.card', null,
+          h('div.row.sb', null, h('h2', null, 'Watched sites'), h('span.xs.mut', null, `${data.watchedSites.length} sites`)),
+          ...data.watchedSites.map(w => 
+            h('div.li', null,
+              h('div', { style: { flex: '1' } },
+                h('div.nm', null, w.url),
+                h('div.xs.mut', null, w.status_text || 'Active')
+              ),
+              h('button.btn.btn-sm.gh', { onClick: (e) => checkSite(e.currentTarget, w.url) }, 'Check'),
+              h('button.ib', { onClick: () => removeSite(w.url), title: 'Remove' }, h('i', {'data-i': 'trash'})),
+              h('span.chip', { class: w.status === 'down' ? 'dng' : 'ok' }, w.status === 'down' ? 'Down' : 'Up')
+            )
           )
         ),
-        act.reversible ? h('button.btn.btn-sm.btn-ghost', {type: 'button', onClick: () => undoActivity(act.id)}, 'Undo') : null
-      ))) : emptyState({ iconName: 'list', title: 'No activity', body: 'Nothing to display.' })
-    );
-
-    mount(centerBody, approvalsSection, activitySection);
-    mount(center, centerHead, centerBody);
-
-    // Right HUD: Watched Sites + Recent Alerts
-    mount(right,
-      section('Watched Sites', 'Add', addSite,
-        data.watchedSites.length ? h('div.stack', null, ...data.watchedSites.map((w) => h('div.row', null,
-          icon('globe', 16),
-          h('span', { style: { flex: '1', minWidth: '0' } }, w.url),
-          h('button.btn.btn-sm.btn-ghost', { type: 'button', onClick: (e) => checkSite(e.currentTarget, w.url) }, 'Check'),
-          h('button.icon-btn', { type: 'button', onClick: () => removeSite(w.url) }, icon('close', 14))
-        ))) : emptyState({ iconName: 'globe', title: 'No sites watched', body: 'Add URLs to get proactive alerts when they go down or SSL expires.' })
+        h('div.card', null,
+          h('div.row.sb', null, h('h2', null, 'Recent alerts'), h('button.btn.gh', { style: { height: '22px' }, onClick: () => { data.alerts = []; renderFn(); } }, 'Clear')),
+          ...data.alerts.map(a => 
+            h('div.li', null,
+              h('span.chip', { class: a.level === 'High' ? 'dng' : a.level === 'Medium' ? 'warn' : '' }, a.level || 'Info'),
+              h('span.sm', { style: { flex: '1' } }, a.message),
+              h('span.xs.mut', null, formatTime(a.ts))
+            )
+          )
+        )
       ),
-      h('div', {style:{height: 'var(--space-6)'}}),
-      section('Recent Alerts', null, null,
-        data.alerts.length ? h('div.stack', null, ...data.alerts.map((a) => h('div.row', null,
-          icon(a.kind === 'battery' ? 'power' : a.kind === 'disk' ? 'drive' : a.kind === 'network' ? 'globe' : 'info', 16),
-          h('span', { style: { flex: '1', minWidth: '0' } }, a.message),
-          h('span.t-meta.muted', null, new Date((a.ts || Date.now() / 1000) * 1000).toLocaleTimeString())
-        ))) : emptyState({ iconName: 'check', title: 'No recent alerts', body: 'All systems normal.' })
+      h('div.grid2', { style: { marginTop: '14px' } },
+        h('div.card', null,
+          h('div.row.sb', null, h('h2', null, 'Waiting for you'), h('span.chip.warn', null, `${data.approvalsList.length} approvals`)),
+          ...data.approvalsList.map(a => 
+            h('div.li.new', { style: { paddingLeft: '10px' } },
+              h('div', { style: { flex: '1' } },
+                h('div.nm', null, a.action || a.title),
+                h('div.xs.mut.approval-countdown', { 'data-expires-at': a.expiresAt }, a.description ? `${a.description} ╖ expires in ${formatTimeLeft(a.expiresAt)}` : `expires in ${formatTimeLeft(a.expiresAt)}`),
+                h('div.meter', { style: { marginTop: '6px' } }, h('i', { style: { width: '80%' } }))
+              ),
+              h('button.btn.gh', { onClick: () => decideApproval(a.id, 'deny') }, 'Deny'),
+              h('button.btn.pri', { onClick: () => decideApproval(a.id, 'approve') }, 'Approve')
+            )
+          )
+        ),
+        h('div.card', null,
+          h('div.row.sb', null, h('h2', null, 'What KALKI did'), h('span.row.g4', null, h('span.chip', null, 'All'), h('span.chip', null, 'Reversible'))),
+          ...data.activityList.map(act => 
+            h('div.li.tl' + (act.reversible ? '.u' : ''), null,
+              h('span.mono.xs.mut', { style: { width: '38px' } }, formatTime(act.ts)),
+              h('span.sm', { style: { flex: '1' } }, act.action || act.title || act.description),
+              act.reversible ? h('button.btn.gh', { style: { height: '22px' }, onClick: () => undoActivity(act.id) }, 'Undo') : null
+            )
+          )
+        )
+      ),
+      h('div.card', { style: { marginTop: '14px' } },
+        h('h2', null, 'Alert thresholds'),
+        h('div.grid3', { style: { marginTop: '10px' } },
+          h('div.col.g8', null,
+            h('div.row.sb', null, h('span.sm', null, 'CPU'), h('span.mono.xs', null, `${data.thresholds.cpu || 85}%`)),
+            h('div.meter', null, h('i', { style: { width: `${data.thresholds.cpu || 85}%` } }))
+          ),
+          h('div.col.g8', null,
+            h('div.row.sb', null, h('span.sm', null, 'Memory'), h('span.mono.xs', null, `${data.thresholds.ram || 85}%`)),
+            h('div.meter', null, h('i', { style: { width: `${data.thresholds.ram || 85}%` } }))
+          ),
+          h('div.col.g8', null,
+            h('div.row.sb', null, h('span.sm', null, 'Disk'), h('span.mono.xs', null, `${data.thresholds.disk_gb || 5} GB`)),
+            h('div.meter', null, h('i', { style: { width: `${Math.min(100, (data.thresholds.disk_gb || 5) * 10)}%` } }))
+          )
+        )
       )
     );
-  };
 
-  view.addEventListener('kalki:view-enter', startPolling);
-  view.addEventListener('kalki:view-leave', stopPolling);
-  
-  renderFn = view.render;
-  return view;
+    const s = store.status || {};
+    mount(aside,
+      h('h1', { style: { fontSize: '16px' } }, 'Health'),
+      h('div.card.col.g12', null,
+        h('div.row.sb', null, h('span.sm', null, 'Local service'), h('span.chip.ok', null, 'Running')),
+        h('div.row.sb', null, h('span.sm', null, 'Provider'), h('span.chip.ok', null, store.models?.current || 'Connected')),
+        h('div.row.sb', null, h('span.sm', null, 'Uptime'), h('span.chip.ok', null, `${Math.round((s.uptimeSec||0)/60)} min`)),
+        h('div.row.sb', null, h('span.sm', null, 'Memory'), h('span.chip.ok', null, s.memUsz ? `${s.memUsz} MB` : 'N/A'))
+      ),
+      h('div.card.col.g8', null,
+        h('h2', null, 'Diagnostics'),
+        h('pre', { style: { fontSize: '11px', lineHeight: '16px' } }, store.diagnosticsText || '14:02 status ok\n14:01 watch: finmate down\n13:58 clipboard prompt\n13:40 tts ok 212 ms')
+      )
+    );
+  }
+
+  renderFn = render;
+  return { main, aside, render };
 }

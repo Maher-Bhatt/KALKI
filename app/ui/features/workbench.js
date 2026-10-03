@@ -13,14 +13,12 @@ import { emptyState } from '../components/states.js';
 import { confirmDialog } from '../components/dialog.js';
 import { ok, err, toast } from '../state/toasts.js';
 
-/** Modes defined in app/workflows.py. Confirmation-gated ones are marked so
- *  the UI warns before the server's own gate fires. */
 const MODES = [
-  { id: 'dev', label: 'Developer', desc: 'Crisp pair-programming voice, tuned for code sessions.' },
-  { id: 'focus', label: 'Focus', desc: 'Low-distraction deep work. Quieter, slower delivery.' },
-  { id: 'study', label: 'Study', desc: 'Relaxed pace for reading and revision.' },
-  { id: 'gaming', label: 'Gaming', desc: 'Fast, low-latency, subdued so it stays out of the way.' },
-  { id: 'ctf', label: 'CTF', desc: 'Sharp, precise delivery for security work.', advanced: true },
+  { id: 'study', label: 'Study mode', desc: 'Silences notifications, opens your notes, starts a 50-minute focus timer.', voice: 'calm, brief' },
+  { id: 'gaming', label: 'Gaming mode', desc: 'Closes background apps, raises performance, pauses sync.', voice: 'upbeat' },
+  { id: 'dev', label: 'Dev mode', desc: 'Opens editor and terminal, checks Git status, starts local servers.', voice: 'concise' },
+  { id: 'ctf', label: 'CTF mode', desc: 'Opens tools and a notes template, starts the scoped lab workspace.', voice: 'terse' },
+  { id: 'focus', label: 'Deep focus', desc: 'Quits distracting apps and blocks sites. Needs your confirmation.', voice: 'silent', advanced: true },
 ];
 
 const runs = [];
@@ -106,139 +104,158 @@ async function runCode() {
   render();
 }
 
-let renderFn = () => {};
+let renderFn = () => set('workbench', {});
 const render = () => renderFn();
 
 /* ── View ────────────────────────────────────────────────────────────── */
 
 export function workbenchView() {
-  const body = h('div.view-body.scroll');
-  const view = h('section.view', { 'aria-label': 'Workbench' },
-    h('header.view-head', null, h('h1', { tabindex: '-1', id: 'view-title' }, 'Workbench')),
-    body,
-  );
+  if (!skillsLoaded) {
+    skillsLoaded = true;
+    import('../api/client.js').then(({ get }) => get('/api/skills/list')).then(r => {
+      if (r.ok) {
+        skillsList = r.data.skills || r.data || [];
+        render();
+      }
+    });
+  }
 
-  view.render = () => {
-    const grid = h('div.grid-2');
-
-    grid.appendChild(h('section.panel', null,
-      h('div.panel-head', null, h('h2', null, 'Modes')),
-      h('div.panel-body', null,
-        h('p.t-body-sm.muted', { style: { marginBottom: 'var(--space-5)' } },
-          'A mode changes how KALKI sounds and behaves for a stretch of work. It stays until you change it.'),
-        h('div.stack', null, ...MODES.map(workflowCard)),
-      )));
-
-    grid.appendChild(h('section.panel', null,
-      h('div.panel-head', null, h('h2', null, 'Recent runs')),
-      h('div.panel-body', null,
-        runs.length
-          ? h('div.stack', null, ...runs.map((r) => h('div.toolrun', { class: r.state === 'failed' ? 'toolrun toolrun-failed' : 'toolrun' },
-              h('div.toolrun-head', null,
-                icon(r.state === 'failed' ? 'alert' : r.state === 'running' ? 'clock' : 'check', 16),
-                h('span', null, r.mode),
-                h('span.spacer'),
-                h('span.t-meta.muted', null, r.state),
-              ),
-              r.detail ? h('p.t-meta.muted', { style: { marginTop: 'var(--space-3)' } }, String(r.detail).slice(0, 220)) : null,
-            )))
-          : emptyState({ iconName: 'flow', title: 'No runs yet', body: 'Modes you run in this session appear here with their result.' }),
-      )));
-
-    // Skills
-    const skillsPanel = h('section.panel');
-    grid.appendChild(skillsPanel);
-    
-    if (!skillsLoaded) {
-      skillsLoaded = true;
-      import('../api/client.js').then(({ get }) => get('/api/skills/list')).then(r => {
-        if (r.ok) {
-          skillsList = r.data.skills || r.data || [];
-          render();
-        }
-      });
-      mount(skillsPanel, 
-        h('div.panel-head', null, h('h2', null, 'Skills')),
-        h('div.panel-body', null, h('p.t-meta.muted', null, 'Loading skills...'))
-      );
-    } else {
-      const toggleSkill = async (s) => {
-        const next = !s.enabled;
-        const { post } = await import('../api/client.js');
-        const r = await post('/api/skills/toggle', { id: s.id, enabled: next });
-        if (r.ok) { s.enabled = next; render(); }
-      };
-      
-      mount(skillsPanel,
-        h('div.panel-head', null, h('h2', null, 'Skills')),
-        h('div.panel-body', null,
-          h('p.t-body-sm.muted', { style: { marginBottom: 'var(--space-5)' } }, 'Built-in integrations.'),
-          h('div.stack', null, ...skillsList.map((s) => 
-            h('div.row', null,
-              icon('code', 18),
-              h('div', { style: { flex: '1', minWidth: '0' } },
-                h('div.t-body-sm', null, s.name),
-                s.needs && s.needs.length ? h('div.t-meta.muted', null, 'Needs: ' + s.needs.join(', ')) : null
-              ),
-              h('label.toggle', null,
-                h('input', { type: 'checkbox', checked: s.enabled, onChange: () => toggleSkill(s) }),
-                h('i')
-              )
-            )
-          ))
-        )
-      );
-    }
-
-    // Code studio
-    let promptEl, sourceEl;
-    grid.appendChild(h('section.panel', { style: { gridColumn: '1 / -1' } },
-      h('div.panel-head', null,
-        h('h2', null, 'Code'),
-        h('span.spacer'),
-        h('select.select', {
-          'aria-label': 'Language', style: { width: '9rem' },
-          onChange: (e) => { codeState.lang = e.target.value; },
-        }, ...['python', 'javascript', 'bash'].map((l) => h('option', { value: l, selected: codeState.lang === l }, l))),
-      ),
-      h('div.panel-body.stack', null,
-        h('div.field', null,
-          h('label', { for: 'code-prompt' }, 'Describe what the script should do'),
-          h('div.inline', null,
-            h('input.input', {
-              id: 'code-prompt', placeholder: 'rename every .jpg in a folder to its capture date',
-              ref: (el) => { promptEl = el; },
-              onKeydown: (e) => { if (e.key === 'Enter' && promptEl.value.trim()) generate(promptEl.value.trim()); },
-            }),
-            h('button.btn.btn-secondary', {
-              type: 'button', disabled: codeState.busy,
-              onClick: () => promptEl.value.trim() && generate(promptEl.value.trim()),
-            }, codeState.busy ? h('span.btn-dots', null, h('i'), h('i'), h('i')) : 'Generate'),
-          ),
-        ),
-        h('div.field', null,
-          h('label', { for: 'code-source' }, 'Source'),
-          h('textarea.textarea.t-mono', {
-            id: 'code-source', rows: 10, value: codeState.source,
-            ref: (el) => { sourceEl = el; },
-            onInput: (e) => { codeState.source = e.target.value; },
-          }),
-        ),
-        h('div.inline', null,
-          h('button.btn.btn-secondary', { type: 'button', disabled: codeState.busy || !codeState.source, onClick: runCode }, 'Run locally'),
-          h('button.btn.btn-ghost', {
-            type: 'button', disabled: !codeState.source,
-            onClick: () => { navigator.clipboard?.writeText(codeState.source); ok('Code copied'); },
-          }, 'Copy'),
-          h('span.spacer'),
-          h('span.t-meta.faint', null, 'Execution is gated by KALKI\u2019s sandbox settings.'),
-        ),
-        codeState.output ? h('pre.pre-out', null, codeState.output) : null,
-      )));
-
-    mount(body, grid);
+  const toggleSkill = async (s) => {
+    const next = !s.enabled;
+    const { post } = await import('../api/client.js');
+    const r = await post('/api/skills/toggle', { id: s.id, enabled: next });
+    if (r.ok) { s.enabled = next; render(); }
   };
 
-  renderFn = view.render;
-  return view;
+  const getRunStateIcon = (modeId) => {
+    const r = runs.find(r => r.mode === modeId);
+    if (!r) return null;
+    return h('span.chip.ok', null, `Last run ${new Date(r.at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`);
+  };
+
+  const main = h('div.pad', null, 
+    h('div.hd', null, 
+      h('div', null, h('h1', null, 'Workbench'), h('div.sub', null, 'Run routines, generate code, and look at your screen.')), 
+      h('span.chip.warn', null, 'Host execution off')
+    ), 
+    h('div.tabs', null, 
+      h('button.a', null, 'Workflows'), 
+      h('button', null, 'Code studio'), 
+      h('button', null, 'Screen and vision')
+    ), 
+    h('div.grid3', {style: {marginBottom: '22px'}}, 
+      ...MODES.map(m => 
+        h('div.card.col.g8', null, 
+          h('div.row.sb', null, 
+            h('span.nm', null, m.label), 
+            getRunStateIcon(m.id) || (m.advanced ? h('span.chip.warn', null, 'Asks first') : null)
+          ), 
+          h('div.sm.t2', null, m.desc), 
+          h('div.row.sb', null, 
+            h('span.xs.mut', null, m.voice ? `Voice: ${m.voice}` : ''), 
+            h('button.btn' + (m.id === 'study' ? '.pri' : ''), { onClick: () => runMode(m) }, 'Run')
+          )
+        )
+      ),
+      h('div.card.col.g8', {style: {borderStyle: 'dashed'}}, 
+        h('div.nm', null, 'Create a routine'), 
+        h('div.sm.t2', null, 'Chain steps and give it a voice profile and a name KALKI understands.'), 
+        h('button.btn', {style: {alignSelf: 'flex-start'}}, h('i', {'data-i': 'plus'}), 'New routine')
+      )
+    ), 
+    h('div.grid2', null, 
+      h('div.col.g12', null, 
+        h('h2', null, 'Code studio'), 
+        h('div.card.in.col.g8', null, 
+          h('div.field', {style: {border: '0', padding: '0'}}, 
+            h('input', {
+              style: {background: 'transparent', border: '0', width: '100%', outline: 'none'},
+              placeholder: 'Write a Python script that renames photos by date taken',
+              onKeydown: (e) => { if (e.key === 'Enter' && e.target.value.trim()) generate(e.target.value.trim()); }
+            })
+          ), 
+          h('div.row.sb', null, 
+            h('select.chip', {
+              onChange: (e) => { codeState.lang = e.target.value; },
+              style: {border: 'none', background: 'transparent', outline: 'none', cursor: 'pointer'}
+            }, ...['python', 'javascript', 'bash'].map((l) => h('option', { value: l, selected: codeState.lang === l }, l))), 
+            h('button.btn.pri', {
+              disabled: codeState.busy,
+              onClick: (e) => {
+                const prompt = e.target.closest('.card.in').querySelector('input').value.trim();
+                if (prompt) generate(prompt);
+              }
+            }, codeState.busy ? 'Generating...' : 'Generate')
+          )
+        ), 
+        h('textarea.t-mono', {
+          style: { width: '100%', minHeight: '120px', background: 'var(--inset)', color: 'var(--text)', border: 'none', padding: '8px', borderRadius: '4px', resize: 'vertical' },
+          value: codeState.source,
+          onInput: (e) => { codeState.source = e.target.value; }
+        }),
+        codeState.output ? h('pre', { style: { padding: '8px', background: 'var(--inset)', borderRadius: '4px', overflowX: 'auto', marginTop: '8px', fontSize: '12px' } }, codeState.output) : null,
+        h('div.row.g8', null, 
+          h('button.btn', {disabled: codeState.busy || !codeState.source, onClick: runCode}, 'Run locally'), 
+          h('span.xs.mut', null, 'Host execution is off. Turn it on in Settings, then confirm each run.')
+        )
+      ), 
+      h('div.col.g12', null, 
+        h('h2', null, 'Screen and vision'), 
+        h('div.card.col.g12', null, 
+          h('div.sm.t2', null, 'KALKI reads your whole desktop and speaks the reply. Capture needs your confirmation each time.'), 
+          h('div.field', {style: {background: 'var(--inset)'}}, 'What error is on my screen?'), 
+          h('div.row.g8', null, 
+            h('button.btn.pri', null, h('i', {'data-i': 'mon'}), 'Ask about my screen'), 
+            h('button.btn', null, 'Attach an image')
+          )
+        ), 
+        h('div.card.col.g8', null, 
+          h('div.row.sb', null, 
+            h('span.nm', null, 'Documents'), 
+            h('span.xs.mut', null, 'PDF, DOCX, XLSX, PPTX ╖ 32 MB max')
+          ), 
+          h('div.card.in', {style: {textAlign: 'center', borderStyle: 'dashed', padding: '20px'}}, 
+            h('div.sm.t2', null, 'Drop a file here to read it'), 
+            h('div.xs.mut', null, 'KALKI shows what it extracted before sending')
+          )
+        )
+      )
+    ), 
+    h('div.card', {style: {marginTop: '22px'}}, 
+      h('div.row.sb', null, h('h2', null, 'Skills'), h('button.btn', null, 'Browse catalog')), 
+      h('div.grid2', {style: {gap: '0 28px'}}, 
+        ...skillsList.map(s => h('div.li', null, 
+          h('div', {style: {flex: '1'}}, 
+            h('div.nm', null, s.name), 
+            h('div.xs.mut', null, s.desc || (s.needs && s.needs.length ? 'Needs: ' + s.needs.join(', ') : ''))
+          ), 
+          h('i.tg' + (s.enabled ? '.on' : ''), { onClick: () => toggleSkill(s) })
+        ))
+      )
+    )
+  );
+
+  const aside = [
+    h('h1', {style: {fontSize: '16px'}}, 'Status'), 
+    h('div.col.g8', null, 
+      h('h2', null, 'Confirmation'), 
+      h('div.dlg', {style: {width: 'auto', background: 'var(--overlay)'}}, 
+        h('div.nm', {style: {fontSize: '16px'}}, 'No pending actions'), 
+        h('div.sm.t2', {style: {margin: '6px 0 12px'}}, 'Actions requiring your approval will appear here.')
+      )
+    ), 
+    h('div.card.col.g8', null, 
+      h('h2', null, 'Last run'), 
+      runs.length ? h('div', null,
+        h('div.row.sb', null, h('span.sm', null, runs[0].mode), h('span.chip.ok', null, runs[0].state)), 
+        h('div.xs.mut', null, runs[0].detail)
+      ) : h('div.xs.mut', null, 'No runs yet')
+    ), 
+    h('div.card.col.g8', null, 
+      h('h2', null, 'Sandbox'), 
+      h('div.sm.t2', null, 'Generated code runs in a contained sandbox when host execution is off.')
+    )
+  ];
+
+  return { main, aside };
 }

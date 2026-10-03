@@ -117,92 +117,174 @@ async function remove(m) {
   });
 }
 
-function memoryRow(m) {
-  const pinned = m.type === 'pinned';
-  return h('div.panel', { style: { padding: 'var(--space-4)', position: 'relative', border: pinned ? '1px solid var(--filament-3)' : '1px solid var(--filament-2)', borderRadius: 'var(--radius-sm)' } },
-    pinned ? h('div', { style: { position: 'absolute', top: 0, left: 0, width: '2px', height: '100%', background: 'var(--filament-3)', borderRadius: 'var(--radius-sm) 0 0 var(--radius-sm)' } }) : null,
-    h('div', { style: { display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-3)', alignItems: 'center' } },
-      h('span.chip.t-mono', null, m.type || 'fact'),
-      h('span.spacer'),
-      h('button.icon-btn', { type: 'button', 'aria-label': pinned ? 'Unpin' : 'Pin', onClick: () => togglePin(m) }, icon('pin', 14)),
-      h('button.icon-btn', { type: 'button', 'aria-label': 'Edit', onClick: () => editor(m) }, icon('edit', 14)),
-      h('button.icon-btn', { type: 'button', 'aria-label': 'Forget', onClick: () => remove(m) }, icon('trash', 14))
-    ),
-    h('div.t-body-sm', { style: { wordBreak: 'break-word', color: 'var(--fg-1)' } }, m.text),
-    h('div.inline.t-meta.muted', { style: { marginTop: 'var(--space-3)', fontFamily: 'var(--font-mono, monospace)', textTransform: 'uppercase', fontSize: '0.75rem' } },
-      h('span', { title: `Importance ${m.importance ?? 5}` }, '■'.repeat(Math.max(1, Math.round((m.importance ?? 5) / 2)))),
-      m.created_at ? h('span', null, relative(m.created_at)) : null
-    )
-  );
-}
-
 export function memoryView() {
-  const body = h('div.view-body.scroll');
-  const search = h('input.input', {
-    type: 'search', placeholder: 'Search memories', 'aria-label': 'Search memories',
-    style: { maxWidth: '18rem' },
-    onInput: debounce((e) => set('memory', { query: e.target.value }), 160),
+  const main = h('div.pad');
+  const aside = h('div');
+  
+  let quickText = '';
+  let quickType = 'preference';
+  let quickImp = 5;
+
+  const searchInput = h('input', {
+    type: 'search',
+    placeholder: 'Search memory',
+    style: { border: 'none', background: 'transparent', outline: 'none', flex: '1', color: 'inherit' },
+    onInput: debounce((e) => {
+      set('memory', { query: e.target.value });
+      view.render();
+    }, 160)
   });
 
-  const view = h('section.view', { 'aria-label': 'Memory' },
-    h('header.view-head', null,
-      h('h1', { tabindex: '-1', id: 'view-title' }, 'Memory'),
-      h('span.spacer'),
-      search,
-      h('button.btn.btn-sm.btn-secondary', { type: 'button', onClick: () => editor(null) }, icon('plus', 14), 'Add'),
-    ),
-    body,
-  );
+  const view = { main, aside };
 
   view.render = () => {
     const m = store.memory;
-    if (m.loading) return mount(body, skeletonRows(5));
-    if (m.error) {
-      return mount(body, errorState({
+    const q = (m.query || '').trim().toLowerCase();
+    searchInput.value = m.query || '';
+
+    const filtered = (m.items || [])
+      .filter((x) => !q || String(x.text).toLowerCase().includes(q))
+      .sort((a, b) => (Number(b.type === 'pinned') - Number(a.type === 'pinned')) || ((b.importance ?? 5) - (a.importance ?? 5)));
+
+    // MAIN
+    const hd = h('div.hd', null, 
+      h('div', null, h('h1', null, 'Memory'), h('div.sub', null, 'Facts KALKI keeps about you. Stored on this machine only.')), 
+      h('button.btn.pri', { type: 'button', onClick: () => editor(null) }, h('i', {'data-i': 'plus'}), 'Add memory')
+    );
+
+    const banner = m.legacyCount ? 
+      h('div.card.row.sb', { style: { marginBottom: '16px' } }, 
+        h('span.sm', null, h('b', { style: { fontWeight: '500' } }, `${m.legacyCount} older memories`), ' from the previous version can be imported with full metadata.'), 
+        h('div.row.g8', null, 
+          h('button.btn.pri', { type: 'button', onClick: importLegacy }, `Import ${m.legacyCount} memories`), 
+          h('button.btn.gh', { type: 'button', onClick: () => { set('memory', { legacyCount: 0 }); sessionStorage.setItem('kalki.legacyMemoryDone', '1'); view.render(); } }, 'Dismiss')
+        )
+      ) : null;
+
+    const searchRow = h('div.row.g8', { style: { marginBottom: '16px' } }, 
+      h('div.field', { style: { flex: '1' } }, h('i', {'data-i': 'search'}), searchInput), 
+      h('select', { style: { appearance: 'none', background: 'transparent', border: 'none', outline: 'none', padding: '0 8px', color: 'inherit' }, className: 'btn' }, 
+        h('option', { value: 'all' }, 'Type: all'), 
+        ...TYPES.map(t => h('option', { value: t }, `Type: ${t}`))
+      ), 
+      h('select', { style: { appearance: 'none', background: 'transparent', border: 'none', outline: 'none', padding: '0 8px', color: 'inherit' }, className: 'btn' }, 
+        h('option', { value: 'any' }, 'Importance: any'), 
+        ...[1,2,3,4,5,6,7,8,9,10].map(i => h('option', { value: i }, `Importance: ${i}`))
+      )
+    );
+
+    let listNodes = [];
+    if (m.loading) {
+      listNodes.push(skeletonRows(3));
+    } else if (m.error) {
+      listNodes.push(errorState({
         title: "Memory didn't load",
         message: m.error.kind === 'unavailable'
           ? 'The embedding backend is unavailable, so search is limited. Your memories are safe.'
           : m.error.message,
         detail: m.error.detail, onRetry: loadMemory,
       }));
-    }
-
-    const q = m.query.trim().toLowerCase();
-    const filtered = m.items
-      .filter((x) => !q || String(x.text).toLowerCase().includes(q))
-      .sort((a, b) => (Number(b.type === 'pinned') - Number(a.type === 'pinned')) || ((b.importance ?? 5) - (a.importance ?? 5)));
-
-    const banner = m.legacyCount
-      ? h('div.toolrun.toolrun-confirm', { style: { marginBottom: 'var(--space-6)' } },
-          h('div.toolrun-head', null,
-            icon('info', 16),
-            h('span', null, `${m.legacyCount} older memories are stored in the previous format.`),
-            h('span.spacer'),
-            h('button.btn.btn-sm.btn-secondary', { type: 'button', onClick: importLegacy }, 'Import them'),
-          ))
-      : null;
-
-    if (!m.items.length) {
-      return mount(body, banner, emptyState({
+    } else if (!m.items.length && !q) {
+      listNodes.push(emptyState({
         iconName: 'memory',
         title: 'KALKI remembers nothing yet',
-        body: 'Add the things you would otherwise repeat — how you like replies, who people are, what you are working on. Everything stays on this machine.',
-        actions: [h('button.btn.btn-sm.btn-secondary', { type: 'button', onClick: () => editor(null) }, 'Add the first memory')],
+        body: 'Add the things you would otherwise repeat.',
       }));
-    }
-
-    if (!filtered.length) {
-      return mount(body, banner, emptyState({
+    } else if (!filtered.length) {
+      listNodes.push(emptyState({
         iconName: 'search', title: 'No memories match that',
         body: `Nothing stored contains "${m.query}". Try a shorter phrase.`,
-        actions: [h('button.btn.btn-sm.btn-ghost', { type: 'button', onClick: () => { search.value = ''; set('memory', { query: '' }); } }, 'Clear search')],
+        actions: [h('button.btn.btn-sm.btn-ghost', { type: 'button', onClick: () => { searchInput.value = ''; set('memory', { query: '' }); view.render(); } }, 'Clear search')],
       }));
+    } else {
+      filtered.forEach(x => {
+        const pinned = x.type === 'pinned';
+        listNodes.push(
+          h('div.li', null, 
+            h('span.chip', null, x.type || 'fact'), 
+            h('div', { style: { flex: '1', minWidth: '0' } }, 
+              h('div.sm', { style: { wordBreak: 'break-word' } }, x.text), 
+              h('div.xs.mut', { style: { marginTop: '4px', display: 'flex', gap: '8px' } }, 
+                h('span', { title: `Importance ${x.importance ?? 5}` }, '■'.repeat(Math.max(1, Math.round((x.importance ?? 5) / 2)))), 
+                x.created_at ? h('span', null, relative(x.created_at)) : null
+              )
+            ), 
+            h('div.row.g4', null, 
+              h('button.ib', { type: 'button', title: pinned ? 'Unpin' : 'Pin', onClick: () => togglePin(x) }, h('i', {'data-i': 'pin', style: pinned ? { color: 'var(--fg)' } : undefined})), 
+              h('button.ib', { type: 'button', title: 'Edit', onClick: () => editor(x) }, h('i', {'data-i': 'pen'})), 
+              h('button.ib', { type: 'button', title: 'Forget', onClick: () => remove(x) }, h('i', {'data-i': 'trash'}))
+            )
+          )
+        );
+      });
     }
 
-    mount(body, banner,
-      h('p.t-meta.muted', { style: { marginBottom: 'var(--space-5)' } },
-        `${filtered.length} ${filtered.length === 1 ? 'memory' : 'memories'}${q ? ' matching' : ''}`),
-      h('div.grid-2', null, ...filtered.map(memoryRow)));
+    const memCard = h('div.card', { id: 'mem' }, ...listNodes);
+
+    const quickAddCard = h('div.card.in.col.g12', { style: { marginTop: '18px' } }, 
+      h('h2', null, 'Add a memory'), 
+      h('div.field', { style: { minHeight: '56px', alignItems: 'flex-start' } }, 
+        h('textarea', {
+          style: { width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', color: 'inherit', fontFamily: 'inherit' },
+          placeholder: 'I prefer short, direct answers...',
+          value: quickText,
+          onInput: (e) => { quickText = e.target.value; }
+        })
+      ), 
+      h('div.row.g8', null, 
+        h('select', { 
+            className: 'btn', 
+            style: { appearance: 'none', background: 'transparent' }, 
+            onInput: (e) => { quickType = e.target.value; }
+          },
+          ...TYPES.map(t => h('option', { value: t, selected: quickType === t }, `Type: ${t}`))
+        ), 
+        h('span.xs.mut', null, 'Importance'), 
+        h('input', { 
+          type: 'range', min: '1', max: '10', value: String(quickImp), 
+          style: { width: '80px' },
+          onInput: (e) => { quickImp = Number(e.target.value); view.render(); } 
+        }), 
+        h('span.imp', { id: 'impn' }, String(quickImp)), 
+        h('div.sp', { style: { flex: '1' } }), 
+        h('button.btn.pri', { 
+          type: 'button',
+          onClick: async () => {
+             if (!quickText.trim()) return;
+             const r = await memory.add({ text: quickText.trim(), type: quickType, importance: quickImp });
+             if (r.ok) {
+               ok('Memory added');
+               quickText = '';
+               quickImp = 5;
+               quickType = 'preference';
+               loadMemory();
+             } else {
+               err(r.message, r.detail);
+             }
+          }
+        }, 'Save memory')
+      )
+    );
+
+    mount(main, hd, banner, searchRow, h('h2', { style: { marginBottom: '6px' } }, 'Pinned ╖ always included'), memCard, quickAddCard);
+
+    // ASIDE
+    mount(aside, 
+      h('h1', { style: { fontSize: '16px' } }, 'Overview'), 
+      h('div.card.col.g12', null, 
+        h('div.row.sb', null, h('span.xs.mut', null, 'Total memories'), h('span.mono', null, String(m.items?.length || 0))), 
+        h('div.row.sb', null, h('span.xs.mut', null, 'Pinned'), h('span.mono', null, String(m.items?.filter(x => x.type === 'pinned').length || 0))), 
+        h('div.row.sb', null, h('span.xs.mut', null, 'Search mode'), h('span.chip.ok', null, m.error?.kind === 'unavailable' ? 'Text fallback' : 'Semantic'))
+      ), 
+      h('div.card.col.g8', null, 
+        h('h2', null, 'What memory is for'), 
+        h('div.sm.t2', null, 'KALKI uses memory to answer in your context. Pinned items are always included; the rest are found by meaning. Nothing leaves this machine.')
+      ), 
+      h('div.card.col.g8', null, 
+        h('h2', null, 'If search is unavailable'), 
+        h('div.sm.t2', null, 'Memory still lists and edits, and search falls back to matching text. KALKI says so on screen.')
+      )
+    );
   };
 
   return view;
