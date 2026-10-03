@@ -27,10 +27,10 @@
   --text-disabled: #4a535d;
 
   /* ── Filament: the signature. Presence, active indicator, focus only. */
-  --filament:      #fff4e2;
-  --filament-2:    #e2d6c2;
-  --filament-3:    #9c9384;
-  --filament-halo: rgba(255, 244, 226, .13);
+  --filament:      #f5b841;
+  --filament-2:    #41e6f5;
+  --filament-3:    #30aab5;
+  --filament-halo: rgba(245, 184, 65, .13);
 
   /* ── Semantic. Status only — never branding, never decoration. ────── */
   --danger:       #f0565b;
@@ -47,7 +47,7 @@
   --warning-line: rgba(224, 140, 51, .30);
 
   /* ── Type ─────────────────────────────────────────────────────────── */
-  --font-ui: "Instrument Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-ui: "JetBrains Mono", "Roboto Mono", "Cascadia Mono", Consolas, ui-monospace, SFMono-Regular, monospace;
   --font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, ui-monospace, SFMono-Regular, monospace;
 
   --fs-display: 1.75rem;  --lh-display: 2.125rem;
