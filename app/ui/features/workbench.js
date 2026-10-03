@@ -70,6 +70,8 @@ function workflowCard(m) {
 /* ── Code studio ─────────────────────────────────────────────────────── */
 
 let codeState = { lang: 'python', source: '', output: '', busy: false };
+let skillsLoaded = false;
+let skillsList = [];
 
 async function generate(prompt) {
   codeState.busy = true;
@@ -142,6 +144,51 @@ export function workbenchView() {
             )))
           : emptyState({ iconName: 'flow', title: 'No runs yet', body: 'Modes you run in this session appear here with their result.' }),
       )));
+
+    // Skills
+    const skillsPanel = h('section.panel');
+    grid.appendChild(skillsPanel);
+    
+    if (!skillsLoaded) {
+      skillsLoaded = true;
+      import('../api/client.js').then(({ get }) => get('/api/skills/list')).then(r => {
+        if (r.ok) {
+          skillsList = r.data.skills || r.data || [];
+          render();
+        }
+      });
+      mount(skillsPanel, 
+        h('div.panel-head', null, h('h2', null, 'Skills')),
+        h('div.panel-body', null, h('p.t-meta.muted', null, 'Loading skills...'))
+      );
+    } else {
+      const toggleSkill = async (s) => {
+        const next = !s.enabled;
+        const { post } = await import('../api/client.js');
+        const r = await post('/api/skills/toggle', { id: s.id, enabled: next });
+        if (r.ok) { s.enabled = next; render(); }
+      };
+      
+      mount(skillsPanel,
+        h('div.panel-head', null, h('h2', null, 'Skills')),
+        h('div.panel-body', null,
+          h('p.t-body-sm.muted', { style: { marginBottom: 'var(--space-5)' } }, 'Built-in integrations.'),
+          h('div.stack', null, ...skillsList.map((s) => 
+            h('div.row', null,
+              icon('code', 18),
+              h('div', { style: { flex: '1', minWidth: '0' } },
+                h('div.t-body-sm', null, s.name),
+                s.needs && s.needs.length ? h('div.t-meta.muted', null, 'Needs: ' + s.needs.join(', ')) : null
+              ),
+              h('label.toggle', null,
+                h('input', { type: 'checkbox', checked: s.enabled, onChange: () => toggleSkill(s) }),
+                h('i')
+              )
+            )
+          ))
+        )
+      );
+    }
 
     // Code studio
     let promptEl, sourceEl;

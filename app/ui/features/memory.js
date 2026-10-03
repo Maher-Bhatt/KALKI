@@ -119,19 +119,20 @@ async function remove(m) {
 
 function memoryRow(m) {
   const pinned = m.type === 'pinned';
-  return h('div.row', { style: pinned ? { borderLeft: '2px solid var(--filament-3)', borderRadius: '0 var(--radius-sm) var(--radius-sm) 0' } : null },
-    h('div', { style: { flex: '1', minWidth: '0' } },
-      h('div.t-body-sm', null, m.text),
-      h('div.inline.t-meta.muted', { style: { marginTop: 'var(--space-2)' } },
-        h('span.chip', null, m.type || 'fact'),
-        h('span', { title: `Importance ${m.importance ?? 5} of 10`, 'aria-label': `Importance ${m.importance ?? 5} of 10` },
-          '●'.repeat(Math.max(1, Math.round((m.importance ?? 5) / 3.4)))),
-        m.created_at ? h('span', null, relative(m.created_at)) : null,
-      ),
+  return h('div.panel', { style: { padding: 'var(--space-4)', position: 'relative', border: pinned ? '1px solid var(--filament-3)' : '1px solid var(--filament-2)', borderRadius: 'var(--radius-sm)' } },
+    pinned ? h('div', { style: { position: 'absolute', top: 0, left: 0, width: '2px', height: '100%', background: 'var(--filament-3)', borderRadius: 'var(--radius-sm) 0 0 var(--radius-sm)' } }) : null,
+    h('div', { style: { display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-3)', alignItems: 'center' } },
+      h('span.chip.t-mono', null, m.type || 'fact'),
+      h('span.spacer'),
+      h('button.icon-btn', { type: 'button', 'aria-label': pinned ? 'Unpin' : 'Pin', onClick: () => togglePin(m) }, icon('pin', 14)),
+      h('button.icon-btn', { type: 'button', 'aria-label': 'Edit', onClick: () => editor(m) }, icon('edit', 14)),
+      h('button.icon-btn', { type: 'button', 'aria-label': 'Forget', onClick: () => remove(m) }, icon('trash', 14))
     ),
-    h('button.icon-btn', { type: 'button', 'aria-label': pinned ? 'Unpin memory' : 'Pin memory', title: pinned ? 'Unpin' : 'Pin', onClick: () => togglePin(m) }, icon('pin', 16)),
-    h('button.icon-btn', { type: 'button', 'aria-label': 'Edit memory', title: 'Edit', onClick: () => editor(m) }, icon('edit', 16)),
-    h('button.icon-btn', { type: 'button', 'aria-label': 'Forget memory', title: 'Forget', onClick: () => remove(m) }, icon('trash', 16)),
+    h('div.t-body-sm', { style: { wordBreak: 'break-word', color: 'var(--fg-1)' } }, m.text),
+    h('div.inline.t-meta.muted', { style: { marginTop: 'var(--space-3)', fontFamily: 'var(--font-mono, monospace)', textTransform: 'uppercase', fontSize: '0.75rem' } },
+      h('span', { title: `Importance ${m.importance ?? 5}` }, '■'.repeat(Math.max(1, Math.round((m.importance ?? 5) / 2)))),
+      m.created_at ? h('span', null, relative(m.created_at)) : null
+    )
   );
 }
 
@@ -201,7 +202,7 @@ export function memoryView() {
     mount(body, banner,
       h('p.t-meta.muted', { style: { marginBottom: 'var(--space-5)' } },
         `${filtered.length} ${filtered.length === 1 ? 'memory' : 'memories'}${q ? ' matching' : ''}`),
-      h('div.stack', null, ...filtered.map(memoryRow)));
+      h('div.grid-2', null, ...filtered.map(memoryRow)));
   };
 
   return view;

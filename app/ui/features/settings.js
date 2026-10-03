@@ -62,9 +62,9 @@ async function save(patch, message = 'Saved') {
 /* ── Building blocks ─────────────────────────────────────────────────── */
 
 function row(label, desc, control) {
-  return h('div.settings-row', null,
-    h('div', null, h('div.label', null, label), desc ? h('div.desc', null, desc) : null),
-    h('span.spacer'),
+  return h('div.settings-row', { style: { borderBottom: '1px solid var(--filament-2)', padding: 'var(--space-3) 0', display: 'flex', alignItems: 'center' } },
+    h('div', null, h('div.label.t-mono', null, label), desc ? h('div.desc.t-meta.muted', { style: { marginTop: 'var(--space-1)' } }, desc) : null),
+    h('span.spacer', { style: { flex: '1', minWidth: 'var(--space-4)' } }),
     control,
   );
 }
