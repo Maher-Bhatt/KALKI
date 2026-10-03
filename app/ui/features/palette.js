@@ -134,34 +134,34 @@ function paint() {
   resultsEl.replaceChildren();
 
   if (!items.length) {
-    resultsEl.appendChild(h('div.palette-group', null, `Nothing matches "${input.value.trim()}"`));
-    resultsEl.appendChild(h('div.palette-item', { style: { cursor: 'default' } },
-      h('span.label.muted', null, 'Press Enter to ask KALKI this instead')));
+    resultsEl.appendChild(h('div.pg', null, `Nothing matches "${input.value.trim()}"`));
+    resultsEl.appendChild(h('div.pi', { style: { cursor: 'default' } },
+      h('span.mut', null, 'Press Enter to ask KALKI this instead')));
     return;
   }
-
+  
   let group = null;
   items.forEach((cmd, i) => {
     if (cmd.group !== group) {
       group = cmd.group;
-      resultsEl.appendChild(h('div.palette-group', { role: 'presentation' }, group));
+      resultsEl.appendChild(h('div.pg', { role: 'presentation' }, group));
     }
-    resultsEl.appendChild(h('div.palette-item', {
+    resultsEl.appendChild(h('div.pi', {
       id: `pal-${i}`, role: 'option', 'aria-selected': i === cursor ? 'true' : 'false',
       onMouseenter: () => { cursor = i; syncSelection(); },
       onClick: () => execute(i),
     },
-      icon(cmd.icon || 'chevron', 16),
-      h('span.label', null, cmd.label),
-      cmd.context ? h('span.ctx', null, cmd.context) : null,
-      cmd.shortcut ? h('span.kbd', null, keyLabel(cmd.shortcut)) : null,
+      cmd.icon ? icon(cmd.icon, 16) : null,
+      cmd.label,
+      cmd.context ? h('span.xs.mut', { style: { marginLeft: '8px' } }, cmd.context) : null,
+      cmd.shortcut ? h('span.xs.mut', { style: { marginLeft: 'auto' } }, keyLabel(cmd.shortcut)) : null,
     ));
   });
   syncSelection();
 }
 
 function syncSelection() {
-  const rows = resultsEl.querySelectorAll('.palette-item[role="option"]');
+  const rows = resultsEl.querySelectorAll('.pi[role="option"]');
   rows.forEach((el, i) => el.setAttribute('aria-selected', i === cursor ? 'true' : 'false'));
   input.setAttribute('aria-activedescendant', rows[cursor]?.id || '');
   rows[cursor]?.scrollIntoView({ block: 'nearest' });
@@ -189,11 +189,12 @@ export function openPalette(prefill = '') {
   lastTrigger = document.activeElement;
   loadModels();
 
-  input = h('input.palette-input', {
+  input = h('input', {
     type: 'text', role: 'combobox', 'aria-expanded': 'true', 'aria-controls': 'palette-results',
     'aria-autocomplete': 'list', 'aria-label': 'Search commands, conversations and settings',
     autocomplete: 'off', spellcheck: 'false', value: prefill,
-    placeholder: 'Search or run a command…',
+    placeholder: 'Type a command or ask KALKI...',
+    style: { background: 'transparent', border: 'none', color: 'var(--text)', outline: 'none', flex: '1', fontSize: '13px' },
     onInput: () => { cursor = 0; paint(); },
     onKeydown: (e) => {
       if (e.key === 'ArrowDown') { e.preventDefault(); cursor = Math.min(cursor + 1, Math.max(0, items.length - 1)); syncSelection(); }
@@ -202,21 +203,17 @@ export function openPalette(prefill = '') {
       else if (e.key === 'End') { e.preventDefault(); cursor = items.length - 1; syncSelection(); }
       else if (e.key === 'Enter') { e.preventDefault(); execute(cursor); }
       else if (e.key === 'Tab' && items[cursor]) { e.preventDefault(); input.value = items[cursor].label; cursor = 0; paint(); }
+      else if (e.key === 'Escape') { e.preventDefault(); close(); }
     },
   });
 
-  resultsEl = h('div.palette-results', { id: 'palette-results', role: 'listbox', 'aria-label': 'Results' });
+  resultsEl = h('div', { id: 'palette-results', role: 'listbox', 'aria-label': 'Results' });
 
-  dlg = h('dialog', { id: 'palette', class: 'jarvis-hud theme-dark', 'aria-label': 'Command palette' },
-    input,
-    resultsEl,
-    h('div.palette-foot', null,
-      h('span', null, h('span.kbd', null, '↑'), ' ', h('span.kbd', null, '↓'), ' move'),
-      h('span', null, h('span.kbd', null, '↵'), ' run'),
-      h('span', null, h('span.kbd', null, 'esc'), ' close'),
-      h('span.spacer', { style: { flex: '1' } }),
-      h('span', null, '> actions  @ memory  / settings'),
-    ),
+  dlg = h('dialog', { class: 'ov on', id: 'pov', 'aria-label': 'Command palette', style: { border: 'none', background: 'transparent', padding: 0 } },
+    h('div.dlg', null,
+      h('div.field', { style: { marginBottom: '6px' } }, input, h('kbd', { style: { marginLeft: 'auto' } }, 'Esc')),
+      resultsEl
+    )
   );
 
   dlg.addEventListener('close', () => {
