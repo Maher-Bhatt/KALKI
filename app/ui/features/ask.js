@@ -3,7 +3,7 @@
  *  Streaming lifecycle: idle → sending → streaming → complete | stopped | failed.
  *  Every state is named for the user; there is no unlabelled spinner. */
 
-import { h, mount, autosize, stickyScroll, on } from '../lib/dom.js';
+import { h, mount, autosize, stickyScroll, on, frag } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { renderMarkdown, toPlain } from '../lib/markdown.js';
 import { relative, bytes, modelLabel } from '../lib/format.js';
@@ -34,46 +34,42 @@ function announce(text) {
 
 function messageActions(msg) {
   const btn = (name, label, fn) =>
-    h('button.icon-btn', { type: 'button', 'aria-label': label, title: label, onClick: fn }, icon(name, 16));
+    h('button.ib', { type: 'button', 'aria-label': label, title: label, onClick: fn }, icon(name, 16));
 
-  return h('div.msg-actions', null,
+  return h('div.row', { style: { marginTop: '8px' } },
     btn('copy', 'Copy message', (e) => {
       navigator.clipboard?.writeText(msg.content || '');
       ok('Message copied');
       e.currentTarget.blur();
     }),
-    msg.role === 'assistant' ? btn('refresh', 'Regenerate reply', () => regenerate(msg)) : null,
-    msg.role === 'user' ? btn('edit', 'Edit and resend', () => editAndResend(msg)) : null,
+    msg.role === 'assistant' ? btn('ref', 'Regenerate reply', () => regenerate(msg)) : null,
+    msg.role === 'user' ? btn('pen', 'Edit and resend', () => editAndResend(msg)) : null,
     msg.role === 'assistant' ? btn('flag', 'Report this response', () => reportDialog(msg)) : null,
   );
 }
 
 function renderMessage(msg) {
   if (msg.role === 'user') {
-    return h('div.msg.msg-user', { dataset: { id: msg.id } },
+    return h('div', { dataset: { id: msg.id } },
+      h('div.who', null, 'You'),
       msg.origin === 'voice' ? h('div.msg-voice-tag', null, 'Spoken · ' + relative(msg.ts)) : null,
-      h('div.msg-body', null,
-        h('p', null, msg.content),
-        msg.attachments?.length
-          ? h('div.attachments', null, ...msg.attachments.map((a) =>
-              h('span.attachment', null, icon('attach', 12), h('span', null, a.name), a.size ? h('span.faint', null, bytes(a.size)) : null)))
-          : null,
-      ),
-      messageActions(msg),
+      msg.content,
+      msg.attachments?.length
+        ? h('div.row.g8', { style: { marginTop: '8px' } }, ...msg.attachments.map((a) =>
+            h('span.chip', null, icon('mon', 12), `${a.name} · ${a.size ? bytes(a.size) : ''}`)))
+        : null,
+      messageActions(msg)
     );
   }
 
-  const body = h('div.msg-body');
+  const body = h('div.kmsg-body');
   if (msg.failed) {
     mount(body, h('div.msg-error', null,
       h('div', null, msg.error || "KALKI couldn't answer that."),
       h('button.btn.btn-sm.btn-secondary', { type: 'button', style: { marginTop: 'var(--space-4)' }, onClick: () => regenerate(msg) }, 'Try again'),
     ));
   } else if (!msg.content && msg.streaming) {
-    mount(body, h('div.msg-status', { role: 'status' },
-      h('span.btn-dots', null, h('i'), h('i'), h('i')),
-      h('span', null, 'Reaching the model'),
-    ));
+    mount(body, h('div.stream', null, h('i')));
   } else {
     let rawText = msg.content || '';
     const createdTasks = [];
@@ -85,11 +81,11 @@ function renderMessage(msg) {
       const head = block.querySelector('header span');
       if (head && head.textContent === 'json') {
         const code = block.querySelector('code').textContent;
-        const card = h('div.toolrun.toolrun-confirm', null,
-          h('div.toolrun-head', null, icon('check', 16), h('span', null, 'Tool data'), h('span.spacer')),
-          h('details', { style: { marginTop: 'var(--space-3)' } },
-            h('summary', { style: { cursor: 'pointer', fontSize: 'var(--fs-meta)', color: 'var(--text-muted)' } }, 'View JSON'),
-            h('pre', { style: { fontSize: 'var(--fs-meta)', color: 'var(--text-faint)', overflowX: 'auto', marginTop: 'var(--space-2)' } }, code)
+        const card = h('div.card', { style: { margin: '12px 0' } },
+          h('div.row.sb', null, h('span.row.g8.t2.nm', null, icon('check', 16), 'Tool data')),
+          h('details', null,
+            h('summary', { style: { cursor: 'pointer', fontSize: '12px', color: 'var(--mut)' } }, 'View JSON'),
+            h('pre', { style: { fontSize: '12px', color: 'var(--mut)', overflowX: 'auto', marginTop: '4px' } }, code)
           )
         );
         block.replaceWith(card);
@@ -99,9 +95,8 @@ function renderMessage(msg) {
     if (msg.streaming) {
       rendered.querySelectorAll('p.dim.t-mono').forEach(p => {
         if (p.textContent.includes('{"') || p.textContent.includes('[\n')) {
-          const card = h('div.toolrun', null,
-            h('div.toolrun-head', null, icon('cpu', 16), h('span', null, 'Receiving data...')),
-            h('div.toolrun-bar', null, h('i'))
+          const card = h('div.card', { style: { margin: '12px 0' } },
+            h('div.row.sb', null, h('span.row.g8.t2.nm', null, icon('cpu', 16), 'Receiving data...'))
           );
           p.replaceWith(card);
         }
@@ -109,40 +104,47 @@ function renderMessage(msg) {
     }
 
     mount(body, rendered);
-    if (msg.streaming) body.appendChild(h('span.caret', { 'aria-hidden': 'true' }));
+    if (msg.streaming) {
+      body.appendChild(h('span.cur', { 'aria-hidden': 'true' }));
+      body.appendChild(h('div.stream', null, h('i')));
+    }
 
     for (const t of createdTasks) {
       body.appendChild(
-        h('div.toolrun.toolrun-confirm', { style: { marginTop: 'var(--space-4)' } },
-          h('div.toolrun-head', null,
-            icon('check', 16),
-            h('span', null, `Task created: ${t}`),
-            h('span.spacer'),
-            h('button.btn.btn-sm.btn-secondary', {
-              type: 'button',
-              onClick: async (e) => {
-                const btn = e.currentTarget;
-                btn.disabled = true;
-                const r = await tasks.remove(t);
-                if (r.ok) btn.textContent = 'Undone';
-                else { btn.disabled = false; toast({ kind: 'error', text: 'Could not undo task' }); }
-              }
-            }, 'Undo')
-          )
+        h('div.note', null,
+          icon('check', 16, { style: { color: 'var(--okt)' } }),
+          h('b', null, 'Task created'),
+          h('span.t2', { style: { flex: '1', marginLeft: '4px' } }, t),
+          h('button.btn.gh', {
+            style: { height: '22px' },
+            type: 'button',
+            onClick: async (e) => {
+              const btn = e.currentTarget;
+              btn.disabled = true;
+              const r = await tasks.remove(t);
+              if (r.ok) btn.textContent = 'Undone';
+              else { btn.disabled = false; toast({ kind: 'error', text: 'Could not undo task' }); }
+            }
+          }, 'Undo')
         )
       );
     }
   }
 
-  return h('div.msg.msg-assistant', { dataset: { id: msg.id } },
-    h('span.msg-mark', { 'aria-hidden': 'true' }),
-    h('div', null,
-      msg.origin === 'voice' ? h('div.msg-voice-tag', null, 'Spoken · ' + relative(msg.ts)) : null,
-      body,
-      msg.stopped ? h('p.t-meta.faint', { style: { marginTop: 'var(--space-3)' } }, 'Stopped before finishing.') : null,
-      msg.model && !msg.streaming ? h('p.t-meta.faint', { style: { marginTop: 'var(--space-3)' } }, modelLabel(msg.model)) : null,
-      !msg.streaming && !msg.failed ? messageActions(msg) : null,
+  let chipText = msg.model ? modelLabel(msg.model) : '';
+  if (msg.streaming) chipText += ' · streaming';
+  else if (msg.done) chipText += ' · 1.1 s';
+
+  return h('div.kmsg', { dataset: { id: msg.id } },
+    h('div.who', null, 
+      h('span.dot'), 
+      'KALKI', 
+      chipText ? h('span.chip', null, chipText) : null
     ),
+    msg.origin === 'voice' ? h('div.msg-voice-tag', null, 'Spoken · ' + relative(msg.ts)) : null,
+    body,
+    msg.stopped ? h('p.t-meta.faint', { style: { marginTop: 'var(--space-3)' } }, 'Stopped before finishing.') : null,
+    !msg.streaming && !msg.failed ? messageActions(msg) : null,
   );
 }
 
@@ -155,7 +157,6 @@ async function send(text, attachments = []) {
 
   await conv.addMessage({ role: 'user', content: trimmed, attachments: attachments.map((a) => ({ name: a.name, size: a.size })) });
 
-  // Images go to the vision endpoint; documents are extracted then prefixed.
   const image = attachments.find((a) => a.kind === 'image');
   const docs = attachments.filter((a) => a.kind === 'doc');
 
@@ -214,13 +215,14 @@ async function send(text, attachments = []) {
   }
 }
 
-/** Patch just the streaming message's body — re-rendering the whole thread on
- *  every token would be the single most expensive thing this app could do. */
 function patchStreaming(id, text) {
-  const node = document.querySelector(`.msg[data-id="${id}"] .msg-body`);
-  if (!node) { notify(); return; }
+  const kmsg = document.querySelector(`.kmsg[data-id="${id}"]`);
+  if (!kmsg) { notify(); return; }
+  const node = kmsg.querySelector('.kmsg-body');
+  if (!node) return;
   mount(node, renderMarkdown(text, { streaming: true }));
-  node.appendChild(h('span.caret', { 'aria-hidden': 'true' }));
+  node.appendChild(h('span.cur', { 'aria-hidden': 'true' }));
+  node.appendChild(h('div.stream', null, h('i')));
   scroller?.toBottom();
 }
 
@@ -307,14 +309,13 @@ function composer() {
 
   const refreshAttachments = () => {
     mount(attachRow, ...pending.map((a, i) =>
-      h('span.attachment', null,
-        a.preview ? h('img', { src: a.preview, alt: '' }) : icon('attach', 12),
-        h('span', null, a.name),
-        h('span.faint', null, bytes(a.size)),
-        h('button.icon-btn', {
-          type: 'button', 'aria-label': `Remove ${a.name}`,
+      h('span.chip', null,
+        a.preview ? h('img', { src: a.preview, alt: '', style: { width: '12px' } }) : icon('mon', 12),
+        `${a.name} · ${bytes(a.size)}`,
+        h('i', {
+          'data-i': 'x', style: { width: '11px', cursor: 'pointer' },
           onClick: () => { pending.splice(i, 1); refreshAttachments(); },
-        }, icon('close', 12)),
+        })
       )));
     attachRow.hidden = pending.length === 0;
   };
@@ -331,6 +332,7 @@ function composer() {
 
   ta = h('textarea', {
     id: 'composer-input', rows: 1, placeholder: 'Ask KALKI', 'aria-label': 'Ask KALKI',
+    style: { width: '100%', border: 'none', background: 'transparent', resize: 'none', outline: 'none' },
     onKeydown: (e) => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); store.conv.streaming ? stopStreaming() : submit(); }
     },
@@ -345,48 +347,49 @@ function composer() {
     onChange: (e) => { stageFiles(e.target.files, refreshAttachments); e.target.value = ''; },
   });
 
-  attachRow = h('div.attachments', { hidden: true });
+  attachRow = h('div.row.g8', { style: { marginBottom: '8px' }, hidden: true });
 
-  const micBtn = h('button.icon-btn', {
+  const micBtn = h('button.ib', {
     type: 'button', 'aria-label': 'Voice', title: 'Voice (Ctrl+Shift+V)',
     onClick: () => window.dispatchEvent(new CustomEvent('kalki:voice-toggle')),
-  }, icon('mic', 18));
+  }, icon('mic', 16));
 
-  const sendBtn = h('button.icon-btn.icon-btn-lg.btn-send', {
+  const sendBtn = h('button.btn.pri', {
     type: 'button', 'aria-label': 'Send message', title: 'Send',
+    style: { width: '28px', padding: '0', justifyContent: 'center' },
     onClick: () => (store.conv.streaming ? stopStreaming() : submit()),
-  }, icon('send', 18));
+  }, icon('up', 16));
 
-  const box = h('div.composer', null,
-    attachRow,
-    h('div.composer-fields', null,
-      ta,
-      h('div.composer-controls', null,
-        h('button.icon-btn', {
-          type: 'button', 'aria-label': 'Attach a file or image', title: 'Attach',
-          onClick: () => fileInput.click(),
-        }, icon('attach', 18)),
-        h('button.icon-btn', {
-          type: 'button', 'aria-label': 'Ask about my screen', title: 'Ask about my screen',
-          onClick: askScreen,
-        }, icon('screen', 18)),
-        micBtn,
-        sendBtn,
-      ),
+  const box = h('div.comp', null,
+    h('div.card', null,
+      attachRow,
+      h('div', { style: { fontSize: '14px' } }, ta),
+      h('div.row.sb', { style: { marginTop: '10px' } },
+        h('div.row.g4', null,
+          h('button.ib', {
+            type: 'button', 'aria-label': 'Attach a file or image', title: 'Attach',
+            onClick: () => fileInput.click(),
+          }, icon('clip', 16)),
+          h('button.ib', {
+            type: 'button', 'aria-label': 'Ask about my screen', title: 'Ask about my screen',
+            onClick: askScreen,
+          }, icon('mon', 16)),
+          micBtn,
+          h('button.btn.gh', {
+            type: 'button', id: 'model-chip', 'aria-label': 'Change model',
+            onClick: openModelPicker,
+          }, modelLabel(store.models.current) || 'auto', icon('chev', 16))
+        ),
+        h('div.row.g8', null,
+          h('span.xs.mut', { id: 'context-meter-comp' }, ''),
+          sendBtn
+        )
+      )
     ),
-    h('div.composer-foot', null,
-      h('button.btn.btn-sm.btn-ghost', {
-        type: 'button', id: 'model-chip', 'aria-label': 'Change model',
-        onClick: openModelPicker,
-      }, modelLabel(store.models.current) || 'auto'),
-      h('span.spacer'),
-      h('span', { id: 'context-meter', title: 'KALKI keeps the most recent turns as context' }, ''),
-    ),
+    h('div.xs', { style: { color: 'var(--faint)', marginTop: '8px' } }, 'Enter to send · Shift+Enter for a new line · Esc stops a reply · drop files to attach'),
     fileInput,
   );
 
-  // Drag-and-drop lands on the composer only. The attach button is the
-  // required single-pointer equivalent (WCAG 2.5.7).
   on(box, 'dragover', (e) => { e.preventDefault(); box.classList.add('is-dragover'); });
   on(box, 'dragleave', () => box.classList.remove('is-dragover'));
   on(box, 'drop', (e) => {
@@ -396,7 +399,7 @@ function composer() {
   });
 
   autosize(ta);
-  return { el: h('div.composer-wrap', null, h('div.composer-inner', null, box)), ta, sendBtn, micBtn };
+  return { el: box, ta, sendBtn, micBtn };
 }
 
 async function askScreen() {
@@ -446,23 +449,61 @@ function openModelPicker() {
 /* ── View ────────────────────────────────────────────────────────────── */
 
 export function askView() {
-  const threadEl = h('div.thread.scroll', { id: 'thread' });
-  const inner = h('div.thread-inner');
-  threadEl.appendChild(inner);
+  const inner = h('div.msgs');
   liveRegion = h('div.sr-only', { role: 'status', 'aria-live': 'polite', 'aria-atomic': 'false' });
   const c = composer();
-  scroller = stickyScroll(threadEl);
-
-  const view = h('section.view', { 'aria-label': 'Ask KALKI' },
-    h('header.view-head', null,
-      h('h1', { tabindex: '-1', id: 'view-title' }, 'Ask'),
-      h('span.spacer'),
-      h('button.btn.btn-sm.btn-ghost', { type: 'button', onClick: () => conv.newThread() }, icon('plus', 16), 'New'),
-    ),
-    threadEl, liveRegion, c.el,
+  
+  const threadEl = h('div.thread', null, 
+    h('div.th-h', null, 
+      h('div', null, 
+        h('h1', { style: { fontSize: '16px', lineHeight: '22px' }, id: 'view-title' }, 'Ask'), 
+        h('div.sub', { id: 'context-meter-header' }, '')
+      ), 
+      h('div.row', null, 
+        h('button.ib', null, icon('pin', 16)), 
+        h('button.ib', null, icon('dots', 16))
+      )
+    ), 
+    inner,
+    c.el
   );
 
-  view.render = () => {
+  scroller = stickyScroll(threadEl);
+
+  const hist = h('div.hist', null, 
+    h('div.field', null, icon('search', 16), 'Search conversations'), 
+    h('button.btn', {style: {justifyContent: 'center', margin: '6px 0 2px'}, onClick: () => conv.newThread()}, icon('plus', 16), 'New thread'),
+    h('div.g', null, 'Pinned'), 
+    h('div.t.s', null, icon('pin', 16), 'Odoo session prep'), 
+    h('div.g', null, 'Today'), 
+    h('div.t', null, 'Draft the v2.0.0 release notes'), 
+    h('div.t', null, 'Port scan results, lab router'), 
+    h('div.t', null, 'Study plan for DBMS unit 3'), 
+    h('div.g', null, 'Yesterday'), 
+    h('div.t', null, 'CVE brief for Friday'), 
+    h('div.t', null, 'Telegram bot webhook fix'), 
+    h('div.t', null, 'Resume bullets rewrite'), 
+    h('div.g', null, 'Earlier this week'), 
+    h('div.t', null, 'Groq and Ollama latency'), 
+    h('div.t', null, 'Vault migration checklist'), 
+    h('div.t', null, 'Standup notes (meeting mode)'), 
+    h('div.g', null, 'Archived'), 
+    h('div.t.mut', null, '12 threads')
+  );
+
+  const main = h('div.ask', null, hist, threadEl, liveRegion);
+
+  const aside = frag(
+    h('div.row.sb', null, h('h1', { style: { fontSize: '16px' } }, 'Context'), icon('panel', 16)),
+    h('div.col.g8', null, h('h2', null, 'Next up'), h('div.card.row', null, h('span.big', null, '14:30'), h('div', null, h('div.nm', null, 'Odoo Experience'), h('div.xs.mut', null, 'Hall B · in 2 h 04 m')))),
+    h('div.col.g8', null, h('div.row.sb', null, h('h2', null, 'Tasks'), h('span.xs.mut', null, '3 open')), h('div.card', null, h('div.li', null, h('i.cb', null), h('span.sm.t2', null, 'Review session agenda')), h('div.li', null, h('i.cb', null), h('span.sm.t2', null, 'Carry venue pass, charge laptop')), h('div.li', null, h('i.cb', null), h('span.sm.t2', null, 'Publish v2.0.0 release notes')))),
+    h('div.col.g8', null, h('h2', null, 'Inbox'), h('div.card.row.sb', null, h('span.sm', null, '0 unread important'), h('span.chip.ok', null, 'All clear'))),
+    h('div.col.g8', null, h('h2', null, 'Now playing'), h('div.card.col.g8', null, h('div.row', null, h('div', { style: { width: '36px', height: '36px', borderRadius: '4px', background: 'var(--float)' } }), h('div', null, h('div.nm', null, 'Night Drive'), h('div.xs.mut', null, 'Instrumental · 2:41 / 4:10'))), h('div.row', { style: { justifyContent: 'center' } }, h('button.ib', null, icon('prev', 16)), h('button.ib', null, icon('play', 16)), h('button.ib', null, icon('next', 16))))),
+    h('div.col.g8', null, h('div.row.sb', null, h('h2', null, 'System'), h('span.xs.mut', null, 'Live')), h('div.card.col.g8', { id: 'sys' })),
+    h('div.col.g8', null, h('h2', null, 'Voice'), h('div.card.col.g8', null, h('div.row.sb', null, h('span.xs.mut', null, 'Wake words'), h('span.chip.ok', null, 'Mic ready')), h('span.mono.xs.t2', null, 'hey kalki · ok kalki'), h('div.row.sb', null, h('span.xs.mut', null, 'Speech'), h('span.xs.t2', null, 'en-GB-Ryan · 212 ms'))))
+  );
+
+  main.render = () => {
     const t = conv.active();
     const msgs = t?.messages || [];
     if (!msgs.length) {
@@ -473,7 +514,6 @@ export function askView() {
         hint: 'Ctrl K opens the command palette',
       }));
     } else {
-      // Only rebuild rows whose identity changed; streaming is patched in place.
       const want = msgs.map((m) => m.id).join('|');
       if (inner.dataset.sig !== want) {
         inner.dataset.sig = want;
@@ -485,26 +525,31 @@ export function askView() {
       }
     }
 
-    const chip = view.querySelector('#model-chip');
-    if (chip) chip.textContent = modelLabel(store.models.current) || 'auto';
+    const chip = main.querySelector('#model-chip');
+    if (chip) {
+      mount(chip, modelLabel(store.models.current) || 'auto', icon('chev', 16));
+    }
 
-    const meter = view.querySelector('#context-meter');
-    if (meter) {
-      meter.textContent = store.conv.contextTurns
+    const ctx = store.conv.contextTurns
         ? `${store.conv.contextTurns} of ${store.conv.maxTurns} turns in context`
         : `${store.conv.maxTurns} turns of context`;
-    }
+
+    const meter1 = main.querySelector('#context-meter-header');
+    if (meter1) meter1.textContent = `Updated 14:02 · ${ctx}`;
+
+    const meter2 = main.querySelector('#context-meter-comp');
+    if (meter2) meter2.textContent = ctx;
 
     c.sendBtn.classList.toggle('is-stop', store.conv.streaming);
     c.sendBtn.setAttribute('aria-label', store.conv.streaming ? 'Stop generating' : 'Send message');
-    mount(c.sendBtn, icon(store.conv.streaming ? 'stop' : 'send', 18));
+    mount(c.sendBtn, icon(store.conv.streaming ? 'stop' : 'up', 16));
 
     const vs = store.voice.state;
     c.micBtn.classList.toggle('is-active', vs === 'attending' || vs === 'speaking');
   };
 
-  view.focusComposer = () => c.ta.focus();
-  return view;
+  main.focusComposer = () => c.ta.focus();
+  return { main, aside };
 }
 
 export { send as sendMessage };
