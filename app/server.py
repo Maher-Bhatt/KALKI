@@ -357,57 +357,66 @@ STATE = {
 }
 
 _pending_lock = threading.Lock()
-_pending_action = None
+_pending_approvals = {}
+_approval_id_seq = 0
 _PENDING_TTL = 30
 
+_activity_log = []
+_activity_id_seq = 0
+_activity_lock = threading.Lock()
+
+def add_activity(action, source, reversible=False, undo_fn=None):
+    global _activity_id_seq
+    with _activity_lock:
+        _activity_id_seq += 1
+        act = {
+            "id": str(_activity_id_seq),
+            "action": action,
+            "source": source,
+            "time": time.time(),
+            "reversible": reversible,
+            "undo_fn": undo_fn,
+        }
+        _activity_log.append(act)
+        if len(_activity_log) > 500:
+            _activity_log.pop(0)
 
 def _queue_confirmation(description, action):
-    global _pending_action
+    global _approval_id_seq
     if not getattr(config, "REQUIRE_DANGEROUS_CONFIRMATION", True):
         return action()
     with _pending_lock:
-        _pending_action = {
+        _approval_id_seq += 1
+        aid = str(_approval_id_seq)
+        _pending_approvals[aid] = {
+            "id": aid,
             "description": description,
             "action": action,
             "expires": time.time() + _PENDING_TTL,
         }
     return True, f"{description}. Say confirm within {_PENDING_TTL} seconds."
 
-
-def ask_native_permission(description):
-    """Triggers a native Windows popup to ask the user for permission before executing dangerous actions."""
-    if not getattr(config, "REQUIRE_DANGEROUS_CONFIRMATION", True):
-        return True
-    try:
-        import ctypes
-        MB_YESNO = 0x04
-        MB_ICONWARNING = 0x30
-        MB_TOPMOST = 0x40000
-        MB_SETFOREGROUND = 0x10000
-        IDYES = 6
-        res = ctypes.windll.user32.MessageBoxW(0, f"KALKI wants to {description}.\n\nAllow this action?", "KALKI Security Sandbox", MB_YESNO | MB_ICONWARNING | MB_TOPMOST | MB_SETFOREGROUND)
-        return res == IDYES
-    except Exception:
-        return True  # Fallback gracefully if ctypes fails
-
-
 def _consume_confirmation(command):
-    global _pending_action
+    global _pending_approvals
     
-    # Strip punctuation and trailing/leading spaces
     clean_command = "".join(c for c in command if c not in ".,!?").strip().lower()
     
     if clean_command in ("cancel", "never mind", "nevermind"):
         with _pending_lock:
-            had_pending = _pending_action is not None
-            _pending_action = None
+            had_pending = len(_pending_approvals) > 0
+            _pending_approvals.clear()
         return (True, "Cancelled.") if had_pending else None
     if clean_command not in ("confirm", "yes confirm", "confirm it", "do it"):
         return None
+        
     with _pending_lock:
-        pending = _pending_action
-        _pending_action = None
-    if not pending or pending["expires"] < time.time():
+        if not _pending_approvals:
+            return True, "There is no active action to confirm."
+        # Confirm the most recent one
+        aid = max(_pending_approvals.keys(), key=lambda k: int(k))
+        pending = _pending_approvals.pop(aid)
+        
+    if pending["expires"] < time.time():
         return True, "There is no active action to confirm."
     return pending["action"]()
 
@@ -3072,6 +3081,18 @@ def execute_tool_call(tool_name, tool_args):
     except:
         args = {}
     try:
+        skill_map = {
+            "search_web": "search",
+            "get_calendar_events": "calendar",
+            "create_calendar_event": "calendar",
+            "delete_calendar_event": "calendar",
+            "play_music": "spotify",
+            "github": "github"
+        }
+        mapped = skill_map.get(tool_name)
+        if mapped and not getattr(config, f"SKILL_{mapped.upper()}_ENABLED", True):
+            return f"Error: The {mapped} skill is currently disabled. Ask the user to enable it."
+            
         if tool_name == "search_web":
             res = ddg_instant_answer(args.get("query")) or ddg_html_search(args.get("query", ""))
             return json.dumps(res)
@@ -4560,76 +4581,19 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/status":
-            from urllib.parse import urlparse, parse_qs
-            qs = parse_qs(urlparse(self.path).query)
-            hidden = qs.get("hidden", ["0"])[0] == "1"
-            STATE["frontend_hidden"] = hidden
-            # Mark UI alive
-            STATE["ui_last_ping"] = time.time()
-            # Consume wake signal
-            wake_req = STATE.get("wake_pending", False)
-            STATE["wake_pending"] = False
-
-            ollama_ok = cached_ollama_model() is not None
-            now = datetime.now()
-            cpu, ram, disk = cached_hardware_stats()
-            batt_pct = None
-            batt_plugged = None
-            if psutil:
-                try:
-                    b = psutil.sensors_battery()
-                    if b:
-                        batt_pct = int(b.percent)
-                        batt_plugged = bool(b.power_plugged)
-                except Exception:
-                    pass
-            up_prog = {"pct": 0, "active": False}
+            st = {
+                "ok": True,
+                "cpu": 0, "ram": 0, "uptimeSec": int(time.time() - STATE.get("started_at", time.time())),
+                "listenerState": STATE.get("listener_state", "idle"),
+                "micLevel": STATE.get("mic_level", 0.0),
+                "muted": STATE.get("listener_mic_muted", False)
+            }
             try:
-                import core.updater
-                up_prog = core.updater.STATE_UPDATE_PROGRESS
-            except Exception:
-                pass
-                
-            self._json({
-                "online": True,
-                "model": STATE["model"],
-                "clipboardPromptPending": "clipboard_prompt_pending" in STATE,
-                "groqConfigured": bool(config.GROQ_API_KEY and config.GROQ_API_KEY != "PASTE_YOUR_GROQ_KEY_HERE"),
-                "ollamaOnline": ollama_ok,
-                "speaking": STATE["speaking"],
-                "ttsProvider": _tts_provider(),
-                "ttsVoice": "en-GB-RyanNeural",
-                "ttsLastProvider": STATE.get("last_tts_provider", ""),
-                "ttsLastError": STATE.get("last_tts_error", ""),
-                "ttsLastLatencyMs": STATE.get("last_tts_latency_ms", 0),
-                "ttsProbeError": PYGAME_PROBE_ERROR,
-                "memCount": cached_mem_count(),
-                "time": now.strftime("%I:%M %p"),
-                "timeFull": now.strftime("%H:%M:%S"),
-                "date": now.strftime("%A, %B %d, %Y"),
-                "uptimeSec": int(time.time() - STATE["started_at"]),
-                "cpu": cpu, "ram": ram, "disk": disk,
-                "batteryPct": batt_pct, "batteryPlugged": batt_plugged,
-                "owner": config.OWNER_NAME, "title": config.OWNER_TITLE,
-                "city": config.OWNER_CITY,
-                "hardware": getattr(config, "HARDWARE_PROFILE", {}),
-                "hudQuality": getattr(config, "HUD_EFFECT_QUALITY", "balanced"),
-                "wakeRequested": wake_req,
-                "conversationSeq": STATE.get("conversation_seq", 0),
-                "recentExchange": STATE.get("recent_exchange"),
-                "listenerPaused": STATE.get("listener_paused", False),
-                "listenerMicMuted": STATE.get("listener_mic_muted"),
-                "listenerCapabilityNotice": os.environ.get("KALKI_LISTENER_NOTICE", ""),
-                "platform": sys.platform,
-                "cpuAlertsEnabled": getattr(config, "CPU_ALERTS_ENABLED", False),
-                "gcalConfigured": gcal.is_configured(),
-                "spotifyConfigured": spotify_mod.is_configured(),
-                "todayEvents": STATE.get("cached_today_events", []),
-                "unreadImportant": STATE.get("cached_unread_count", 0),
-                "nowPlaying": STATE.get("cached_now_playing"),
-                "updateProgress": up_prog,
-                "terminalLogs": _get_recent_logs()
-            })
+                import psutil
+                st["cpu"] = psutil.cpu_percent()
+                st["ram"] = psutil.virtual_memory().percent
+            except Exception: pass
+            self._json(st)
             return
 
         if path == "/api/models":
@@ -4840,6 +4804,127 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": True})
             return
 
+        
+        if path == "/api/activity/list":
+            with _activity_lock:
+                # filter out undo_fn
+                filtered = [{"id": a["id"], "action": a["action"], "source": a["source"], "time": a["time"], "reversible": a["reversible"]} for a in _activity_log]
+            self._json({"ok": True, "activities": filtered})
+            return
+
+        if path == "/api/activity/undo":
+            act_id = body.get("id")
+            with _activity_lock:
+                act = next((a for a in _activity_log if a["id"] == act_id), None)
+            if not act or not act["reversible"] or not act["undo_fn"]:
+                self._json({"ok": False, "error": "Cannot undo this activity"}, status=400)
+                return
+            try:
+                act["undo_fn"]()
+                self._json({"ok": True})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)}, status=500)
+            return
+
+        if path == "/api/approvals/list":
+            with _pending_lock:
+                now = time.time()
+                active = []
+                expired = []
+                for aid, pending in list(_pending_approvals.items()):
+                    if pending["expires"] < now:
+                        expired.append(aid)
+                    else:
+                        active.append({
+                            "id": aid,
+                            "description": pending["description"],
+                            "expires": pending["expires"]
+                        })
+                for aid in expired:
+                    del _pending_approvals[aid]
+            self._json({"ok": True, "approvals": active})
+            return
+
+        if path == "/api/approvals/decide":
+            aid = body.get("id")
+            decision = body.get("decision")  # 'approve' or 'deny'
+            with _pending_lock:
+                if aid in _pending_approvals:
+                    pending = _pending_approvals.pop(aid)
+                else:
+                    pending = None
+            if not pending or pending["expires"] < time.time():
+                self._json({"ok": False, "error": "Approval expired or not found"}, status=400)
+                return
+            if decision == "approve":
+                try:
+                    res = pending["action"]()
+                    self._json({"ok": True, "result": res})
+                except Exception as e:
+                    self._json({"ok": False, "error": str(e)}, status=500)
+            else:
+                self._json({"ok": True, "result": "Denied"})
+            return
+
+        if path == "/api/briefing/get":
+            # Compose from calendar, tasks, overdue reminders, watched-site alerts, github
+            enabled = getattr(config, "BRIEFING_ENABLED", False)
+            if not enabled:
+                self._json({"ok": False, "error": "Briefing disabled"}, status=400)
+                return
+            briefing = "Morning briefing: "
+            try:
+                ev = gcal.today_events()
+                if ev and not isinstance(ev, dict) and len(ev) > 0:
+                    briefing += f"You have {len(ev)} events today. "
+                tasks = taskmod.list_tasks()
+                if tasks:
+                    briefing += f"You have {len(tasks)} tasks. "
+                rems = taskmod.list_reminders()
+                if rems:
+                    briefing += f"You have {len(rems)} reminders. "
+                import watchdog
+                bad = [s for s in watchdog.WATCHLIST if s.get("status") == "down"]
+                if bad:
+                    briefing += f"{len(bad)} watched sites are down. "
+            except Exception:
+                pass
+            
+            self._json({"ok": True, "briefing": briefing})
+            return
+
+        if path == "/api/skills/list":
+            skills = [
+                {"id": "calendar", "name": "Google Calendar", "enabled": True, "needs": ["Google credentials"]},
+                {"id": "spotify", "name": "Spotify", "enabled": True, "needs": ["Spotify credentials"]},
+                {"id": "github", "name": "GitHub", "enabled": True, "needs": ["GitHub token"]},
+                {"id": "search", "name": "Web Search", "enabled": True, "needs": []},
+            ]
+            self._json({"ok": True, "skills": skills})
+            return
+
+        if path == "/api/skills/toggle":
+            skill_id = body.get("id")
+            enabled = bool(body.get("enabled"))
+            setattr(config, f"SKILL_{skill_id.upper()}_ENABLED", enabled)
+            self._json({"ok": True})
+            return
+            
+        if path == "/api/status":
+            st = {
+                "ok": True,
+                "cpu": 0, "ram": 0, "uptimeSec": int(time.time() - STATE.get("started_at", time.time())),
+                "listenerState": STATE.get("listener_state", "idle"),
+                "micLevel": STATE.get("mic_level", 0.0),
+                "muted": STATE.get("listener_mic_muted", False)
+            }
+            try:
+                import psutil
+                st["cpu"] = psutil.cpu_percent()
+                st["ram"] = psutil.virtual_memory().percent
+            except Exception: pass
+            self._json(st)
+            return
         if path == "/api/recovery/clear":
             try:
                 os.remove(os.path.join(DATA_DIR, "crash.log"))
