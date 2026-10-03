@@ -498,7 +498,7 @@ export function askView() {
     h('div.col.g8', null, h('h2', null, 'Next up'), h('div.card.row', null, h('span.big', null, '14:30'), h('div', null, h('div.nm', null, 'Odoo Experience'), h('div.xs.mut', null, 'Hall B · in 2 h 04 m')))),
     h('div.col.g8', null, h('div.row.sb', null, h('h2', null, 'Tasks'), h('span.xs.mut', null, '3 open')), h('div.card', null, h('div.li', null, h('i.cb', null), h('span.sm.t2', null, 'Review session agenda')), h('div.li', null, h('i.cb', null), h('span.sm.t2', null, 'Carry venue pass, charge laptop')), h('div.li', null, h('i.cb', null), h('span.sm.t2', null, 'Publish v2.0.0 release notes')))),
     h('div.col.g8', null, h('h2', null, 'Inbox'), h('div.card.row.sb', null, h('span.sm', null, '0 unread important'), h('span.chip.ok', null, 'All clear'))),
-    h('div.col.g8', null, h('h2', null, 'Now playing'), h('div.card.col.g8', null, h('div.row', null, h('div', { style: { width: '36px', height: '36px', borderRadius: '4px', background: 'var(--float)' } }), h('div', null, h('div.nm', null, 'Night Drive'), h('div.xs.mut', null, 'Instrumental · 2:41 / 4:10'))), h('div.row', { style: { justifyContent: 'center' } }, h('button.ib', null, icon('prev', 16)), h('button.ib', null, icon('play', 16)), h('button.ib', null, icon('next', 16))))),
+    h('div.col.g8', null, h('h2', null, 'Now playing'), h('div.card.col.g8', { id: 'music-panel' }, h('div.row', null, h('div', { style: { width: '36px', height: '36px', borderRadius: '4px', background: 'var(--float)' } }), h('div', null, h('div.nm', null, 'Night Drive'), h('div.xs.mut', null, 'Instrumental · 2:41 / 4:10'))), h('div.row', { style: { justifyContent: 'center' } }, h('button.ib', null, icon('prev', 16)), h('button.ib', null, icon('play', 16)), h('button.ib', null, icon('next', 16))))),
     h('div.col.g8', null, h('div.row.sb', null, h('h2', null, 'System'), h('span.xs.mut', null, 'Live')), h('div.card.col.g8', { id: 'sys' })),
     h('div.col.g8', null, h('h2', null, 'Voice'), h('div.card.col.g8', null, h('div.row.sb', null, h('span.xs.mut', null, 'Wake words'), h('span.chip.ok', null, 'Mic ready')), h('span.mono.xs.t2', null, 'hey kalki · ok kalki'), h('div.row.sb', null, h('span.xs.mut', null, 'Speech'), h('span.xs.t2', null, 'en-GB-Ryan · 212 ms'))))
   );
@@ -546,6 +546,48 @@ export function askView() {
 
     const vs = store.voice.state;
     c.micBtn.classList.toggle('is-active', vs === 'attending' || vs === 'speaking');
+  };
+
+  let mediaTimer = null;
+  async function updateMedia() {
+    try {
+      const res = await api('/api/media/now_json');
+      const el = document.getElementById('music-panel');
+      if (el) {
+        if (res.status === 'NoMedia') {
+          el.innerHTML = '<div class="xs mut" style="text-align:center;padding:8px">Nothing playing</div>';
+        } else {
+          const playIcon = res.status === 'Playing' ? 'pause' : 'play';
+          const title = res.title || 'Unknown';
+          const artist = res.artist || 'Unknown';
+          el.replaceChildren(
+            h('div.row', null,
+              h('div', { style: { width: '36px', height: '36px', borderRadius: '4px', background: 'var(--float)', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, icon('music', 16)),
+              h('div', { style: { flex: 1, minWidth: 0, overflow: 'hidden' } },
+                h('div.nm', { style: { whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' } }, title),
+                h('div.xs.mut', { style: { whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' } }, artist)
+              )
+            ),
+            h('div.row', { style: { justifyContent: 'center' } },
+              h('button.ib', { onClick: () => api('/api/media/prev').then(updateMedia) }, icon('prev', 16)),
+              h('button.ib', { onClick: () => api(res.status === 'Playing' ? '/api/media/pause' : '/api/media/play').then(updateMedia) }, icon(playIcon, 16)),
+              h('button.ib', { onClick: () => api('/api/media/next').then(updateMedia) }, icon('next', 16))
+            )
+          );
+        }
+      }
+    } catch (e) {}
+    if (document.contains(main)) mediaTimer = setTimeout(updateMedia, 3000);
+  }
+
+  const origRender = main.render;
+  main.render = () => {
+    origRender();
+    if (!mediaTimer) updateMedia();
+  };
+
+  main.cleanup = () => {
+    clearTimeout(mediaTimer);
   };
 
   main.focusComposer = () => c.ta.focus();
