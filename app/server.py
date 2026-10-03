@@ -361,7 +361,11 @@ _activity_log = []
 _activity_id_seq = 0
 _activity_lock = threading.Lock()
 
-def add_activity(action, source, reversible=False, undo_fn=None):
+def add_activity(action, source, reversible=False, undo_fn=None, kind="info"):
+    """Record something KALKI did. Returns the activity id (string).
+
+    `undo_fn` is kept server-side only; /api/activity/list never serialises
+    it. An activity can be undone once, after which it is marked undone."""
     global _activity_id_seq
     with _activity_lock:
         _activity_id_seq += 1
@@ -369,28 +373,62 @@ def add_activity(action, source, reversible=False, undo_fn=None):
             "id": str(_activity_id_seq),
             "action": action,
             "source": source,
+            "kind": kind,
             "time": time.time(),
-            "reversible": reversible,
+            "reversible": bool(reversible and undo_fn),
+            "undone": False,
             "undo_fn": undo_fn,
         }
         _activity_log.append(act)
         if len(_activity_log) > 500:
             _activity_log.pop(0)
+        return act["id"]
 
-def _queue_confirmation(description, action):
+
+def _public_activity(a):
+    return {k: a[k] for k in ("id", "action", "source", "kind", "time", "reversible", "undone")}
+
+
+def _queue_confirmation(description, action, source="chat"):
     global _approval_id_seq
     if not getattr(config, "REQUIRE_DANGEROUS_CONFIRMATION", True):
         return action()
     with _pending_lock:
         _approval_id_seq += 1
         aid = str(_approval_id_seq)
+        now = time.time()
         _pending_approvals[aid] = {
             "id": aid,
             "description": description,
+            "source": source,
             "action": action,
-            "expires": time.time() + _PENDING_TTL,
+            "created": now,
+            "expires": now + _PENDING_TTL,
         }
-    return True, f"{description}. Say confirm within {_PENDING_TTL} seconds."
+    return True, f"{description}. Say confirm within {_PENDING_TTL} seconds, or approve it in Oversight."
+
+
+def ask_native_permission(description):
+    """Native Windows Yes/No prompt before a dangerous local action (opening
+    an app, terminating a process). Restored: Phase 4 deleted this while
+    two call sites still used it, which raised NameError at runtime."""
+    if not getattr(config, "REQUIRE_DANGEROUS_CONFIRMATION", True):
+        return True
+    if sys.platform != "win32":
+        return True
+    try:
+        import ctypes
+        MB_YESNO = 0x04
+        MB_ICONWARNING = 0x30
+        MB_TOPMOST = 0x40000
+        MB_SETFOREGROUND = 0x10000
+        IDYES = 6
+        res = ctypes.windll.user32.MessageBoxW(
+            0, f"KALKI wants to {description}.\n\nAllow this action?", "KALKI Security Sandbox",
+            MB_YESNO | MB_ICONWARNING | MB_TOPMOST | MB_SETFOREGROUND)
+        return res == IDYES
+    except Exception:
+        return True  # Fallback gracefully if ctypes fails
 
 def _consume_confirmation(command):
     global _pending_approvals
@@ -4577,19 +4615,90 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/status":
-            st = {
-                "ok": True,
-                "cpu": 0, "ram": 0, "uptimeSec": int(time.time() - STATE.get("started_at", time.time())),
-                "listenerState": STATE.get("listener_state", "idle"),
-                "micLevel": STATE.get("mic_level", 0.0),
-                "muted": STATE.get("listener_mic_muted", False)
-            }
+            # Restored full payload. Phase 4 replaced this with a six-field
+            # stub, which silently broke presence, the context panel, voice
+            # exchange sync, wake events and every status chip.
+            from urllib.parse import urlparse, parse_qs
+            qs = parse_qs(urlparse(self.path).query)
+            hidden = qs.get("hidden", ["0"])[0] == "1"
+            STATE["frontend_hidden"] = hidden
+            STATE["ui_last_ping"] = time.time()
+            wake_req = STATE.get("wake_pending", False)
+            STATE["wake_pending"] = False
+
+            ollama_ok = cached_ollama_model() is not None
+            now = datetime.now()
+            cpu, ram, disk = cached_hardware_stats()
+            batt_pct = None
+            batt_plugged = None
+            if psutil:
+                try:
+                    b = psutil.sensors_battery()
+                    if b:
+                        batt_pct = int(b.percent)
+                        batt_plugged = bool(b.power_plugged)
+                except Exception:
+                    pass
+            up_prog = {"pct": 0, "active": False}
             try:
-                import psutil
-                st["cpu"] = psutil.cpu_percent()
-                st["ram"] = psutil.virtual_memory().percent
-            except Exception: pass
-            self._json(st)
+                import core.updater
+                up_prog = core.updater.STATE_UPDATE_PROGRESS
+            except Exception:
+                pass
+            with _pending_lock:
+                pending_count = sum(1 for p in _pending_approvals.values() if p["expires"] >= time.time())
+
+            self._json({
+                "ok": True,
+                "online": True,
+                "model": STATE["model"],
+                "clipboardPromptPending": "clipboard_prompt_pending" in STATE,
+                "groqConfigured": bool(config.GROQ_API_KEY and config.GROQ_API_KEY != "PASTE_YOUR_GROQ_KEY_HERE"),
+                "ollamaOnline": ollama_ok,
+                "speaking": STATE["speaking"],
+                "ttsProvider": _tts_provider(),
+                "ttsVoice": getattr(config, "TTS_VOICE", "") or "en-GB-RyanNeural",
+                "ttsLastProvider": STATE.get("last_tts_provider", ""),
+                "ttsLastError": STATE.get("last_tts_error", ""),
+                "ttsLastLatencyMs": STATE.get("last_tts_latency_ms", 0),
+                "ttsProbeError": PYGAME_PROBE_ERROR,
+                "memCount": cached_mem_count(),
+                "time": now.strftime("%I:%M %p"),
+                "timeFull": now.strftime("%H:%M:%S"),
+                "date": now.strftime("%A, %B %d, %Y"),
+                "uptimeSec": int(time.time() - STATE["started_at"]),
+                "cpu": cpu, "ram": ram, "disk": disk,
+                "batteryPct": batt_pct, "batteryPlugged": batt_plugged,
+                "owner": config.OWNER_NAME, "title": config.OWNER_TITLE,
+                "city": config.OWNER_CITY,
+                "hardware": getattr(config, "HARDWARE_PROFILE", {}),
+                "wakeRequested": wake_req,
+                "conversationSeq": STATE.get("conversation_seq", 0),
+                "recentExchange": STATE.get("recent_exchange"),
+                "listenerPaused": STATE.get("listener_paused", False),
+                "listenerMicMuted": STATE.get("listener_mic_muted"),
+                "listenerState": STATE.get("listener_state", "idle"),
+                "listenerSeenAt": STATE.get("listener_seen_at", 0),
+                "micLevel": STATE.get("mic_level", 0.0),
+                "listenerCapabilityNotice": os.environ.get("KALKI_LISTENER_NOTICE", ""),
+                "platform": sys.platform,
+                "cpuAlertsEnabled": getattr(config, "CPU_ALERTS_ENABLED", False),
+                "gcalConfigured": gcal.is_configured(),
+                "spotifyConfigured": spotify_mod.is_configured(),
+                "githubConfigured": bool(getattr(config, "GITHUB_TOKEN", "")),
+                "todayEvents": STATE.get("cached_today_events", []),
+                "unreadImportant": STATE.get("cached_unread_count", 0),
+                "nowPlaying": STATE.get("cached_now_playing"),
+                "focus": {
+                    "active": _focus_active(),
+                    "remainingSec": max(0, int(float(STATE.get("focus_until") or 0) - time.time())),
+                    "minutes": int(STATE.get("focus_minutes") or 25),
+                },
+                "pendingApprovals": pending_count,
+                "hostExecution": bool(getattr(config, "ALLOW_HOST_CODE_EXECUTION", False)),
+                "updateProgress": up_prog,
+                "terminalLogs": _get_recent_logs(),
+            })
             return
 
         if path == "/api/models":
@@ -4906,21 +5015,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": True})
             return
             
-        if path == "/api/status":
-            st = {
-                "ok": True,
-                "cpu": 0, "ram": 0, "uptimeSec": int(time.time() - STATE.get("started_at", time.time())),
-                "listenerState": STATE.get("listener_state", "idle"),
-                "micLevel": STATE.get("mic_level", 0.0),
-                "muted": STATE.get("listener_mic_muted", False)
-            }
-            try:
-                import psutil
-                st["cpu"] = psutil.cpu_percent()
-                st["ram"] = psutil.virtual_memory().percent
-            except Exception: pass
-            self._json(st)
-            return
+
         if path == "/api/recovery/clear":
             try:
                 os.remove(os.path.join(DATA_DIR, "crash.log"))
