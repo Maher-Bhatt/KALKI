@@ -78,6 +78,7 @@ import tasks as taskmod
 import mail as mailmod
 import gcal
 import spotify_mod
+import media_mod
 import whatsapp_mod
 import notes as notesmod
 import ytdl
@@ -5747,6 +5748,19 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"reply": spotify_mod.next_track()}); return
         if path == "/api/spotify/now":
             self._json({"reply": spotify_mod.now_playing()}); return
+
+        if path == "/api/media/play":
+            self._json({"reply": media_mod.play()}); return
+        if path == "/api/media/pause":
+            self._json({"reply": media_mod.pause()}); return
+        if path == "/api/media/next":
+            self._json({"reply": media_mod.next_track()}); return
+        if path == "/api/media/prev":
+            self._json({"reply": media_mod.prev_track()}); return
+        if path == "/api/media/now":
+            self._json({"reply": media_mod.now_playing()}); return
+        if path == "/api/media/now_json":
+            self._json(media_mod.now_playing_json()); return
 
         # ── WhatsApp ───────────────────────────────────
         if path == "/api/whatsapp/send":
