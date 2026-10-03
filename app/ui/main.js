@@ -20,6 +20,7 @@ import { oversightView, loadOversight } from './features/oversight.js';
 import { securityView } from './features/security.js';
 import { settingsView, loadSettings, openSettingsSection } from './features/settings.js';
 import { openDiagnostics } from './features/diagnostics.js';
+import { presenceView } from './features/presence.js';
 
 const VIEWS = {
   ask: { build: askView, load: () => loadModels() },
@@ -29,6 +30,7 @@ const VIEWS = {
   oversight: { build: oversightView, load: () => loadOversight() },
   security: { build: securityView, load: () => {} },
   settings: { build: settingsView, load: () => { loadSettings(); loadModels(); } },
+  pres: { build: presenceView, load: () => {} },
 };
 
 let shell = null;
