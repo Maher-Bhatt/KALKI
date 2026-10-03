@@ -1,10 +1,10 @@
 # KALKI AI Assistant
 
-KALKI is a local-first, voice-capable AI desktop assistant with a secure localhost API, a rebuilt personal-workspace interface, configurable model providers, memory and task workflows, cybersecurity utilities, and platform-aware system integrations. Version **2.1.0** replaces the previous HUD dashboard with **Filament**: a five-destination workspace (Ask, Today, Memory, Workbench, Settings) built as a 27-module, no-build-step frontend, with a command palette as a core interaction system and a single warm-platinum presence mark that lives in the navigation rail rather than at screen center.
+KALKI is a local-first, voice-capable AI desktop assistant with a secure localhost API, a rebuilt personal-workspace interface, configurable model providers, memory and task workflows, cybersecurity utilities, and platform-aware system integrations. Version **1.4.0** replaces the previous HUD dashboard with **Filament**: a five-destination workspace (Ask, Today, Memory, Workbench, Settings) built as a 27-module, no-build-step frontend, with a command palette as a core interaction system and a single warm-platinum presence mark that lives in the navigation rail rather than at screen center.
 
-Version **2.1.0** focuses on the frontend and its packaging: a maintainable module structure in place of one 2,529-line HTML file, exposure of the roughly two-thirds of KALKI's API surface the previous interface never surfaced, a gated cybersecurity workspace, an honest voice-state model that never claims a state the backend cannot confirm, and a corrected static-asset route and service-worker caching policy so the packaged app can actually receive frontend updates. The backend, voice pipeline, and memory system are unchanged in substance.
+Version **1.4.0** focuses on the frontend and its packaging: a maintainable module structure in place of one 2,529-line HTML file, exposure of the roughly two-thirds of KALKI's API surface the previous interface never surfaced, a gated cybersecurity workspace, an honest voice-state model that never claims a state the backend cannot confirm, and a corrected static-asset route and service-worker caching policy so the packaged app can actually receive frontend updates. The backend, voice pipeline, and memory system are unchanged in substance.
 
-Version **2.1.0** introduces a transparent **Jarvis HUD** overlay, providing real-time voice status, an activity log, and an approvals queue for sensitive commands. It also brings an AI-generated morning briefing, comprehensive skills management (allowing individual skills to be toggled on/off), and stabilized cyber tools.
+Version **1.4.0** introduces a transparent **Jarvis HUD** overlay, providing real-time voice status, an activity log, and an approvals queue for sensitive commands. It also brings an AI-generated morning briefing, comprehensive skills management (allowing individual skills to be toggled on/off), and stabilized cyber tools.
 
 
 
@@ -16,7 +16,7 @@ Version **2.1.0** introduces a transparent **Jarvis HUD** overlay, providing rea
 
 | Platform | Primary experience | Status |
 |---|---|---|
-| Windows 10/11 | Native-framed PyWebView desktop shell with packaged helper services | Backend validated for v1.3.5; v2.1.0 frontend validated in a Node/jsdom harness (see below) — target-device acceptance still recommended |
+| Windows 10/11 | Native-framed PyWebView desktop shell with packaged helper services | Backend validated for v1.3.5; v1.4.0 frontend validated in a Node/jsdom harness (see below) — target-device acceptance still recommended |
 | Linux | Supervised local server with browser-backed dashboard | Validated in an Ubuntu-like sandbox; hardware acceptance pass recommended |
 | macOS | Source-compatible runtime path and browser mode | Not claimed as fully validated in this release |
 
@@ -192,9 +192,9 @@ The v1.3.5 release gates recorded the following results, which remain valid for 
 
 A sandbox without a graphical display, physical microphone, or audio device cannot validate human-perceived GUI rendering, microphone capture, or audible playback. Those scenarios require a final acceptance pass on the target workstation.
 
-#### v2.0.0 & v2.1.0 frontend validation
+#### v2.0.0 & v1.4.0 frontend validation
 
-The v2.1.0 frontend rebuild and v2.1.0 additive oversight features were validated in a sandbox with Node.js but no browser and no Windows/Linux GUI, so the scope below is what was actually exercised — not a claim that a target-device acceptance pass is unnecessary:
+The v1.4.0 frontend rebuild and v1.4.0 additive oversight features were validated in a sandbox with Node.js but no browser and no Windows/Linux GUI, so the scope below is what was actually exercised — not a claim that a target-device acceptance pass is unnecessary:
 
 | Check | Method | Result |
 |---|---|---|
@@ -203,7 +203,7 @@ The v2.1.0 frontend rebuild and v2.1.0 additive oversight features were validate
 | Directory-traversal guard on the new `/ui/*` route | Manual requests for `/ui/../server.py` and its percent-encoded form | Both return 404 |
 | Full user journeys — boot, streaming chat, command palette, memory CRUD, tasks, settings, workflows, gated security, oversight, keyboard navigation, offline/recovery | Real `app/ui/main.js` loaded via Node's module loader against a jsdom document and a stub HTTP server reproducing the actual API response shapes | Passed, zero uncaught console errors |
 
-Target-device acceptance for v2.1.0 includes ensuring `oversight.py` and `notify.py` are properly packaged by PyInstaller to prevent background thread crashes, and that zombie WebView2 instances are cleared to prevent IndexedDB locking upon boot.
+Target-device acceptance for v1.4.0 includes ensuring `oversight.py` and `notify.py` are properly packaged by PyInstaller to prevent background thread crashes, and that zombie WebView2 instances are cleared to prevent IndexedDB locking upon boot.
 
 ## Release and CI
 
