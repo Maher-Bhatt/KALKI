@@ -1,5 +1,5 @@
 #define MyAppName "KALKI"
-#define MyAppVersion "2.1.0"
+#define MyAppVersion "1.4.0"
 #define MyAppPublisher "KALKI Technologies"
 #define MyAppExeName "KALKI.exe"
 
@@ -12,7 +12,7 @@ DefaultDirName={localappdata}\Programs\KALKI
 DefaultGroupName={#MyAppName}
 PrivilegesRequired=lowest
 OutputDir=..\..\Output
-OutputBaseFilename=KALKI_Setup_v2.1.0
+OutputBaseFilename=KALKI_Setup_v1.4.0
 LicenseFile=..\..\LICENSE
 InfoBeforeFile=..\..\TERMS.md
 SetupIconFile=..\..\assets\kalki_icon.ico

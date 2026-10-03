@@ -401,7 +401,7 @@ Ship gate: no item below may be worse than it is today.
 - [ ] Zero console errors across all twelve journeys
 
 
-## v2.1.0 Additions
-- **Oversight Panel (`app/ui/features/oversight.js`)**: Real-time Shodan/monitoring dashboard with CPU/RAM limits, watched sites (API endpoints added in v2.1.0), and 50-item alert history.
+## v1.4.0 Additions
+- **Oversight Panel (`app/ui/features/oversight.js`)**: Real-time Shodan/monitoring dashboard with CPU/RAM limits, watched sites (API endpoints added in v1.4.0), and 50-item alert history.
 - **Desktop Notifications (`app/notify.py`)**: Native plyer toasts when KALKI is backgrounded.
 - **Fallback Chain (`app/server.py`)**: Zero-downtime model fallback with unified errors.

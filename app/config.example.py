@@ -8,7 +8,7 @@ import os
 import json
 from runtime_paths import prepare_runtime
 
-CURRENT_VERSION = "v2.1.0"
+CURRENT_VERSION = "v1.4.0"
 
 # ── INTERNAL PATHS (do not change) ───────────────────────────
 # Where the Setup Wizard and hardware auto-detect persist their own data.

@@ -1,6 +1,6 @@
 # KALKI Change History
 
-## 2.1.0 build and verification fixes
+## 1.4.0 build and verification fixes
 
 - **New Jarvis HUD:** A transparent overlay HUD displaying voice status, activity log, approvals queue, and notifications.
 - **Activity Log & Approvals Queue:** Added logging for reversible actions and an approvals queue for sensitive commands.
@@ -10,12 +10,12 @@
 - **Cleanup:** Removed obsolete patch scripts and fixed duplicate imports in server.py.
 
 - Fixed: the Oversight "watch a site", "remove site" and "check site" routes crashed with HTTP 500 (undefined variable `data`; the request body is `body`). Watching a website from the UI now works.
-- Fixed: release files disagreed on the version. The MSIX manifest and Inno Setup script said 2.0.0 while the app is 2.1.0; `release.ps1` now reads the version from `app/version.py` so artifact names and the manifest cannot drift.
+- Fixed: release files disagreed on the version. The MSIX manifest and Inno Setup script said 2.0.0 while the app is 1.4.0; `release.ps1` now reads the version from `app/version.py` so artifact names and the manifest cannot drift.
 - Added: `tests/feature_check.py` boots the real server with an isolated profile and checks authentication, tasks, notes, reminders, memory, settings, oversight, cyber tools, graceful behaviour without credentials, backup and the vault (Windows only).
 - Added: `tests/version_check.py` fails the build if version strings drift.
 - Added: `.github/workflows/windows.yml` builds the EXE, portable ZIP and MSIX on `windows-2022`, runs every check first, uploads the artifacts and attaches them to tagged releases.
 
-## v2.1.0 — Oversight, Presence & Background Notifications
+## v1.4.0 — Oversight, Presence & Background Notifications
 
 **Release date:** Unreleased
 
