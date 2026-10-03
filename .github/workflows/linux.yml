@@ -76,7 +76,7 @@ jobs:
       - name: Run project verification and tool tests
         working-directory: app
         run: |
-          python verification_sandbox.py --report ../Output/verification_linux_ci.json
+          cp config.example.py config.py ; python verification_sandbox.py --report ../Output/verification_linux_ci.json
           python -m unittest sandbox_tool_test.py
 
       - name: Build Linux source release
