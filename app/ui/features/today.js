@@ -15,17 +15,28 @@ import { ok, err, toast } from '../state/toasts.js';
 import { go } from './router.js';
 
 let focusTimer = null;
-let focusEndsAt = 0;
 
 export async function loadToday() {
   set('today', { loading: true });
-  const [t, r, n] = await Promise.all([tasks.list(), reminders.list(), notes.list(6)]);
+  const [t, r, n, b] = await Promise.all([
+    tasks.list(), 
+    reminders.list(), 
+    notes.list(6),
+    system.briefing().catch(() => ({ ok: false }))
+  ]);
+  
+  let briefingData = null;
+  if (b.ok) {
+    briefingData = b.data?.text || b.data || b.text;
+  }
+
   set('today', {
     loading: false,
     tasks: t.ok ? t.items : [],
     tasksError: t.ok ? null : t,
     reminders: r.ok ? r.items : [],
     notes: n.ok ? n.items : [],
+    briefing: briefingData,
   });
   loadAgenda();
 }
@@ -80,18 +91,19 @@ async function addReminder() {
   if (r.ok) { ok('Reminder set'); loadToday(); } else err(r.message, r.detail);
 }
 
-function reminderRow(r) {
-  return h('div.row', null,
-    icon('clock', 16),
-    h('span', { style: { flex: '1', minWidth: '0' } }, r.text),
-    h('span.t-meta.muted', null, dateTime(r.due) || r.due || ''),
-  );
+function groupReminders(rems) {
+  const groups = {};
+  for (const r of rems) {
+    const time = dateTime(r.due) || r.due || 'Sometime';
+    if (!groups[time]) groups[time] = [];
+    groups[time].push(r);
+  }
+  return groups;
 }
 
 /* ── Notes ───────────────────────────────────────────────────────────── */
 
-async function addNote() {
-  const text = await promptDialog({ title: 'New note', label: 'Anything worth keeping', confirmLabel: 'Save note' });
+async function addNote(text) {
   if (!text) return;
   const r = await notes.add(text);
   if (r.ok) { ok('Note saved'); loadToday(); } else err(r.message, r.detail);
@@ -99,22 +111,25 @@ async function addNote() {
 
 /* ── Focus ───────────────────────────────────────────────────────────── */
 
-function startFocusTicker(remaining) {
-  clearInterval(focusTimer);
-  focusEndsAt = Date.now() + remaining * 1000;
-  focusTimer = setInterval(() => {
-    const left = Math.max(0, (focusEndsAt - Date.now()) / 1000);
-    const el = document.getElementById('focus-clock');
-    if (el) el.textContent = clock(left);
-    if (left <= 0) clearInterval(focusTimer);
-  }, 1000);
-}
-
 export async function syncFocus() {
   const r = await system.focus();
   if (!r.ok) return;
   set('today', { focus: r.data });
-  if (r.data.active) startFocusTicker(r.data.remainingSec); else clearInterval(focusTimer);
+  
+  clearInterval(focusTimer);
+  if (r.data.active) {
+    focusTimer = setInterval(async () => {
+      const fr = await system.focus();
+      if (fr.ok && fr.data.active) {
+        const el = document.getElementById('focus-clock');
+        if (el) el.textContent = clock(fr.data.remainingSec);
+        store.today.focus = fr.data;
+      } else {
+        clearInterval(focusTimer);
+        syncFocus();
+      }
+    }, 1000);
+  }
 }
 
 /* ── View ────────────────────────────────────────────────────────────── */
@@ -143,6 +158,18 @@ export function todayView() {
 
   view.render = () => {
     const d = store.today;
+    body.innerHTML = '';
+    
+    // Briefing Card
+    if (d.briefing) {
+      body.appendChild(h('section.panel', { style: { marginBottom: 'var(--space-6)', background: 'var(--surface-float)' } },
+        h('div.panel-body', null, 
+          h('div.inline', { style: { marginBottom: 'var(--space-4)', color: 'var(--text-muted)' } }, icon('spark', 16), h('strong', null, 'Morning Briefing')),
+          h('div.t-body-sm', { style: { whiteSpace: 'pre-wrap' } }, typeof d.briefing === 'string' ? d.briefing : JSON.stringify(d.briefing))
+        )
+      ));
+    }
+
     const grid = h('div.grid-2');
 
     // Tasks
@@ -157,9 +184,21 @@ export function todayView() {
           })));
 
     // Reminders
+    const rGroups = groupReminders(d.reminders || []);
+    const rEls = [];
+    for (const [time, items] of Object.entries(rGroups)) {
+      rEls.push(h('div.t-label.muted', { style: { marginTop: 'var(--space-3)' } }, time));
+      for (const r of items) {
+        rEls.push(h('div.row', null,
+          icon('clock', 16),
+          h('span', { style: { flex: '1', minWidth: '0' } }, r.text)
+        ));
+      }
+    }
+
     grid.appendChild(section('Reminders', 'Add', addReminder,
       d.loading ? skeletonRows(2)
-        : d.reminders.length ? h('div.stack', null, ...d.reminders.map(reminderRow))
+        : d.reminders.length ? h('div.stack', null, ...rEls)
         : emptyState({
             iconName: 'clock', title: 'Nothing scheduled',
             body: 'KALKI speaks reminders when they fall due, whether or not this window is open.',
@@ -183,17 +222,33 @@ export function todayView() {
           : emptyState({ iconName: 'calendar', title: 'Nothing on the calendar today', body: 'A clear day. KALKI will speak anything that appears.' })));
 
     // Notes
-    grid.appendChild(section('Notes', 'Add', addNote,
-      d.notes.length
-        ? h('div.stack', null, ...d.notes.map((n) => h('div.row', null,
-            icon('note', 16),
-            h('span', { style: { flex: '1', minWidth: '0' } }, n.text || String(n)),
-            h('span.t-meta.muted', null, relative(n.date || n.added)))))
-        : emptyState({
-            iconName: 'note', title: 'No notes yet',
-            body: 'Quick captures you or KALKI jot down. Searchable from the command palette.',
-            actions: [h('button.btn.btn-sm.btn-secondary', { type: 'button', onClick: addNote }, 'Write a note')],
-          })));
+    grid.appendChild(section('Notes', null, null,
+      h('div.stack', null,
+        h('form.row', { 
+            style: { borderBottom: '1px solid var(--line-subtle)', paddingBottom: 'var(--space-4)' },
+            onSubmit: async (e) => {
+              e.preventDefault();
+              const input = e.target.elements.note;
+              const text = input.value.trim();
+              if (text) {
+                input.value = '';
+                await addNote(text);
+              }
+            }
+          },
+          h('input.t-body-sm', { name: 'note', placeholder: 'Quick capture...', style: { flex: '1', border: 'none', background: 'var(--surface-inset)', padding: 'var(--space-3) var(--space-4)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', outline: 'none' } }),
+          h('button.btn.btn-sm.btn-secondary', { type: 'submit' }, 'Save')
+        ),
+        d.notes.length
+          ? h('div.stack', { style: { paddingTop: 'var(--space-2)' } }, ...d.notes.map((n) => h('div.row', null,
+              icon('note', 16),
+              h('span', { style: { flex: '1', minWidth: '0' } }, n.text || String(n)),
+              h('span.t-meta.muted', null, relative(n.date || n.added)))))
+          : emptyState({
+              iconName: 'note', title: 'No notes yet',
+              body: 'Quick captures you or KALKI jot down. Searchable from the command palette.',
+            })
+      )));
 
     // Focus
     const f = d.focus;
@@ -226,7 +281,7 @@ export function todayView() {
         )));
     }
 
-    mount(body, grid);
+    body.appendChild(grid);
   };
 
   return view;

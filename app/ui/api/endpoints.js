@@ -27,6 +27,7 @@ export const system = {
   search: (q) => post('/api/search', { q }),
   report: (payload) => post('/api/report', payload),
   history: () => get('/api/history'),
+  briefing: () => get('/api/briefing/get'),
 };
 
 /* ── Listener / voice ─────────────────────────────────────────────── */
