@@ -36,16 +36,21 @@ export function buildShell(root) {
 
   const railNav = h('nav.rail', { 'aria-label': 'Main' });
   const banner = h('div', { hidden: true });
-  const workEl = h('div.work');
-  const viewSlot = h('div', { style: { display: 'contents' } });
-  const contextEl = h('aside.context', { 'aria-label': 'Context' });
+  const leftPanel = h('aside.hud-left', { 'aria-label': 'System Diagnostics' }, h('div.panel-head', null, h('h2', null, 'SYSTEM.DIAGNOSTICS')), h('div.telemetry-log', null, 'INITIALIZING TELEMETRY...'));
+  const viewSlot = h('main.hud-center', { style: { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 } });
+  const contextEl = h('aside.hud-right', { 'aria-label': 'Context' });
+  const workEl = h('div.work', null, leftPanel, viewSlot, contextEl);
   const toastsEl = h('div.toasts', { 'aria-live': 'polite', 'aria-atomic': 'false' });
   const announcer = h('div.sr-only', { role: 'status', 'aria-live': 'polite' });
 
-  workEl.append(viewSlot, contextEl);
-
   const titlebar = h('header.titlebar', null,
-    h('span.wordmark', null, 'KALKI'),
+    h('span.wordmark', null, 'KALKI // OPS'),
+    h('span.spacer'),
+    h('div.privacy-chips', null, 
+      h('span.chip', null, icon('mic', 12), 'MIC'),
+      h('span.chip', null, icon('monitor', 12), 'SCREEN'),
+      h('span.chip.chip-success', null, icon('shield', 12), 'LOCAL')
+    ),
     h('span.spacer'),
     h('button.palette-hint.no-drag', {
       type: 'button', onClick: () => openPalette(),
