@@ -49,6 +49,7 @@ def _connect():
 
 
 def get_unread_count():
+    m = None
     try:
         m = _connect()
         m.select("inbox")
@@ -58,6 +59,12 @@ def get_unread_count():
         return 0
     except Exception:
         return 0
+    finally:
+        if m:
+            try:
+                m.logout()
+            except Exception:
+                pass
 
 
 def check_inbox(limit=10, only_unread=True):

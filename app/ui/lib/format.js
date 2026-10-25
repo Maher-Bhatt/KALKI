@@ -48,6 +48,6 @@ export function titleFrom(text) {
 
 /** Human label for a model id. Never invents capability claims. */
 export function modelLabel(id) {
-  if (!id) return 'auto';
+  if (!id || id === 'auto') return 'Auto (Smart)';
   return String(id).replace(/-versatile$/, '').replace(/^models\//, '');
 }

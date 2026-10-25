@@ -19,6 +19,8 @@ import { go } from './router.js';
 import { ok, err } from '../state/toasts.js';
 import { promptDialog } from '../components/dialog.js';
 import { openDiagnostics } from './diagnostics.js';
+import { openPetSettings, triggerPetReaction, getPetState } from './pet.js';
+import { exportChatMarkdown } from './ask.js';
 
 let dlg = null;
 let input = null;
@@ -69,6 +71,16 @@ const actionCommands = () => [
   },
   { group: 'Run', label: 'Wake KALKI', icon: 'spark', run: async () => { const r = await system.wake(''); r.ok ? refreshStatus() : err(r.message, r.detail); } },
   { group: 'Run', label: 'Stop speaking', icon: 'stop', run: async () => { await system.stop(); refreshStatus(); } },
+  { group: 'Run', label: 'Export conversation as Markdown', icon: 'export', run: () => exportChatMarkdown(conv.active()) },
+  {
+    group: 'Companion Pet', label: 'Interact with AI Pet', icon: 'pet',
+    run: () => {
+      const p = getPetState();
+      triggerPetReaction('happy', 3000, `Hey from Palette! ✨`);
+      ok(`Interacted with ${p.name}`);
+    }
+  },
+  { group: 'Companion Pet', label: 'Pet settings & species selection', icon: 'sliders', run: () => openPetSettings() },
   { group: 'Run', label: 'Open diagnostics', icon: 'info', run: () => setTimeout(openDiagnostics, 60) },
   {
     group: 'Run', label: `Switch theme to ${store.ui.theme === 'dark' ? 'light' : 'dark'}`, icon: 'spark',

@@ -240,6 +240,15 @@ def run_mode(mode_name, *, speak_fn=None, set_volume_fn=None,
     """Execute a workflow. Pass in callable hooks from the server."""
     mode_name = mode_name.lower().strip()
     if mode_name not in MODES:
+        if f"{mode_name} mode" in MODES:
+            mode_name = f"{mode_name} mode"
+        elif mode_name.endswith(" mode") and mode_name[:-5].strip() in MODES:
+            mode_name = mode_name[:-5].strip()
+        else:
+            matched = find_mode(mode_name)
+            if matched:
+                mode_name = matched
+    if mode_name not in MODES:
         return {"ok": False, "error": f"Unknown mode: {mode_name}",
                 "available": list(MODES.keys())}
 
@@ -317,3 +326,15 @@ def run_mode(mode_name, *, speak_fn=None, set_volume_fn=None,
             log.append(f"error in {action}: {e}")
 
     return {"ok": True, "mode": mode_name, "log": log}
+
+
+def get_custom_routines():
+    """Return loaded custom routines dictionary."""
+    load_custom_routines()
+    if os.path.exists(CUSTOM_ROUTINES_PATH):
+        try:
+            with open(CUSTOM_ROUTINES_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}

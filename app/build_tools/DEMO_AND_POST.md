@@ -15,7 +15,7 @@ Three things for shipping today:
 >
 > Five thousand lines of Python and one HTML file later, here it is.
 >
-> 🎙 Always-on wake word ("Hey Kalki"). Neural American voice (en-US-GuyNeural — warm, casual, like a mate). Listens from any room, works when my browser is closed.
+> 🎙 Always-on wake word ("Hey Kalki"). Neural American voice (en-US-AndrewMultilingualNeural — warm, casual, like a mate). Listens from any room, works when my browser is closed.
 >
 > 🧠 Groq LLaMA-3.3-70B brain with web search injection. Vision via LLaMA-4-Scout — I drag any image into the window and KALKI solves CTF challenges, reads code screenshots, explains error dialogs.
 >

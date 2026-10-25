@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KALKI 2.0 — Filament workspace</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{--void:#070809;--inset:#0a0c0e;--base:#0d0f12;--raised:#191d22;--overlay:#262c33;--float:#323941;--ls:#232930;--line:#333b44;--lst:#59636f;--text:#e6ebef;--t2:#b3bcc6;--mut:#8a95a1;--faint:#7e8894;--fil:#fff4e2;--ok:#4cc061;--okt:#7bd98a;--warn:#e08c33;--warnt:#efa95f;--dng:#f0565b;--dngt:#ff8a8e;
+--ui:"Instrument Sans","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;--mono:"JetBrains Mono",Consolas,monospace}
+@media(prefers-color-scheme:light){:root{}}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;background:var(--void);color:var(--text);font:400 14px/21px var(--ui);padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--fil);outline-offset:2px;border-radius:6px}
+.app{display:grid;grid-template-rows:36px 1fr;height:100%;min-width:900px}
+.title{display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--ls);font-size:12px;font-weight:500;color:var(--t2)}
+.pal{display:flex;align-items:center;gap:8px;width:300px;height:24px;padding:0 10px;background:var(--inset);border:1px solid var(--lst);border-radius:6px;color:var(--faint);font-size:12px}
+.pal kbd{margin-left:auto}
+kbd{font:500 10px var(--mono);color:var(--mut);border:1px solid var(--line);border-radius:3px;padding:0 4px}
+.body{display:grid;grid-template-columns:56px 1fr 280px;min-height:0}
+.rail{background:var(--raised);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px}
+.mark{position:relative;width:40px;height:40px;margin-bottom:14px;display:grid;place-items:center}
+.mark:before{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(255,244,226,.22),transparent 70%)}
+.mark b{width:10px;height:10px;border-radius:50%;background:var(--fil);opacity:.6}
+.nav{position:relative;width:40px;height:40px;border-radius:6px;display:grid;place-items:center;color:var(--mut)}
+.nav:hover{background:var(--overlay);color:var(--t2)}
+.nav[aria-current=page]{background:var(--float);color:var(--text)}
+.nav[aria-current=page]:before{content:"";position:absolute;left:-8px;top:10px;width:2px;height:20px;background:var(--fil)}
+.sp{flex:1}
+main{overflow:auto;min-width:0;display:none}main.on{display:block}
+aside{border-left:1px solid var(--line);overflow:auto;padding:16px;display:none;flex-direction:column;gap:16px}aside.on{display:flex}
+.screen{display:contents}
+h1{font-size:20px;line-height:26px;font-weight:500;letter-spacing:-.015em}
+h2{font-size:12px;font-weight:500;color:var(--t2)}
+.sub{font-size:11px;color:var(--mut)}
+.mut{color:var(--mut)}.t2{color:var(--t2)}.mono{font-family:var(--mono)}.sm{font-size:13px;line-height:19px}.xs{font-size:11px;line-height:15px}
+.pad{padding:20px 28px}
+.hd{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+.card{background:var(--raised);border:1px solid var(--line);border-radius:10px;padding:14px}
+.card.in{background:var(--inset)}
+.row{display:flex;align-items:center;gap:10px}.sb{justify-content:space-between}.col{display:flex;flex-direction:column}.g4{gap:4px}.g8{gap:8px}.g12{gap:12px}.g16{gap:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;padding:2px 7px;border-radius:3px;border:1px solid var(--line);color:var(--t2);background:var(--raised);white-space:nowrap}
+.chip.ok{color:var(--okt);background:rgba(76,192,97,.12);border-color:rgba(76,192,97,.3)}.chip.warn{color:var(--warnt);background:rgba(224,140,51,.12);border-color:rgba(224,140,51,.3)}.chip.dng{color:var(--dngt);background:rgba(240,86,91,.12);border-color:rgba(240,86,91,.32)}
+.chip.ok:before,.chip.warn:before,.chip.dng:before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+.btn{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border-radius:6px;font-size:12px;font-weight:500;background:var(--raised);border:1px solid var(--line);color:var(--text)}
+.btn:hover{border-color:var(--lst)}.btn.pri{background:var(--float);border-color:var(--float)}.btn.gh{border-color:transparent;background:none;color:var(--t2)}.btn.gh:hover{background:var(--raised)}
+.btn.dng{background:rgba(240,86,91,.12);border-color:rgba(240,86,91,.32);color:var(--dng)}.btn[disabled]{color:#4a535d;cursor:not-allowed}
+.ib{width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:var(--mut)}.ib:hover{background:var(--raised);color:var(--text)}
+.field{display:flex;align-items:center;gap:8px;background:var(--inset);border:1px solid var(--lst);border-radius:6px;padding:6px 10px;color:var(--faint);font-size:13px}
+.rule{border-top:1px solid var(--ls)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--ls);margin-bottom:16px}.tabs button{padding:8px 12px;font-size:12px;font-weight:500;color:var(--mut);border-bottom:2px solid transparent;margin-bottom:-1px}.tabs .a{color:var(--text);border-color:var(--fil)}
+.meter{height:3px;border-radius:2px;background:var(--ls);overflow:hidden;flex:1}.meter i{display:block;height:100%;background:var(--t2)}
+.li{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--ls)}.li:first-child{border-top:0}
+.cb{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--lst);flex:none}.cb.d{background:var(--t2);border-color:var(--t2)}
+.sel{background:var(--float);border-radius:6px}
+pre{font:400 12px/18px var(--mono);color:var(--t2);background:var(--inset);border:1px solid var(--line);border-radius:10px;padding:12px 14px;overflow:auto}
+.k{color:var(--text)}.c{color:var(--faint)}
+/* ask */
+.ask{display:grid;grid-template-columns:232px 1fr;height:100%}
+.hist{border-right:1px solid var(--ls);padding:14px;display:flex;flex-direction:column;gap:3px;overflow:auto}
+.hist .g{font-size:11px;font-weight:500;color:var(--mut);padding:12px 9px 4px}
+.hist .t{padding:7px 9px;border-radius:6px;font-size:13px;color:var(--t2);display:flex;gap:6px;align-items:center}.hist .t.s{background:var(--float);color:var(--text);font-weight:500}
+.thread{display:flex;flex-direction:column;min-width:0}
+.th-h{padding:16px 40px 12px;border-bottom:1px solid var(--ls);display:flex;justify-content:space-between}
+.msgs{flex:1;overflow:auto;padding:22px 40px;display:flex;flex-direction:column;gap:24px}
+.msgs>div{max-width:72ch}
+.who{font-size:11px;font-weight:500;color:var(--mut);margin-bottom:3px}
+.k .who,.kmsg .who{color:var(--text);display:flex;gap:7px;align-items:center}.dot{width:6px;height:6px;border-radius:50%;background:var(--fil);opacity:.85}
+.note{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;font-size:12px;background:rgba(76,192,97,.12);border:1px solid rgba(76,192,97,.3);margin-top:10px}.note b{color:var(--okt);font-weight:500}
+.comp{margin:0 40px 8px;max-width:72ch}.comp .card{padding:12px 14px;border-radius:10px}
+.cur{display:inline-block;width:1.5px;height:16px;background:var(--fil);vertical-align:-3px}
+.stream{height:2px;background:var(--ls);border-radius:2px;margin-top:10px;overflow:hidden}.stream i{display:block;width:38%;height:100%;background:var(--t2)}
+.big{font:500 20px var(--mono);letter-spacing:-.02em}
+.nm{font-size:13px;font-weight:500}
+.grid-sw{display:grid;grid-template-columns:200px 1fr;gap:28px}
+.snav a{display:block;padding:7px 10px;border-radius:6px;font-size:13px;color:var(--t2);margin-bottom:2px}.snav a.s{background:var(--float);color:var(--text);font-weight:500}
+table{width:100%;border-collapse:collapse;font-size:13px}th{font-weight:500;font-size:11px;color:var(--mut);text-align:left;padding:6px 0}td{padding:8px 0;border-top:1px solid var(--ls)}td.n,th.n{text-align:right;font-family:var(--mono);font-size:12px}
+.dlg{position:relative;width:420px;background:var(--overlay);border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 64px rgba(0,0,0,.68);padding:18px}
+.imp{display:flex;gap:2px}.imp i{width:4px;height:12px;background:var(--ls);border-radius:1px}.imp i.f{background:var(--t2)}
+.tg{width:30px;height:18px;border-radius:9px;background:var(--float);border:1px solid var(--lst);position:relative;flex:none}.tg:after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:var(--mut)}.tg.on{background:var(--t2)}.tg.on:after{left:14px;background:var(--void)}
+
+.mark:after{content:"";position:absolute;inset:6px;border-radius:50%;border:1.5px solid transparent;border-top-color:var(--fil);opacity:0}
+.mark[data-s=thinking]:after{opacity:.85;animation:spin 1.1s linear infinite}
+.mark[data-s=listening] b{animation:pulse 1s ease-in-out infinite}.mark[data-s=speaking] b{animation:pulse .6s ease-in-out infinite}
+.mark[data-s=error] b{background:var(--dng)}.mark[data-s=asleep] b{opacity:.2}
+@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{50%{transform:scale(1.5)}}
+@keyframes rip{from{transform:scale(1);opacity:.5}to{transform:scale(2.4);opacity:0}}@keyframes bar{50%{height:46px}}
+.orb{--lv:0;position:relative;width:240px;height:240px;margin:8px auto;display:grid;place-items:center}
+.orb>*{grid-area:1/1}
+.orb .core{width:52px;height:52px;border-radius:50%;background:radial-gradient(circle,#fff4e2 0,rgba(255,244,226,.55) 40%,rgba(255,244,226,0) 72%);transition:transform .24s cubic-bezier(.2,.8,.2,1),opacity .24s;opacity:.55;transform:scale(.9)}
+.orb .rg{justify-self:center;align-self:center;width:90px;height:90px;border-radius:50%;border:1px solid var(--t2);opacity:0}
+.orb .arc{justify-self:center;align-self:center;width:130px;height:130px;border-radius:50%;border:2px solid transparent;border-top-color:var(--fil);border-right-color:rgba(255,244,226,.25);opacity:0}
+.orb .bars{display:flex;gap:5px;align-items:center;height:60px;justify-self:center;opacity:0}.orb .bars i{width:3px;height:8px;background:var(--fil);border-radius:2px}
+.orb[data-s=idle] .core{opacity:.6}
+.orb[data-s=listening] .core{opacity:1;transform:scale(calc(1 + var(--lv)*.55))}
+.orb[data-s=listening] .rg{opacity:.4;animation:rip 1.8s ease-out infinite}.orb[data-s=listening] .rg:nth-child(2){animation-delay:.6s}.orb[data-s=listening] .rg:nth-child(3){animation-delay:1.2s}
+.orb[data-s=thinking] .arc{opacity:.9;animation:spin 1.1s linear infinite}.orb[data-s=thinking] .core{opacity:.8}
+.orb[data-s=speaking] .bars{opacity:1}.orb[data-s=speaking] .bars i{animation:bar .7s ease-in-out infinite}.orb[data-s=speaking] .core{opacity:.5;transform:scale(.7)}
+.orb .bars i:nth-child(2n){animation-delay:.12s!important}.orb .bars i:nth-child(3n){animation-delay:.27s!important}.orb .bars i:nth-child(5n){animation-delay:.4s!important}
+.orb[data-s=interrupting] .core{transform:scale(.6);opacity:1}.orb[data-s=interrupting] .rg{opacity:.7;transform:scale(1.4)}
+.orb[data-s=error] .core{background:radial-gradient(circle,#f0565b 0,rgba(240,86,91,.5) 40%,rgba(240,86,91,0) 72%);opacity:1}.orb[data-s=error] .rg{opacity:.8;border-color:var(--dng);border-style:dashed}
+.orb[data-s=asleep] .core{opacity:.22;transform:scale(.55)}
+.seg{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}.seg .btn.a{background:var(--float);border-color:var(--lst)}
+.cap{min-height:64px;text-align:center;font-size:15px;line-height:22px;max-width:46ch;margin:0 auto}
+.ov{position:fixed;inset:0;background:rgba(7,8,9,.72);display:none;align-items:flex-start;justify-content:center;padding-top:14vh;z-index:9}.ov.on{display:flex}
+.ov .dlg{width:560px;padding:12px;animation:dlg .16s cubic-bezier(.2,.8,.2,1)}@keyframes dlg{from{opacity:0;transform:scale(.98)}}
+.pi{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;font-size:13px}.pi:first-of-type{background:var(--float)}.pi .xs{margin-left:auto}
+.pg{font-size:11px;color:var(--mut);padding:10px 10px 4px;font-weight:500}
+.new{border-left:2px solid var(--fil)}
+.tl{position:relative;padding-left:18px}.tl:before{content:"";position:absolute;left:4px;top:14px;width:6px;height:6px;border-radius:50%;background:var(--lst)}
+.tl.u:before{background:var(--fil)}
+@media(max-width:1100px){.body{grid-template-columns:56px 1fr}aside{display:none!important}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style></head><body>
+<div class="app">
+<div class="title"><span>KALKI</span><div class="pal"><i data-i="search"></i>Search or run a command<kbd>Ctrl K</kbd></div><div class="row g8" title="Privacy indicators are always visible"><span class="chip ok" id="mic">Mic ready</span><span class="chip">Screen not shared</span><span class="chip">Local-first</span></div></div>
+<div class="body">
+<nav class="rail" aria-label="Destinations">
+<div class="mark" title="KALKI — ready"><b></b></div>
+<button class="nav" data-go="ask" title="Ask"><i data-i="msg"></i></button>
+<button class="nav" data-go="today" title="Today"><i data-i="sun"></i></button>
+<button class="nav" data-go="memory" title="Memory"><i data-i="layers"></i></button>
+<button class="nav" data-go="bench" title="Workbench"><i data-i="term"></i></button>
+<button class="nav" data-go="over" title="Oversight"><i data-i="act"></i></button>
+<button class="nav" data-go="pres" title="Presence and motion"><i data-i="mic"></i></button>
+<div class="sp"></div>
+<button class="nav" data-go="set" title="Settings"><i data-i="sliders"></i></button>
+</nav>
+
+<!-- ASK -->
+<main id="m-ask" style="padding:0"><div class="ask">
+<div class="hist">
+<div class="field"><i data-i="search"></i>Search conversations</div>
+<button class="btn" style="justify-content:center;margin:6px 0 2px"><i data-i="plus"></i>New thread</button>
+<div class="g">Pinned</div><div class="t s"><i data-i="pin"></i>Odoo session prep</div>
+<div class="g">Today</div><div class="t">Draft the v2.0.0 release notes</div><div class="t">Port scan results, lab router</div><div class="t">Study plan for DBMS unit 3</div>
+<div class="g">Yesterday</div><div class="t">CVE brief for Friday</div><div class="t">Telegram bot webhook fix</div><div class="t">Resume bullets rewrite</div>
+<div class="g">Earlier this week</div><div class="t">Groq and Ollama latency</div><div class="t">Vault migration checklist</div><div class="t">Standup notes (meeting mode)</div>
+<div class="g">Archived</div><div class="t mut">12 threads</div>
+</div>
+<div class="thread">
+<div class="th-h"><div><h1 style="font-size:16px;line-height:22px">Odoo session prep</h1><div class="sub">Updated 14:02 · 6 of 10 turns in context</div></div><div class="row"><button class="ib"><i data-i="pin"></i></button><button class="ib"><i data-i="dots"></i></button></div></div>
+<div class="msgs">
+<div><div class="who">You</div>How long until the Odoo session, and what should I prepare?</div>
+<div class="kmsg"><div class="who"><span class="dot"></span>KALKI<span class="chip">llama-3.3-70b · 1.1 s</span></div>
+<p>The session starts at 14:30, about two hours from now. You have two events today and three open tasks; one of them touches this directly.</p>
+<div class="card" style="margin:12px 0"><div class="row sb"><span class="row g8 t2 nm"><i data-i="sun"></i>Calendar</span><span class="xs mut">2 events today</span></div>
+<div class="li"><span class="mono t2 sm">14:30</span><span class="sm" style="flex:1">Odoo Experience, Hall B</span><span class="xs mut">in 2 h 04 m</span></div>
+<div class="li"><span class="mono t2 sm">17:00</span><span class="sm" style="flex:1">Team sync, Velocity Web</span><span class="xs mut">in 4 h 34 m</span></div></div>
+<p>Suggested order: review the agenda and mark your picks, charge the laptop and carry the venue pass, then leave by 13:45 to be seated before the opening.</p>
+<div class="note"><i data-i="check" style="color:var(--okt)"></i><b>Task created</b><span class="t2" style="flex:1">Review session agenda · due 13:00</span><button class="btn gh" style="height:22px">Undo</button></div>
+<div class="row" style="margin-top:8px"><button class="ib"><i data-i="copy"></i></button><button class="ib"><i data-i="ref"></i></button><button class="ib"><i data-i="pen"></i></button><button class="ib"><i data-i="flag"></i></button></div></div>
+<div><div class="who">You</div>Remind me at 13:30 to leave.</div>
+<div class="kmsg"><div class="who"><span class="dot"></span>KALKI<span class="chip">llama-3.3-70b · streaming</span></div>
+<p>Done. I will remind you at 13:30 today and say it aloud if the microphone is on<span class="cur"></span></p><div class="stream"><i></i></div></div>
+</div>
+<div class="comp"><div class="card">
+<div class="row g8" style="margin-bottom:8px"><span class="chip"><i data-i="mon" style="width:12px"></i>screen-capture.png · 412 KB<i data-i="x" style="width:11px"></i></span></div>
+<div style="font-size:14px">Also summarise my unread mail before I leave<span class="cur"></span></div>
+<div class="row sb" style="margin-top:10px"><div class="row g4"><button class="ib"><i data-i="clip"></i></button><button class="ib" title="Ask about my screen"><i data-i="mon"></i></button><button class="ib"><i data-i="mic"></i></button><button class="btn gh">llama-3.3-70b<i data-i="chev"></i></button></div>
+<div class="row g8"><span class="xs mut">6 of 10 turns in context</span><button class="btn pri" style="width:28px;padding:0;justify-content:center"><i data-i="up"></i></button></div></div></div>
+<div class="xs" style="color:var(--faint);margin-top:8px">Enter to send · Shift+Enter for a new line · Esc stops a reply · drop files to attach</div></div>
+</div></div></main>
+<aside id="a-ask">
+<div class="row sb"><h1 style="font-size:16px">Context</h1><i data-i="panel" class="mut"></i></div>
+<div class="col g8"><h2>Next up</h2><div class="card row"><span class="big">14:30</span><div><div class="nm">Odoo Experience</div><div class="xs mut">Hall B · in 2 h 04 m</div></div></div></div>
+<div class="col g8"><div class="row sb"><h2>Tasks</h2><span class="xs mut">3 open</span></div><div class="card"><div class="li"><i class="cb"></i><span class="sm t2">Review session agenda</span></div><div class="li"><i class="cb"></i><span class="sm t2">Carry venue pass, charge laptop</span></div><div class="li"><i class="cb"></i><span class="sm t2">Publish v2.0.0 release notes</span></div></div></div>
+<div class="col g8"><h2>Inbox</h2><div class="card row sb"><span class="sm">0 unread important</span><span class="chip ok">All clear</span></div></div>
+<div class="col g8"><h2>Now playing</h2><div class="card col g8"><div class="row"><div style="width:36px;height:36px;border-radius:4px;background:var(--float)"></div><div><div class="nm">Night Drive</div><div class="xs mut">Instrumental · 2:41 / 4:10</div></div></div><div class="row" style="justify-content:center"><button class="ib"><i data-i="prev"></i></button><button class="ib"><i data-i="play"></i></button><button class="ib"><i data-i="next"></i></button></div></div></div>
+<div class="col g8"><div class="row sb"><h2>System</h2><span class="xs mut">Live</span></div><div class="card col g8" id="sys"></div></div>
+<div class="col g8"><h2>Voice</h2><div class="card col g8"><div class="row sb"><span class="xs mut">Wake words</span><span class="chip ok">Mic ready</span></div><span class="mono xs t2">hey kalki · ok kalki</span><div class="row sb"><span class="xs mut">Speech</span><span class="xs t2">en-GB-Ryan · 212 ms</span></div></div></div>
+</aside>
+
+<!-- TODAY -->
+<main id="m-today"><div class="pad">
+<div class="hd"><div><h1>Good afternoon</h1><div class="sub">Friday, 2 October · focus session available</div></div><div class="row g8"><button class="btn"><i data-i="plus"></i>Quick note</button><button class="btn pri"><i data-i="play"></i>Start a focus session</button></div></div>
+<div class="card" style="margin-bottom:14px"><div class="row sb"><span class="row g8"><h2>Morning briefing</h2><span class="chip">Proactive</span></span><span class="xs mut">Prepared 08:00 · you choose when KALKI speaks up</span></div>
+<div class="grid2" style="margin-top:10px;gap:6px 28px"><div class="sm">Your first event is Odoo Experience at 14:30.</div><div class="sm">SSL for classic-infra expires in 9 days.</div><div class="sm">3 GitHub notifications, no important mail.</div><div class="sm">One reminder is overdue: renew the lab VPN.</div></div>
+<div class="row g8" style="margin-top:12px"><button class="btn pri"><i data-i="play"></i>Read aloud</button><button class="btn">Snooze until tomorrow</button><button class="btn gh">Change briefing time</button></div></div>
+<div class="grid2">
+<div class="card"><div class="row sb"><h2>Agenda</h2><span class="chip ok">Google Calendar connected</span></div>
+<div class="li"><span class="mono t2 sm" style="width:44px">14:30</span><div style="flex:1"><div class="nm">Odoo Experience</div><div class="xs mut">Hall B</div></div><span class="xs mut">in 2 h 04 m</span></div>
+<div class="li"><span class="mono t2 sm" style="width:44px">17:00</span><div style="flex:1"><div class="nm">Team sync</div><div class="xs mut">Google Meet</div></div><span class="xs mut">in 4 h 34 m</span></div>
+<div class="li"><span class="mono t2 sm" style="width:44px">Sat</span><div style="flex:1"><div class="nm">Study block: DSA</div><div class="xs mut">Upcoming, 2 more this week</div></div><button class="btn gh">View upcoming</button></div></div>
+<div class="card"><div class="row sb"><h2>Tasks</h2><span class="xs mut">3 open · 5 done</span></div>
+<div class="field" style="margin:10px 0 4px">Add a task, press Enter</div>
+<div class="li"><i class="cb"></i><span style="flex:1">Review session agenda</span><span class="xs mut">13:00</span></div>
+<div class="li"><i class="cb"></i><span style="flex:1">Publish v2.0.0 release notes</span></div>
+<div class="li"><i class="cb d"></i><span class="mut" style="flex:1;text-decoration:line-through">Renew domain</span><button class="btn gh" style="height:22px">Undo</button></div></div>
+<div class="card"><div class="row sb"><h2>Reminders</h2><span class="xs mut">Say it naturally: “tomorrow 9am”</span></div>
+<div class="xs mut" style="margin:10px 0 2px">Next two hours</div><div class="li"><i data-i="flag" class="mut"></i><span style="flex:1">Leave for the venue</span><span class="mono xs t2">13:30</span></div>
+<div class="xs mut" style="margin:8px 0 2px">Later today</div><div class="li"><i data-i="flag" class="mut"></i><span style="flex:1">Send invoice to the client</span><span class="mono xs t2">18:00</span></div>
+<div class="xs mut" style="margin:8px 0 2px">Tomorrow</div><div class="li"><i data-i="flag" class="mut"></i><span style="flex:1">Submit PBL report</span><span class="mono xs t2">09:00</span></div></div>
+<div class="card"><div class="row sb"><h2>Notes</h2><span class="xs mut">14 this week</span></div>
+<div class="field" style="margin:10px 0 4px"><i data-i="search"></i>Capture a thought or search notes</div>
+<div class="li col" style="align-items:flex-start;gap:2px"><span class="xs mut">11:20</span><span class="sm">Ask about OAuth scopes for the Calendar integration</span></div>
+<div class="li col" style="align-items:flex-start;gap:2px"><span class="xs mut">Yesterday</span><span class="sm">Try Ollama for offline summaries on battery</span></div></div>
+<div class="card col g12"><div class="row sb"><h2>Focus session</h2><span class="chip">25 min</span></div><div class="big" style="font-size:34px">18:42</div><div class="meter"><i style="width:25%"></i></div><div class="row g8"><button class="btn">Pause</button><button class="btn gh">End session</button></div></div>
+<div class="card col g12"><div class="row sb"><h2>Inbox and code</h2><span class="chip ok">Synced 14:02</span></div>
+<div class="row sb"><span>Important mail</span><span class="mono">0 unread</span></div><div class="rule"></div>
+<div class="row sb"><span>GitHub notifications</span><span class="mono">3 new</span></div><div class="xs mut">Checked every 60 s · uses the server’s poll hint</div>
+<div class="row sb"><span class="t2">WhatsApp</span><span class="chip">Connect in Settings</span></div></div>
+</div></div></main>
+<aside id="a-today"><h1 style="font-size:16px">Dashboard</h1>
+<div class="card col g12"><div class="row sb"><span class="xs mut">Screen time</span><span class="mono">3 h 12 m</span></div><div class="row sb"><span class="xs mut">Productivity</span><span class="mono">74%</span></div><div class="meter"><i style="width:74%"></i></div><div class="row sb"><span class="xs mut">Memories</span><span class="mono">128</span></div><div class="row sb"><span class="xs mut">Uptime</span><span class="mono">4 h 12 m</span></div></div>
+<div class="col g8"><h2>Music</h2><div class="card col g8"><div class="nm">Night Drive</div><div class="xs mut">Spotify · playing</div><div class="row" style="justify-content:center"><button class="ib"><i data-i="prev"></i></button><button class="ib"><i data-i="play"></i></button><button class="ib"><i data-i="next"></i></button></div></div></div>
+<div class="col g8"><h2>Clipboard</h2><div class="card col g8"><div class="sm">KALKI noticed a long block of text. Analyse it?</div><div class="row g8"><button class="btn pri">Yes, analyse</button><button class="btn gh">Ignore</button></div></div></div>
+<div class="col g8"><h2>Updates</h2><div class="card col g8"><div class="row sb"><span class="sm">Downloading 2.0.1</span><span class="mono xs">64%</span></div><div class="meter"><i style="width:64%"></i></div></div></div></aside>
+
+<!-- MEMORY -->
+<main id="m-memory"><div class="pad">
+<div class="hd"><div><h1>Memory</h1><div class="sub">Facts KALKI keeps about you. Stored on this machine only.</div></div><button class="btn pri"><i data-i="plus"></i>Add memory</button></div>
+<div class="card row sb" style="margin-bottom:16px"><span class="sm"><b style="font-weight:500">9 older memories</b> from the previous version can be imported with full metadata.</span><div class="row g8"><button class="btn pri">Import 9 memories</button><button class="btn gh">Dismiss</button></div></div>
+<div class="row g8" style="margin-bottom:16px"><div class="field" style="flex:1"><i data-i="search"></i>Search memory</div><button class="btn">Type: all<i data-i="chev"></i></button><button class="btn">Importance: any<i data-i="chev"></i></button></div>
+<h2 style="margin-bottom:6px">Pinned · always included</h2>
+<div class="card" id="mem"></div>
+<div class="card in col g12" style="margin-top:18px"><h2>Add a memory</h2><div class="field" style="min-height:56px;align-items:flex-start">I prefer short, direct answers…</div><div class="row g8"><button class="btn">Type: preference<i data-i="chev"></i></button><span class="xs mut">Importance</span><span class="imp" id="impn"></span><div class="sp" style="flex:1"></div><button class="btn pri">Save memory</button></div></div>
+</div></main>
+<aside id="a-memory"><h1 style="font-size:16px">Overview</h1>
+<div class="card col g12"><div class="row sb"><span class="xs mut">Total memories</span><span class="mono">128</span></div><div class="row sb"><span class="xs mut">Pinned</span><span class="mono">6</span></div><div class="row sb"><span class="xs mut">Search mode</span><span class="chip ok">Semantic</span></div></div>
+<div class="card col g8"><h2>What memory is for</h2><div class="sm t2">KALKI uses memory to answer in your context. Pinned items are always included; the rest are found by meaning. Nothing leaves this machine.</div></div>
+<div class="card col g8"><h2>If search is unavailable</h2><div class="sm t2">Memory still lists and edits, and search falls back to matching text. KALKI says so on screen.</div></div></aside>
+
+<!-- WORKBENCH -->
+<main id="m-bench"><div class="pad">
+<div class="hd"><div><h1>Workbench</h1><div class="sub">Run routines, generate code, and look at your screen.</div></div><span class="chip warn">Host execution off</span></div>
+<div class="tabs"><button class="a">Workflows</button><button>Code studio</button><button>Screen and vision</button></div>
+<div class="grid3" style="margin-bottom:22px">
+<div class="card col g8"><div class="row sb"><span class="nm">Study mode</span><span class="chip ok">Last run 12:10</span></div><div class="sm t2">Silences notifications, opens your notes, starts a 50-minute focus timer.</div><div class="row sb"><span class="xs mut">Voice: calm, brief</span><button class="btn pri">Run</button></div></div>
+<div class="card col g8"><div class="row sb"><span class="nm">Gaming mode</span></div><div class="sm t2">Closes background apps, raises performance, pauses sync.</div><div class="row sb"><span class="xs mut">Voice: upbeat</span><button class="btn">Run</button></div></div>
+<div class="card col g8"><div class="row sb"><span class="nm">Dev mode</span></div><div class="sm t2">Opens editor and terminal, checks Git status, starts local servers.</div><div class="row sb"><span class="xs mut">Voice: concise</span><button class="btn">Run</button></div></div>
+<div class="card col g8"><div class="row sb"><span class="nm">CTF mode</span></div><div class="sm t2">Opens tools and a notes template, starts the scoped lab workspace.</div><div class="row sb"><span class="xs mut">Voice: terse</span><button class="btn">Run</button></div></div>
+<div class="card col g8"><div class="row sb"><span class="nm">Deep focus</span><span class="chip warn">Asks first</span></div><div class="sm t2">Quits distracting apps and blocks sites. Needs your confirmation.</div><div class="row sb"><span class="xs mut">Voice: silent</span><button class="btn">Run</button></div></div>
+<div class="card col g8" style="border-style:dashed"><div class="nm">Create a routine</div><div class="sm t2">Chain steps and give it a voice profile and a name KALKI understands.</div><button class="btn" style="align-self:flex-start"><i data-i="plus"></i>New routine</button></div></div>
+<div class="grid2">
+<div class="col g12"><h2>Code studio</h2><div class="card in col g8"><div class="field" style="border:0;padding:0">Write a Python script that renames photos by date taken</div><div class="row sb"><span class="chip">Python</span><button class="btn pri">Generate</button></div></div>
+<pre><span class="c"># rename_photos.py</span>
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+<span class="k">from</span> PIL <span class="k">import</span> Image
+
+<span class="k">for</span> p <span class="k">in</span> Path(<span class="k">"photos"</span>).glob(<span class="k">"*.jpg"</span>):
+    taken = Image.open(p)._getexif()[<span class="k">36867</span>]
+    p.rename(p.with_name(taken.replace(<span class="k">":"</span>, <span class="k">"-"</span>) + p.suffix))</pre>
+<div class="row g8"><button class="btn" disabled>Run locally</button><span class="xs mut">Host execution is off. Turn it on in Settings, then confirm each run.</span></div></div>
+<div class="col g12"><h2>Screen and vision</h2><div class="card col g12"><div class="sm t2">KALKI reads your whole desktop and speaks the reply. Capture needs your confirmation each time.</div><div class="field" style="background:var(--inset)">What error is on my screen?</div><div class="row g8"><button class="btn pri"><i data-i="mon"></i>Ask about my screen</button><button class="btn">Attach an image</button></div></div>
+<div class="card col g8"><div class="row sb"><span class="nm">Documents</span><span class="xs mut">PDF, DOCX, XLSX, PPTX · 32 MB max</span></div><div class="card in" style="text-align:center;border-style:dashed;padding:20px"><div class="sm t2">Drop a file here to read it</div><div class="xs mut">KALKI shows what it extracted before sending</div></div></div></div>
+<div class="card" style="margin-top:22px"><div class="row sb"><h2>Skills</h2><button class="btn">Browse catalog</button></div>
+<div class="grid2" style="gap:0 28px"><div class="li"><div style="flex:1"><div class="nm">Calendar</div><div class="xs mut">Read and add events</div></div><i class="tg on"></i></div><div class="li"><div style="flex:1"><div class="nm">Spotify</div><div class="xs mut">Play, pause, skip</div></div><i class="tg on"></i></div><div class="li"><div style="flex:1"><div class="nm">GitHub</div><div class="xs mut">Notifications and issues</div></div><i class="tg on"></i></div><div class="li"><div style="flex:1"><div class="nm">Web search</div><div class="xs mut">Needs a connection</div></div><i class="tg"></i></div></div></div>
+</div></main>
+<aside id="a-bench"><h1 style="font-size:16px">Status</h1>
+<div class="col g8"><h2>Confirmation</h2><div class="dlg" style="width:auto;background:var(--overlay)"><div class="nm" style="font-size:16px">Run Deep focus?</div><div class="sm t2" style="margin:6px 0 12px">This quits Chrome and Discord and blocks 14 sites until you end the session.</div><div class="row sb"><span class="mono xs mut">Expires in 24 s</span><div class="row g8"><button class="btn gh">Cancel</button><button class="btn pri">Run</button></div></div></div></div>
+<div class="card col g8"><h2>Last run</h2><div class="row sb"><span class="sm">Study mode</span><span class="chip ok">Completed</span></div><div class="xs mut">4 steps · 2.1 s</div></div>
+<div class="card col g8"><h2>Sandbox</h2><div class="sm t2">Generated code runs in a contained sandbox when host execution is off.</div></div></aside>
+
+<!-- OVERSIGHT -->
+<main id="m-over"><div class="pad">
+<div class="hd"><div><h1>Oversight</h1><div class="sub">KALKI watches in the background and tells you when something needs you.</div></div><button class="btn pri"><i data-i="plus"></i>Watch a site</button></div>
+<div class="grid2">
+<div class="card"><div class="row sb"><h2>Watched sites</h2><span class="xs mut">3 sites</span></div>
+<div class="li"><div style="flex:1"><div class="nm">velocityweb.in</div><div class="xs mut">SSL valid for 71 days · 142 ms</div></div><span class="chip ok">Up</span></div>
+<div class="li"><div style="flex:1"><div class="nm">classic-infra.example</div><div class="xs mut">SSL expires in 9 days</div></div><span class="chip warn">Renew soon</span></div>
+<div class="li"><div style="flex:1"><div class="nm">staging.finmate.example</div><div class="xs mut">No response for 6 min</div></div><span class="chip dng">Down</span></div></div>
+<div class="card"><div class="row sb"><h2>Recent alerts</h2><button class="btn gh" style="height:22px">Clear</button></div>
+<div class="li"><span class="chip dng">High</span><span class="sm" style="flex:1">staging.finmate.example is not responding</span><span class="xs mut">14:01</span></div>
+<div class="li"><span class="chip warn">Medium</span><span class="sm" style="flex:1">CPU stayed above 85% for 5 minutes</span><span class="xs mut">12:44</span></div>
+<div class="li"><span class="chip">Info</span><span class="sm" style="flex:1">Battery charged to 100%</span><span class="xs mut">10:15</span></div></div></div>
+<div class="grid2" style="margin-top:14px">
+<div class="card"><div class="row sb"><h2>Waiting for you</h2><span class="chip warn">2 approvals</span></div>
+<div class="li new" style="padding-left:10px"><div style="flex:1"><div class="nm">Quit Chrome and Discord</div><div class="xs mut">Deep focus · expires in 24 s</div><div class="meter" style="margin-top:6px"><i style="width:80%"></i></div></div><button class="btn gh">Deny</button><button class="btn pri">Approve</button></div>
+<div class="li"><div style="flex:1"><div class="nm">Capture your screen</div><div class="xs mut">Asked from Ask · image is not stored</div></div><button class="btn gh">Deny</button><button class="btn pri">Approve</button></div></div>
+<div class="card"><div class="row sb"><h2>What KALKI did</h2><span class="row g4"><span class="chip">All</span><span class="chip">Reversible</span></span></div>
+<div class="li tl u"><span class="mono xs mut" style="width:38px">14:02</span><span class="sm" style="flex:1">Created task “Review session agenda”</span><button class="btn gh" style="height:22px">Undo</button></div>
+<div class="li tl"><span class="mono xs mut" style="width:38px">13:58</span><span class="sm" style="flex:1">Read your clipboard (you approved)</span></div>
+<div class="li tl"><span class="mono xs mut" style="width:38px">12:10</span><span class="sm" style="flex:1">Ran Study mode, 4 steps</span></div>
+<div class="li tl"><span class="mono xs mut" style="width:38px">11:55</span><span class="sm" style="flex:1">Looked at your screen once (you approved)</span></div></div></div>
+<div class="card" style="margin-top:14px"><h2>Alert thresholds</h2><div class="grid3" style="margin-top:10px"><div class="col g8"><div class="row sb"><span class="sm">CPU</span><span class="mono xs">85%</span></div><div class="meter"><i style="width:85%"></i></div></div><div class="col g8"><div class="row sb"><span class="sm">Memory</span><span class="mono xs">90%</span></div><div class="meter"><i style="width:90%"></i></div></div><div class="col g8"><div class="row sb"><span class="sm">Disk</span><span class="mono xs">92%</span></div><div class="meter"><i style="width:92%"></i></div></div></div></div>
+</div></main>
+<aside id="a-over"><h1 style="font-size:16px">Health</h1><div class="card col g12"><div class="row sb"><span class="sm">Local service</span><span class="chip ok">Running</span></div><div class="row sb"><span class="sm">Groq</span><span class="chip ok">Connected</span></div><div class="row sb"><span class="sm">Ollama</span><span class="chip dng">Offline</span></div><div class="row sb"><span class="sm">Calendar</span><span class="chip ok">Connected</span></div></div>
+<div class="card col g8"><h2>Diagnostics</h2><pre style="font-size:11px;line-height:16px">14:02 status ok
+14:01 watch: finmate down
+13:58 clipboard prompt
+13:40 tts ok 212 ms</pre></div></aside>
+
+<!-- PRESENCE -->
+<main id="m-pres"><div class="pad">
+<div class="hd"><div><h1>Presence and motion</h1><div class="sub">One shape tells you what KALKI is doing. Try each state.</div></div><button class="btn pri" id="demo"><i data-i="play"></i>Play a conversation</button></div>
+<div class="grid2" style="align-items:start">
+<div class="card col g12"><div class="orb" id="orb" data-s="idle"><i class="rg"></i><i class="rg"></i><i class="rg"></i><i class="arc"></i><div class="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="core"></div></div>
+<div class="row g8" style="justify-content:center"><span class="chip" id="slab">Waiting for “hey kalki”</span></div>
+<div class="cap" id="cap"></div>
+<div class="seg" id="segs"><button class="btn a" data-s="idle">Idle</button><button class="btn" data-s="listening">Listening</button><button class="btn" data-s="thinking">Thinking</button><button class="btn" data-s="speaking">Speaking</button><button class="btn" data-s="interrupting">Interrupt</button><button class="btn" data-s="error">Error</button><button class="btn" data-s="asleep">Asleep</button></div></div>
+<div class="card"><h2>How each state looks</h2><table><tr><th>State</th><th>What moves</th></tr>
+<tr><td>Idle</td><td class="sm t2">Steady glow. Nothing animates.</td></tr>
+<tr><td>Listening</td><td class="sm t2">Rings ripple out; the core grows with your voice level.</td></tr>
+<tr><td>Thinking</td><td class="sm t2">A short arc circles the core while the model works.</td></tr>
+<tr><td>Speaking</td><td class="sm t2">Bars move with the reply; captions follow the audio.</td></tr>
+<tr><td>Interrupt</td><td class="sm t2">Core shrinks in 180 ms, audio stops, then listening starts.</td></tr>
+<tr><td>Error</td><td class="sm t2">Red core with a dashed ring and a plain message.</td></tr>
+<tr><td>Asleep</td><td class="sm t2">Small dim core. The mic chip reads Mic off.</td></tr></table></div></div>
+<div class="grid2" style="margin-top:14px;align-items:start">
+<div class="card"><h2>Motion rules</h2><table><tr><th>Moment</th><th>What moves</th><th class="n">Timing</th></tr>
+<tr><td class="sm">Switch screen</td><td class="sm t2">Content fades</td><td class="n">120 ms</td></tr>
+<tr><td class="sm">Open palette or dialog</td><td class="sm t2">Scrim fades, panel scales from 98%</td><td class="n">160 ms</td></tr>
+<tr><td class="sm">Reply streams in</td><td class="sm t2">Text appears as received; caret blinks</td><td class="n">live</td></tr>
+<tr><td class="sm">Tool result arrives</td><td class="sm t2">Card grows, status chip cross-fades</td><td class="n">160 ms</td></tr>
+<tr><td class="sm">Task created</td><td class="sm t2">Banner slides 8 px; Undo shows for 5 s</td><td class="n">180 ms</td></tr>
+<tr><td class="sm">Confirmation</td><td class="sm t2">Countdown bar drains; cancels at zero</td><td class="n">30 s</td></tr>
+<tr><td class="sm">Meters change</td><td class="sm t2">Value eases, no overshoot</td><td class="n">400 ms</td></tr>
+<tr><td class="sm">New alert</td><td class="sm t2">Filament edge shows once</td><td class="n">1.2 s</td></tr></table>
+<div class="sm t2" style="margin-top:10px">With Reduce motion on, every move above becomes a fade of 120 ms or less, and presence states stay distinct by shape, not movement.</div></div>
+<div class="card"><h2>Where every feature lives</h2><div class="col g12" style="margin-top:8px">
+<div><div class="xs mut">Ask</div><div class="sm t2">Chat, files, screen vision, voice, model choice, history</div></div>
+<div><div class="xs mut">Today</div><div class="sm t2">Briefing, calendar, tasks, reminders, notes, focus, mail, GitHub, WhatsApp, music, clipboard, updates</div></div>
+<div><div class="xs mut">Memory</div><div class="sm t2">Pinned facts, semantic search, import, edit, importance</div></div>
+<div><div class="xs mut">Workbench</div><div class="sm t2">Routines, code studio, vision, documents, skills</div></div>
+<div><div class="xs mut">Oversight</div><div class="sm t2">Watched sites, alerts, approvals, activity with undo, health</div></div>
+<div><div class="xs mut">Settings</div><div class="sm t2">Models, keys, usage, voice, privacy, vault, backup, shortcuts</div></div>
+<div><div class="xs mut">Everywhere</div><div class="sm t2">Ctrl K palette, Ctrl Space quick ask, presence mark, privacy chips</div></div></div></div></div>
+</div></main>
+<aside id="a-pres"><h1 style="font-size:16px">Voice</h1><div class="card col g8"><div class="row sb"><span class="sm">Wake words</span><span class="chip ok">On</span></div><span class="mono xs t2">hey kalki · ok kalki</span><div class="row sb"><span class="sm">Interrupt by talking</span><i class="tg on"></i></div><div class="row sb"><span class="sm">Live captions</span><i class="tg on"></i></div></div>
+<div class="card col g8"><h2>Privacy</h2><div class="sm t2">The mic chip in the title bar turns amber whenever KALKI can hear you. Audio stays on this machine unless you pick a cloud voice.</div></div>
+<div class="card col g8"><h2>Quick ask</h2><div class="row sb"><span class="sm">Open from anywhere</span><kbd>Ctrl Space</kbd></div></div></aside>
+
+<!-- SETTINGS -->
+<main id="m-set"><div class="pad"><div class="hd"><div><h1>Settings</h1><div class="sub">Changes save when you leave a field.</div></div><button class="btn">Export settings</button></div>
+<div class="grid-sw"><div class="snav"><a>Profile</a><a>Appearance</a><a>Voice</a><a class="s">Models</a><a>Memory</a><a>Integrations</a><a>Privacy</a><a>Security</a><a>Performance</a><a>Shortcuts</a><a>Backup</a><a>Advanced</a><a>About</a></div>
+<div class="col g16">
+<div class="card"><h2>Provider keys</h2><div class="sub" style="margin-bottom:6px">KALKI never shows a saved key. Replace one to change it.</div>
+<div class="li"><span style="flex:1">Groq</span><span class="chip ok">Set</span><button class="btn">Replace</button></div>
+<div class="li"><span style="flex:1">OpenAI</span><span class="chip">Not set</span><button class="btn">Add key</button></div>
+<div class="li"><span style="flex:1">Anthropic</span><span class="chip">Not set</span><button class="btn">Add key</button></div>
+<div class="li"><span style="flex:1">Gemini</span><span class="chip">Not set</span><button class="btn">Add key</button></div>
+<div class="li"><span style="flex:1">ElevenLabs</span><span class="chip ok">Set</span><button class="btn">Replace</button></div></div>
+<div class="card"><div class="row sb"><h2>Usage</h2><span class="xs mut">This week</span></div><table><tr><th>Model</th><th class="n">Tokens</th><th class="n">Median latency</th></tr><tr><td>llama-3.3-70b</td><td class="n">412,880</td><td class="n">1.1 s</td></tr><tr><td>llama-3.1-8b</td><td class="n">96,402</td><td class="n">0.4 s</td></tr><tr><td>Ollama, local</td><td class="n">18,230</td><td class="n">3.8 s</td></tr></table></div>
+<div class="card col g12"><h2>Preferences</h2><div class="row sb"><span>Smart routing</span><i class="tg on"></i></div><div class="row sb"><span>Reduce motion</span><i class="tg"></i></div><div class="row sb"><span>Show Security in the rail</span><i class="tg"></i></div><div class="row sb"><span>Allow host code execution</span><i class="tg"></i></div></div>
+</div></div></div></main>
+<aside id="a-set"><h1 style="font-size:16px">Vault</h1><div class="card col g8"><div class="sm t2">Credentials live in a hardware-bound vault. Entries are write-only here.</div><div class="row g8"><button class="btn pri">Open vault</button></div></div>
+<div class="card col g8"><h2>Backup</h2><div class="sm t2">Last backup yesterday, 22:10</div><div class="row g8"><button class="btn">Create backup</button><button class="btn gh">Restore</button></div></div>
+<div class="card col g8"><h2>Connections</h2><div class="row sb"><span class="sm">Google</span><span class="chip ok">OK</span></div><div class="row sb"><span class="sm">Spotify</span><span class="chip ok">OK</span></div><div class="row sb"><span class="sm">Telegram</span><span class="chip">Not set</span></div></div></aside>
+</div></div>
+<div class="ov" id="pov"><div class="dlg"><div class="field" style="margin-bottom:6px">Type a command or ask KALKI<kbd style="margin-left:auto">Esc</kbd></div>
+<div class="pg">Go to</div><div class="pi" data-go="ask">Ask<span class="xs mut">Ctrl 1</span></div><div class="pi" data-go="today">Today<span class="xs mut">Ctrl 2</span></div><div class="pi" data-go="memory">Memory<span class="xs mut">Ctrl 3</span></div><div class="pi" data-go="pres">Presence and motion</div>
+<div class="pg">Run</div><div class="pi">Start Study mode</div><div class="pi">Flush RAM</div><div class="pi">Start a 25 minute focus session</div>
+<div class="pg">Ask KALKI</div><div class="pi">What should I prepare for my 14:30 event?</div></div></div>
+<script>
+const P={msg:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/>',layers:'<path d="M12 2 2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>',term:'<path d="M4 17l6-6-6-6M12 19h8"/>',act:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',sliders:'<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>',mic:'<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v4"/>',plus:'<path d="M12 5v14M5 12h14"/>',up:'<path d="M12 19V5M5 12l7-7 7 7"/>',clip:'<path d="M21 11l-9 9a6 6 0 0 1-8-8l9-9a4 4 0 0 1 6 6l-9 9a2 2 0 0 1-3-3l8-8"/>',copy:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',check:'<path d="M20 6L9 17l-5-5"/>',chev:'<path d="M6 9l6 6 6-6"/>',mon:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',pen:'<path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5z"/>',flag:'<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/>',ref:'<path d="M23 4v6h-6M1 20v-6h6M3.5 9a9 9 0 0 1 14.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0 0 20.5 15"/>',x:'<path d="M6 6l12 12M18 6L6 18"/>',pin:'<path d="M12 17v5M9 3h6l-1 7 3 3H7l3-3z"/>',dots:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',prev:'<path d="M19 20L9 12l10-8zM5 19V5"/>',next:'<path d="M5 4l10 8-10 8zM19 5v14"/>',play:'<path d="M6 4l14 8-14 8z"/>',panel:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/>'};
+document.querySelectorAll('i[data-i]').forEach(e=>{e.outerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+P[e.dataset.i]+'</svg>'});
+document.getElementById('sys').innerHTML=[['CPU',42],['RAM',61],['DSK',48],['BAT',87]].map(([k,v])=>`<div class="row"><span class="mono xs mut" style="width:28px">${k}</span><div class="meter"><i style="width:${v}%"></i></div><span class="mono xs" style="width:32px;text-align:right">${v}%</span></div>`).join('');
+const M=[['Prefers short, direct answers; skip the preamble','preference',9,1],['Studying B.Tech CSE, Sem 3; exams in October','context',8,1],['Runs Windows 11 with an RTX laptop; use PowerShell examples','system',7,1],['Wake words: hey kalki, ok kalki','voice',6,0],['Weekly review every Sunday at 20:00','routine',5,0]];
+document.getElementById('mem').innerHTML=M.map(([t,ty,im,pn])=>`<div class="li"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${pn?'#b3bcc6':'#4a535d'}" stroke-width="1.6">${P.pin}</svg><span style="flex:1">${t}</span><span class="chip">${ty}</span><span class="imp">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<i class="${n<=im?'f':''}"></i>`).join('')}</span><button class="ib">${'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">'+P.dots+'</svg>'}</button></div>`).join('');
+document.getElementById('impn').innerHTML=[1,2,3,4,5,6,7,8,9,10].map(n=>`<i class="${n<=7?'f':''}"></i>`).join('');
+const go=k=>{document.querySelectorAll('main,aside').forEach(e=>e.classList.remove('on'));document.getElementById('m-'+k).classList.add('on');document.getElementById('a-'+k).classList.add('on');document.querySelectorAll('.nav').forEach(n=>{if(n.dataset.go===k)n.setAttribute('aria-current','page');else n.removeAttribute('aria-current')});location.hash=k};
+document.querySelectorAll('.nav').forEach(n=>n.onclick=()=>go(n.dataset.go));
+
+const LAB={idle:'Waiting for “hey kalki”',listening:'Listening. Captions appear as you speak',thinking:'Working on it',speaking:'Speaking. Talk to interrupt',interrupting:'Stopped. Back to you',error:'Could not hear you. Check the microphone',asleep:'Asleep. Say the wake word or press Ctrl Space'};
+const orb=document.getElementById('orb'),cap=document.getElementById('cap'),mk=document.querySelector('.mark'),mic=document.getElementById('mic');let lt,run=0;
+function setS(s){orb.dataset.s=s;mk.dataset.s=s;document.querySelectorAll('#segs button').forEach(b=>b.classList.toggle('a',b.dataset.s===s));document.getElementById('slab').textContent=LAB[s];mic.className='chip '+(s==='listening'?'warn':s==='asleep'?'':'ok');mic.textContent=s==='listening'?'Mic live':s==='asleep'?'Mic off':'Mic ready';clearInterval(lt);orb.style.setProperty('--lv',0);if(s==='listening')lt=setInterval(()=>orb.style.setProperty('--lv',(Math.random()*.9).toFixed(2)),90)}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+document.querySelectorAll('#segs button').forEach(b=>b.onclick=()=>{run++;const s=b.dataset.s;setS(s);cap.textContent=s==='error'?'I could not hear you. Check that the microphone is plugged in.':'';if(s==='interrupting')setTimeout(()=>setS('listening'),400)});
+document.getElementById('demo').onclick=async()=>{const id=++run;const ok=()=>id===run;setS('idle');cap.textContent='';await sleep(600);if(!ok())return;setS('listening');let u='',q='what is on my calendar today'.split(' ');for(const w of q){u+=(u?' ':'')+w;cap.innerHTML='<span class="t2">'+u+'</span>';await sleep(260);if(!ok())return}await sleep(300);setS('thinking');cap.innerHTML='<span class="mut">'+u+'<br>Checking your calendar</span>';await sleep(1400);if(!ok())return;setS('speaking');let a='',r='You have two events. Odoo Experience at 14:30, then a team sync at 17:00.'.split(' ');for(const w of r){a+=(a?' ':'')+w;cap.innerHTML='<span class="mut">'+u+'</span><br>'+a;await sleep(190);if(!ok())return}await sleep(800);if(ok())setS('idle')};
+const pov=document.getElementById('pov');
+document.querySelector('.pal').onclick=()=>pov.classList.add('on');pov.onclick=e=>{if(e.target===pov)pov.classList.remove('on')};
+pov.querySelectorAll('[data-go]').forEach(p=>p.onclick=()=>{go(p.dataset.go);pov.classList.remove('on')});
+addEventListener('keydown',e=>{if(e.ctrlKey&&e.key.toLowerCase()==='k'){e.preventDefault();pov.classList.toggle('on')}if(e.key==='Escape')pov.classList.remove('on')});
+go(['ask','today','memory','bench','over','pres','set'].includes(location.hash.slice(1))?location.hash.slice(1):'ask');
+</script></body></html>

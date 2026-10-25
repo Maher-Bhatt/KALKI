@@ -17,7 +17,7 @@ export const store = {
   settings: { values: {}, secretStatus: {}, meta: {}, loading: false, saving: false },
   ui: {
     railOpen: false, contextOpen: true, theme: 'dark', motion: 'auto',
-    density: 'comfortable', securityEnabled: false, debug: false,
+    density: 'comfortable', securityEnabled: true, debug: false,
   },
   toasts: [],
 };
@@ -34,9 +34,10 @@ export function loadUi() {
 
 export function applyUi() {
   const r = document.documentElement;
-  r.dataset.theme = store.ui.theme;
-  r.dataset.density = store.ui.density;
+  r.dataset.theme = store.ui.theme || 'dark';
+  r.dataset.density = store.ui.density || 'comfortable';
   if (store.ui.motion === 'off') r.dataset.motion = 'off'; else delete r.dataset.motion;
+  if (store.ui.enhancedVisuals) r.dataset.enhanced = 'on'; else r.dataset.enhanced = 'off';
   try { localStorage.setItem(UI_KEY, JSON.stringify(store.ui)); } catch { /* non-fatal */ }
 }
 
@@ -58,6 +59,6 @@ export function notify() {
 
 /** Shallow-merge a slice and schedule a render. */
 export function set(slice, patch) {
-  Object.assign(store[slice], patch);
+  store[slice] = Object.assign(store[slice] || {}, patch);
   notify();
 }

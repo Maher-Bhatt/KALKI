@@ -7,12 +7,14 @@ from typing import Dict, Any, List, Optional
 
 import config
 
+_has_gemini = bool(getattr(config, "GEMINI_API_KEY", "") and not getattr(config, "GEMINI_API_KEY", "").startswith("PASTE_"))
+
 # Default routing roles
 ROLE_MODELS = {
-    "chat": "llama-3.3-70b-versatile",
-    "vision": "meta-llama/llama-4-scout-17b-16e-instruct",
-    "coding": "llama-3.3-70b-versatile",
-    "voice": "llama-3.1-8b-instant"
+    "chat": "gemini-2.5-flash" if _has_gemini else "llama-3.3-70b-versatile",
+    "vision": "gemini-2.5-flash" if _has_gemini else "meta-llama/llama-4-scout-17b-16e-instruct",
+    "coding": "gemini-2.5-pro" if _has_gemini else "llama-3.3-70b-versatile",
+    "voice": "gemini-2.5-flash" if _has_gemini else "llama-3.1-8b-instant"
 }
 
 # Cost estimate sheet per 1k tokens (input, output) in USD

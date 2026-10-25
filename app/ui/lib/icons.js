@@ -43,6 +43,36 @@ const P = {
   offline:  'M3.5 3.5l13 13M6.4 12.3a5 5 0 0 1 2-1.5M3.5 9.4a9 9 0 0 1 3-2M16.5 9.4a9 9 0 0 0-6.8-2.4M9.4 15.2l.6.6.6-.6',
   vault:    'M3.5 4.5h13v11h-13zM10 7.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM10 12.5V15',
   download: 'M10 3.5v9M6.5 9.5 10 13l3.5-3.5M4 16.5h12',
+  dots:     'M5 10h.01M10 10h.01M15 10h.01',
+  prev:     'M14 5l-6 5 6 5ZM6 5v10',
+  up:       'M10 16V5M5.5 9.5 10 5l4.5 4.5',
+  music:    'M8 14.5V5l7-1.5V12M8 14.5a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM15 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z',
+  cpu:      'M6.5 6.5h7v7h-7zM8.5 3.5v3M11.5 3.5v3M8.5 13.5v3M11.5 13.5v3M3.5 8.5h3M3.5 11.5h3M13.5 8.5h3M13.5 11.5h3',
+  layers:   'M10 3 3 6.5 10 10l7-3.5ZM3 10l7 3.5 7-3.5M3 13.5 10 17l7-3.5',
+  term:     'M4 5.5l4.5 4.5L4 14.5M10.5 15h5.5',
+  act:      'M17.5 10h-3l-2.2 5.5-4.6-11L5.5 10h-3',
+  sliders:  'M4 16v-5M4 7V4M10 16V9M10 6V4M16 16v-3M16 9V4M2 11h4M8 6h4M14 13h4',
+  sun:      'M10 13.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM10 2v1.5M10 16.5V18M3.5 3.5l1 1M15.5 15.5l1 1M2 10h1.5M16.5 10H18M3.5 16.5l1-1M15.5 4.5l1-1',
+  battery:  'M3 6.5h12v7H3zM15 9v2h2V9z',
+  eye:      'M2.5 10S5.5 4.5 10 4.5 17.5 10 17.5 10 14.5 15.5 10 15.5 2.5 10 2.5 10ZM10 12.2a2.2 2.2 0 1 0 0-4.4 2.2 2.2 0 0 0 0 4.4Z',
+  undo:     'M7 5 3.5 8.5 7 12M3.5 8.5H12a4.5 4.5 0 0 1 0 9H8',
+  volume:   'M3.5 7.5h3.5l4-3.5v12l-4-3.5H3.5zM14.5 7.5a4 4 0 0 1 0 5M16.5 5.5a7 7 0 0 1 0 9',
+  volumeOff:'M3.5 7.5h3.5l4-3.5v12l-4-3.5H3.5zM14 8l4 4M18 8l-4 4',
+  pet:      'M10 14c-2.2 0-3.8-1.2-3.8-2.6 0-1.5 1.6-2.6 3.8-2.6s3.8 1.1 3.8 2.6c0 1.4-1.6 2.6-3.8 2.6ZM5.5 8a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM8.5 5.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM11.5 5.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM14.5 8a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z',
+  heart:    'M10 16.5s-6-3.8-6-7.5a3.5 3.5 0 0 1 6-2.3 3.5 3.5 0 0 1 6 2.3c0 3.7-6 7.5-6 7.5Z',
+  food:     'M3.5 9h13c-.5 4.5-4 7-6.5 7s-6-2.5-6.5-7ZM7 5.5v1.5M10 4.5v2.5M13 5.5v1.5',
+  ball:     'M10 17.5a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15ZM4.5 10a7.5 7.5 0 0 1 7.5-7.5M15.5 10a7.5 7.5 0 0 1-7.5 7.5',
+  export:   'M4 11.5v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4M10 3.5v9M6.5 7 10 3.5 13.5 7',
+  sparkles: 'M10 2.5 11.2 6.5 15.2 7.7 11.2 8.9 10 12.9 8.8 8.9 4.8 7.7 8.8 6.5ZM15 13.5 15.6 15.5 17.6 16.1 15.6 16.7 15 18.7 14.4 16.7 12.4 16.1 14.4 15.5Z',
+};
+
+/* The Filament v2 screens (and the design they were built from) name a few
+ * icons differently from the original set. Resolve them here once instead of
+ * letting an unknown name fall through to the info glyph. */
+const ALIAS = {
+  msg: 'ask', pen: 'edit', ref: 'refresh', chev: 'chevronD', mon: 'screen', clip: 'attach',
+  x: 'close', check2: 'check', today2: 'today', stopped: 'stop', chat: 'ask',
+  speaker: 'volume', sound: 'volume', paw: 'pet', love: 'heart', treat: 'food',
 };
 
 /** @param {keyof P} name */
@@ -59,9 +89,41 @@ export function icon(name, size = 20) {
   svg.setAttribute('aria-hidden', 'true');
   svg.setAttribute('focusable', 'false');
   const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute('d', P[name] || P.info);
+  path.setAttribute('d', P[name] || P[ALIAS[name]] || P.info);
   svg.appendChild(path);
   return svg;
 }
 
 export const iconNames = Object.keys(P);
+
+/** Turn <i data-i="name"> markers into real icons, now and whenever a view
+ *  renders new ones. Views written against the design use these markers; this
+ *  keeps them working without every call site importing icon(). */
+export function hydrateIcons(root = document.body) {
+  const swap = (scope) => {
+    scope.querySelectorAll?.('i[data-i]').forEach((el) => {
+      const svg = icon(el.dataset.i, Number(el.dataset.size) || 16);
+      if (el.className) svg.setAttribute('class', el.className);
+      if (el.getAttribute('style')) svg.setAttribute('style', el.getAttribute('style'));
+      el.replaceWith(svg);
+    });
+  };
+  swap(root);
+  const obs = new MutationObserver((muts) => {
+    for (const m of muts) {
+      for (const n of m.addedNodes) {
+        if (n.nodeType !== 1) continue;
+        if (n.tagName === 'I' && n.dataset.i) {
+          const svg = icon(n.dataset.i, Number(n.dataset.size) || 16);
+          if (n.className) svg.setAttribute('class', n.className);
+          if (n.getAttribute('style')) svg.setAttribute('style', n.getAttribute('style'));
+          n.replaceWith(svg);
+        } else if (n.querySelector && n.querySelector('i[data-i]')) {
+          swap(n);
+        }
+      }
+    }
+  });
+  obs.observe(root, { childList: true, subtree: true });
+  return obs;
+}

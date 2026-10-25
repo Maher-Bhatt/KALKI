@@ -91,6 +91,7 @@ def main():
         ("server.py", "KALKI_Server", False),
         ("listener.py", "KALKI_Listener", False),
         ("main_app.py", "KALKI", True),
+        ("desktop_pet.py", "KALKI_Pet", True),
         ("kalki_setup_wizard.py", "KALKI_Setup_Wizard", True),
         ("setup_google.py", "KALKI_Setup_Google", False),
         ("setup_spotify.py", "KALKI_Setup_Spotify", False)
@@ -114,7 +115,7 @@ def main():
         ]
         
         if windowed:
-            if script == "main_app.py":
+            if script in ("main_app.py", "desktop_pet.py"):
                 cmd.append("--collect-all=webview")
             cmd.append("--windowed")
         if script == "kalki_setup_wizard.py":
@@ -126,6 +127,7 @@ def main():
             cmd.append("--hidden-import=spotipy")
             cmd.append("--hidden-import=plyer")
             cmd.append("--hidden-import=media_mod")
+            cmd.append("--hidden-import=antivirus")
             
         if script == "listener.py":
             cmd.append("--hidden-import=pyaudio")
@@ -137,7 +139,7 @@ def main():
     # Copy config.example.py to build dist folders
     import shutil
     for folder in [
-        "KALKI", "KALKI_Setup_Wizard", "KALKI_Server", "KALKI_Listener",
+        "KALKI", "KALKI_Pet", "KALKI_Setup_Wizard", "KALKI_Server", "KALKI_Listener",
         "KALKI_Setup_Google", "KALKI_Setup_Spotify",
     ]:
         dest = os.path.join("dist", folder, "config.example.py")

@@ -82,31 +82,28 @@ export function debounce(fn, ms = 160) {
 }
 
 export async function withCheckmark(btn, p) {
-  const orig = btn.innerHTML;
+  const origNodes = Array.from(btn.childNodes);
   btn.disabled = true;
   const styleW = btn.style.width;
   if (!styleW) btn.style.width = btn.offsetWidth + 'px';
+  const restore = () => {
+    btn.replaceChildren(...origNodes);
+    btn.style.width = styleW;
+    btn.disabled = false;
+    btn.classList.remove('is-success');
+  };
   try {
     const res = await p;
     if (res && res.ok === false) {
-      btn.disabled = false;
-      btn.innerHTML = orig;
-      btn.style.width = styleW;
+      restore();
       return res;
     }
     btn.classList.add('is-success');
-    btn.innerHTML = '&#10003;';
-    setTimeout(() => { 
-      btn.classList.remove('is-success'); 
-      btn.innerHTML = orig; 
-      btn.style.width = styleW;
-      btn.disabled = false; 
-    }, 2000);
+    btn.textContent = '✓';
+    setTimeout(restore, 2000);
     return res;
   } catch (err) {
-    btn.disabled = false;
-    btn.innerHTML = orig;
-    btn.style.width = styleW;
+    restore();
     throw err;
   }
 }

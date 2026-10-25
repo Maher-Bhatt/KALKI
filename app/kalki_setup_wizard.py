@@ -126,7 +126,7 @@ def _apply_to_config_py(updates: dict) -> None:
             else:
                 return
 
-    with open(cfg_path, "r", encoding="utf-8") as f:
+    with open(cfg_path, "r", encoding="utf-8-sig") as f:
         text = f.read()
 
     appended = []
@@ -159,7 +159,7 @@ def run_headless_setup() -> int:
         "OWNER_COUNTRY": os.environ.get("KALKI_OWNER_COUNTRY", ""),
         "PERSONALITY_SPICE": "professional",
         "TTS_PROVIDER": "edge",
-        "TTS_VOICE": "en-GB-RyanNeural",
+        "TTS_VOICE": "en-US-AndrewMultilingualNeural",
         "TTS_RATE": "+0%",
         "TTS_PITCH": "+0Hz",
         "TTS_VOLUME": "+0%",
@@ -220,7 +220,7 @@ class KalkiSetupWizard(ctk.CTk):
 
         if os.path.exists(_USER_CONFIG_PATH):
             try:
-                with open(_USER_CONFIG_PATH, "r", encoding="utf-8") as f:
+                with open(_USER_CONFIG_PATH, "r", encoding="utf-8-sig") as f:
                     self.config_data.update(json.load(f))
             except:
                 pass
@@ -357,17 +357,17 @@ class KalkiSetupWizard(ctk.CTk):
         voice_frame.pack(fill="x", pady=5)
         ctk.CTkLabel(voice_frame, text="Voice:", width=170, anchor="w").pack(side="left")
         self.voice_options = {
-            "Ryan (British, stable KALKI voice)": "en-GB-RyanNeural",
+            "Andrew (US, natural male, default)": "en-US-AndrewMultilingualNeural",
             "Brian (US, natural male)": "en-US-BrianMultilingualNeural",
             "Andrew (US, natural male)": "en-US-AndrewMultilingualNeural",
             "Thomas (British, formal)": "en-GB-ThomasNeural",
             "Guy (US, standard male)": "en-US-GuyNeural",
             "Tony (US, deep male)": "en-US-TonyNeural",
         }
-        current_voice = self.config_data.get("TTS_VOICE", "en-GB-RyanNeural")
+        current_voice = self.config_data.get("TTS_VOICE", "en-US-AndrewMultilingualNeural")
         current_voice_label = next(
             (label for label, val in self.voice_options.items() if val == current_voice),
-            "Ryan (British, stable KALKI voice)",
+            "Andrew (US, natural male, default)",
         )
         self.voice_var = ctk.StringVar(value=current_voice_label)
         ctk.CTkOptionMenu(voice_frame, values=list(self.voice_options.keys()),
@@ -573,7 +573,7 @@ class KalkiSetupWizard(ctk.CTk):
             "OWNER_COUNTRY": self.country_entry.get(),
             "MANAGED_AI_ENABLED": self.managed_ai_var.get(),
             "GROQ_API_KEY": self.groq_entry.get().strip(),
-            "TTS_VOICE": self.voice_options.get(self.voice_var.get(), "en-GB-RyanNeural"),
+            "TTS_VOICE": self.voice_options.get(self.voice_var.get(), "en-US-AndrewMultilingualNeural"),
             "LISTEN_MODE": self.listen_mode_var.get(),
             "PERSONALITY_SPICE": self.spice_var.get(),
             "EMAIL_ADDRESS": self.email_entry.get(),
@@ -646,3 +646,4 @@ if __name__ == "__main__":
         raise SystemExit(run_headless_setup())
     app = KalkiSetupWizard()
     app.mainloop()
+

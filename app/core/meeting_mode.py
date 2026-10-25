@@ -108,16 +108,20 @@ def _transcribe_and_summarize():
     except Exception as e:
         print(f"[MEETING] Transcription failed: {e}")
 
+_meeting_lock = threading.Lock()
+
 def start_meeting():
     global _recording, _thread
-    if _recording: return False
-    _recording = True
-    _thread = threading.Thread(target=_record_loop, daemon=True)
-    _thread.start()
-    return True
+    with _meeting_lock:
+        if _recording: return False
+        _recording = True
+        _thread = threading.Thread(target=_record_loop, daemon=True)
+        _thread.start()
+        return True
 
 def stop_meeting():
     global _recording
-    if not _recording: return False
-    _recording = False
-    return True
+    with _meeting_lock:
+        if not _recording: return False
+        _recording = False
+        return True

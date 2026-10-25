@@ -6,6 +6,7 @@ import urllib.parse
 from collections import Counter
 import re
 import threading
+import base64
 from datetime import datetime
 
 _lock = threading.RLock()
@@ -75,23 +76,88 @@ class SemanticMemory:
         self.documents = []
         self._load()
 
+    def _encrypt_payload(self, text: str) -> str:
+        data = text.encode("utf-8")
+        try:
+            import win32crypt
+            blob = win32crypt.CryptProtectData(data, "kalki-memory-vault", None, None, None, 0)
+            return "DPAPI:" + base64.b64encode(blob).decode("ascii")
+        except Exception:
+            pass
+        try:
+            from cryptography.fernet import Fernet
+            import hashlib
+            import socket
+            machine_id = os.environ.get("COMPUTERNAME", socket.gethostname()) + "_" + os.environ.get("USERNAME", "kalki")
+            key = base64.urlsafe_b64encode(hashlib.sha256(machine_id.encode("utf-8")).digest())
+            f = Fernet(key)
+            return "FERNET:" + f.encrypt(data).decode("ascii")
+        except Exception:
+            return "B64:" + base64.b64encode(data).decode("ascii")
+
+    def _decrypt_payload(self, raw: str) -> str:
+        if raw.startswith("DPAPI:"):
+            try:
+                import win32crypt
+                blob = base64.b64decode(raw[6:])
+                return win32crypt.CryptUnprotectData(blob, None, None, None, 0)[1].decode("utf-8")
+            except Exception as e:
+                print(f"[SemanticMemory] DPAPI decrypt failed: {e}")
+                return ""
+        elif raw.startswith("FERNET:"):
+            try:
+                from cryptography.fernet import Fernet
+                import hashlib
+                import socket
+                machine_id = os.environ.get("COMPUTERNAME", socket.gethostname()) + "_" + os.environ.get("USERNAME", "kalki")
+                key = base64.urlsafe_b64encode(hashlib.sha256(machine_id.encode("utf-8")).digest())
+                f = Fernet(key)
+                return f.decrypt(raw[7:].encode("ascii")).decode("utf-8")
+            except Exception as e:
+                print(f"[SemanticMemory] Fernet decrypt failed: {e}")
+                return ""
+        elif raw.startswith("B64:"):
+            try:
+                return base64.b64decode(raw[4:]).decode("utf-8")
+            except Exception:
+                return ""
+        return raw
+
     def _load(self):
         if os.path.exists(self.path):
             try:
                 with open(self.path, "r", encoding="utf-8") as f:
-                    self.documents = json.load(f)
-            except Exception:
+                    content = f.read().strip()
+                if not content:
+                    self.documents = []
+                    return
+                if content.startswith(("DPAPI:", "FERNET:", "B64:")):
+                    decrypted = self._decrypt_payload(content)
+                    self.documents = json.loads(decrypted) if decrypted else []
+                else:
+                    self.documents = json.loads(content)
+                    self._save()
+            except Exception as e:
+                print(f"[SemanticMemory] Load error: {e}")
                 self.documents = []
 
     def _save(self):
         try:
-            os.makedirs(os.path.dirname(self.path), exist_ok=True)
-            with open(self.path, "w", encoding="utf-8") as f:
-                json.dump(self.documents, f, indent=2)
-        except Exception:
-            pass
+            dir_name = os.path.dirname(self.path)
+            if dir_name:
+                os.makedirs(dir_name, exist_ok=True)
+            raw = json.dumps(self.documents, indent=2)
+            encrypted = self._encrypt_payload(raw)
+            tmp = self.path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                f.write(encrypted)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp, self.path)
+        except Exception as e:
+            print(f"[SemanticMemory] Save error: {e}")
 
-    def add_memory(self, text, tags=None, importance=5, memory_type="fact"):
+    def add_memory(self, text, tags=None, importance=5, memory_type="fact", topic=None, metadata=None, **kwargs):
         """
         Add a fact/memory.
         memory_type: 'fact' (long-term), 'pinned' (always in prompt), 'project' (current workspace docs)
@@ -103,22 +169,31 @@ class SemanticMemory:
             ids = [d.get("id", 0) for d in self.documents]
             if ids:
                 doc_id = max(ids) + 1
+
+            resolved_topic = topic or (tags[0] if tags and len(tags) > 0 else "General")
+            resolved_tags = list(tags) if tags else ([resolved_topic] if resolved_topic else [])
+            meta = dict(metadata) if isinstance(metadata, dict) else {}
+            if "topic" not in meta:
+                meta["topic"] = resolved_topic
                 
             doc = {
                 "id": doc_id,
                 "text": text.strip(),
-                "tags": tags or [],
+                "tags": resolved_tags,
                 "importance": importance,  # scale 1-10
                 "type": memory_type,
+                "topic": resolved_topic,
+                "metadata": meta,
                 "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "last_accessed": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "vector": vector
+                "vector": vector,
+                **kwargs
             }
             self.documents.append(doc)
             self._save()
             return doc["id"]
 
-    def update_memory(self, doc_id, text, tags=None, importance=None, memory_type=None):
+    def update_memory(self, doc_id, text, tags=None, importance=None, memory_type=None, topic=None, metadata=None):
         """Update an existing memory node."""
         try:
             target_id = int(doc_id)
@@ -134,6 +209,10 @@ class SemanticMemory:
                         doc["importance"] = importance
                     if memory_type is not None:
                         doc["type"] = memory_type
+                    if topic is not None:
+                        doc["topic"] = topic
+                    if metadata is not None:
+                        doc["metadata"] = metadata
                     # Re-vectorize if content changed
                     doc["vector"] = get_embedding(text)
                     self._save()
@@ -164,6 +243,8 @@ class SemanticMemory:
                     "tags": d.get("tags", []),
                     "importance": d.get("importance", 5),
                     "type": d.get("type", "fact"),
+                    "topic": d.get("topic", (d.get("tags", ["General"])[0] if d.get("tags") else "General")),
+                    "metadata": d.get("metadata", {}),
                     "created_at": d.get("created_at", "")
                 }
                 for d in self.documents

@@ -183,6 +183,24 @@ def add_reminder(text: str, due: Union[datetime, str]) -> int:
     """
     if isinstance(due, datetime):
         due = due.isoformat(timespec="seconds")
+    elif isinstance(due, str):
+        # Validate or parse natural language due strings
+        parsed = False
+        try:
+            datetime.fromisoformat(due)
+            parsed = True
+        except (ValueError, TypeError):
+            parsed = False
+        if not parsed:
+            dt, _ = parse_when(due)
+            if not dt:
+                dt, _ = parse_when(f"at {due}")
+            if not dt:
+                dt, _ = parse_when(f"in {due}")
+            if dt:
+                due = dt.isoformat(timespec="seconds")
+            else:
+                due = (datetime.now() + timedelta(hours=1)).isoformat(timespec="seconds")
     with _lock:
         rems = _load_reminders()
         nid = (max((r["id"] for r in rems), default=0)) + 1

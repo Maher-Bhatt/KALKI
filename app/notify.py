@@ -1,4 +1,5 @@
 import os
+import sys
 
 def notify_desktop(title: str, message: str):
     """
@@ -7,12 +8,18 @@ def notify_desktop(title: str, message: str):
     """
     try:
         from plyer import notification
-        icon_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "assets", "kalki_icon.ico"))
+        candidates = [
+            os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "assets", "kalki_icon.ico")),
+            os.path.abspath(os.path.join(os.path.dirname(__file__), "assets", "kalki_icon.ico")),
+            os.path.abspath(os.path.join(os.path.dirname(sys.executable), "assets", "kalki_icon.ico")),
+            os.path.abspath(os.path.join(os.path.dirname(sys.executable), "..", "assets", "kalki_icon.ico")),
+        ]
+        icon_path = next((p for p in candidates if os.path.exists(p)), None)
         notification.notify(
             title=title,
             message=message,
             app_name="KALKI",
-            app_icon=icon_path if os.path.exists(icon_path) else None,
+            app_icon=icon_path,
             timeout=5
         )
     except Exception:

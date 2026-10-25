@@ -5,7 +5,7 @@
  *  shows Set / Not set and writes a replacement value, never round-tripping a
  *  masked string back into /api/settings/save. */
 
-import { h, mount } from '../lib/dom.js';
+import { h, mount, frag } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { settings as api, voice, backup, system, vault } from '../api/endpoints.js';
 import { store, set, applyUi } from '../state/store.js';
@@ -14,9 +14,10 @@ import { openDialog, confirmDialog, promptDialog } from '../components/dialog.js
 import { ok, err } from '../state/toasts.js';
 import { openDiagnostics } from './diagnostics.js';
 import { shortcuts, label as keyLabel } from '../lib/keys.js';
+import { getPetState, openPetSettings, triggerPetReaction } from './pet.js';
 
 const SECTIONS = [
-  ['general', 'Profile'], ['appearance', 'Appearance'], ['voice', 'Voice'], ['models', 'Models'],
+  ['general', 'Profile'], ['pet', 'Companion Pet'], ['appearance', 'Appearance'], ['voice', 'Voice'], ['models', 'Models'],
   ['memory', 'Memory'], ['integrations', 'Integrations'], ['privacy', 'Privacy'], ['security', 'Security'],
   ['performance', 'Performance'], ['shortcuts', 'Shortcuts'], ['backup', 'Backup'], ['advanced', 'Advanced'], ['about', 'About'],
 ];
@@ -27,11 +28,35 @@ const SECRET_KEYS = [
   ['GITHUB_TOKEN', 'GitHub'], ['SHODAN_API_KEY', 'Shodan'], ['EMAIL_APP_PASSWORD', 'Email app password'],
 ];
 
+const TTS_VOICE_PRESETS = [
+  { id: 'en-US-AndrewMultilingualNeural', name: 'Andrew (Multilingual - Expressive & Natural)' },
+  { id: 'en-US-AndrewNeural', name: 'Andrew (US - Confident)' },
+  { id: 'en-GB-RyanNeural', name: 'Ryan (UK - Crisp)' },
+  { id: 'en-US-BrianNeural', name: 'Brian (US - Deep & Clear)' },
+  { id: 'en-US-GuyNeural', name: 'Guy (US - Authoritative)' },
+  { id: 'en-US-TonyNeural', name: 'Tony (US - Casual & Friendly)' },
+  { id: 'en-US-ChristopherNeural', name: 'Christopher (US - Conversational)' },
+  { id: 'en-US-EricNeural', name: 'Eric (US - Smooth)' },
+  { id: 'en-US-SteffanNeural', name: 'Steffan (US - Clear)' },
+  { id: 'en-GB-ThomasNeural', name: 'Thomas (UK - Formal)' },
+  { id: 'en-IN-PrabhatNeural', name: 'Prabhat (India - Natural)' },
+  { id: 'en-US-JennyNeural', name: 'Jenny (US - Warm Female)' },
+  { id: 'en-US-AriaNeural', name: 'Aria (US - Vibrant Female)' },
+];
+
 let active = 'general';
 let renderFn = () => {};
 
 export function openSettingsSection(name) {
   if (name && SECTIONS.some(([id]) => id === name)) active = name;
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('kalki:online', () => {
+    if (store.settings.error || !store.settings.values) {
+      loadSettings();
+    }
+  });
 }
 
 export async function loadSettings() {
@@ -100,9 +125,11 @@ function textRow(label, desc, key, placeholder) {
 
 function secretRow([key, label]) {
   const statusText = store.settings.secretStatus?.[key];
-  const isSet = typeof statusText === 'string'
-    ? /set|configured|present|ok/i.test(statusText)
-    : Boolean(store.settings.values[key]);
+  const isSet = typeof statusText === 'boolean'
+    ? statusText
+    : typeof statusText === 'string'
+      ? /set|configured|present|ok|true/i.test(statusText)
+      : Boolean(store.settings.values?.[key]);
 
   return h('div.li', null,
     h('span', { style: { flex: '1' } }, label),
@@ -110,9 +137,13 @@ function secretRow([key, label]) {
     h('button.btn', {
       type: 'button',
       onClick: async () => {
-        const v = await promptDialog({ title: `${label} key`, label: 'Paste the key. It is stored encrypted and never displayed again.', confirmLabel: 'Save key' });
+        const v = await promptDialog({ title: `${label} key`, label: 'Paste the key. It is stored encrypted in the secure vault and never displayed in plain text.', confirmLabel: 'Save key' });
         if (!v) return;
-        if (await save({ [key]: v }, `${label} key saved`)) loadSettings();
+        if (await save({ [key]: v }, `${label} key saved`)) {
+          if (!store.settings.secretStatus) store.settings.secretStatus = {};
+          store.settings.secretStatus[key] = true;
+          loadSettings();
+        }
       },
     }, isSet ? 'Replace' : 'Add key')
   );
@@ -131,6 +162,31 @@ const SECTION_BODY = {
       textRow('Country', null, 'OWNER_COUNTRY', 'Country')
     )
   ],
+
+  pet: () => {
+    const petState = getPetState();
+    return [
+      h('div.card.col.g12', null,
+        h('h2', null, 'AI Companion Mascot'),
+        h('div.sub', null, 'Interactive desk mascot that lives in your workspace, reacts to conversations, music, and typing.'),
+        row('Companion status', petState.enabled ? `Active: ${petState.name} (Lvl ${petState.level})` : 'Disabled',
+          h('button.btn.pri', {
+            type: 'button',
+            onClick: () => openPetSettings(),
+          }, 'Customize Pet')
+        ),
+        row('Species', `${petState.species.toUpperCase()} (${petState.name})`,
+          h('button.btn', {
+            type: 'button',
+            onClick: () => {
+              triggerPetReaction('happy', 3000, 'Hello from Settings! ✨');
+              ok(`Interacted with ${petState.name}`);
+            }
+          }, 'Interact')
+        )
+      )
+    ];
+  },
 
   appearance: () => [
     h('div.card.col.g12', null,
@@ -171,9 +227,31 @@ const SECTION_BODY = {
           }, 'Test voice')
         )
       ),
-      textRow('Voice', 'An edge-tts voice name, e.g. en-GB-RyanNeural.', 'TTS_VOICE', 'en-GB-RyanNeural'),
-      textRow('Rate', 'Relative speed, e.g. +0% or -10%.', 'TTS_RATE', '+0%'),
-      textRow('Pitch', 'e.g. +0Hz.', 'TTS_PITCH', '+0Hz')
+      row('Voice identity', 'Neural voice model for assistant speech (Andrew, Ryan, Brian, Guy, Tony, etc.).',
+        h('select.select', {
+          style: { maxWidth: '24rem', width: '100%' }, 'aria-label': 'Voice identity',
+          onChange: (e) => save({ TTS_VOICE: e.target.value }),
+        }, ...(() => {
+          const cur = store.settings.values.TTS_VOICE || 'en-US-AndrewMultilingualNeural';
+          const hasCur = TTS_VOICE_PRESETS.some((v) => v.id === cur);
+          const list = hasCur ? TTS_VOICE_PRESETS : [{ id: cur, name: `Custom (${cur})` }, ...TTS_VOICE_PRESETS];
+          return list.map((v) => h('option', { value: v.id, selected: cur === v.id }, v.name));
+        })())
+      ),
+      row('Rate', 'Relative speed, e.g. +0% or -10%.',
+        h('input.input', {
+          style: { maxWidth: '8rem' }, 'aria-label': 'Rate', placeholder: '+0%',
+          value: store.settings.values.TTS_RATE || '+0%',
+          onChange: (e) => save({ TTS_RATE: e.target.value }),
+        })
+      ),
+      row('Pitch', 'Relative pitch, e.g. +0Hz.',
+        h('input.input', {
+          style: { maxWidth: '8rem' }, 'aria-label': 'Pitch', placeholder: '+0Hz',
+          value: store.settings.values.TTS_PITCH || '+0Hz',
+          onChange: (e) => save({ TTS_PITCH: e.target.value }),
+        })
+      )
     ),
     h('div.card.col.g12', null,
       h('h2', null, 'Microphone'),
@@ -311,10 +389,15 @@ const SECTION_BODY = {
     h('div.card.col.g12', null,
       h('h2', null, 'System load'),
       h('div.sm.t2', null, 'KALKI runs in a conservative WebView2 configuration with GPU compositing disabled, so heavy visual effects are off by default. These are safe to leave alone.'),
-      row('Enhanced visuals', 'Adds translucency to two surfaces. Can cost frames on this renderer.',
-        h('i.tg' + (document.documentElement.dataset.enhanced === 'on' ? '.on' : ''), {
+      row('Enhanced visuals', 'Translucent glassmorphism with backdrop blur across surface panels.',
+        h('i.tg' + (store.ui.enhancedVisuals ? '.on' : ''), {
           style: { cursor: 'pointer' },
-          onClick: () => { document.documentElement.dataset.enhanced = document.documentElement.dataset.enhanced === 'on' ? 'off' : 'on'; },
+          onClick: () => {
+            store.ui.enhancedVisuals = !store.ui.enhancedVisuals;
+            applyUi();
+            renderFn();
+            ok(store.ui.enhancedVisuals ? 'Enhanced visuals enabled' : 'Enhanced visuals disabled');
+          },
         })),
       toggleRow('CPU alerts', 'Speak a warning when this machine is under sustained load.', 'CPU_ALERTS_ENABLED'),
       row('Cached data', store.settings.meta.cacheSize ? `${store.settings.meta.cacheSize} in the local data folder.` : 'Local data folder.',
@@ -407,14 +490,59 @@ const SECTION_BODY = {
 
 async function showMetrics() {
   const r = await system.metrics();
-  openDialog({
-    title: 'Model usage',
-    description: 'Recorded locally. Nothing is sent anywhere.',
-    width: '32rem',
-    body: r.ok && r.data.metrics && Object.keys(r.data.metrics).length
-      ? h('pre', null, JSON.stringify(r.data.metrics, null, 2))
-      : h('p.mut.sm', null, 'No usage recorded yet. Metrics appear after your first few replies.'),
-    actions: [],
+  const m = (r && r.ok && r.data && r.data.metrics) ? r.data.metrics : {};
+  const totalCalls = m.total_calls || 0;
+  const promptTokens = m.total_prompt_tokens || 0;
+  const compTokens = m.total_completion_tokens || 0;
+  const totalTokens = promptTokens + compTokens;
+  const costUsd = typeof m.total_cost_usd === 'number' ? m.total_cost_usd.toFixed(4) : '0.0000';
+  const avgLatency = typeof m.avg_latency_ms === 'number' ? Math.round(m.avg_latency_ms) : 0;
+
+  const modelEntries = Object.entries(m).filter(([k, v]) =>
+    !['total_calls', 'total_prompt_tokens', 'total_completion_tokens', 'total_cost_usd', 'avg_latency_ms', 'daily'].includes(k) &&
+    typeof v === 'object' && v !== null
+  );
+
+  const statCard = (title, val, subtitle) => h('div.card.col.g4', { style: { flex: '1 1 120px', padding: '12px', background: 'var(--raised)' } },
+    h('div.xs.mut', null, title),
+    h('div.h2', { style: { fontSize: '18px', fontWeight: '700', color: 'var(--text)' } }, String(val)),
+    subtitle ? h('div.xs.faint', null, subtitle) : null
+  );
+
+  let dlgClose = null;
+  const body = h('div.col.g16', null,
+    h('div.row.g12', { style: { flexWrap: 'wrap' } },
+      statCard('Total Calls', totalCalls.toLocaleString(), `${avgLatency}ms avg latency`),
+      statCard('Total Tokens', totalTokens.toLocaleString(), `${promptTokens.toLocaleString()} in / ${compTokens.toLocaleString()} out`),
+      statCard('Est. Cost', `$${costUsd}`, 'Local usage tracking')
+    ),
+    h('div.card.col.g8', null,
+      h('div.row.sb', null,
+        h('strong', { style: { fontSize: '13px' } }, 'Activity by Model'),
+        h('span.xs.mut', null, `${modelEntries.length} models tracked`)
+      ),
+      modelEntries.length === 0
+        ? h('div.sm.mut', { style: { padding: '8px 0' } }, 'Telemetry logs start recording automatically as you converse with AI models.')
+        : h('div.col.g6', null,
+            ...modelEntries.map(([modName, stats]) => h('div.li', { style: { padding: '6px 8px', borderRadius: '6px', background: 'var(--inset)' } },
+              h('div.col', { style: { flex: 1, minWidth: 0 } },
+                h('strong.sm', { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, modName),
+                h('span.xs.mut', null, `${((stats.prompt_tokens || 0) + (stats.completion_tokens || 0)).toLocaleString()} tokens • ${Math.round(stats.avg_latency_ms || 0)}ms`)
+              ),
+              h('span.chip.ok', null, `${stats.calls || 0} calls`)
+            ))
+          )
+    )
+  );
+
+  const dlg = openDialog({
+    title: 'Model Usage & Performance',
+    description: 'Recorded locally on this machine. Never shared or uploaded.',
+    width: '34rem',
+    body,
+    actions: [
+      h('button.btn.pri', { type: 'button', onClick: () => dlg.close() }, 'Done')
+    ]
   });
 }
 
@@ -480,7 +608,7 @@ export function settingsView() {
       )
     ));
 
-    mount(aside, h('div.pad', null,
+    mount(aside, frag(
       h('h1', { style: { fontSize: '16px' } }, 'Vault'), 
       h('div.card.col.g8', null, 
         h('div.sm.t2', null, 'Credentials live in a hardware-bound vault. Entries are write-only here.'), 
@@ -489,9 +617,14 @@ export function settingsView() {
       h('div.card.col.g8', null, 
         h('h2', null, 'Backup'), 
         h('div.sm.t2', null, 'Memory, tasks and notes to a single archive.'), 
-        h('div.row.g8', null, 
-          h('button.btn', { onClick: async () => { const r = await backup.create(); r.ok ? ok(r.data.path ? `Backup written to ${r.data.path}` : 'Backup created') : err(r.message, r.detail); } }, 'Create backup'), 
-          h('button.btn.gh', { onClick: async () => {
+        h('div.row.g8', { style: { flexWrap: 'wrap' } }, 
+          h('button.btn', {
+            style: { whiteSpace: 'nowrap', flex: '1 1 auto', justifyContent: 'center' },
+            onClick: async () => { const r = await backup.create(); r.ok ? ok(r.data.path ? `Backup written to ${r.data.path}` : 'Backup created') : err(r.message, r.detail); }
+          }, 'Create backup'), 
+          h('button.btn.gh', {
+            style: { whiteSpace: 'nowrap', flex: '0 0 auto', justifyContent: 'center' },
+            onClick: async () => {
             const path = await promptDialog({ title: 'Restore a backup', label: 'Full path to the backup archive', confirmLabel: 'Restore' });
             if (!path) return;
             if (!(await confirmDialog({ title: 'Replace local data?', description: 'Current memory, tasks and settings will be overwritten.', confirmLabel: 'Restore' }))) return;
