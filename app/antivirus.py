@@ -676,6 +676,6 @@ def get_antivirus_status() -> Dict[str, Any]:
         "quarantined_count": len(quarantined),
         "quarantined_items": quarantined,
         "last_scan": last_scan,
-        "engine_version": "1.4.0-ShieldCore",
+        "engine_version": "1.5.0-ShieldCore",
         "system_protected": bool(shields.get("realtime_shield", True) and (defender.get("antivirus_enabled", True) if defender.get("available") else True)),
     }

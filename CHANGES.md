@@ -1,11 +1,37 @@
 # KALKI Change History
 
-## 1.4.2 Desktop Companion Pet Always-On-Screen, Real System Control, Marketing Suite & Repository Overhaul
-
-- **Interactive Marketing Web Showcase & Repository Overhaul (marketing/index.html, showcase.html, README.md):
-  - Built standalone, zero-dependency cyber-glassmorphism web showcase (marketing/index.html) featuring an ambient particle canvas, Web Audio API sound synthesizer, interactive companion pet playground with 6 selectable cyber species (Gobi, Kittu, Byte, Draco, Nova, Kitsu), interactive ShieldCore radar scanner simulator, dynamic smart model router tester, and multi-platform binary download center.
-  - Added root showcase.html with instant redirection for seamless offline double-click launching.
-  - Completely redesigned README.md with glowing shields, quick download matrix with verified SHA-256 integrity hashes, system architecture mermaid diagrams, cyber tools reference, and campaign artwork.
+## 1.5.0 Sovereign Native Desktop Architecture, Embedded Terminal, 3D Mascots & Live Process Defense
+
+- **100% Native Desktop Operating Architecture (`app/main_app.py`, `app/server.py`, `app/ui/api/endpoints.js`, `app/ui/features/shell.js`):**
+  - Upgraded PyWebView `WebApi` with comprehensive native OS IPC bridge: `exec_command` (real PowerShell execution), `read_file`, `write_file`, `list_directory`, `open_folder_dialog`, `open_file_dialog`, `reveal_in_explorer`, `get_system_telemetry`, `get_process_list`, `kill_process`, `toggle_pin`, `toggle_pet`, `minimize`, `toggle_maximize`, `close`.
+  - Added native desktop window titlebar with draggable region (`.pywebview-drag-region`), green core indicator (`🟢 DESKTOP OS CORE`), Always-On-Top toggle, pet toggle, and window action buttons.
+  - Prevented external browser launching in `server.py` `open_browser_to_ui()`: strictly unminimizes and foregrounds the native PyWebView window via Win32.
+- **Embedded System Terminal (`app/ui/features/workbench.js`, `app/server.py`):**
+  - Integrated interactive PowerShell console inside the Workbench tab with preset diagnostic pills, command history, execution timers, and exit code reporting.
+- **Workspace File Explorer & In-Place Code Editor (`app/ui/features/workbench.js`):**
+  - Added directory tree explorer with native folder picker, file viewer, and in-place code editor with direct "Save to Disk" capability.
+- **ShieldCore Live Process Defense (`app/ui/features/security.js`):**
+  - Added real-time CPU and RAM telemetry meters, active process table with PID, CPU %, memory MB, and 1-click process termination.
+- **Next-Gen 3D Companion Mascot Engine (`marketing/assets/mascot3d.js`, `app/ui/pet_overlay.html`, `marketing/pets.html`, `marketing/index.html`):**
+  - Built pure canvas 3D Isometric Perspective Projection & Volumetric Lighting Engine running at 60 FPS.
+  - Implemented dynamic Lambertian shading, depth sorting, real-time mouse cursor look-at tracking, audio beat synchronization, and holographic ground platform.
+  - Authored distinct 3D polyhedral models for all 6 companion species: Gobi, Kittu, Byte, Draco, Nova, Kitsu.
+  - Replaced flat 2D SVGs in the standalone floating desktop overlay (`KALKI_Pet.exe`) with the interactive 3D canvas mascot.
+- **Multi-Platform Release Packaging for v1.5.0:**
+  - Built `Output/windows/KALKI_Setup_v1.5.0.exe`, `Output/linux/KALKI_Ubuntu_Installer_v1.5.0.sh`, `Output/linux/KALKI_v1.5.0_Linux.tar.gz`, `Output/macos/KALKI_v1.5.0_macOS.tar.gz`.
+
+## 1.4.2 Desktop Companion Pet Always-On-Screen, Real System Control, Marketing Suite & Repository Overhaul
+
+
+
+- **Interactive Marketing Web Showcase & Repository Overhaul (marketing/index.html, showcase.html, README.md):
+
+  - Built standalone, zero-dependency cyber-glassmorphism web showcase (marketing/index.html) featuring an ambient particle canvas, Web Audio API sound synthesizer, interactive companion pet playground with 6 selectable cyber species (Gobi, Kittu, Byte, Draco, Nova, Kitsu), interactive ShieldCore radar scanner simulator, dynamic smart model router tester, and multi-platform binary download center.
+
+  - Added root showcase.html with instant redirection for seamless offline double-click launching.
+
+  - Completely redesigned README.md with glowing shields, quick download matrix with verified SHA-256 integrity hashes, system architecture mermaid diagrams, cyber tools reference, and campaign artwork.
+
 - **Desktop Companion Pet Always-On-Screen & Instant App Launch (`app/desktop_pet.py`, `app/ui/pet_overlay.html`):**
   - Resolved PyWebView startup crash by removing invalid 8-character hex color (`#00000000`) and configuring native transparency.
   - Eliminated Windows WebView2 resource lock collision (`0x800700AA: The requested resource is in use`) by creating an isolated `pet_webview_profile` environment.

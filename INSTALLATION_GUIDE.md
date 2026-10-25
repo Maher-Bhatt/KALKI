@@ -1,6 +1,6 @@
 # KALKI AI Assistant — Installation & Deployment Guide
 
-Welcome to the official installation and system setup guide for **KALKI AI Assistant v1.4.0**. This document details all hardware prerequisites, required software runtimes, step-by-step setup methods for end-users and developers, configuration options, cybersecurity verification procedures, dynamic auto-model routing, and the standalone always-on-top desktop companion pet.
+Welcome to the official installation and system setup guide for **KALKI AI Assistant v1.5.0**. This document details all hardware prerequisites, required software runtimes, step-by-step setup methods for end-users and developers, configuration options, cybersecurity verification procedures, dynamic auto-model routing, and the standalone always-on-top desktop companion pet.
 
 > 🌐 **Interactive Web Showcase**: You can explore the full interactive marketing experience, live companion pet simulator, and audio synthesizer live at [KALKI — Sovereign AI Desktop Assistant & Endpoint Defense](https://kalki-marketing.vercel.app/) or offline in [marketing/index.html](marketing/index.html).
 
@@ -30,7 +30,7 @@ Welcome to the official installation and system setup guide for **KALKI AI Assis
 | **Operating System** | **Windows 10 / Windows 11 (64-bit)** |
 | **Tested Builds** | Windows 11 Build 22631+, Windows 10 22H2 Build 19045+ |
 | **Desktop Architecture** | x86_64 / AMD64 |
-| **Release Status** | **Production Ready & Fully Validated for v1.4.0** |
+| **Release Status** | **Production Ready & Fully Validated for v1.5.0** |
 | **Shell Environment** | Microsoft Edge WebView2 (Evergreen Chromium Runtime with GPU Rasterization) |
 | **Native Integrations** | Windows Defender (`MpCmdRun.exe`), PowerShell 5.1+, WinRT Media Controls, Win32 Foreground APIs |
 
@@ -77,24 +77,24 @@ KALKI provides production-ready native releases for **Windows**, **Linux**, and 
 
 | Platform | Format / File | Size | Integrity Hash (SHA-256) | Description |
 |---|---|---|---|---|
-| **Windows** | [`Output/windows/KALKI_Setup_v1.4.0.exe`](Output/windows/KALKI_Setup_v1.4.0.exe) | 271.48 MB | `a0a0dd3e2cf70dca887d6b761a3f6272b0418fcb14360dfece761952e052ccd5` | 1-Click Inno Setup Executable Installer |
-| **Windows** | [`Output/windows/KALKI_v1.4.0.msix`](Output/windows/KALKI_v1.4.0.msix) | 362.28 MB | `1c7d0d0c3eb1bc40280eb4f6c4ff989fc1da9772bf2d5ef76903d7c30e5272a3` | Microsoft Store / Enterprise MSIX Package |
-| **Linux** | [`Output/linux/KALKI_Ubuntu_Installer_v1.4.0.sh`](Output/linux/KALKI_Ubuntu_Installer_v1.4.0.sh) | 11.04 MB | `d933d00b9f1621f9a862db99e52e7500f0e88c73d11eed3386cf44101f3a6116` | Self-extracting automated Linux shell installer |
-| **Linux** | [`Output/linux/KALKI_v1.4.0_Linux.tar.gz`](Output/linux/KALKI_v1.4.0_Linux.tar.gz) | 8.17 MB | `0cc8dc57bbca7902baf894621d42cc8ab389c8c915e63c95639786f04d47e85e` | Portable distribution tarball with `install.sh` |
-| **macOS** | [`Output/macos/KALKI_v1.4.0_macOS.tar.gz`](Output/macos/KALKI_v1.4.0_macOS.tar.gz) | 8.17 MB | `8b5fa1a00a12cf6f74a001a1dbfa003e8c4ca9f04ae05d76166ba11cfafca1a3` | Complete macOS bundle for Apple Silicon & Intel |
+| **Windows** | [`Output/windows/KALKI_Setup_v1.5.0.exe`](Output/windows/KALKI_Setup_v1.5.0.exe) | 276.26 MB | `4d2522eb714db26ab0d180d74ac751df64ac82a01215a669f35084c434a3ddd6` | 1-Click Inno Setup Executable Installer |
+| **Windows** | [`Output/windows/KALKI_v1.5.0.msix`](Output/windows/KALKI_v1.5.0.msix) | 362.28 MB | `1c7d0d0c3eb1bc40280eb4f6c4ff989fc1da9772bf2d5ef76903d7c30e5272a3` | Microsoft Store / Enterprise MSIX Package |
+| **Linux** | [`Output/linux/KALKI_Ubuntu_Installer_v1.5.0.sh`](Output/linux/KALKI_Ubuntu_Installer_v1.5.0.sh) | 11.07 MB | `8dfd09e807a35e62f0139b5f1bea94213e17c21921973700e539955387d1cc93` | Self-extracting automated Linux shell installer |
+| **Linux** | [`Output/linux/KALKI_v1.5.0_Linux.tar.gz`](Output/linux/KALKI_v1.5.0_Linux.tar.gz) | 8.19 MB | `ef997051c2ceb50ac16c7891b9635780b61b86b856e74dcb37ad979882db1bac` | Portable distribution tarball with `install.sh` |
+| **macOS** | [`Output/macos/KALKI_v1.5.0_macOS.tar.gz`](Output/macos/KALKI_v1.5.0_macOS.tar.gz) | 8.20 MB | `0426b34fb87be633347cc54b7d6759f37223e3aa645b0701334622379f95d51f` | Complete macOS bundle for Apple Silicon & Intel |
 | **macOS** | [`Output/macos/install_mac.sh`](Output/macos/install_mac.sh) | 4.6 KB | — | Automated macOS setup & `.app` generator |
 
 ---
 
 ### 4.1 Windows Installation (Method A)
 
-1. Navigate to `Output/windows/` and double-click `KALKI_Setup_v1.4.0.exe`.
+1. Navigate to `Output/windows/` and double-click `KALKI_Setup_v1.5.0.exe`.
 2. Follow the setup wizard to install to `%LOCALAPPDATA%\Programs\KALKI`.
 3. Optionally select **Create a desktop shortcut** and **Start KALKI on system startup**.
 4. Click **Install** and launch KALKI from your Desktop or Start Menu.
 5. Alternatively, for corporate or Windows 11 enterprise deployment, install the MSIX package:
    ```powershell
-   Add-AppxPackage -Path Output\windows\KALKI_v1.4.0.msix
+   Add-AppxPackage -Path Output\windows\KALKI_v1.5.0.msix
    ```
 
 ---
@@ -103,13 +103,13 @@ KALKI provides production-ready native releases for **Windows**, **Linux**, and 
 
 1. Open your terminal in the KALKI repository and run the self-extracting installer:
    ```bash
-   chmod +x Output/linux/KALKI_Ubuntu_Installer_v1.4.0.sh
-   ./Output/linux/KALKI_Ubuntu_Installer_v1.4.0.sh
+   chmod +x Output/linux/KALKI_Ubuntu_Installer_v1.5.0.sh
+   ./Output/linux/KALKI_Ubuntu_Installer_v1.5.0.sh
    ```
 2. Or extract the release tarball:
    ```bash
-   tar -xzf Output/linux/KALKI_v1.4.0_Linux.tar.gz
-   cd KALKI-v1.4.0-linux
+   tar -xzf Output/linux/KALKI_v1.5.0_Linux.tar.gz
+   cd KALKI-v1.5.0-linux
    chmod +x install.sh
    ./install.sh
    ```
@@ -124,8 +124,8 @@ KALKI provides production-ready native releases for **Windows**, **Linux**, and 
 
 1. Open Terminal and navigate to the macOS output folder:
    ```bash
-   tar -xzf Output/macos/KALKI_v1.4.0_macOS.tar.gz
-   cd KALKI-v1.4.0-macOS
+   tar -xzf Output/macos/KALKI_v1.5.0_macOS.tar.gz
+   cd KALKI-v1.5.0-macOS
    chmod +x install.sh
    ./install.sh
    ```
@@ -313,4 +313,4 @@ KALKI automatically detects informational queries (e.g. `"search everything abou
 
 ---
 
-*KALKI AI Assistant v1.4.0 • Built with precision, performance, and user privacy.*
+*KALKI AI Assistant v1.5.0 • Built with precision, performance, and user privacy.*
