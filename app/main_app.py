@@ -785,27 +785,31 @@ if __name__ == '__main__':
     if server_ready is not None:
         server_ready.wait(timeout=18.0)
 
-    # Launch Standalone Desktop Floating Companion Pet
-    if getattr(config, "ENABLE_DESKTOP_PET", True):
-        def _launch_desktop_pet():
-            time.sleep(1.5)
-            try:
-                env = os.environ.copy()
-                pet_profile = os.path.join(_runtime.user_data_dir, "pet_webview_profile")
-                os.makedirs(pet_profile, exist_ok=True)
-                env["WEBVIEW2_USER_DATA_FOLDER"] = pet_profile
-                if getattr(sys, "frozen", False):
-                    pet_exe = os.path.join(BASE_DIR, "services", "pet", "KALKI_Pet.exe")
-                    if os.path.exists(pet_exe):
-                        subprocess.Popen([pet_exe], cwd=BASE_DIR, env=env)
-                    elif os.path.exists(os.path.join(BASE_DIR, "KALKI_Pet.exe")):
-                        subprocess.Popen([os.path.join(BASE_DIR, "KALKI_Pet.exe")], cwd=BASE_DIR, env=env)
-                else:
-                    pet_script = os.path.join(BASE_DIR, "desktop_pet.py")
-                    if os.path.exists(pet_script):
-                        subprocess.Popen([sys.executable, pet_script], cwd=BASE_DIR, env=env)
-            except Exception as _e:
-                print(f"[MainApp] Desktop pet startup notice: {_e}")
+    def _launch_desktop_pet():
+        time.sleep(1.0)
+        try:
+            env = os.environ.copy()
+            pet_profile = os.path.join(_runtime.user_data_dir, "pet_webview_profile")
+            os.makedirs(pet_profile, exist_ok=True)
+            env["WEBVIEW2_USER_DATA_FOLDER"] = pet_profile
+            if getattr(sys, "frozen", False):
+                pet_exe = os.path.join(BASE_DIR, "services", "pet", "KALKI_Pet.exe")
+                if os.path.exists(pet_exe):
+                    return subprocess.Popen([pet_exe], cwd=BASE_DIR, env=env)
+                elif os.path.exists(os.path.join(BASE_DIR, "KALKI_Pet.exe")):
+                    return subprocess.Popen([os.path.join(BASE_DIR, "KALKI_Pet.exe")], cwd=BASE_DIR, env=env)
+            else:
+                pet_script = os.path.join(BASE_DIR, "desktop_pet.py")
+                if os.path.exists(pet_script):
+                    return subprocess.Popen([sys.executable, pet_script], cwd=BASE_DIR, env=env)
+        except Exception as _e:
+            print(f"[MainApp] Desktop pet startup notice: {_e}")
+        return None
+
+    # Standalone Desktop Floating Companion Pet
+    # Disabled by default so KALKI runs as a single clean taskbar application.
+    # Can be toggled on or off from Settings -> Companion Pet at any time.
+    if getattr(config, "ENABLE_DESKTOP_PET", False):
         import threading
         threading.Thread(target=_launch_desktop_pet, name="kalki-desktop-pet", daemon=True).start()
 
@@ -850,11 +854,33 @@ if __name__ == '__main__':
                 return {"ok": False, "error": str(e)}
             return {"ok": False}
 
-        def toggle_pet(self):
-            """Toggle or spawn the floating companion pet."""
+        def toggle_pet(self, enable=None):
+            """Toggle or set the floating companion pet overlay state."""
             try:
-                _launch_desktop_pet()
-                return {"ok": True}
+                import psutil
+                pet_procs = []
+                for p in psutil.process_iter(['name', 'cmdline']):
+                    try:
+                        cmd = ' '.join(p.info.get('cmdline') or [])
+                        if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
+                            pet_procs.append(p)
+                    except Exception:
+                        pass
+
+                is_running = len(pet_procs) > 0
+                target_state = not is_running if enable is None else bool(enable)
+
+                if not target_state:
+                    for p in pet_procs:
+                        try:
+                            p.kill()
+                        except Exception:
+                            pass
+                    return {"ok": True, "running": False}
+                else:
+                    if not is_running:
+                        _launch_desktop_pet()
+                    return {"ok": True, "running": True}
             except Exception as e:
                 return {"ok": False, "error": str(e)}
 
@@ -1065,15 +1091,12 @@ if __name__ == '__main__':
     # full dashboard interaction model.
 
     if sys.platform == "win32":
-
-        extra_args = "--enable-gpu-rasterization --enable-zero-copy"
-
+        # Keep WebView2 arguments clean and stable to prevent GPU process crashes / black screens
         existing_args = os.environ.get("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "").strip()
-
-        if "--disable-gpu" in existing_args:
-            existing_args = existing_args.replace("--disable-gpu", "").strip()
-
-        os.environ["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = (existing_args + " " + extra_args).strip()
+        for bad_flag in ["--enable-gpu-rasterization", "--enable-zero-copy", "--disable-gpu"]:
+            if bad_flag in existing_args:
+                existing_args = existing_args.replace(bad_flag, "").strip()
+        os.environ["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = existing_args
 
     import webview
 
