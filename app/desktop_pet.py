@@ -104,6 +104,14 @@ class PetApi:
             print(f"[DesktopPet] Failed opening main app: {e}")
         return False
 
+    def get_music_state(self):
+        """Polls active Windows Media Control session directly in native Python."""
+        try:
+            import media_mod
+            return media_mod.now_playing_json()
+        except Exception:
+            return {"status": "stopped", "title": ""}
+
     def get_pet_state(self):
         """Loads pet state from user data or defaults."""
         try:
@@ -113,7 +121,7 @@ class PetApi:
                     return json.load(f)
         except Exception:
             pass
-        return {"species": "cat", "name": "Kittu", "color": "#ffb833", "sound": True, "enabled": True}
+        return {"species": "gobi", "name": "Gobi", "sound": True, "enabled": True}
 
     def save_pet_state(self, state_dict):
         """Saves pet state to user data directory."""
@@ -141,14 +149,14 @@ def main():
     pos_y = max(20, SCREEN_HEIGHT - pet_h - 60) # Leave room for Windows taskbar
 
     port = getattr(config, "PORT", 8888)
-    pet_url = f"http://127.0.0.1:{port}/pet_overlay"
 
-    # Fallback to local file if server not running yet
+    # Load local HTML directly as native desktop software
     local_html = os.path.join(BASE_DIR, "ui", "pet_overlay.html")
+    load_url = local_html if os.path.exists(local_html) else f"http://127.0.0.1:{port}/pet_overlay"
 
     window = webview.create_window(
         title="KALKI Desktop Companion",
-        url=pet_url if os.path.exists(local_html) else local_html,
+        url=load_url,
         width=pet_w,
         height=pet_h,
         x=pos_x,
