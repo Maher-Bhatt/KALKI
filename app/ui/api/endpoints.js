@@ -47,7 +47,7 @@ export const memory = {
     return r.ok ? { ok: true, items: r.data.memories || [] } : r;
   },
   add: ({ text, tags = [], importance = 5, type = 'fact' }) => post('/api/memory/add', { text, tags, importance, type }),
-  update: ({ id, text, importance, type }) => post('/api/memory/update', { id, text, importance, type }),
+  update: ({ id, text, tags, importance, type }) => post('/api/memory/update', { id, text, tags, importance, type }),
   remove: (id) => post('/api/memory/delete', { id }),
   async legacy() {
     const r = await get('/api/memories');
@@ -90,8 +90,10 @@ export const notes = {
 
 /* ── Calendar / mail / music / messaging ──────────────────────────── */
 export const calendar = {
+  status: () => get('/api/calendar/status'),
   today: () => post('/api/calendar/today', {}),
   upcoming: (n = 5) => post('/api/calendar/upcoming', { n }),
+  connect: () => post('/api/calendar/connect', {}),
 };
 
 export const mail = {
@@ -107,17 +109,28 @@ export const spotify = {
 };
 
 export const whatsapp = { send: (to, message) => post('/api/whatsapp/send', { to, message }) };
-export const media = { download: (url, audio = false) => post('/api/ytdl', { url, audio }) };
+export const media = {
+  download: (url, audio = false) => post('/api/ytdl', { url, audio }),
+  now: () => post('/api/media/now_json', {}),
+  play: () => post('/api/media/play', {}),
+  pause: () => post('/api/media/pause', {}),
+  next: () => post('/api/media/next', {}),
+  prev: () => post('/api/media/prev', {}),
+};
 
 /* ── Vision & documents ───────────────────────────────────────────── */
 export const vision = {
   image: (image, question = '') => post('/api/vision/image', { image, question }, { timeout: 90000 }),
   screen: (question = '') => post('/api/screen', { question }, { timeout: 90000 }),
-  parseDocument: (filename, data) => post('/api/parse_document', { filename, data }, { timeout: 60000 }),
+  capture: () => post('/api/screen/capture', {}, { timeout: 30000 }),
+  parseDocument: (filename, data) => post('/api/parse_document', { name: filename, filename, data }, { timeout: 60000 }),
 };
 
 /* ── Workflows & code ─────────────────────────────────────────────── */
-export const workflows = { run: (mode) => post('/api/workflow', { mode }, { timeout: 60000 }) };
+export const workflows = {
+  run: (mode) => post('/api/workflow', { mode }, { timeout: 60000 }),
+  saveCustom: (name, actions, aliases = []) => post('/api/workflow/custom', { name, actions, aliases }, { timeout: 60000 }),
+};
 
 export const code = {
   generate: (prompt, lang = 'python', run = false) => post('/api/code/generate', { prompt, lang, run }, { timeout: 120000 }),
@@ -175,11 +188,25 @@ export const oversight = {
 };
 
 export const activity = {
-  list: () => get('/api/activity/list'),
+  list: () => post('/api/activity/list', {}),
   undo: (id) => post('/api/activity/undo', { id })
 };
 
 export const approvals = {
-  list: () => get('/api/approvals/list'),
+  list: () => post('/api/approvals/list', {}),
   decide: (id, decision) => post('/api/approvals/decide', { id, decision })
 };
+
+/* ── Antivirus & Endpoint Shield ──────────────────────────────────────── */
+export const antivirus = {
+  status: () => get('/api/antivirus/status'),
+  scanFile: (path) => post('/api/antivirus/scan/file', { path }, { timeout: 60000 }),
+  scanQuick: () => post('/api/antivirus/scan/quick', {}, { timeout: 120000 }),
+  scanProcesses: () => post('/api/antivirus/scan/processes', {}, { timeout: 30000 }),
+  scanUrl: (url) => post('/api/antivirus/scan/url', { url }),
+  quarantine: (path, threat) => post('/api/antivirus/quarantine', { path, threat }),
+  resolveQuarantine: (id, action) => post('/api/antivirus/threats/resolve', { id, action }),
+  updateSettings: (updates) => post('/api/antivirus/settings', { updates }),
+  checkClipboard: (text) => post('/api/antivirus/clipboard', { text }),
+};
+

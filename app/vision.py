@@ -34,8 +34,14 @@ except ImportError:
     HAS_OCR = False
 
 VISION_MODELS = [
+    # Groq active vision models — ordered by preference (fastest → most capable)
+    "llama-3.2-11b-vision-preview",
+    "llama-3.2-90b-vision-preview",
+    # Experimental and preview models
     "meta-llama/llama-4-scout-17b-16e-instruct",
     "meta-llama/llama-4-maverick-17b-128e-instruct",
+    # Reliable fallback
+    "llava-v1.5-7b-4096-preview",
 ]
 
 SYSTEM_VISION = (

@@ -38,8 +38,8 @@ OWNER_COUNTRY = "YourCountry"
 # modes and notifications never switch to a different assistant identity.
 TTS_PROVIDER = "edge"
 TTS_GROQ_TIMEOUT_SEC = 3
-# Stable British-English neural voice used everywhere.
-TTS_VOICE  = "en-GB-RyanNeural"
+# Expressive neural voice used everywhere (en-US-AndrewMultilingualNeural or en-US-AndrewNeural fallback).
+TTS_VOICE  = "en-US-AndrewMultilingualNeural"
 TTS_RATE   = "+0%"                # +N% faster, -N% slower
 TTS_PITCH  = "+0Hz"               # +/-N Hz to shift pitch
 TTS_VOLUME = "+0%"
@@ -53,7 +53,8 @@ PORT    = 8888
 BROWSER = "chrome"
 
 # ── AI ──────────────────────────────────────────────────────
-GROQ_MODEL  = "llama-3.3-70b-versatile"   # smart default
+DEFAULT_MODEL = "auto"         # fast default
+GROQ_MODEL    = "llama-3.3-70b-versatile"  # fallback default
 OLLAMA_URL  = "http://localhost:11434"     # used only if Groq fails
 MAX_HISTORY = 20
 REQUIRE_DANGEROUS_CONFIRMATION = True
@@ -172,7 +173,7 @@ try:
     import json
     # 1. Load from plaintext user_config.json first
     if os.path.exists(_USER_CONFIG_PATH):
-        with open(_USER_CONFIG_PATH, "r", encoding="utf-8") as _f:
+        with open(_USER_CONFIG_PATH, "r", encoding="utf-8-sig") as _f:
             _user_conf = json.load(_f)
         for _k, _v in _user_conf.items():
             globals()[_k] = _v

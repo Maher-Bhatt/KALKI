@@ -6,7 +6,7 @@
 
 import { store, notify } from '../state/store.js';
 
-const ROUTES = ['ask', 'today', 'memory', 'workbench', 'oversight', 'security', 'settings'];
+const ROUTES = ['ask', 'today', 'memory', 'workbench', 'oversight', 'security', 'settings', 'pres'];
 let announcer = null;
 
 export function setAnnouncer(el) { announcer = el; }

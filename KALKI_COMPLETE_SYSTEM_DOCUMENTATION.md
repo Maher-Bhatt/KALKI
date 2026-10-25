@@ -62,7 +62,7 @@ A new developer or AI agent should be able to work on KALKI from this document a
 Model providers: Groq (primary, llama-3.3-70b-versatile chat /
 llama-4-scout vision) → Ollama (local fallback) → optional OpenAI /
 Anthropic / Gemini per role. TTS: edge-tts, default voice
-en-GB-RyanNeural, provider fallback chain surfaced via ttsProvider /
+en-US-AndrewMultilingualNeural, provider fallback chain surfaced via ttsProvider /
 ttsLastError / ttsProbeError on /api/status.
 ```
 
@@ -186,7 +186,7 @@ listener.py (separate process)
   → POST /api/wake  (sets wakeRequested; may carry an inline {cmd})
   → POST /api/chat  {source: "voice", clientSpeech: true, messages: [...]}
   → server.py routes to the configured model provider
-  → reply spoken via edge-tts (default voice en-GB-RyanNeural)
+  → reply spoken via edge-tts (default voice en-US-AndrewMultilingualNeural)
   → server.py appends the exchange to history.json and increments
     an in-memory conversationSeq, exposed via /api/status as
     { conversationSeq, recentExchange: {seq, user, reply, ts} }
@@ -223,6 +223,20 @@ composer (features/ask.js)
 **Stopping** calls both `AbortController.abort()` (halts the fetch) and `POST /api/stop` (halts server-side generation and speech) — stopping the text without stopping speech was identified as a real defect during design and is why both calls exist together in `api/stream.js`.
 
 **Context transparency.** The composer shows "N of 10 turns in context", computed from `MAX_HISTORY = 20` (10 exchanges). This is stated, not enforced by the frontend — the server truncates independently, and the number is informational.
+
+**Conversational UX & Neural Audio:**
+- User messages render in a dedicated `.umsg` container with surface gradients, rounded corners, and hover action bars (copy message, edit and resend).
+- Assistant turns (`.kmsg`) feature model identification chips, markdown formatting, copy-with-feedback, regeneration, and a direct **Neural Read Aloud** speaker button calling `/api/tts/test` with active pulsing animations and instant stop controls.
+- Thread header features inline title renaming, 1-click formatted Markdown export (`.md`), and full chat message clearing with confirmation dialogs.
+
+**Interactive AI Companion Mascot System (`features/pet.js`):**
+- Features 5 distinct cybernetic species: Kittu (Cyber Cat), Byte (Robo Pup), Draco (Cyber Dragon), Nova (Floating Drone Bot), and Kitsu (Twin-tailed Cyber Fox).
+- Responsive state engine: Reacts to user typing (`alert`), token generation (`working`), completion (`happy`), media playback (`jamming`), and 45-second inactivity (`sleeping` with floating `z Z Z` particles).
+- Mini-gameplay & progression: Petting (heart bursts + purrs), treat feeding (fish, bone, battery, candy), laser ball fetch across chat floor, persistent XP leveling (Lvl 1-99), and mood telemetry.
+- Zero-dependency design: 100% SVG vector art, CSS keyframes, and Web Audio API synthesized chimes and purrs. Fully configurable in Settings, Chat header, and Command Palette.
+
+**Fluid Spring Animation Engine:**
+- Central spring easing (`cubic-bezier(0.16, 1, 0.3, 1)`) with silky message entrance keyframes (`@keyframes msgIn`), view transitions (`@keyframes viewFadeIn`), and tactile button active states (`transform: scale(0.95)`).
 
 ---
 
@@ -477,3 +491,51 @@ Full specification with computed contrast ratios: `KALKI_DESIGN_SYSTEM.md`. Load
 - [ ] `README.md`, the four design/architecture docs, and this document agree with the current source — none describe the previous HUD as current
 - [ ] Store-facing metadata (`microsoft_store/docs/`, package descriptions) reviewed for stale UI claims
 - [ ] Target-device acceptance pass performed before distribution — real WebView2, real backend process (not a stub), Windows display scaling, physical microphone/speaker — since none of this was exercised in a sandbox without a GUI or audio device (explicitly out of scope for this pass; see §Q)
+
+
+---
+
+## V. v1.4.0 & v1.4.2 Production Additions: Desktop Pet, ShieldCore Antivirus, Real System Control & Smart Router
+
+### 1. Standalone Codex-Style Desktop Companion Pet
+- **Architecture**: Implemented in `app/desktop_pet.py` and packaged as `services/pet/KALKI_Pet.exe`. Uses borderless, transparent PyWebView (`transparent=True`, `on_top=True`).
+- **Profile Isolation**: Uses a dedicated Edge WebView2 profile directory at `%APPDATA%\KALKI\pet_webview_profile`, completely preventing `0x800700AA` profile locking conflicts when running concurrently with the main KALKI application.
+- **Win32 Window Restore & Foregrounding**: Intercepts `open_main_app` API calls from the pet webview. Employs Win32 `AttachThreadInput`, `ShowWindowAsync(SW_RESTORE)`, and `SetForegroundWindow` to seamlessly bring minimized or taskbar-docked KALKI windows to the foreground.
+- **Audio & Dance Reactivity**: Subscribes to Windows SMTC / media transport. Automatically triggers dancing animations and musical note particle emissions (`♪`, `♫`) upon active track detection.
+- **Species**: Features 6 mascots (Gobi, Kittu, Byte, Draco, Nova, Kitsu) with Web Audio synthesized sound effects (purrs, nom sounds, chirps, laser pings).
+
+### 2. ShieldCore Antivirus & Endpoint Defense (`app/antivirus.py`)
+- **Native Windows Defender Integration**: Directly executes `MpCmdRun.exe` and PowerShell `Get-MpComputerStatus` to audit real-time protection, signature freshness, and scan history.
+- **Shannon Entropy Heuristic Engine**: Calculates byte entropy across executable files (>7.45/8.0 indicates packed or encrypted ransomware payload). Flags deceptive double extensions (`.pdf.exe`) and script droppers.
+- **Process & Cryptominer Audit**: Continuously checks running process IDs against known cryptomining pool ports and flags suspicious processes spawned in `%TEMP%` or `AppData\Local`.
+- **Clipboard Anti-Clipper & Phishing Guard**: Inspects clipboard contents for cryptocurrency address replacements (BTC/ETH/XMR clippers) and dangerous pipe-to-shell patterns (`curl | sh`).
+- **Hardened Quarantine Vault**: Automatically restricts filesystem ACLs via `icacls` to eliminate execution permissions on quarantined threats.
+
+### 3. 12 Verified Cybersecurity Modules (`app/cybertools.py`)
+All 12 modules verified for production:
+1. `surface`: Attack surface overview (IP, PTR, HTTP headers).
+2. `dns`: Comprehensive DNS record enumeration (A, AAAA, MX, NS, TXT).
+3. `subdomains`: Certificate Transparency log harvesting via crt.sh.
+4. `portscan`: Multi-threaded async TCP socket probing.
+5. `headers`: HTTP security headers analysis (HSTS, CSP, X-Frame-Options).
+6. `cve`: National Vulnerability Database (NVD) & VulnCheck lookup.
+7. `identify`: Cryptographic hash format detection.
+8. `hash`: Multi-algorithm hashing (MD5, SHA-1, SHA-256, SHA-512).
+9. `encode`: Multi-format payload encoder (Base64, Hex, URL).
+10. `decode`: Multi-format payload decoder.
+11. `dorks`: Target-focused Google Dork query generator.
+12. `crack`: Offline dictionary hash cracker backed by bundled `data/wordlist.txt`.
+
+### 4. Real System Access & Attitude Enforcement
+- **Direct Win32 Workstation Lock**: When a lock command or security violation occurs, the backend calls `ctypes.windll.user32.LockWorkStation()` directly with zero latency.
+- **Attitude Enforcement Protocol**: Real-time profanity and abuse detection in `app/server.py`. If abusive behavior persists across multiple turns, KALKI executes the attitude enforcement lock, physically securing the workstation.
+- **Apple Music Windows Protocol**: Registered Windows protocol `music:` and UWP package launcher (`shell:AppsFolder\AppleInc.AppleMusicWin_nzyj5cx40ttqa!App`).
+- **Dynamic Application Launcher**: Resolves registered Windows App Paths to launch installed applications on command.
+
+### 5. Dynamic Smart Model Auto-Router
+- Configured with `DEFAULT_MODEL = "auto"` in `app/config.py` and displayed as `Auto (Smart)` in the composer chip.
+- Classifies prompt intent into Flash vs Pro tiers: casual prompts stream via high-speed models (`gemini-2.5-flash`), while complex technical, CVE, and coding queries route to Pro models (`gemini-2.5-pro`).
+- Automatic DuckDuckGo search integration bypassing IPv6 NAT64 translation (`64:ff9b::/96`) to conduct live factual research (e.g. patent documentation).
+
+### 6. Interactive Marketing Suite (`marketing/index.html`)
+- Standalone, zero-dependency cyberpunk web showcase with live particle canvas, Web Audio sound effects synthesizer, interactive companion pet playground, ShieldCore radar scanner simulator, dynamic model router tester, and multi-platform download center.

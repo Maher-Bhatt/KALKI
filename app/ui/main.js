@@ -7,10 +7,11 @@
 
 import { store, loadUi, subscribe, notify, applyUi } from './state/store.js';
 import { startStatus, onExchange, loadModels } from './state/status.js';
-import { loadThreads, ensureActive, appendVoiceExchange, openThread } from './state/conversations.js';
+import { loadThreads, ensureActive, appendVoiceExchange, openThread, newThread } from './state/conversations.js';
 import { install as installKeys, bind } from './lib/keys.js';
+import { hydrateIcons } from './lib/icons.js';
 import { buildShell } from './features/shell.js';
-import { startRouter, setAnnouncer, go } from './features/router.js';
+import { startRouter, setAnnouncer, go, parse } from './features/router.js';
 import { openPalette } from './features/palette.js';
 import { askView, stopStreaming } from './features/ask.js';
 import { todayView, loadToday, syncFocus } from './features/today.js';
@@ -23,7 +24,7 @@ import { openDiagnostics } from './features/diagnostics.js';
 import { presenceView } from './features/presence.js';
 
 const VIEWS = {
-  ask: { build: askView, load: () => loadModels() },
+  ask: { build: askView, load: () => { loadModels(); loadToday(); } },
   today: { build: todayView, load: () => { loadToday(); syncFocus(); } },
   memory: { build: memoryView, load: loadMemory },
   workbench: { build: workbenchView, load: () => {} },
@@ -42,24 +43,28 @@ function mountView(route) {
   if (route.name === 'ask' && route.params.threadId) openThread(route.params.threadId);
 
   if (currentName !== route.name) {
+    (currentView?.cleanup || currentView?.main?.cleanup)?.();
     currentName = route.name;
     const spec = VIEWS[route.name] || VIEWS.ask;
     currentView = spec.build();
     if (currentView.main) {
       shell.viewSlot.replaceChildren(currentView.main);
-      shell.contextEl.replaceChildren(currentView.aside || '');
+      const asideNodes = Array.isArray(currentView.aside)
+        ? currentView.aside
+        : (currentView.aside ? [currentView.aside] : []);
+      shell.contextEl.replaceChildren(...asideNodes);
     } else {
       shell.viewSlot.replaceChildren(currentView);
       shell.contextEl.replaceChildren();
     }
     spec.load();
   }
-  currentView?.render?.();
+  (currentView?.render || currentView?.main?.render)?.();
 }
 
 function render() {
   shell.render();
-  currentView?.render?.();
+  (currentView?.render || currentView?.main?.render)?.();
 }
 
 function installShortcuts() {
@@ -97,16 +102,24 @@ async function boot() {
   }
 
   shell = buildShell(root);
+  hydrateIcons(document.body);
   setAnnouncer(shell.announcer);
   installShortcuts();
 
   subscribe(render);
 
   await loadThreads();
-  await ensureActive();
+  // Always open a fresh new conversation on startup (do not resume previous chat)
+  const initRoute = parse();
+  if (initRoute.name === 'ask' && initRoute.params.threadId) {
+    await openThread(initRoute.params.threadId);
+  } else {
+    await newThread();
+  }
   onExchange(appendVoiceExchange);
   startStatus();
   loadModels();
+  loadToday();
 
   startRouter(mountView);
   render();

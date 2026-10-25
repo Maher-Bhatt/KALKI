@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=KALKI AI Assistant
+Comment=Local-first Voice-Enabled AI Desktop Assistant & Workspace
+Exec=kalki
+Icon=kalki_icon
+Terminal=false
+Categories=Utility;AudioVideo;Office;Development;
+StartupNotify=true
+Keywords=AI;Assistant;Voice;Cybersecurity;Chat;

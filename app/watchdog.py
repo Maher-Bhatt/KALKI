@@ -38,9 +38,18 @@ def _save(sites):
         pass
 
 
+from urllib.parse import urlsplit
+
+def _parse_host_port(url):
+    u = url if "://" in url else "https://" + url
+    parsed = urlsplit(u)
+    host = parsed.hostname or url
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    return host, port
+
 def _host(url):
-    u = url.replace("https://", "").replace("http://", "").strip("/")
-    return u.split("/")[0]
+    h, _ = _parse_host_port(url)
+    return h
 
 
 def add_site(url, label=""):
@@ -76,6 +85,13 @@ def list_sites():
 def cert_days_left(host, port=443):
     """Days until the TLS cert expires, or None."""
     try:
+        if ":" in str(host) and not str(host).startswith("["):
+            parts = str(host).split(":", 1)
+            host = parts[0]
+            try:
+                port = int(parts[1])
+            except ValueError:
+                pass
         ctx = ssl.create_default_context()
         with socket.create_connection((host, port), timeout=8) as sock:
             with ctx.wrap_socket(sock, server_hostname=host) as ssock:
@@ -106,7 +122,8 @@ def check_site(url):
     except Exception as e:
         res["error"] = str(e)
     if url.startswith("https://"):
-        res["cert_days"] = cert_days_left(host)
+        h, p = _parse_host_port(url)
+        res["cert_days"] = cert_days_left(h, port=p)
     return res
 
 

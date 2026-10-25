@@ -594,32 +594,7 @@ def main():
                 age = now - _last_callback_time[0]
                 log(f"heartbeat OK (last callback {age:.0f}s ago, muted={_mic_muted.is_set()})")
 
-            # ── Dead-thread detection ──
-            # If the background thread hasn't called back in HEARTBEAT_TIMEOUT
-            # seconds AND we are NOT muted, the thread probably died.
-            if (not _mic_muted.is_set()
-                    and now - _last_callback_time[0] > HEARTBEAT_TIMEOUT):
-                log("WARNING: background listener thread appears dead — restarting")
-                try:
-                    stop_bg(wait_for_stop=False)
-                except Exception:
-                    pass
-                stop_bg = _start_bg()
-                if stop_bg is None:
-                    log("FATAL: could not restart background listener")
-                    time.sleep(5)
-                    # Try once more with a fresh mic
-                    try:
-                        mic = sr.Microphone(device_index=dev_index)
-                    except Exception:
-                        mic = sr.Microphone()
-                    stop_bg = _start_bg()
-                    if stop_bg is None:
-                        log("FATAL: giving up on background listener")
-                        return
-                _drain()
-                continue
-
+            # Background listener thread handles silence continuously without restarts.
             # ── Mute/unmute based on server state ──
             should_mute = get_mute_decision()
 

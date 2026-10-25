@@ -19,8 +19,13 @@ function inline(text) {
     else if (t.startsWith('*')) out.push(h('em', null, t.slice(1, -1)));
     else if (t.startsWith('[')) {
       const cut = t.indexOf('](');
-      out.push(h('a', { href: t.slice(cut + 2, -1), target: '_blank', rel: 'noreferrer noopener' }, t.slice(1, cut)));
-    } else out.push(h('a', { href: t, target: '_blank', rel: 'noreferrer noopener' }, t));
+      const rawHref = t.slice(cut + 2, -1);
+      const safeHref = /^https?:|^mailto:/i.test(rawHref) ? rawHref : '#';
+      out.push(h('a', { href: safeHref, target: '_blank', rel: 'noreferrer noopener' }, t.slice(1, cut)));
+    } else {
+      const safeHref2 = /^https?:/i.test(t) ? t : '#';
+      out.push(h('a', { href: safeHref2, target: '_blank', rel: 'noreferrer noopener' }, t));
+    }
     last = m.index + t.length;
   }
   if (last < text.length) out.push(text.slice(last));

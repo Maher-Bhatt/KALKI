@@ -50,7 +50,12 @@ async function tick() {
     return schedule();
   }
 
-  if (!store.online) { store.online = true; notify(); }
+  const wasOffline = !store.online;
+  if (wasOffline) {
+    store.online = true;
+    notify();
+    try { window.dispatchEvent(new CustomEvent('kalki:online')); } catch {}
+  }
   const s = r.data;
   if (s.wakeRequested) attending = Date.now();
 
@@ -85,6 +90,13 @@ function schedule() {
 }
 
 export function startStatus() {
+  health().then((alive) => {
+    if (alive && !store.online) {
+      store.online = true;
+      notify();
+      try { window.dispatchEvent(new CustomEvent('kalki:online')); } catch {}
+    }
+  });
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) { clearTimeout(timer); tick(); }
   });

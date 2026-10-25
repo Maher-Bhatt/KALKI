@@ -24,6 +24,7 @@ const DESTINATIONS = [
   { id: 'today', label: 'Today', icon: 'today' },
   { id: 'memory', label: 'Memory', icon: 'memory' },
   { id: 'workbench', label: 'Workbench', icon: 'workbench' },
+  { id: 'security', label: 'Antivirus & Cyber', icon: 'security' },
   { id: 'oversight', label: 'Oversight', icon: 'alert' },
 ];
 
@@ -62,12 +63,27 @@ export function buildShell(root) {
   mount(root, appEl, toastsEl, announcer);
 
   /* ── Rail ─────────────────────────────────────────────────────────── */
-  function paintRail() {
+  let lastRailSig = '';
+
+  function paintRail(force = false) {
+    const routeName = store.route?.name || '';
+    const listenerState = store.status?.listenerState || 'idle';
+    const security = !!store.ui?.securityEnabled;
+    const railSig = `${routeName}|${listenerState}|${security}`;
+
+    if (!force && railSig === lastRailSig) return;
+    lastRailSig = railSig;
+
+    const active = document.activeElement;
+    const hadFocusInRail = !!(active && railNav.contains(active));
+    const activeTitle = hadFocusInRail ? active.getAttribute('title') : null;
+    const activeAriaCurrent = hadFocusInRail ? active.getAttribute('aria-current') : null;
+    const activeIndex = hadFocusInRail ? Array.from(railNav.querySelectorAll('button, .mark')).indexOf(active) : -1;
+
     const dests = [...DESTINATIONS];
-    if (store.ui.securityEnabled) dests.push({ id: 'security', label: 'Security', icon: 'security' });
 
     // In filament, the icon function isn't used directly for the mark, but we use the DOM we parsed.
-    const markEl = h('div.mark', { title: 'KALKI — ready', dataset: { s: store.status?.listenerState || 'idle' } }, h('b', null));
+    const markEl = h('div.mark', { title: 'KALKI — ready', dataset: { s: listenerState } }, h('b', null));
 
     mount(railNav,
       markEl,
@@ -84,6 +100,19 @@ export function buildShell(root) {
         onClick: () => location.hash = `#/settings`
       }, icon('settings', 16))
     );
+
+    if (hadFocusInRail) {
+      if (activeTitle) {
+        const btn = railNav.querySelector(`button[title="${activeTitle}"]`);
+        if (btn) btn.focus();
+      } else if (activeAriaCurrent) {
+        const btn = railNav.querySelector(`button[aria-current="${activeAriaCurrent}"]`);
+        if (btn) btn.focus();
+      } else if (activeIndex >= 0) {
+        const items = railNav.querySelectorAll('button, .mark');
+        if (items[activeIndex]) items[activeIndex].focus();
+      }
+    }
   }
 
   /* ── Offline / update banner ──────────────────────────────────────── */
@@ -148,7 +177,7 @@ export function buildShell(root) {
   }
 
   window.addEventListener('kalki:voice-toggle', () => (voiceDialog ? voiceDialog.close() : openVoiceOverlay()));
-  window.addEventListener('kalki:nav-changed', () => { paintRail(); notify(); });
+  window.addEventListener('kalki:nav-changed', () => { paintRail(true); notify(); });
 
   function render() {
     paintRail();
@@ -184,6 +213,6 @@ export function buildShell(root) {
     paintRail,
     render,
     openVoiceOverlay,
-    toggleRail() { store.ui.railOpen = !store.ui.railOpen; applyUi(); paintRail(); },
+    toggleRail() { store.ui.railOpen = !store.ui.railOpen; applyUi(); paintRail(true); },
   };
 }

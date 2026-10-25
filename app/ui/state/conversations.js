@@ -22,7 +22,13 @@ export async function loadThreads() {
   if (!idb.available) return;
   try {
     const all = await idb.all();
-    store.conv.threads = all.sort((a, b) => (b.pinned - a.pinned) || (b.updatedAt - a.updatedAt));
+    // Clean up empty ghost threads that have 0 messages and are not pinned
+    const ghosts = all.filter((t) => !t.pinned && (!t.messages || t.messages.length === 0));
+    for (const g of ghosts) {
+      idb.del(g.id).catch(() => {});
+    }
+    const valid = all.filter((t) => t.pinned || (t.messages && t.messages.length > 0));
+    store.conv.threads = valid.sort((a, b) => (b.pinned - a.pinned) || (b.updatedAt - a.updatedAt));
     notify();
   } catch (e) { console.warn('[kalki] conversation store unavailable', e); }
 }
@@ -44,7 +50,15 @@ async function persist(thread) {
 
 export async function ensureActive() {
   let t = active();
-  if (!t) { t = blank(); store.conv.activeId = t.id; await persist(t); }
+  if (!t) {
+    t = blank();
+    store.conv.activeId = t.id;
+    if (!store.conv.threads.some((x) => x.id === t.id)) {
+      store.conv.threads.unshift(t);
+    }
+    recount();
+    notify();
+  }
   return t;
 }
 
@@ -54,10 +68,20 @@ export async function openThread(id) {
   notify();
 }
 
+export const switchThread = openThread;
+
 export async function newThread() {
+  const cur = active();
+  if (cur && (!cur.messages || cur.messages.length === 0)) {
+    return cur;
+  }
   const t = blank();
   store.conv.activeId = t.id;
-  await persist(t);
+  if (!store.conv.threads.some((x) => x.id === t.id)) {
+    store.conv.threads.unshift(t);
+  }
+  recount();
+  notify();
   return t;
 }
 
@@ -95,9 +119,34 @@ export async function setThread(id, patch) {
 
 export async function removeThread(id) {
   store.conv.threads = store.conv.threads.filter((t) => t.id !== id);
-  if (store.conv.activeId === id) store.conv.activeId = store.conv.threads[0]?.id || null;
+  if (store.conv.activeId === id) {
+    store.conv.activeId = store.conv.threads[0]?.id || null;
+    if (typeof location !== 'undefined' && location.hash.startsWith('#/ask')) {
+      location.hash = store.conv.activeId ? `#/ask/${store.conv.activeId}` : '#/ask';
+    }
+  }
+  recount();
   notify();
-  if (idb.available) { try { await idb.del(id); } catch { /* non-fatal */ } }
+  if (idb.available) {
+    try { await idb.del(id); } catch { /* non-fatal */ }
+  }
+}
+
+export async function clearAllThreads() {
+  const pinned = store.conv.threads.filter((t) => t.pinned);
+  const unpinned = store.conv.threads.filter((t) => !t.pinned);
+  store.conv.threads = pinned;
+  store.conv.activeId = pinned[0]?.id || null;
+  if (typeof location !== 'undefined' && location.hash.startsWith('#/ask')) {
+    location.hash = store.conv.activeId ? `#/ask/${store.conv.activeId}` : '#/ask';
+  }
+  recount();
+  notify();
+  if (idb.available) {
+    for (const t of unpinned) {
+      try { await idb.del(t.id); } catch { /* non-fatal */ }
+    }
+  }
 }
 
 /** Voice turns arrive from listener.py via /api/status polling. Append them so
@@ -135,8 +184,10 @@ export function wireMessages() {
 
 export function searchThreads(q) {
   const s = q.trim().toLowerCase();
-  if (!s) return store.conv.threads.filter((t) => !t.archived).slice(0, 12);
-  return store.conv.threads.filter((t) =>
-    t.title.toLowerCase().includes(s) || t.messages.some((m) => String(m.content).toLowerCase().includes(s)),
-  ).slice(0, 20);
+  // Only surface threads that have messages, or are pinned, or is the currently open active thread
+  const pool = store.conv.threads.filter((t) => !t.archived && (t.pinned || t.id === store.conv.activeId || (t.messages && t.messages.length > 0)));
+  if (!s) return pool.slice(0, 30);
+  return pool.filter((t) =>
+    (t.title || '').toLowerCase().includes(s) || t.messages.some((m) => String(m.content || '').toLowerCase().includes(s)),
+  ).slice(0, 30);
 }
