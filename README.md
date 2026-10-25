@@ -3,7 +3,7 @@
 # ⚡ KALKI AI ASSISTANT
 ### Sovereign AI Desktop Assistant & Endpoint Defense Engine
 
-[![Release](https://img.shields.io/badge/Release-v1.4.2-FFF4E2.svg?style=flat-square&logo=rocket&logoColor=black&labelColor=191D22)](https://github.com/maher-kalki/KALKI/releases)
+[![Release](https://img.shields.io/badge/Release-v1.5.0-FFF4E2.svg?style=flat-square&logo=rocket&logoColor=black&labelColor=191D22)](https://github.com/maher-kalki/KALKI/releases)
 [![Platforms](https://img.shields.io/badge/Platforms-Windows%20%7C%20Linux%20%7C%20macOS-FFF4E2.svg?style=flat-square&logo=windows&logoColor=black&labelColor=191D22)](https://github.com/maher-kalki/KALKI#platform-status)
 [![Privacy](https://img.shields.io/badge/Privacy-100%25%20Local--First%20%7C%20Zero%20Telemetry-4CC061.svg?style=flat-square&logo=shield&logoColor=white&labelColor=191D22)](PRIVACY.md)
 [![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-E08C33.svg?style=flat-square&logo=python&logoColor=white&labelColor=191D22)](https://www.python.org/)
@@ -37,6 +37,10 @@
 
 **KALKI** is a sovereign, local-first personal AI operating workspace for power users, developers, and security professionals. Built on the **Filament Design System**—cold machined graphite surfaces with warm presence light—KALKI operates directly on your workstation loopback (`127.0.0.1:8765`), binds to your native hardware, enforces zero third-party telemetry, and features real system access:
 
+- 🖥️ **100% Native Desktop Operating Architecture**: Seamless native PyWebView IPC bridge (`WebApi`) connecting the frontend directly to OS APIs—zero external browser popups, embedded PowerShell execution, direct directory tree exploration, in-place code editing with disk save, and native window titlebar controls.
+- 🐱 **Next-Gen 3D Mascot Companion Engine**: 6 distinct 3D companion species (Gobi, Kittu, Byte, Draco, Nova, Kitsu) rendered on a 60FPS isometric 3D canvas with volumetric filament lighting, real-time mouse-look perspective tracking, audio beat synchronization, and always-on-screen overlay.
+- 🛡️ **ShieldCore Live Process Defense & Antivirus**: Real-time hardware telemetry (CPU, RAM, loopback ports), live process scanner with PID inspection, 1-click suspicious process termination, Shannon entropy analysis, Windows Defender integration, and an interactive studio of 12 verified cybersecurity tools.
+- 💻 **Embedded System Terminal & Workspace Studio**: Dedicated terminal console executing real PowerShell and CMD commands with exit codes and execution timers, plus a built-in file explorer and code editor for seamless developer productivity.
 - 🐱 **Always-On-Screen Desktop Companion Pet**: A borderless, transparent floating companion mascot (inspired by Codex pets) that lives on your screen even when KALKI is closed or minimized, dances to system music (Apple Music / Spotify), and brings KALKI to the foreground on click.
 - 🛡️ **ShieldCore Native Antivirus & 12 Cyber Tools**: Dedicated visual cyber command center with real-time heuristic radar sweeps, Shannon entropy analysis, Windows Defender integration, cryptominer detection, clipboard anti-clipper protection, and an interactive studio of 12 offensive/defensive cybersecurity tools.
 - 🧠 **Dynamic Cognitive Auto-Router**: Real-time prompt complexity classification automatically routing casual queries to ultra-fast sub-200ms models (Gemini 2.5 Flash, GPT-4o Mini) and technical/reasoning tasks to Pro tiers (Gemini 2.5 Pro, LLaMA 3.3 70B, Claude 3.5 Sonnet).
@@ -61,14 +65,14 @@ KALKI features a fully-realized multi-page marketing and documentation website d
 
 ## 🚀 Quick Download Matrix
 
-KALKI v1.4.2 is fully built, tested, and validated for Windows, Linux, and macOS:
+KALKI v1.5.0 is fully built, tested, and validated for Windows, Linux, and macOS:
 
 | Operating System | Package Format | Binary Size | Integrity Hash (SHA-256) | Installation Command |
 |---|---|---|---|---|
-| **Windows 10 / 11 (64-bit)** | [KALKI_Setup_v1.4.0.exe](Output/windows/KALKI_Setup_v1.4.0.exe) | 271.48 MB | `a0a0dd3e2cf70dca887d6b761a3f6272b0418fcb14360dfece761952e052ccd5` | Double-click or `KALKI_Setup_v1.4.0.exe /VERYSILENT` |
-| **Linux (Ubuntu / Debian / Arch)** | [KALKI_Ubuntu_Installer_v1.4.0.sh](Output/linux/KALKI_Ubuntu_Installer_v1.4.0.sh) | 11.04 MB | `d933d00b9f1621f9a862db99e52e7500f0e88c73d11eed3386cf44101f3a6116` | `chmod +x KALKI_Ubuntu_Installer_v1.4.0.sh && ./KALKI_Ubuntu_Installer_v1.4.0.sh` |
-| **Linux (Portable)** | [KALKI_v1.4.0_Linux.tar.gz](Output/linux/KALKI_v1.4.0_Linux.tar.gz) | 8.17 MB | `0cc8dc57bbca7902baf894621d42cc8ab389c8c915e63c95639786f04d47e85e` | `tar -xzf KALKI_v1.4.0_Linux.tar.gz && ./install.sh` |
-| **macOS (Apple Silicon & Intel)** | [KALKI_v1.4.0_macOS.tar.gz](Output/macos/KALKI_v1.4.0_macOS.tar.gz) | 8.17 MB | `4e8452b57a2634f90eed379c8d908a828b368dc10fb22a4d74df743e052e98da` | `tar -xzf KALKI_v1.4.0_macOS.tar.gz && ./install_mac.sh` |
+| **Windows 10 / 11 (64-bit)** | [KALKI_Setup_v1.5.0.exe](Output/windows/KALKI_Setup_v1.5.0.exe) | 276.26 MB | `4d2522eb714db26ab0d180d74ac751df64ac82a01215a669f35084c434a3ddd6` | Double-click or `KALKI_Setup_v1.5.0.exe /VERYSILENT` |
+| **Linux (Ubuntu / Debian / Arch)** | [KALKI_Ubuntu_Installer_v1.5.0.sh](Output/linux/KALKI_Ubuntu_Installer_v1.5.0.sh) | 11.07 MB | `8dfd09e807a35e62f0139b5f1bea94213e17c21921973700e539955387d1cc93` | `chmod +x KALKI_Ubuntu_Installer_v1.5.0.sh && ./KALKI_Ubuntu_Installer_v1.5.0.sh` |
+| **Linux (Portable)** | [KALKI_v1.5.0_Linux.tar.gz](Output/linux/KALKI_v1.5.0_Linux.tar.gz) | 8.19 MB | `ef997051c2ceb50ac16c7891b9635780b61b86b856e74dcb37ad979882db1bac` | `tar -xzf KALKI_v1.5.0_Linux.tar.gz && ./install.sh` |
+| **macOS (Apple Silicon & Intel)** | [KALKI_v1.5.0_macOS.tar.gz](Output/macos/KALKI_v1.5.0_macOS.tar.gz) | 8.20 MB | `0426b34fb87be633347cc54b7d6759f37223e3aa645b0701334622379f95d51f` | `tar -xzf KALKI_v1.5.0_macOS.tar.gz && ./install_mac.sh` |
 
 ---
 

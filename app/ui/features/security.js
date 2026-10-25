@@ -425,7 +425,7 @@ function renderAntivirus() {
             isProtected ? 'Shields Active' : 'Threat Warning'),
         ),
         h('span.t-meta.muted', null,
-          'KALKI ShieldCore v1.4.0 Engine • Multi-Layer Heuristic Protection'),
+          'KALKI ShieldCore v1.5.0 Engine • Multi-Layer Heuristic Protection'),
         h('span.t-meta', { style: { color: defender.available && defender.realtime_enabled ? '#34d399' : 'var(--mut)' } },
           defender.available
             ? `Microsoft Windows Defender: Synced • Definitions ${defender.signature_age_days === 0 ? 'up to date (today)' : defender.signature_age_days + 'd ago'}`
@@ -1050,7 +1050,7 @@ export function securityView() {
         )
       ),
       h('span.spacer'),
-      h('span.chip.chip-ok', null, 'ShieldCore v1.4.0'),
+      h('span.chip.chip-ok', null, 'ShieldCore v1.5.0'),
     );
 
     let contentNode;

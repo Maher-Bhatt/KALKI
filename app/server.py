@@ -4648,49 +4648,13 @@ def _focus_kalki_window():
 
 
 def open_browser_to_ui():
-    """Bring existing KALKI tab forward, OR launch Chrome to it."""
+    """Focus or restore native desktop KALKI window."""
     global _browser_opened_once
-    if os.environ.get("KALKI_DESKTOP_MODE") == "1":
-        # In the native Windows shell, restore the existing PyWebView window
-        # rather than opening Chrome or silently ignoring the wake event.
-        if _focus_kalki_window():
-            log("desktop wake restored the KALKI window")
-        else:
-            log("desktop wake received; KALKI window was not discoverable")
-        return
-
-    url = f"http://localhost:{config.PORT}/"
-
-    # Try to focus an existing Chrome window that has the KALKI tab open
     if _focus_kalki_window():
-        log("focused existing KALKI tab")
-        return
-
-    # No existing window found — open a fresh Chrome tab
-    try:
-        chrome_paths = [
-            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-            os.path.expanduser(r"~\AppData\Local\Google\Chrome\Application\chrome.exe"),
-        ]
-        chrome_exe = None
-        for p in chrome_paths:
-            if os.path.exists(p):
-                chrome_exe = p
-                break
-
-        if chrome_exe:
-            # --new-tab opens in existing Chrome window instead of a new one
-            subprocess.Popen([chrome_exe, "--new-tab", url])
-            log(f"launched Chrome tab: {chrome_exe}")
-            _browser_opened_once = True
-        else:
-            # Fallback for any other browser
-            webbrowser.open(url)
-            _browser_opened_once = True
-            log(f"opened browser via webbrowser.open({url})")
-    except Exception as e:
-        log(f"Browser open error: {e}")
+        log("desktop wake restored the KALKI window")
+    else:
+        log("desktop wake received; KALKI window was not discoverable")
+    return
 
 
 # ─────────────────────────────────────────────────────────────

@@ -20,7 +20,7 @@ sys.path.insert(0, str(REPO_ROOT / "app"))
 try:
     from version import APP_VERSION
 except ImportError:
-    APP_VERSION = "1.4.0"
+    APP_VERSION = "1.5.0"
 
 OUT_DIR = REPO_ROOT / "Output" / "linux"
 STAGE_DIR = OUT_DIR / f"KALKI-v{APP_VERSION}-linux"

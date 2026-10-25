@@ -1,3 +1,43 @@
+# KALKI v1.5.0 — Sovereign Native Desktop, 3D Mascot Engine, In-Place Workspace Studio & Live Process Defense
+
+## ✦ v1.5.0 Sovereign Native Desktop Architecture, Embedded Terminal, 3D Mascots & Live Process Defense
+
+This major release elevates KALKI into a 100% native desktop operating experience with zero browser dependencies, full operating system IPC integration, real-time 3D mascot companions, an embedded PowerShell terminal, an in-place code studio, and live process defense:
+
+- **🖥️ 100% Native Desktop Operating Architecture (`app/main_app.py`, `app/ui/api/endpoints.js`, `app/ui/features/shell.js`):**
+  - Upgraded PyWebView `WebApi` into a complete native desktop IPC bridge exposing real PowerShell execution (`exec_command`), file system reading/writing/listing, directory browsing, native file and folder pickers, path revealing in Windows Explorer, system CPU/RAM telemetry, active process enumeration, and PID termination.
+  - Added dedicated desktop window titlebar controls: native window dragging (`.pywebview-drag-region`), core connection status (`🟢 DESKTOP OS CORE`), Always-On-Top pin toggle, companion mascot quick-launch, minimize, maximize/restore, and close buttons.
+  - Eliminated external browser launch dependencies: server `open_browser_to_ui()` strictly restores and focuses the native PyWebView window via Win32 `_focus_kalki_window()`.
+
+- **💻 Embedded System Terminal & Interactive Console (`app/ui/features/workbench.js`, `app/server.py`):**
+  - Integrated interactive system terminal inside the Workbench featuring real PowerShell/CMD execution on localhost.
+  - Real-time command status pills (`systeminfo`, `Get-Process`, `Test-NetConnection`, `Get-Service`, `dir`, `cls`).
+  - Terminal output formatting with execution timing (ms), process exit codes, and scrollback history.
+
+- **📁 Workspace Studio & In-Place Code Editor (`app/ui/features/workbench.js`):**
+  - Built-in file system explorer with folder picker dialog, directory tree navigation, and file status badges.
+  - In-place code editor supporting real-time editing and direct "Save to Disk" via native desktop IPC bridge.
+
+- **🛡️ ShieldCore Live Process Defense (`app/ui/features/security.js`, `app/antivirus.py`):**
+  - Real-time hardware telemetry monitors tracking overall CPU utilization and system RAM consumption.
+  - Active process scanner listing running PIDs, memory usage (MB), CPU %, and executable paths.
+  - 1-click suspicious process termination directly from the security workspace.
+
+- **🐱 Next-Gen 3D Companion Mascot Engine (`marketing/assets/mascot3d.js`, `app/ui/pet_overlay.html`, `marketing/pets.html`, `marketing/index.html`):**
+  - 60FPS pure HTML5 Canvas 3D Perspective Projection & Shading Engine with zero external dependencies.
+  - True 3D Isometric math: Euler angle rotations, Lambertian volumetric filament lighting, dynamic depth sorting (Painter's algorithm), and rotating holographic wireframe pedestal.
+  - Real-time mouse tracking: mascots track the user's cursor in 3D space, tilting their head and body to follow movement.
+  - Rhythmic beat synchronization: companions bounce and sway in 3D perspective to system music playback.
+  - Full 3D polyhedral models for all 6 species: Gobi (Sentient Kitten), Kittu (Cyber Shiba), Byte (Holographic Glitch Cube), Draco (Mini Cyber Dragon), Nova (Astral Polyhedron), Kitsu (Nine-Tailed Kitsune).
+  - Standalone transparent desktop overlay window (`KALKI_Pet.exe`) completely upgraded to render in 3D.
+
+- **📦 Multi-Platform v1.5.0 Release Packaging:**
+  - Windows: Inno Setup executable installer `Output/windows/KALKI_Setup_v1.5.0.exe` and certified Microsoft Store MSIX package.
+  - Linux: Automated self-extracting shell installer `Output/linux/KALKI_Ubuntu_Installer_v1.5.0.sh` and portable distribution tarball `Output/linux/KALKI_v1.5.0_Linux.tar.gz`.
+  - macOS: Universal Darwin bundle `Output/macos/KALKI_v1.5.0_macOS.tar.gz` supporting Apple Silicon & Intel.
+
+---
+
 # KALKI v1.4.0 — Human Neural Voice, Companion Pet System, Antivirus Shield & Animation Overhaul
 
 ## ✦ v1.4.2 Desktop Companion Pet Always-On-Screen, Real System Control, Marketing Suite & Repository Overhaul

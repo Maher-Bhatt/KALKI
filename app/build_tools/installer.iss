@@ -1,6 +1,6 @@
 #define MyAppName "KALKI"
 
-#define MyAppVersion "1.4.0"
+#define MyAppVersion "1.5.0"
 
 #define MyAppPublisher "KALKI Technologies"
 
@@ -26,7 +26,7 @@ PrivilegesRequired=lowest
 
 OutputDir=..\..\Output
 
-OutputBaseFilename=KALKI_Setup_v1.4.0
+OutputBaseFilename=KALKI_Setup_v1.5.0
 
 LicenseFile=..\..\LICENSE
 
