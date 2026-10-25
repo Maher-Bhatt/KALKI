@@ -1711,6 +1711,75 @@ def handle_local(text):
     """
     if not text:
         return False, ""
+    # ════════════════════════════════════════════════════
+    # REAL SOVEREIGN DESKTOP SYSTEM ACTIONS (Instant Local Execution)
+    # ════════════════════════════════════════════════════
+    if t.startswith(("run ", "exec ", "terminal ", "powershell ")):
+        prefix = t.split(" ", 1)[0]
+        cmd_to_run = raw[len(prefix):].strip()
+        if cmd_to_run:
+            try:
+                import subprocess, time
+                t0 = time.time()
+                res = subprocess.run(cmd_to_run, shell=True, capture_output=True, text=True, timeout=30)
+                dur = round((time.time() - t0) * 1000)
+                out = (res.stdout or res.stderr or "[Command completed with no output]").strip()
+                if len(out) > 3000:
+                    out = out[:3000] + "\n... [truncated]"
+                reply = f"**Executed System Command:** `{cmd_to_run}` (Exit code: {res.returncode} in {dur}ms)\n```bash\n{out}\n```"
+                return True, reply
+            except subprocess.TimeoutExpired:
+                return True, f"Command `{cmd_to_run}` timed out after 30 seconds."
+            except Exception as _e_exec:
+                return True, f"Execution failed: {_e_exec}"
+
+    if t in ("system stats", "hardware status", "ram usage", "cpu usage", "system info", "specs", "hardware telemetry"):
+        try:
+            import psutil, platform
+            cpu_pct = psutil.cpu_percent(interval=0.2)
+            mem = psutil.virtual_memory()
+            disk = psutil.disk_usage(os.path.abspath(os.sep))
+            batt = psutil.sensors_battery()
+            batt_str = f"\n• Battery: {int(batt.percent)}% ({'Charging' if batt.power_plugged else 'Discharging'})" if batt else ""
+            reply = (
+                f"**Desktop Hardware Telemetry [{platform.node()}]**:\n"
+                f"• CPU Load: {cpu_pct}%\n"
+                f"• RAM Usage: {mem.percent}% ({round(mem.used/(1024*1024))} MB / {round(mem.total/(1024*1024))} MB)\n"
+                f"• Disk Space: {disk.percent}% used ({round(disk.free/(1024*1024*1024), 1)} GB free)\n"
+                f"• Platform: {platform.system()} {platform.release()}{batt_str}\n"
+                f"• Sovereign Engine: 100% Local-First Native Desktop"
+            )
+            return True, reply
+        except Exception as _e_hw:
+            return True, f"Could not retrieve telemetry: {_e_hw}"
+
+    if t in ("list processes", "running processes", "top processes", "tasklist", "show processes", "active tasks"):
+        try:
+            import psutil
+            procs = []
+            for p in psutil.process_iter(['pid', 'name', 'memory_info', 'cpu_percent']):
+                try:
+                    info = p.info
+                    mem_mb = round(info['memory_info'].rss / (1024*1024), 1) if info.get('memory_info') else 0
+                    procs.append((info['name'], info['pid'], mem_mb, info.get('cpu_percent', 0.0)))
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    pass
+            procs.sort(key=lambda x: x[2], reverse=True)
+            top = procs[:12]
+            lines = [f"• **{name}** (PID {pid}) — {mem} MB RAM" for name, pid, mem, cpu in top]
+            return True, "**Active System Processes (Top Memory Users):**\n" + "\n".join(lines)
+        except Exception as _e_p:
+            return True, f"Process query error: {_e_p}"
+
+    if t in ("list files", "dir", "ls", "show files", "current files", "workspace files"):
+        try:
+            items = os.listdir(os.getcwd())
+            files_str = "\n".join(f"• {item}" for item in sorted(items)[:25])
+            count = len(items)
+            return True, f"**Files in Workspace ({os.getcwd()} — {count} items):**\n{files_str}"
+        except Exception as _e_f:
+            return True, f"Directory read error: {_e_f}"
+
     t = text.lower().strip()
     raw = text.strip()
     pending_result = _consume_confirmation(t)
@@ -5135,6 +5204,59 @@ class Handler(BaseHTTPRequestHandler):
             })
             return
 
+        if path == "/api/system/telemetry":
+            try:
+                import psutil
+                cpu_pct = psutil.cpu_percent(interval=None)
+                mem = psutil.virtual_memory()
+                disk = psutil.disk_usage(os.path.abspath(os.sep))
+                net = psutil.net_io_counters()
+                self._json({
+                    "ok": True,
+                    "cpu_percent": cpu_pct,
+                    "memory": {
+                        "total_mb": round(mem.total / (1024*1024)),
+                        "used_mb": round(mem.used / (1024*1024)),
+                        "percent": mem.percent
+                    },
+                    "disk": {
+                        "total_gb": round(disk.total / (1024*1024*1024), 1),
+                        "used_gb": round(disk.used / (1024*1024*1024), 1),
+                        "percent": disk.percent
+                    },
+                    "network": {
+                        "bytes_sent": net.bytes_sent,
+                        "bytes_recv": net.bytes_recv
+                    },
+                    "os": sys.platform,
+                    "hostname": os.environ.get("COMPUTERNAME", os.environ.get("HOSTNAME", "Desktop"))
+                })
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)}, status=500)
+            return
+
+        if path == "/api/system/processes":
+            try:
+                import psutil
+                procs = []
+                for p in psutil.process_iter(['pid', 'name', 'memory_info', 'cpu_percent']):
+                    try:
+                        info = p.info
+                        mem_mb = round(info['memory_info'].rss / (1024*1024), 1) if info.get('memory_info') else 0
+                        procs.append({
+                            "pid": info['pid'],
+                            "name": info['name'],
+                            "mem_mb": mem_mb,
+                            "cpu": info.get('cpu_percent', 0.0)
+                        })
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        pass
+                procs.sort(key=lambda x: x["mem_mb"], reverse=True)
+                self._json({"ok": True, "processes": procs[:60]})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)}, status=500)
+            return
+
         if path == "/api/status":
             # Restored full payload. Phase 4 replaced this with a six-field
             # stub, which silently broke presence, the context panel, voice
@@ -6162,6 +6284,136 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": True, "reportId": report["id"]})
             except Exception as exc:
                 self._json({"ok": False, "error": f"could not save report: {exc}"}, status=500)
+            return
+
+        # ── Sovereign Desktop System Operations ───────────
+        if path == "/api/system/exec":
+            cmd = (body.get("cmd") or "").strip()
+            cwd = body.get("cwd") or os.getcwd()
+            if not cmd:
+                self._json({"ok": False, "error": "command required"}, status=400)
+                return
+            try:
+                import subprocess, time
+                t0 = time.time()
+                res = subprocess.run(
+                    cmd,
+                    shell=True,
+                    cwd=cwd if os.path.exists(cwd) else os.getcwd(),
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+                dur = round((time.time() - t0) * 1000)
+                self._json({
+                    "ok": True,
+                    "exit_code": res.returncode,
+                    "stdout": res.stdout,
+                    "stderr": res.stderr,
+                    "duration_ms": dur
+                })
+            except subprocess.TimeoutExpired:
+                self._json({"ok": False, "error": "Command timed out after 30 seconds."}, status=408)
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)}, status=500)
+            return
+
+        if path == "/api/system/files/list":
+            target = os.path.abspath(body.get("path") or os.getcwd())
+            if not os.path.isdir(target):
+                self._json({"ok": False, "error": f"Directory not found: {target}"}, status=404)
+                return
+            try:
+                items = []
+                for entry in os.scandir(target):
+                    try:
+                        stat = entry.stat()
+                        items.append({
+                            "name": entry.name,
+                            "path": entry.path,
+                            "is_dir": entry.is_dir(),
+                            "size": stat.st_size if not entry.is_dir() else 0,
+                            "modified": stat.st_mtime
+                        })
+                    except Exception:
+                        pass
+                items.sort(key=lambda x: (not x["is_dir"], x["name"].lower()))
+                self._json({"ok": True, "path": target, "items": items})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)}, status=500)
+            return
+
+        if path == "/api/system/files/read":
+            file_path = os.path.abspath((body.get("path") or "").strip())
+            if not file_path or not os.path.isfile(file_path):
+                self._json({"ok": False, "error": f"File not found: {file_path}"}, status=404)
+                return
+            try:
+                with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                    file_content = f.read()
+                self._json({"ok": True, "path": file_path, "content": file_content})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)}, status=500)
+            return
+
+        if path == "/api/system/files/write":
+            file_path = os.path.abspath((body.get("path") or "").strip())
+            file_content = body.get("content")
+            if not file_path or file_content is None:
+                self._json({"ok": False, "error": "path and content required"}, status=400)
+                return
+            try:
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(file_content)
+                self._json({"ok": True, "path": file_path, "bytes": len(file_content)})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)}, status=500)
+            return
+
+        if path == "/api/system/files/reveal":
+            target = os.path.abspath((body.get("path") or "").strip())
+            if not target or not os.path.exists(target):
+                self._json({"ok": False, "error": "Path not found"}, status=404)
+                return
+            try:
+                import subprocess
+                if sys.platform == "win32":
+                    subprocess.Popen(f'explorer /select,"{target}"', shell=True)
+                elif sys.platform == "darwin":
+                    subprocess.Popen(["open", "-R", target])
+                else:
+                    subprocess.Popen(["xdg-open", os.path.dirname(target)])
+                self._json({"ok": True})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)}, status=500)
+            return
+
+        if path == "/api/system/process/kill":
+            pid = body.get("pid")
+            if not pid:
+                self._json({"ok": False, "error": "pid required"}, status=400)
+                return
+            try:
+                import psutil
+                proc = psutil.Process(int(pid))
+                proc.kill()
+                self._json({"ok": True, "message": f"Killed process {pid}"})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)}, status=500)
+            return
+
+        if path == "/api/pet/toggle":
+            try:
+                import subprocess
+                env = os.environ.copy()
+                base = os.path.dirname(os.path.abspath(__file__))
+                pet_script = os.path.join(base, "desktop_pet.py")
+                if os.path.exists(pet_script):
+                    subprocess.Popen([sys.executable, pet_script], cwd=base, env=env)
+                self._json({"ok": True})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)}, status=500)
             return
 
         if path == "/api/command":

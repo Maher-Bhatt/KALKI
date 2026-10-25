@@ -8,7 +8,7 @@
 
 import { h, mount } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
-import { workflows, code, vision } from '../api/endpoints.js';
+import { workflows, code, vision, desktop } from '../api/endpoints.js';
 import { set } from '../state/store.js';
 import { emptyState } from '../components/states.js';
 import { openDialog, confirmDialog } from '../components/dialog.js';
@@ -16,7 +16,7 @@ import { ok, err, toast } from '../state/toasts.js';
 
 /* ── Tab state ────────────────────────────────────────────────────────── */
 
-let activeTab = 'workflows'; // 'workflows' | 'code' | 'vision' | 'skills'
+let activeTab = 'workflows'; // 'workflows' | 'terminal' | 'workspace' | 'code' | 'vision' | 'skills'
 
 /* ── Workflows state ──────────────────────────────────────────────────── */
 
@@ -546,7 +546,221 @@ export function workbenchView() {
   };
 
   /* ── Tab 1: Workflows Content ───────────────────────────────────────── */
-  function renderWorkflowsTab() {
+  /* ── System Terminal Tab State & Renderer ────────────────────────── */
+let terminalHistory = [
+  'KALKI Sovereign Desktop Environment [PowerShell / Native Host]',
+  'Type any system command or click quick action presets below.'
+];
+let terminalInputVal = '';
+let terminalCwd = '';
+let terminalBusy = false;
+
+function renderTerminalTab() {
+  const outputEl = h('div.term-body', { ref: el => { if (el) el.scrollTop = el.scrollHeight; } }, terminalHistory.join('\n\n'));
+  
+  const presets = [
+    { label: 'System Info', cmd: 'systeminfo' },
+    { label: 'Git Status', cmd: 'git status' },
+    { label: 'Running Python', cmd: 'tasklist /FI "IMAGENAME eq python.exe"' },
+    { label: 'Directory (dir)', cmd: 'dir' },
+    { label: 'Network Config', cmd: 'ipconfig' },
+    { label: 'Ping Loopback', cmd: 'ping 127.0.0.1 -n 3' },
+  ];
+
+  async function runCmd(cmd) {
+    if (!cmd.trim() || terminalBusy) return;
+    terminalBusy = true;
+    terminalHistory.push(`PS > ${cmd}`);
+    render();
+    try {
+      const res = await desktop.exec(cmd, terminalCwd);
+      if (res && res.ok) {
+        const out = (res.stdout || res.stderr || '[Completed with 0 output]').trim();
+        terminalHistory.push(`[Exit code: ${res.exit_code} in ${res.duration_ms}ms]\n${out}`);
+      } else {
+        terminalHistory.push(`[Error: ${res?.error || 'Failed'}]`);
+      }
+    } catch (e) {
+      terminalHistory.push(`[Execution failed: ${e.message}]`);
+    } finally {
+      terminalBusy = false;
+      render();
+    }
+  }
+
+  const inputEl = h('input.term-input', {
+    type: 'text',
+    placeholder: 'Enter PowerShell / CMD command (e.g. dir, git status, ping 127.0.0.1)...',
+    value: terminalInputVal,
+    onInput: (e) => terminalInputVal = e.target.value,
+    onKeyDown: (e) => {
+      if (e.key === 'Enter') {
+        const c = terminalInputVal;
+        terminalInputVal = '';
+        runCmd(c);
+      }
+    }
+  });
+
+  return h('div.col.g12', { style: { marginTop: '16px' } },
+    h('div.term-box', null,
+      h('div.term-header', null,
+        h('span.row.g8', null,
+          h('span.dot.active', { style: { width: '8px', height: '8px', borderRadius: '50%', background: '#4cc061', display: 'inline-block' } }),
+          h('b', null, 'LOCAL SYSTEM TERMINAL'),
+          h('span.dim', null, '• Native PowerShell Host')
+        ),
+        h('div.row.g8', null,
+          h('button.btn.btn-sm.btn-secondary', {
+            type: 'button',
+            onClick: () => { terminalHistory = ['[Terminal cleared]']; render(); }
+          }, 'Clear Output')
+        )
+      ),
+      h('div.term-presets', null,
+        ...presets.map(p => h('button.term-pill', {
+          type: 'button',
+          onClick: () => runCmd(p.cmd)
+        }, p.label))
+      ),
+      outputEl,
+      h('div.term-input-row', null,
+        h('span.term-prompt', null, 'PS >'),
+        inputEl,
+        h('button.btn.btn-sm.btn-primary', {
+          type: 'button',
+          disabled: terminalBusy,
+          onClick: () => {
+            const c = terminalInputVal;
+            terminalInputVal = '';
+            runCmd(c);
+          }
+        }, terminalBusy ? 'Running...' : 'Run')
+      )
+    )
+  );
+}
+
+/* ── Workspace & Local File Studio ────────────────────────────────── */
+let currentWorkspaceDir = '';
+let workspaceFiles = [];
+let activeFilePath = '';
+let activeFileContent = '';
+let wsLoading = false;
+
+async function loadWorkspaceDir(path) {
+  wsLoading = true;
+  render();
+  try {
+    const res = await desktop.listDir(path);
+    if (res && res.ok) {
+      currentWorkspaceDir = res.path;
+      workspaceFiles = res.items || [];
+    } else {
+      err(res?.error || 'Failed to list directory');
+    }
+  } catch (e) {
+    err(e.message);
+  } finally {
+    wsLoading = false;
+    render();
+  }
+}
+
+async function openFile(file) {
+  if (file.is_dir) {
+    loadWorkspaceDir(file.path);
+    return;
+  }
+  try {
+    const res = await desktop.readFile(file.path);
+    if (res && res.ok) {
+      activeFilePath = res.path;
+      activeFileContent = res.content || '';
+      render();
+    } else {
+      err(res?.error || 'Could not open file');
+    }
+  } catch (e) {
+    err(e.message);
+  }
+}
+
+async function saveCurrentFile() {
+  if (!activeFilePath) return;
+  try {
+    const res = await desktop.writeFile(activeFilePath, activeFileContent);
+    if (res && res.ok) {
+      ok(`Saved ${activeFilePath.split(/[\\/]/).pop()} (${res.bytes} bytes)`);
+    } else {
+      err(res?.error || 'Failed saving file');
+    }
+  } catch (e) {
+    err(e.message);
+  }
+}
+
+function renderWorkspaceTab() {
+  if (!currentWorkspaceDir && !wsLoading && workspaceFiles.length === 0) {
+    loadWorkspaceDir();
+  }
+
+  const treeItems = workspaceFiles.map(f =>
+    h('div.ws-item', {
+      class: activeFilePath === f.path ? 'active' : '',
+      onClick: () => openFile(f),
+      title: f.path
+    },
+      icon(f.is_dir ? 'flow' : 'code', 14),
+      h('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, f.name)
+    )
+  );
+
+  return h('div.col.g12', { style: { marginTop: '16px' } },
+    h('div.workspace-container', null,
+      h('div.ws-tree', null,
+        h('div.row.sb', { style: { padding: '4px 6px', borderBottom: '1px solid var(--line)', marginBottom: '6px' } },
+          h('span.t-label', null, 'Files'),
+          h('button.btn.btn-xs.btn-secondary', {
+            type: 'button',
+            onClick: async () => {
+              const res = await desktop.openFolderDialog();
+              if (res && res.ok && res.path) loadWorkspaceDir(res.path);
+            }
+          }, 'Open Folder')
+        ),
+        treeItems.length ? treeItems : h('div.dim', { style: { padding: '12px', fontSize: '11px' } }, 'No files in folder')
+      ),
+      h('div.ws-editor-wrap', null,
+        h('div.ws-editor-head', null,
+          h('span.t-mono', { style: { fontSize: '12px', color: 'var(--fil)' } },
+            activeFilePath ? activeFilePath.split(/[\\/]/).pop() : 'No file selected'
+          ),
+          h('div.row.g8', null,
+            activeFilePath ? h('button.btn.btn-sm.btn-secondary', {
+              type: 'button',
+              onClick: () => desktop.reveal(activeFilePath)
+            }, 'Reveal in Explorer') : null,
+            activeFilePath ? h('button.btn.btn-sm.btn-primary', {
+              type: 'button',
+              onClick: saveCurrentFile
+            }, 'Save File') : null
+          )
+        ),
+        activeFilePath
+          ? h('textarea.ws-textarea', {
+              value: activeFileContent,
+              onInput: (e) => activeFileContent = e.target.value
+            })
+          : h('div.col.center', { style: { height: '100%', justifyContent: 'center', color: 'var(--mut)', fontStyle: 'italic', fontSize: '13px', padding: '40px' } },
+              'Select any file from the explorer on the left to view or edit.'
+            )
+      )
+    )
+  );
+}
+
+function renderWorkflowsTab() {
     const allModes = [...MODES, ...customRoutines];
 
     const cards = allModes.map(m =>
@@ -1192,6 +1406,8 @@ export function workbenchView() {
 
     const tabDefs = [
       { id: 'workflows', label: 'Workflows' },
+      { id: 'terminal', label: 'System Terminal' },
+      { id: 'workspace', label: 'Workspace & Files' },
       { id: 'code', label: 'Code studio' },
       { id: 'vision', label: 'Screen and vision' },
       { id: 'skills', label: 'Skills catalog' },
@@ -1214,6 +1430,10 @@ export function workbenchView() {
     let activeContent;
     if (activeTab === 'workflows') {
       activeContent = renderWorkflowsTab();
+    } else if (activeTab === 'terminal') {
+      activeContent = renderTerminalTab();
+    } else if (activeTab === 'workspace') {
+      activeContent = renderWorkspaceTab();
     } else if (activeTab === 'code') {
       activeContent = renderCodeStudioTab();
     } else if (activeTab === 'vision') {

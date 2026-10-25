@@ -210,3 +210,23 @@ export const antivirus = {
   checkClipboard: (text) => post('/api/antivirus/clipboard', { text }),
 };
 
+/* ── Sovereign Desktop Host Bridge (Native & Local IPC) ───────────────── */
+export const desktop = {
+  exec: (cmd, cwd) => window.pywebview?.api?.exec_command ? window.pywebview.api.exec_command(cmd, cwd) : post('/api/system/exec', { cmd, cwd }),
+  readFile: (path) => window.pywebview?.api?.read_file ? window.pywebview.api.read_file(path) : post('/api/system/files/read', { path }),
+  writeFile: (path, content) => window.pywebview?.api?.write_file ? window.pywebview.api.write_file(path, content) : post('/api/system/files/write', { path, content }),
+  listDir: (path) => window.pywebview?.api?.list_directory ? window.pywebview.api.list_directory(path) : post('/api/system/files/list', { path }),
+  openFolderDialog: () => window.pywebview?.api?.open_folder_dialog ? window.pywebview.api.open_folder_dialog() : post('/api/system/files/dialog/folder', {}),
+  openFileDialog: () => window.pywebview?.api?.open_file_dialog ? window.pywebview.api.open_file_dialog() : post('/api/system/files/dialog/file', {}),
+  reveal: (path) => window.pywebview?.api?.reveal_in_explorer ? window.pywebview.api.reveal_in_explorer(path) : post('/api/system/files/reveal', { path }),
+  telemetry: () => window.pywebview?.api?.get_system_telemetry ? window.pywebview.api.get_system_telemetry() : get('/api/system/telemetry'),
+  processes: () => window.pywebview?.api?.get_process_list ? window.pywebview.api.get_process_list() : get('/api/system/processes'),
+  killProcess: (pid) => window.pywebview?.api?.kill_process ? window.pywebview.api.kill_process(pid) : post('/api/system/process/kill', { pid }),
+  togglePet: () => window.pywebview?.api?.toggle_pet ? window.pywebview.api.toggle_pet() : post('/api/pet/toggle', {}),
+  togglePin: () => window.pywebview?.api?.toggle_pin ? window.pywebview.api.toggle_pin() : Promise.resolve({ ok: false }),
+  minimize: () => window.pywebview?.api?.minimize?.(),
+  toggleMaximize: () => window.pywebview?.api?.toggle_maximize?.(),
+  close: () => window.pywebview?.api?.close?.(),
+};
+
+

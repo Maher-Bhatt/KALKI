@@ -11,7 +11,7 @@
 import { h, mount } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { bytes, relative, dateTime } from '../lib/format.js';
-import { cyber, antivirus } from '../api/endpoints.js';
+import { cyber, antivirus, desktop } from '../api/endpoints.js';
 import { emptyState, loadingRow } from '../components/states.js';
 import { ok, err } from '../state/toasts.js';
 
@@ -151,7 +151,7 @@ const CYBER_CATALOG = [
   }
 ];
 
-let activeTab = 'antivirus'; // 'antivirus' | 'catalog' | 'studio'
+let activeTab = 'antivirus'; // 'antivirus' | 'catalog' | 'studio' | 'processes'
 let catalogFilter = 'All';
 let currentTool = CYBER_CATALOG[0];
 let toolInputVal = '';
@@ -897,6 +897,121 @@ function renderSecurityAside() {
 }
 
 /* ── Main View Entry ──────────────────────────────────────────────── */
+/* ── Live Process Defense Tab ────────────────────────────────────────── */
+let procList = [];
+let procLoading = false;
+let procFilter = '';
+let procTelemetry = null;
+
+async function fetchProcesses() {
+  procLoading = true;
+  if (renderFn) renderFn();
+  try {
+    const [pRes, tRes] = await Promise.all([
+      desktop.processes(),
+      desktop.telemetry()
+    ]);
+    if (pRes && pRes.ok) procList = pRes.processes || [];
+    if (tRes && tRes.ok) procTelemetry = tRes;
+  } catch (e) {
+    err(e.message || 'Failed fetching processes');
+  } finally {
+    procLoading = false;
+    if (renderFn) renderFn();
+  }
+}
+
+async function killProc(pid, name) {
+  try {
+    const res = await desktop.killProcess(pid);
+    if (res && res.ok) {
+      ok(`Terminated ${name} (PID ${pid})`);
+      fetchProcesses();
+    } else {
+      err(res?.error || `Failed killing process ${pid}`);
+    }
+  } catch (e) {
+    err(e.message);
+  }
+}
+
+function renderProcessDefense() {
+  if (procList.length === 0 && !procLoading) {
+    fetchProcesses();
+  }
+
+  const filtered = procList.filter(p => !procFilter || p.name.toLowerCase().includes(procFilter.toLowerCase()) || String(p.pid).includes(procFilter));
+
+  const telemCard = procTelemetry ? h('div.card', { style: { marginBottom: '16px', background: 'var(--inset)' } },
+    h('div.row.sb', null,
+      h('div.col', null,
+        h('span.t-label', null, 'CPU Usage'),
+        h('b.t-h2', null, `${procTelemetry.cpu_percent || 0}%`)
+      ),
+      h('div.col', null,
+        h('span.t-label', null, 'RAM In Use'),
+        h('b.t-h2', null, `${procTelemetry.memory?.used_mb || 0} MB / ${procTelemetry.memory?.total_mb || 0} MB`)
+      ),
+      h('div.col', null,
+        h('span.t-label', null, 'RAM Percentage'),
+        h('b.t-h2', null, `${procTelemetry.memory?.percent || 0}%`)
+      ),
+      h('div.col', null,
+        h('span.t-label', null, 'Host Node'),
+        h('b.t-mono', { style: { color: 'var(--fil)' } }, procTelemetry.hostname || 'Local Workstation')
+      )
+    )
+  ) : null;
+
+  const rows = filtered.map(p =>
+    h('tr', { key: p.pid, style: { borderBottom: '1px solid var(--line)' } },
+      h('td', { style: { padding: '8px 12px', fontFamily: 'var(--mono)', fontSize: '12px' } }, String(p.pid)),
+      h('td', { style: { padding: '8px 12px', fontWeight: '600', color: 'var(--text)' } }, p.name),
+      h('td', { style: { padding: '8px 12px', fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--fil)' } }, `${p.mem_mb} MB`),
+      h('td', { style: { padding: '8px 12px', fontFamily: 'var(--mono)', fontSize: '12px' } }, `${p.cpu || 0}%`),
+      h('td', { style: { padding: '8px 12px', textAlign: 'right' } },
+        h('button.btn.btn-xs', {
+          type: 'button',
+          style: { background: 'rgba(239, 68, 68, 0.12)', color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.3)' },
+          onClick: () => killProc(p.pid, p.name)
+        }, 'Terminate')
+      )
+    )
+  );
+
+  return h('div.col.g12', null,
+    telemCard,
+    h('div.row.sb', { style: { alignItems: 'center', marginBottom: '8px' } },
+      h('input.input', {
+        type: 'text',
+        placeholder: 'Filter processes by name or PID...',
+        value: procFilter,
+        style: { width: '320px' },
+        onInput: (e) => { procFilter = e.target.value; if (renderFn) renderFn(); }
+      }),
+      h('button.btn.btn-sm.btn-secondary', {
+        type: 'button',
+        disabled: procLoading,
+        onClick: fetchProcesses
+      }, procLoading ? 'Refreshing...' : 'Refresh Processes')
+    ),
+    h('div.card', { style: { padding: 0, overflow: 'hidden' } },
+      h('table', { style: { width: '100%', borderCollapse: 'collapse', fontSize: '12px' } },
+        h('thead', { style: { background: 'var(--raised)', borderBottom: '1px solid var(--line)' } },
+          h('tr', null,
+            h('th', { style: { padding: '8px 12px', textAlign: 'left', color: 'var(--mut)' } }, 'PID'),
+            h('th', { style: { padding: '8px 12px', textAlign: 'left', color: 'var(--mut)' } }, 'Process Name'),
+            h('th', { style: { padding: '8px 12px', textAlign: 'left', color: 'var(--mut)' } }, 'Memory (RAM)'),
+            h('th', { style: { padding: '8px 12px', textAlign: 'left', color: 'var(--mut)' } }, 'CPU %'),
+            h('th', { style: { padding: '8px 12px', textAlign: 'right', color: 'var(--mut)' } }, 'Action')
+          )
+        ),
+        h('tbody', null, rows.length ? rows : h('tr', null, h('td', { colspan: 5, style: { padding: '24px', textAlign: 'center', color: 'var(--mut)' } }, 'No matching processes found.')))
+      )
+    )
+  );
+}
+
 export function securityView() {
   const main = h('div.view-body.scroll');
   const aside = h('div', { style: { display: 'contents' } });
@@ -921,7 +1036,17 @@ export function securityView() {
             type: 'button',
             class: activeTab === 'studio' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost',
             onClick: () => { activeTab = 'studio'; renderFn(); }
-          }, icon('term', 14), ' Interactive Studio')
+          }, icon('term', 14), ' Interactive Studio'),
+          h('button.btn.btn-sm', {
+            type: 'button',
+            class: activeTab === 'processes' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost',
+            onClick: () => { activeTab = 'processes'; renderFn(); }
+          }, icon('cpu', 14), ' Process Defense'),
+          h('button.btn.btn-sm', {
+            type: 'button',
+            class: activeTab === 'processes' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost',
+            onClick: () => { activeTab = 'processes'; renderFn(); }
+          }, icon('cpu', 14), ' Process Defense')
         )
       ),
       h('span.spacer'),
@@ -933,6 +1058,8 @@ export function securityView() {
       contentNode = renderAntivirus();
     } else if (activeTab === 'catalog') {
       contentNode = renderCyberCatalog();
+    } else if (activeTab === 'processes') {
+      contentNode = renderProcessDefense();
     } else {
       contentNode = renderCyberStudio();
     }
