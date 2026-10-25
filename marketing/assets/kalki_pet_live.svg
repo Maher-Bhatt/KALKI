@@ -2,8 +2,8 @@
   <defs>
     <radialGradient id="petBg" cx="50%" cy="40%" r="75%">
       <stop offset="0%" stop-color="#111827"/>
-      <stop offset="60%" stop-color="#07090e"/>
-      <stop offset="100%" stop-color="#030508"/>
+      <stop offset="60%" stop-color="#070a12"/>
+      <stop offset="100%" stop-color="#020408"/>
     </radialGradient>
 
     <filter id="petGlow" x="-20%" y="-20%" width="140%" height="140%">
@@ -14,109 +14,107 @@
       </feMerge>
     </filter>
 
+    <linearGradient id="petBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f3ff"/>
+      <stop offset="100%" stop-color="#00a8ff"/>
+    </linearGradient>
+
+    <linearGradient id="hornGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c084fc"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+
     <style>
       .mono-text { font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace; }
       .sans-text { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight: 700; }
-      
-      @keyframes petBob {
-        0%, 100% { transform: translateY(0) rotate(0deg); }
-        50% { transform: translateY(-16px) rotate(4deg); }
-      }
-
-      @keyframes noteFloat1 {
-        0% { transform: translate(0, 0) scale(0.6); opacity: 0; }
-        40% { opacity: 1; }
-        100% { transform: translate(-30px, -60px) scale(1.2); opacity: 0; }
-      }
-
-      @keyframes noteFloat2 {
-        0% { transform: translate(0, 0) scale(0.6); opacity: 0; }
-        40% { opacity: 1; }
-        100% { transform: translate(25px, -70px) scale(1.3); opacity: 0; }
-      }
-
-      @keyframes blink {
-        0%, 90%, 100% { transform: scaleY(1); }
-        95% { transform: scaleY(0.1); }
-      }
-
-      .pet-avatar {
-        animation: petBob 1.2s infinite ease-in-out;
-        transform-origin: 130px 180px;
-      }
-
-      .note1 { animation: noteFloat1 2.2s infinite ease-out; }
-      .note2 { animation: noteFloat2 2.5s infinite ease-out 0.8s; }
-      .eyes { animation: blink 4s infinite; transform-origin: center; }
     </style>
   </defs>
 
   <!-- Background Container -->
-  <rect x="2" y="2" width="456" height="276" rx="16" fill="url(#petBg)" stroke="rgba(0, 243, 255, 0.25)" stroke-width="1.5"/>
+  <rect x="2" y="2" width="456" height="276" rx="18" fill="url(#petBg)" stroke="rgba(0, 243, 255, 0.3)" stroke-width="1.8"/>
 
-  <!-- Top Badge -->
+  <!-- Top Badges -->
   <g transform="translate(24, 20)">
-    <rect x="0" y="0" width="190" height="24" rx="12" fill="rgba(168, 85, 247, 0.12)" stroke="rgba(168, 85, 247, 0.4)" stroke-width="1"/>
-    <circle cx="12" cy="12" r="4" fill="#a855f7"/>
-    <text x="24" y="16" fill="#c084fc" class="mono-text" font-size="10" font-weight="700">CODEX DESKTOP PET</text>
+    <rect x="0" y="0" width="185" height="26" rx="13" fill="rgba(168, 85, 247, 0.12)" stroke="rgba(168, 85, 247, 0.4)" stroke-width="1"/>
+    <circle cx="13" cy="13" r="4.5" fill="#a855f7">
+      <animate attributeName="opacity" values="1;0.4;1" dur="1.8s" repeatCount="indefinite"/>
+    </circle>
+    <text x="26" y="17" fill="#c084fc" class="mono-text" font-size="10.5" font-weight="700">CODEX DESKTOP PET</text>
   </g>
 
-  <g transform="translate(320, 20)">
-    <text x="0" y="16" fill="#10b981" class="mono-text" font-size="11" font-weight="600">● JAMMING ♪</text>
+  <g transform="translate(325, 20)">
+    <rect x="0" y="0" width="110" height="26" rx="13" fill="rgba(16, 185, 129, 0.1)" stroke="rgba(16, 185, 129, 0.3)" stroke-width="1"/>
+    <circle cx="13" cy="13" r="4.5" fill="#10b981"/>
+    <text x="24" y="17" fill="#10b981" class="mono-text" font-size="10.5" font-weight="700">JAMMING ♪</text>
   </g>
 
   <!-- Speech Bubble -->
-  <g transform="translate(195, 65)">
-    <path d="M 0 10 Q 0 0 10 0 L 220 0 Q 230 0 230 10 L 230 75 Q 230 85 220 85 L 25 85 L 0 100 L 8 85 L 10 85 Q 0 85 0 75 Z" fill="#0f172a" stroke="#00f3ff" stroke-width="1.2" filter="url(#petGlow)"/>
-    <text x="16" y="26" fill="#ffffff" class="sans-text" font-size="13">"Hey Maher!"</text>
-    <text x="16" y="46" fill="#94a3b8" class="mono-text" font-size="10.5">Always on screen corner.</text>
-    <text x="16" y="62" fill="#94a3b8" class="mono-text" font-size="10.5">Dancing to Apple Music ♪</text>
-    <text x="16" y="77" fill="#00f3ff" class="mono-text" font-size="10" font-weight="700">Click pet to restore KALKI →</text>
+  <g transform="translate(200, 68)">
+    <path d="M 0 12 Q 0 0 12 0 L 216 0 Q 228 0 228 12 L 228 80 Q 228 92 216 92 L 25 92 L 0 108 L 8 92 L 12 92 Q 0 92 0 80 Z" fill="#0f172a" stroke="#00f3ff" stroke-width="1.4" filter="url(#petGlow)"/>
+    <text x="16" y="28" fill="#ffffff" class="sans-text" font-size="14">"Hey Maher!"</text>
+    <text x="16" y="50" fill="#94a3b8" class="mono-text" font-size="10.5">Always on screen corner.</text>
+    <text x="16" y="66" fill="#94a3b8" class="mono-text" font-size="10.5">Dancing to Apple Music ♪</text>
+    <text x="16" y="83" fill="#00f3ff" class="mono-text" font-size="10" font-weight="700">Click pet to restore KALKI →</text>
   </g>
 
   <!-- Animated Companion Mascot (Gobi Chibi Pixel Sprite) -->
-  <g class="pet-avatar" transform="translate(45, 80)">
-    <!-- Aura Glow Shadow -->
-    <ellipse cx="65" cy="140" rx="42" ry="8" fill="rgba(0, 243, 255, 0.2)"/>
+  <g transform="translate(45, 80)">
+    <!-- SVG Native Animation Transform: Bobbing Up and Down -->
+    <animateTransform attributeName="transform" type="translate" values="45,80; 45,66; 45,80" dur="1.1s" repeatCount="indefinite" additive="replace"/>
+
+    <!-- Mascot Shadow -->
+    <ellipse cx="65" cy="142" rx="44" ry="9" fill="rgba(0, 243, 255, 0.22)"/>
 
     <!-- Mascot Body -->
-    <rect x="25" y="40" width="80" height="72" rx="20" fill="#00f3ff" filter="url(#petGlow)"/>
+    <rect x="25" y="40" width="80" height="74" rx="20" fill="url(#petBodyGrad)" filter="url(#petGlow)"/>
 
     <!-- Mascot Horns -->
-    <polygon points="30,40 18,12 42,32" fill="#a855f7"/>
-    <polygon points="100,40 112,12 88,32" fill="#a855f7"/>
+    <polygon points="30,40 18,12 42,32" fill="url(#hornGrad)"/>
+    <polygon points="100,40 112,12 88,32" fill="url(#hornGrad)"/>
 
-    <!-- Inner Horn Accents -->
-    <polygon points="32,36 24,18 38,30" fill="#c084fc"/>
-    <polygon points="98,36 106,18 92,30" fill="#c084fc"/>
+    <!-- Inner Horn Highlights -->
+    <polygon points="32,36 24,18 38,30" fill="#e9d5ff"/>
+    <polygon points="98,36 106,18 92,30" fill="#e9d5ff"/>
 
     <!-- Blinking Eyes -->
-    <g class="eyes">
-      <circle cx="50" cy="72" r="7.5" fill="#07090e"/>
-      <circle cx="80" cy="72" r="7.5" fill="#07090e"/>
+    <g>
+      <circle cx="50" cy="72" r="7.5" fill="#07090e">
+        <animate attributeName="r" values="7.5;7.5;1;7.5" keyTimes="0;0.92;0.96;1" dur="3.5s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="80" cy="72" r="7.5" fill="#07090e">
+        <animate attributeName="r" values="7.5;7.5;1;7.5" keyTimes="0;0.92;0.96;1" dur="3.5s" repeatCount="indefinite"/>
+      </circle>
       <circle cx="52" cy="69" r="2.5" fill="#ffffff"/>
       <circle cx="82" cy="69" r="2.5" fill="#ffffff"/>
     </g>
 
     <!-- Blushing Cheeks -->
-    <ellipse cx="38" cy="82" rx="6" ry="4" fill="#ff4d8d" opacity="0.85"/>
-    <ellipse cx="92" cy="82" rx="6" ry="4" fill="#ff4d8d" opacity="0.85"/>
+    <ellipse cx="38" cy="84" rx="6.5" ry="4" fill="#ff4d8d" opacity="0.85"/>
+    <ellipse cx="92" cy="84" rx="6.5" ry="4" fill="#ff4d8d" opacity="0.85"/>
 
     <!-- Cute Smiling Mouth -->
     <path d="M 58 84 Q 65 92 72 84" stroke="#07090e" stroke-width="3" fill="none" stroke-linecap="round"/>
 
     <!-- Little Paws -->
-    <rect x="36" y="104" width="16" height="12" rx="6" fill="#00c8d6"/>
-    <rect x="78" y="104" width="16" height="12" rx="6" fill="#00c8d6"/>
+    <rect x="36" y="106" width="16" height="12" rx="6" fill="#008ca0"/>
+    <rect x="78" y="106" width="16" height="12" rx="6" fill="#008ca0"/>
   </g>
 
   <!-- Floating Musical Notes -->
   <g transform="translate(140, 110)">
-    <text x="0" y="0" fill="#a855f7" class="mono-text note1" font-size="24" font-weight="900">♪</text>
-    <text x="20" y="10" fill="#00f3ff" class="mono-text note2" font-size="26" font-weight="900">♫</text>
+    <text x="0" y="0" fill="#a855f7" class="mono-text" font-size="24" font-weight="900">
+      ♪
+      <animateTransform attributeName="transform" type="translate" values="0,0; -25,-55; -40,-80" dur="2.2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;0" dur="2.2s" repeatCount="indefinite"/>
+    </text>
+    <text x="25" y="10" fill="#00f3ff" class="mono-text" font-size="26" font-weight="900">
+      ♫
+      <animateTransform attributeName="transform" type="translate" values="0,0; 25,-60; 35,-85" dur="2.6s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;0" dur="2.6s" repeatCount="indefinite"/>
+    </text>
   </g>
 
-  <!-- Bottom Spec Footnote -->
+  <!-- Bottom Footnote -->
   <g transform="translate(24, 252)">
     <text x="0" y="0" fill="#64748b" class="mono-text" font-size="10.5">
       Win32 AttachThreadInput • Isolated Edge WebView2 Profile • 8-Bit Web Audio

@@ -1,29 +1,33 @@
 <div align="center">
 
-# ⚡ KALKI AI Assistant
-### Sovereign Desktop Intelligence • Desktop Companion Pet • ShieldCore Antivirus • Cognitive Auto-Router
+# ⚡ KALKI AI ASSISTANT
+### Sovereign AI Desktop Assistant & Endpoint Defense Engine
 
-[![Release](https://img.shields.io/badge/Release-v1.4.2-00f3ff.svg?style=for-the-badge&logo=rocket&logoColor=black)](https://github.com/maher-kalki/KALKI/releases)
-[![Platform](https://img.shields.io/badge/Platforms-Windows%20%7C%20Linux%20%7C%20macOS-a855f7.svg?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/maher-kalki/KALKI#platform-status)
-[![License](https://img.shields.io/badge/License-MIT-10b981.svg?style=for-the-badge&logo=open-source-initiative&logoColor=white)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-f59e0b.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![Local First](https://img.shields.io/badge/Privacy-100%25%20Local--First%20%7C%20Zero%20Telemetry-00f3ff.svg?style=for-the-badge&logo=shield&logoColor=black)](PRIVACY.md)
+[![Release](https://img.shields.io/badge/Release-v1.4.2-00f3ff.svg?style=flat-square&logo=rocket&logoColor=black)](https://github.com/maher-kalki/KALKI/releases)
+[![Platforms](https://img.shields.io/badge/Platforms-Windows%20%7C%20Linux%20%7C%20macOS-a855f7.svg?style=flat-square&logo=windows&logoColor=white)](https://github.com/maher-kalki/KALKI#platform-status)
+[![Privacy](https://img.shields.io/badge/Privacy-100%25%20Local--First%20%7C%20Zero%20Telemetry-10b981.svg?style=flat-square&logo=shield&logoColor=white)](PRIVACY.md)
+[![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-f59e0b.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-MIT-38bdf8.svg?style=flat-square&logo=open-source-initiative&logoColor=white)](LICENSE)
+
+<br>
 
 <p align="center">
-  <a href="marketing/index.html"><strong>🌐 Launch Interactive Web Showcase & Live Pet Demo →</strong></a>
+  <a href="marketing/index.html">
+    <img src="https://img.shields.io/badge/%F0%9F%8C%90_LAUNCH_LIVE_INTERACTIVE_WEB_SHOWCASE-00F3FF?style=for-the-badge&labelColor=07090e&color=00f3ff" alt="Launch Live Interactive Web Showcase" height="38">
+  </a>
 </p>
 
 <p align="center">
-  <img src="marketing/assets/kalki_hero_live.svg" alt="KALKI Live Animated Hero Vector Banner" width="940" style="border-radius: 14px; box-shadow: 0 16px 48px rgba(0,243,255,0.15);">
+  <img src="marketing/assets/kalki_hero_live.svg" alt="KALKI Live Animated Hero Vector Banner" width="940" style="border-radius: 14px; box-shadow: 0 20px 50px rgba(0,243,255,0.18);">
 </p>
 
 <p align="center">
-  <a href="#-quick-download-matrix">⚡ Download Installer</a> •
-  <a href="#-standalone-desktop-companion-pet-codex-style">🐱 Desktop Pet</a> •
-  <a href="#-shieldcore-antivirus--cybersecurity-direct-viewer">🛡️ ShieldCore Antivirus</a> •
-  <a href="#-dynamic-smart-model-auto-router">🧠 Smart Model Router</a> •
-  <a href="INSTALLATION_GUIDE.md">📖 Installation Guide</a> •
-  <a href="KALKI_COMPLETE_SYSTEM_DOCUMENTATION.md">📚 System Architecture</a>
+  <strong><a href="#-quick-download-matrix">⚡ Installer</a></strong> &nbsp;•&nbsp;
+  <strong><a href="#-standalone-desktop-companion-pet-codex-style">🐱 Desktop Pet</a></strong> &nbsp;•&nbsp;
+  <strong><a href="#-shieldcore-antivirus--cybersecurity-direct-viewer">🛡️ ShieldCore Cyber</a></strong> &nbsp;•&nbsp;
+  <strong><a href="#-dynamic-smart-model-auto-router">🧠 Smart Router</a></strong> &nbsp;•&nbsp;
+  <strong><a href="INSTALLATION_GUIDE.md">📖 Install Guide</a></strong> &nbsp;•&nbsp;
+  <strong><a href="KALKI_COMPLETE_SYSTEM_DOCUMENTATION.md">📚 System Manual</a></strong>
 </p>
 
 </div>
