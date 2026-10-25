@@ -1,0 +1,185 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 320" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad" cx="50%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#0e172a"/>
+      <stop offset="60%" stop-color="#07090e"/>
+      <stop offset="100%" stop-color="#020408"/>
+    </radialGradient>
+
+    <!-- Neon Glow Filters -->
+    <filter id="glowCyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="glowPurple" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Linear Gradients -->
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="50%" stop-color="#00f3ff"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00f3ff"/>
+      <stop offset="50%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+
+    <linearGradient id="scanlineGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="rgba(0, 243, 255, 0)"/>
+      <stop offset="50%" stop-color="rgba(0, 243, 255, 0.15)"/>
+      <stop offset="100%" stop-color="rgba(0, 243, 255, 0)"/>
+    </linearGradient>
+
+    <style>
+      .mono-text { font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace; }
+      .sans-text { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight: 800; }
+      
+      @keyframes pulseGlow {
+        0%, 100% { opacity: 0.8; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.03); }
+      }
+
+      @keyframes scanline {
+        0% { transform: translateY(-320px); }
+        100% { transform: translateY(320px); }
+      }
+
+      @keyframes eqBounce1 { 0%, 100% { height: 10px; y: 250px; } 50% { height: 28px; y: 232px; } }
+      @keyframes eqBounce2 { 0%, 100% { height: 22px; y: 238px; } 50% { height: 12px; y: 248px; } }
+      @keyframes eqBounce3 { 0%, 100% { height: 16px; y: 244px; } 50% { height: 32px; y: 228px; } }
+      @keyframes eqBounce4 { 0%, 100% { height: 30px; y: 230px; } 50% { height: 14px; y: 246px; } }
+      @keyframes eqBounce5 { 0%, 100% { height: 14px; y: 246px; } 50% { height: 26px; y: 234px; } }
+
+      @keyframes borderDash {
+        0% { stroke-dashoffset: 0; }
+        100% { stroke-dashoffset: 1000; }
+      }
+
+      .eq1 { animation: eqBounce1 0.7s infinite ease-in-out; }
+      .eq2 { animation: eqBounce2 0.9s infinite ease-in-out 0.2s; }
+      .eq3 { animation: eqBounce3 0.6s infinite ease-in-out 0.1s; }
+      .eq4 { animation: eqBounce4 0.8s infinite ease-in-out 0.3s; }
+      .eq5 { animation: eqBounce5 1.0s infinite ease-in-out 0.15s; }
+      
+      .animated-border {
+        stroke-dasharray: 60 120;
+        animation: borderDash 25s linear infinite;
+      }
+    </style>
+  </defs>
+
+  <!-- Card Background -->
+  <rect x="2" y="2" width="936" height="316" rx="20" fill="url(#bgGrad)"/>
+  
+  <!-- Subtle Cyber Grid -->
+  <g opacity="0.08" stroke="#00f3ff" stroke-width="1">
+    <line x1="0" y1="64" x2="940" y2="64"/>
+    <line x1="0" y1="128" x2="940" y2="128"/>
+    <line x1="0" y1="192" x2="940" y2="192"/>
+    <line x1="0" y1="256" x2="940" y2="256"/>
+    <line x1="188" y1="0" x2="188" y2="320"/>
+    <line x1="376" y1="0" x2="376" y2="320"/>
+    <line x1="564" y1="0" x2="564" y2="320"/>
+    <line x1="752" y1="0" x2="752" y2="320"/>
+  </g>
+
+  <!-- Moving Scanline -->
+  <g style="animation: scanline 6s linear infinite;">
+    <rect x="2" y="0" width="936" height="120" fill="url(#scanlineGrad)"/>
+  </g>
+
+  <!-- Glowing Animated Border -->
+  <rect x="2" y="2" width="936" height="316" rx="20" fill="none" stroke="url(#borderGrad)" stroke-width="2.5" class="animated-border" filter="url(#glowCyan)"/>
+
+  <!-- Top Pill / Telemetry Status -->
+  <g transform="translate(40, 36)">
+    <rect x="0" y="0" width="220" height="28" rx="14" fill="rgba(0, 243, 255, 0.08)" stroke="rgba(0, 243, 255, 0.3)" stroke-width="1"/>
+    <circle cx="16" cy="14" r="5" fill="#00f3ff">
+      <animate attributeName="opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <text x="30" y="18" fill="#00f3ff" class="mono-text" font-size="11" font-weight="600" letter-spacing="1">SYSTEM READY // v1.4.2</text>
+  </g>
+
+  <g transform="translate(680, 36)">
+    <rect x="0" y="0" width="220" height="28" rx="14" fill="rgba(16, 185, 129, 0.08)" stroke="rgba(16, 185, 129, 0.3)" stroke-width="1"/>
+    <circle cx="16" cy="14" r="5" fill="#10b981">
+      <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/>
+    </circle>
+    <text x="30" y="18" fill="#10b981" class="mono-text" font-size="11" font-weight="600" letter-spacing="1">SHIELDCORE: ACTIVE</text>
+  </g>
+
+  <!-- Brand Logo & Title -->
+  <g transform="translate(40, 100)">
+    <!-- Hexagonal Core Icon -->
+    <g transform="translate(0, 10)" filter="url(#glowCyan)">
+      <polygon points="35,0 70,20 70,60 35,80 0,60 0,20" fill="rgba(0, 243, 255, 0.12)" stroke="#00f3ff" stroke-width="2.5"/>
+      <polygon points="35,15 55,27 55,53 35,65 15,53 15,27" fill="#07090e" stroke="#a855f7" stroke-width="2"/>
+      <circle cx="35" cy="40" r="8" fill="#00f3ff">
+        <animate attributeName="r" values="7;10;7" dur="2.5s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+
+    <!-- Main Title -->
+    <text x="95" y="52" fill="url(#textGrad)" class="sans-text" font-size="52" letter-spacing="-1">KALKI</text>
+    <text x="268" y="52" fill="#f8fafc" class="sans-text" font-size="34" letter-spacing="-0.5" opacity="0.95">AI ASSISTANT</text>
+
+    <!-- Subtitle -->
+    <text x="96" y="84" fill="#94a3b8" class="mono-text" font-size="14" font-weight="500" letter-spacing="0.5">
+      SOVEREIGN DESKTOP INTELLIGENCE • DESKTOP COMPANION PET • SHIELDCORE DEFENSE
+    </text>
+  </g>
+
+  <!-- Bottom Interactive Capability Pills & Audio Visualizer -->
+  <g transform="translate(40, 220)">
+    <!-- Capability Badges -->
+    <g transform="translate(0, 10)">
+      <rect x="0" y="0" width="145" height="34" rx="8" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)"/>
+      <text x="14" y="22" fill="#e2e8f0" class="mono-text" font-size="11.5">● 100% LOCAL-FIRST</text>
+    </g>
+
+    <g transform="translate(155, 10)">
+      <rect x="0" y="0" width="160" height="34" rx="8" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)"/>
+      <text x="14" y="22" fill="#e2e8f0" class="mono-text" font-size="11.5">● ZERO TELEMETRY</text>
+    </g>
+
+    <g transform="translate(325, 10)">
+      <rect x="0" y="0" width="160" height="34" rx="8" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)"/>
+      <text x="14" y="22" fill="#e2e8f0" class="mono-text" font-size="11.5">● 12 CYBER TOOLS</text>
+    </g>
+
+    <g transform="translate(495, 10)">
+      <rect x="0" y="0" width="175" height="34" rx="8" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)"/>
+      <text x="14" y="22" fill="#e2e8f0" class="mono-text" font-size="11.5">● COGNITIVE ROUTER</text>
+    </g>
+
+    <!-- Animated Audio Waveform Equalizer (Real-time Simulation) -->
+    <g transform="translate(740, 0)">
+      <text x="0" y="16" fill="#64748b" class="mono-text" font-size="10" letter-spacing="1">AUDIO ENGINE</text>
+      <rect x="0" y="246" width="6" height="14" rx="3" fill="#00f3ff" class="eq1"/>
+      <rect x="10" y="238" width="6" height="22" rx="3" fill="#00f3ff" class="eq2"/>
+      <rect x="20" y="244" width="6" height="16" rx="3" fill="#a855f7" class="eq3"/>
+      <rect x="30" y="230" width="6" height="30" rx="3" fill="#a855f7" class="eq4"/>
+      <rect x="40" y="246" width="6" height="14" rx="3" fill="#00f3ff" class="eq5"/>
+      <rect x="50" y="238" width="6" height="22" rx="3" fill="#00f3ff" class="eq2"/>
+      <rect x="60" y="244" width="6" height="16" rx="3" fill="#a855f7" class="eq1"/>
+      <rect x="70" y="230" width="6" height="30" rx="3" fill="#a855f7" class="eq3"/>
+      <rect x="80" y="246" width="6" height="14" rx="3" fill="#00f3ff" class="eq4"/>
+      <rect x="90" y="238" width="6" height="22" rx="3" fill="#00f3ff" class="eq5"/>
+      <rect x="100" y="244" width="6" height="16" rx="3" fill="#10b981" class="eq2"/>
+      <rect x="110" y="234" width="6" height="26" rx="3" fill="#10b981" class="eq4"/>
+    </g>
+  </g>
+</svg>
