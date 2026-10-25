@@ -139,6 +139,42 @@ class PetApi:
         """Closes the desktop pet window."""
         os._exit(0)
 
+def _apply_stealth_window_styles():
+    """Removes the window from the Windows taskbar so it behaves as an overlay."""
+    if sys.platform != "win32":
+        return
+    import ctypes
+    import threading
+    user32 = ctypes.windll.user32
+    GWL_EXSTYLE = -20
+    WS_EX_APPWINDOW = 0x00040000
+    WS_EX_TOOLWINDOW = 0x00000080
+    SWP_FRAMECHANGED = 0x0020
+    SWP_NOMOVE = 0x0002
+    SWP_NOSIZE = 0x0001
+    SWP_NOACTIVATE = 0x0010
+    SWP_NOZORDER = 0x0004
+
+    def _worker():
+        for _ in range(40):
+            time.sleep(0.15)
+            hwnd = user32.FindWindowW(None, "KALKI Desktop Companion")
+            if hwnd:
+                try:
+                    style = user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+                    if (style & WS_EX_APPWINDOW) or not (style & WS_EX_TOOLWINDOW):
+                        new_style = (style & ~WS_EX_APPWINDOW) | WS_EX_TOOLWINDOW
+                        user32.SetWindowLongW(hwnd, GWL_EXSTYLE, new_style)
+                        user32.SetWindowPos(
+                            hwnd, 0, 0, 0, 0, 0,
+                            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED
+                        )
+                    break
+                except Exception:
+                    pass
+
+    threading.Thread(target=_worker, daemon=True, name="kalki-pet-stealth").start()
+
 def main():
     api = PetApi()
     
@@ -154,6 +190,8 @@ def main():
     local_html = os.path.join(BASE_DIR, "ui", "pet_overlay.html")
     load_url = local_html if os.path.exists(local_html) else f"http://127.0.0.1:{port}/pet_overlay"
 
+    _apply_stealth_window_styles()
+
     window = webview.create_window(
         title="KALKI Desktop Companion",
         url=load_url,
@@ -164,6 +202,7 @@ def main():
         frameless=True,
         on_top=True,
         transparent=True,
+        background_color="#000000",
         easy_drag=True,
         js_api=api
     )

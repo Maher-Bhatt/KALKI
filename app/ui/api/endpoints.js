@@ -222,11 +222,18 @@ export const desktop = {
   telemetry: () => window.pywebview?.api?.get_system_telemetry ? window.pywebview.api.get_system_telemetry() : get('/api/system/telemetry'),
   processes: () => window.pywebview?.api?.get_process_list ? window.pywebview.api.get_process_list() : get('/api/system/processes'),
   killProcess: (pid) => window.pywebview?.api?.kill_process ? window.pywebview.api.kill_process(pid) : post('/api/system/process/kill', { pid }),
-  togglePet: () => window.pywebview?.api?.toggle_pet ? window.pywebview.api.toggle_pet() : post('/api/pet/toggle', {}),
+  togglePet: (enable) => window.pywebview?.api?.toggle_pet ? window.pywebview.api.toggle_pet(enable) : post('/api/pet/overlay', typeof enable === 'boolean' ? { enabled: enable } : { toggle: true }),
   togglePin: () => window.pywebview?.api?.toggle_pin ? window.pywebview.api.toggle_pin() : Promise.resolve({ ok: false }),
   minimize: () => window.pywebview?.api?.minimize?.(),
   toggleMaximize: () => window.pywebview?.api?.toggle_maximize?.(),
   close: () => window.pywebview?.api?.close?.(),
+};
+
+/* ── Companion Mascot & Desktop Overlay Bridge ────────────────────────── */
+export const petOverlay = {
+  status: () => get('/api/pet/overlay'),
+  set: (enabled) => post('/api/pet/overlay', { enabled }),
+  toggle: () => post('/api/pet/overlay', { toggle: true }),
 };
 
 

@@ -190,3 +190,6 @@ try:
         pass
 except Exception as _e:
     pass
+
+# Desktop Companion Floating Overlay (False by default for clean single-window taskbar)
+ENABLE_DESKTOP_PET = False

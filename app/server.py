@@ -1711,6 +1711,10 @@ def handle_local(text):
     """
     if not text:
         return False, ""
+    import clipboard_mod, cybertools
+    import notes as notesmod
+    t = text.lower().strip()
+    raw = text.strip()
     # ════════════════════════════════════════════════════
     # REAL SOVEREIGN DESKTOP SYSTEM ACTIONS (Instant Local Execution)
     # ════════════════════════════════════════════════════
@@ -1780,8 +1784,6 @@ def handle_local(text):
         except Exception as _e_f:
             return True, f"Directory read error: {_e_f}"
 
-    t = text.lower().strip()
-    raw = text.strip()
     pending_result = _consume_confirmation(t)
     if pending_result is not None:
         return pending_result
@@ -2352,16 +2354,46 @@ def handle_local(text):
         return True, f"{spoken}\n\n```json\n{json.dumps(result, indent=2)}\n```"
 
     # ════════════════════════════════════════════════════
-    # QUICK CAPTURE (clipboard -> notes)
+    # QUICK CAPTURE & CONVERSATIONAL NOTES
     # ════════════════════════════════════════════════════
+    # 1. Follow-up note answer if KALKI asked what to remember
+    if STATE.get("pending_note_capture"):
+        STATE["pending_note_capture"] = False
+        notesmod.add_note(text)
+        try:
+            import semantic_memory
+            semantic_memory.add_memory(text, category="Personal", importance=4)
+        except Exception:
+            pass
+        return True, f"Saved to your notes, {config.OWNER_TITLE}: '{text}'"
+
+    # 2. Direct note syntax: "remember that ...", "remember this: ...", "save note: ..."
+    m_note = _re_local.search(
+        r"^(?:remember\s+(?:that\s+|this\s*:\s*|to\s+)?|save\s+(?:this\s*:\s*|note\s*:\s*|that\s*:\s*)?|note\s+(?:that\s+|this\s*:\s*)?|take\s+a\s+note\s*:\s*)(.+)$",
+        t, _re_local.IGNORECASE
+    )
+    if m_note:
+        note_content = m_note.group(1).strip()
+        if note_content and len(note_content) > 1 and note_content.lower() not in ("this", "that", "it", ""):
+            notesmod.add_note(note_content)
+            try:
+                import semantic_memory
+                semantic_memory.add_memory(note_content, category="Personal", importance=4)
+            except Exception:
+                pass
+            return True, f"Saved to your notes, {config.OWNER_TITLE}: '{note_content}'"
+
+    # 3. Bare capture command ("remember this", "save this")
     if t in ("remember this", "save this", "capture this", "note this",
              "save that", "remember that"):
         txt = clipboard_mod.read_text()
-        if not txt:
-            return True, (f"Nothing on your clipboard to save, {config.OWNER_TITLE}. "
-                          "Copy something first.")
-        notesmod.add_note(txt)
-        return True, f"Saved to your notes, {config.OWNER_TITLE}. {len(txt.split())} words."
+        if txt and txt.strip():
+            notesmod.add_note(txt.strip())
+            return True, f"Saved clipboard to your notes, {config.OWNER_TITLE}. {len(txt.split())} words."
+        else:
+            STATE["pending_note_capture"] = True
+            return True, (f"Your clipboard is currently empty, {config.OWNER_TITLE}. "
+                          "What would you like me to remember? You can type it directly or copy it.")
 
     # ════════════════════════════════════════════════════
     # CYBER: CVE, subdomain, reverse shell, github dorks
@@ -4213,22 +4245,25 @@ def resolve_auto_model(last_user):
     if not (has_gemini or has_openai or has_groq):
         return "deepseek-r1"
     
+    # Preferred Groq fallback model from available models
+    best_groq = "qwen/qwen3.8-27b" if "qwen/qwen3.8-27b" in AVAILABLE_GROQ_MODELS else (AVAILABLE_GROQ_MODELS[0] if AVAILABLE_GROQ_MODELS else "llama-3.1-8b-instant")
+    
     if "gemini" in low_prompt and has_gemini:
-        return "gemini-2.5-flash"
+        return "gemini-3.5-flash"
     elif ("gpt" in low_prompt or "openai" in low_prompt) and has_openai:
         return "gpt-4o-mini"
     elif ("groq" in low_prompt or "llama" in low_prompt) and has_groq:
-        return "llama-3.1-8b-instant"
+        return best_groq
     else:
         is_complex = any(k in low_prompt for k in _HARD_HINTS) or "```" in (last_user or "") or len(low_prompt.split()) > 14
         if is_complex:
-            if has_gemini: return "gemini-2.5-pro"
+            if has_gemini: return "gemini-3.5-flash"
             elif has_openai: return "gpt-4o"
-            elif has_groq: return getattr(config, "GROQ_MODEL", "llama-3.3-70b-versatile")
+            elif has_groq: return best_groq
             else: return "ollama"
         else:
-            if has_gemini: return "gemini-2.5-flash"
-            elif has_groq: return "llama-3.1-8b-instant"
+            if has_gemini: return "gemini-3.5-flash"
+            elif has_groq: return best_groq
             elif has_openai: return "gpt-4o-mini"
             else: return "ollama"
 
@@ -4340,8 +4375,73 @@ def ask_ai_stream(user_messages):
     headers = {"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
     
     if chosen.startswith("gemini-"):
-        api_url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
-        headers["Authorization"] = f"Bearer {config.GEMINI_API_KEY}"
+        # Gemini automatic quota & model fallback cascade
+        gemini_candidates = [chosen]
+        for m_cand in ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-flash-latest", "gemini-2.5-flash"]:
+            if m_cand not in gemini_candidates:
+                gemini_candidates.append(m_cand)
+                
+        last_gemini_err = None
+        for g_model in gemini_candidates:
+            api_url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+            g_headers = {
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Authorization": f"Bearer {config.GEMINI_API_KEY}"
+            }
+            payload_dict = {
+                "model": g_model,
+                "messages": msgs,
+                "max_tokens": 1024,
+                "temperature": 0.7,
+                "stream": True
+            }
+            try:
+                req = urllib.request.Request(api_url, data=json.dumps(payload_dict).encode(), headers=g_headers, method="POST")
+                with urllib.request.urlopen(req, timeout=35) as r:
+                    got_any = False
+                    for line in r:
+                        line_str = line.decode("utf-8").strip()
+                        if line_str.startswith("data:"):
+                            data_body = line_str[5:].strip()
+                            if data_body == "[DONE]":
+                                break
+                            try:
+                                chunk = json.loads(data_body)
+                                token = chunk["choices"][0]["delta"].get("content", "")
+                                if token:
+                                    got_any = True
+                                    yield token
+                            except Exception:
+                                pass
+                    if got_any:
+                        return
+            except Exception as e_gem:
+                log(f"[GeminiStream] Model {g_model} failed: {e_gem}. Cascading to next candidate...")
+                last_gemini_err = e_gem
+                continue
+        # If all Gemini candidates failed, mark provider and fall through
+        e = last_gemini_err or RuntimeError("All Gemini candidates failed")
+        mark_provider_failed("gemini")
+        # Try Groq fallback
+        best_groq = "qwen/qwen3.8-27b" if "qwen/qwen3.8-27b" in AVAILABLE_GROQ_MODELS else (AVAILABLE_GROQ_MODELS[0] if AVAILABLE_GROQ_MODELS else "llama-3.1-8b-instant")
+        if getattr(config, "GROQ_API_KEY", "") and not getattr(config, "GROQ_API_KEY", "").startswith("PASTE_"):
+            try:
+                log(f"Falling back from Gemini to Groq model: {best_groq}")
+                for token in ask_ai_stream(user_messages):
+                    yield token
+                return
+            except Exception: pass
+        # Try DeepSeek free fallback
+        try:
+            log("Attempting DeepSeek free stream fallback...")
+            for token in ask_deepseek_free_stream(user_messages):
+                yield token
+            return
+        except Exception: pass
+        yield f"I experienced a temporary interruption reaching the cloud models, {config.OWNER_TITLE}. Your system, memory, and desktop tools are fully operational. Please check your API quota or network connection."
+        return
+
     elif chosen.startswith("gpt-"):
         api_url = "https://api.openai.com/v1/chat/completions"
         headers["Authorization"] = f"Bearer {config.OPENAI_API_KEY}"
@@ -4389,7 +4489,14 @@ def ask_ai_stream(user_messages):
             finally:
                 ask_ai_stream._fallback_active = False
             return
-        raise RuntimeError(f"Provider {chosen} failed: {e}")
+        try:
+            log("Attempting DeepSeek free stream fallback after general cloud stream failure...")
+            for token in ask_deepseek_free_stream(user_messages):
+                yield token
+            return
+        except Exception: pass
+        yield f"Unable to reach the active AI provider, {config.OWNER_TITLE}. Your local desktop environment, memory, and cyber tools are ready."
+        return
 
 def ask_ai(user_messages, force_search=False):
     """Returns the AI text reply. Routes based on active model and falls back to Ollama."""
@@ -4978,6 +5085,53 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(content_bytes)
                 return
 
+        if path == "/api/pet/overlay":
+            import psutil
+            running = False
+            for p in psutil.process_iter(['name', 'cmdline']):
+                try:
+                    cmd = ' '.join(p.info.get('cmdline') or [])
+                    if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
+                        running = True
+                        break
+                except Exception:
+                    pass
+
+            if self.command == 'POST':
+                action_enable = body.get('enabled')
+                toggle = body.get('toggle', False)
+                if toggle:
+                    action_enable = not running
+
+                if action_enable is False:
+                    # Kill running pet processes
+                    for p in psutil.process_iter(['name', 'cmdline']):
+                        try:
+                            cmd = ' '.join(p.info.get('cmdline') or [])
+                            if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
+                                p.kill()
+                        except Exception: pass
+                    self._json({"ok": True, "running": False})
+                    return
+                elif action_enable is True and not running:
+                    # Launch desktop pet
+                    try:
+                        base = os.path.dirname(os.path.abspath(__file__))
+                        pet_script = os.path.join(base, "desktop_pet.py")
+                        pet_exe = os.path.join(base, "KALKI_Pet.exe")
+                        if os.path.exists(pet_exe):
+                            subprocess.Popen([pet_exe], cwd=base)
+                        elif os.path.exists(pet_script):
+                            subprocess.Popen([sys.executable, pet_script], cwd=base)
+                        running = True
+                    except Exception as e:
+                        self._json({"ok": False, "error": str(e)})
+                        return
+                    self._json({"ok": True, "running": True})
+                    return
+            self._json({"ok": True, "running": running})
+            return
+
         if path == "/api/pet":
             pet_file = os.path.join(DATA_DIR, "pet_state.json")
             pet_data = {
@@ -5312,7 +5466,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/models":
             models = ["auto"]
             if getattr(config, "GEMINI_API_KEY", "") and not getattr(config, "GEMINI_API_KEY", "").startswith("PASTE_"):
-                models += ["gemini-2.5-flash", "gemini-2.5-pro"]
+                models += ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash"]
             if getattr(config, "OPENAI_API_KEY", "") and not getattr(config, "OPENAI_API_KEY", "").startswith("PASTE_"):
                 models += ["gpt-4o-mini", "gpt-4o"]
             if getattr(config, "ANTHROPIC_API_KEY", "") and not getattr(config, "ANTHROPIC_API_KEY", "").startswith("PASTE_"):
@@ -5668,6 +5822,53 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": str(e)})
             return
 
+        if path == "/api/pet/overlay":
+            import psutil
+            running = False
+            for p in psutil.process_iter(['name', 'cmdline']):
+                try:
+                    cmd = ' '.join(p.info.get('cmdline') or [])
+                    if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
+                        running = True
+                        break
+                except Exception:
+                    pass
+
+            if self.command == 'POST':
+                action_enable = body.get('enabled')
+                toggle = body.get('toggle', False)
+                if toggle:
+                    action_enable = not running
+
+                if action_enable is False:
+                    # Kill running pet processes
+                    for p in psutil.process_iter(['name', 'cmdline']):
+                        try:
+                            cmd = ' '.join(p.info.get('cmdline') or [])
+                            if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
+                                p.kill()
+                        except Exception: pass
+                    self._json({"ok": True, "running": False})
+                    return
+                elif action_enable is True and not running:
+                    # Launch desktop pet
+                    try:
+                        base = os.path.dirname(os.path.abspath(__file__))
+                        pet_script = os.path.join(base, "desktop_pet.py")
+                        pet_exe = os.path.join(base, "KALKI_Pet.exe")
+                        if os.path.exists(pet_exe):
+                            subprocess.Popen([pet_exe], cwd=base)
+                        elif os.path.exists(pet_script):
+                            subprocess.Popen([sys.executable, pet_script], cwd=base)
+                        running = True
+                    except Exception as e:
+                        self._json({"ok": False, "error": str(e)})
+                        return
+                    self._json({"ok": True, "running": True})
+                    return
+            self._json({"ok": True, "running": running})
+            return
+
         if path == "/api/pet":
             pet_file = os.path.join(DATA_DIR, "pet_state.json")
             pet_data = {
@@ -5709,6 +5910,53 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": True, "secretStatus": _settings_status(SECRET_SETTING_KEYS)})
             except Exception as e:
                 self._json({"ok": False, "error": str(e)})
+            return
+
+        if path == "/api/pet/overlay":
+            import psutil
+            running = False
+            for p in psutil.process_iter(['name', 'cmdline']):
+                try:
+                    cmd = ' '.join(p.info.get('cmdline') or [])
+                    if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
+                        running = True
+                        break
+                except Exception:
+                    pass
+
+            if self.command == 'POST':
+                action_enable = body.get('enabled')
+                toggle = body.get('toggle', False)
+                if toggle:
+                    action_enable = not running
+
+                if action_enable is False:
+                    # Kill running pet processes
+                    for p in psutil.process_iter(['name', 'cmdline']):
+                        try:
+                            cmd = ' '.join(p.info.get('cmdline') or [])
+                            if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
+                                p.kill()
+                        except Exception: pass
+                    self._json({"ok": True, "running": False})
+                    return
+                elif action_enable is True and not running:
+                    # Launch desktop pet
+                    try:
+                        base = os.path.dirname(os.path.abspath(__file__))
+                        pet_script = os.path.join(base, "desktop_pet.py")
+                        pet_exe = os.path.join(base, "KALKI_Pet.exe")
+                        if os.path.exists(pet_exe):
+                            subprocess.Popen([pet_exe], cwd=base)
+                        elif os.path.exists(pet_script):
+                            subprocess.Popen([sys.executable, pet_script], cwd=base)
+                        running = True
+                    except Exception as e:
+                        self._json({"ok": False, "error": str(e)})
+                        return
+                    self._json({"ok": True, "running": True})
+                    return
+            self._json({"ok": True, "running": running})
             return
 
         if path == "/api/pet":
@@ -5798,6 +6046,53 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": str(e)})
             return
 
+        if path == "/api/pet/overlay":
+            import psutil
+            running = False
+            for p in psutil.process_iter(['name', 'cmdline']):
+                try:
+                    cmd = ' '.join(p.info.get('cmdline') or [])
+                    if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
+                        running = True
+                        break
+                except Exception:
+                    pass
+
+            if self.command == 'POST':
+                action_enable = body.get('enabled')
+                toggle = body.get('toggle', False)
+                if toggle:
+                    action_enable = not running
+
+                if action_enable is False:
+                    # Kill running pet processes
+                    for p in psutil.process_iter(['name', 'cmdline']):
+                        try:
+                            cmd = ' '.join(p.info.get('cmdline') or [])
+                            if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
+                                p.kill()
+                        except Exception: pass
+                    self._json({"ok": True, "running": False})
+                    return
+                elif action_enable is True and not running:
+                    # Launch desktop pet
+                    try:
+                        base = os.path.dirname(os.path.abspath(__file__))
+                        pet_script = os.path.join(base, "desktop_pet.py")
+                        pet_exe = os.path.join(base, "KALKI_Pet.exe")
+                        if os.path.exists(pet_exe):
+                            subprocess.Popen([pet_exe], cwd=base)
+                        elif os.path.exists(pet_script):
+                            subprocess.Popen([sys.executable, pet_script], cwd=base)
+                        running = True
+                    except Exception as e:
+                        self._json({"ok": False, "error": str(e)})
+                        return
+                    self._json({"ok": True, "running": True})
+                    return
+            self._json({"ok": True, "running": running})
+            return
+
         if path == "/api/pet":
             pet_file = os.path.join(DATA_DIR, "pet_state.json")
             pet_data = {
@@ -5853,6 +6148,53 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": True, "secretStatus": _settings_status(SECRET_SETTING_KEYS)})
             except Exception as e:
                 self._json({"ok": False, "error": str(e)})
+            return
+
+        if path == "/api/pet/overlay":
+            import psutil
+            running = False
+            for p in psutil.process_iter(['name', 'cmdline']):
+                try:
+                    cmd = ' '.join(p.info.get('cmdline') or [])
+                    if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
+                        running = True
+                        break
+                except Exception:
+                    pass
+
+            if self.command == 'POST':
+                action_enable = body.get('enabled')
+                toggle = body.get('toggle', False)
+                if toggle:
+                    action_enable = not running
+
+                if action_enable is False:
+                    # Kill running pet processes
+                    for p in psutil.process_iter(['name', 'cmdline']):
+                        try:
+                            cmd = ' '.join(p.info.get('cmdline') or [])
+                            if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
+                                p.kill()
+                        except Exception: pass
+                    self._json({"ok": True, "running": False})
+                    return
+                elif action_enable is True and not running:
+                    # Launch desktop pet
+                    try:
+                        base = os.path.dirname(os.path.abspath(__file__))
+                        pet_script = os.path.join(base, "desktop_pet.py")
+                        pet_exe = os.path.join(base, "KALKI_Pet.exe")
+                        if os.path.exists(pet_exe):
+                            subprocess.Popen([pet_exe], cwd=base)
+                        elif os.path.exists(pet_script):
+                            subprocess.Popen([sys.executable, pet_script], cwd=base)
+                        running = True
+                    except Exception as e:
+                        self._json({"ok": False, "error": str(e)})
+                        return
+                    self._json({"ok": True, "running": True})
+                    return
+            self._json({"ok": True, "running": running})
             return
 
         if path == "/api/pet":
@@ -6472,6 +6814,53 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": True, "secretStatus": _settings_status(SECRET_SETTING_KEYS)})
             except Exception as e:
                 self._json({"ok": False, "error": str(e)})
+            return
+
+        if path == "/api/pet/overlay":
+            import psutil
+            running = False
+            for p in psutil.process_iter(['name', 'cmdline']):
+                try:
+                    cmd = ' '.join(p.info.get('cmdline') or [])
+                    if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
+                        running = True
+                        break
+                except Exception:
+                    pass
+
+            if self.command == 'POST':
+                action_enable = body.get('enabled')
+                toggle = body.get('toggle', False)
+                if toggle:
+                    action_enable = not running
+
+                if action_enable is False:
+                    # Kill running pet processes
+                    for p in psutil.process_iter(['name', 'cmdline']):
+                        try:
+                            cmd = ' '.join(p.info.get('cmdline') or [])
+                            if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
+                                p.kill()
+                        except Exception: pass
+                    self._json({"ok": True, "running": False})
+                    return
+                elif action_enable is True and not running:
+                    # Launch desktop pet
+                    try:
+                        base = os.path.dirname(os.path.abspath(__file__))
+                        pet_script = os.path.join(base, "desktop_pet.py")
+                        pet_exe = os.path.join(base, "KALKI_Pet.exe")
+                        if os.path.exists(pet_exe):
+                            subprocess.Popen([pet_exe], cwd=base)
+                        elif os.path.exists(pet_script):
+                            subprocess.Popen([sys.executable, pet_script], cwd=base)
+                        running = True
+                    except Exception as e:
+                        self._json({"ok": False, "error": str(e)})
+                        return
+                    self._json({"ok": True, "running": True})
+                    return
+            self._json({"ok": True, "running": running})
             return
 
         if path == "/api/pet":
