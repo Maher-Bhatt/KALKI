@@ -3,7 +3,7 @@
 # ⚡ KALKI AI Assistant
 ### Sovereign Desktop Intelligence • Desktop Companion Pet • ShieldCore Antivirus • Cognitive Auto-Router
 
-[![Release](https://img.shields.io/badge/Release-v1.4.0-00f3ff.svg?style=for-the-badge&logo=rocket&logoColor=black)](https://github.com/maher-kalki/KALKI/releases)
+[![Release](https://img.shields.io/badge/Release-v1.4.2-00f3ff.svg?style=for-the-badge&logo=rocket&logoColor=black)](https://github.com/maher-kalki/KALKI/releases)
 [![Platform](https://img.shields.io/badge/Platforms-Windows%20%7C%20Linux%20%7C%20macOS-a855f7.svg?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/maher-kalki/KALKI#platform-status)
 [![License](https://img.shields.io/badge/License-MIT-10b981.svg?style=for-the-badge&logo=open-source-initiative&logoColor=white)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-f59e0b.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <img src="marketing/promotional/promo_github_hero.png" alt="KALKI AI Assistant — Intelligence, Within Reach" width="940" style="border-radius: 14px; box-shadow: 0 16px 48px rgba(0,243,255,0.15);">
+  <img src="marketing/assets/kalki_hero_live.svg" alt="KALKI Live Animated Hero Vector Banner" width="940" style="border-radius: 14px; box-shadow: 0 16px 48px rgba(0,243,255,0.15);">
 </p>
 
 <p align="center">
@@ -90,9 +90,9 @@ KALKI features an always-on-screen companion mascot engineered with transparent 
 
 Dedicated cybersecurity workspace pinned permanently to the navigation rail, featuring real endpoint defense and an interactive penetration testing studio:
 
-<div align="center">
-  <img src="marketing/promotional/poster_06_security.png" alt="KALKI Security Architecture" width="550" style="border-radius: 10px;">
-</div>
+<p align="center">
+  <img src="marketing/assets/kalki_radar_live.svg" alt="KALKI ShieldCore Antivirus Animated Telemetry Radar" width="600" style="border-radius: 14px; box-shadow: 0 12px 36px rgba(16,185,129,0.2);">
+</p>
 
 ### 1. Endpoint Defense Engine (`app/antivirus.py`)
 - **Windows Defender Native Bridge**: Directly interfaces with `MpCmdRun.exe` and PowerShell `Get-MpComputerStatus` to query real-time protection, definition freshness, and scan history.
@@ -195,26 +195,17 @@ flowchart TD
 
 ---
 
-## 🎨 Campaign Gallery
+## ⚡ Live Animated Showcase & Desktop Subsystems
 
-Explore the visual design language and capability stories behind KALKI:
+Experience KALKI's real-time desktop subsystems in action:
 
 <p align="center">
-  <img src="marketing/promotional/poster_01_launch.png" alt="KALKI Launch" width="24%">
-  <img src="marketing/promotional/poster_02_voice.png" alt="KALKI Voice" width="24%">
-  <img src="marketing/promotional/poster_03_workflows.png" alt="KALKI Workflows" width="24%">
-  <img src="marketing/promotional/poster_04_memory.png" alt="KALKI Memory" width="24%">
+  <img src="marketing/assets/kalki_pet_live.svg" alt="KALKI Codex Desktop Pet Animated Showcase" width="48%" style="border-radius: 14px; margin-right: 1%; box-shadow: 0 12px 36px rgba(0,243,255,0.15);">
+  <img src="marketing/assets/kalki_radar_live.svg" alt="KALKI ShieldCore Antivirus Animated Telemetry Radar" width="48%" style="border-radius: 14px; box-shadow: 0 12px 36px rgba(16,185,129,0.15);">
 </p>
 
 <p align="center">
-  <img src="marketing/promotional/poster_05_developer.png" alt="KALKI Developer" width="24%">
-  <img src="marketing/promotional/poster_06_security.png" alt="KALKI Security" width="24%">
-  <img src="marketing/promotional/poster_07_cross_platform.png" alt="KALKI Cross Platform" width="24%">
-  <img src="marketing/promotional/poster_08_privacy.png" alt="KALKI Privacy" width="24%">
-</p>
-
-<p align="center">
-  <a href="marketing/index.html"><strong>View All Posters & Interactive High-Resolution Showcase in marketing/index.html →</strong></a>
+  <a href="marketing/index.html"><strong>🌐 Open Full Live Interactive Experience (Interactive Workspace Simulator, Live Pet Playground & Synthesizer) →</strong></a>
 </p>
 
 ---
