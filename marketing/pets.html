@@ -1,0 +1,1886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Companion Pets — KALKI Sovereign Desktop Assistant</title>
+  <meta name="description" content="Meet KALKI's always-on-screen companion pets. Standalone desktop overlays that play music, react to your workflow, guard your system, and summon KALKI instantly.">
+  <link rel="icon" type="image/x-icon" href="../app/assets/kalki_icon.ico">
+
+  <style>
+    /* ==========================================================================
+       KALKI FILAMENT DESIGN SYSTEM
+       Cold Machined Graphite Surfaces • Warm Ivory Filament Light
+       ========================================================================== */
+    :root {
+      --void: #070809;
+      --inset: #0a0c0e;
+      --base: #0d0f12;
+      --raised: #191d22;
+      --overlay: #262c33;
+      --float: #323941;
+      --ls: #232930;
+      --line: #333b44;
+      --lst: #59636f;
+      --text: #e6ebef;
+      --t2: #b3bcc6;
+      --mut: #8a95a1;
+      --faint: #7e8894;
+      --fil: #fff4e2;
+      --fil-glow: rgba(255, 244, 226, 0.25);
+      --fil-dim: rgba(255, 244, 226, 0.08);
+      --ok: #4cc061;
+      --ok-glow: rgba(76, 192, 97, 0.2);
+      --warn: #e08c33;
+      --dng: #f0565b;
+      --font-sans: "Instrument Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+      --font-mono: "JetBrains Mono", Consolas, Monaco, monospace;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; background: var(--void); color: var(--text); }
+    body {
+      background-color: var(--void);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Ambient Canvas */
+    #ambient-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 28px;
+    }
+
+    /* Navigation */
+    nav.top-nav {
+      position: sticky;
+      top: 0;
+      width: 100%;
+      z-index: 1000;
+      background: rgba(7, 8, 9, 0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--line);
+      padding: 14px 0;
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .presence-mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--fil) 0%, rgba(255, 244, 226, 0.3) 50%, transparent 80%);
+      box-shadow: 0 0 16px var(--fil-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: presenceBreathe 4s infinite ease-in-out;
+    }
+
+    @keyframes presenceBreathe {
+      0%, 100% { transform: scale(1); opacity: 0.85; }
+      50% { transform: scale(1.08); opacity: 1; }
+    }
+
+    .presence-mark-inner {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--fil);
+    }
+
+    .brand-text {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-badge {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      color: var(--fil);
+      background: var(--fil-dim);
+      border: 1px solid rgba(255, 244, 226, 0.2);
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+
+    .nav-menu {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      list-style: none;
+    }
+
+    @media (max-width: 900px) {
+      .nav-menu { display: none; }
+    }
+
+    .nav-menu a {
+      color: var(--t2);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 500;
+      transition: color 0.15s;
+    }
+
+    .nav-menu a:hover, .nav-menu a.active {
+      color: var(--fil);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-sound {
+      background: var(--inset);
+      border: 1px solid var(--line);
+      color: var(--t2);
+      padding: 7px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+
+    .btn-sound:hover {
+      color: var(--fil);
+      border-color: var(--lst);
+    }
+
+    .btn-primary {
+      background: var(--fil);
+      color: #070809;
+      font-weight: 700;
+      padding: 8px 18px;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      font-size: 0.88rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 0 16px var(--fil-glow);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 24px rgba(255, 244, 226, 0.4);
+    }
+
+    .btn-ghost {
+      background: var(--raised);
+      color: var(--text);
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      font-size: 0.88rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      transition: all 0.15s;
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--lst);
+      color: var(--fil);
+    }
+
+    /* Page Hero */
+    .page-hero {
+      padding: 80px 0 50px;
+      text-align: center;
+      position: relative;
+    }
+
+    .pill-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      background: var(--inset);
+      border: 1px solid var(--line);
+      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      color: var(--fil);
+      margin-bottom: 24px;
+    }
+
+    .pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--ok);
+      box-shadow: 0 0 8px var(--ok-glow);
+      animation: blinkDot 2s infinite ease-in-out;
+    }
+
+    @keyframes blinkDot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .page-title {
+      font-size: clamp(2.4rem, 4.5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+
+    .filament-glow {
+      color: var(--fil);
+      text-shadow: 0 0 32px var(--fil-glow);
+    }
+
+    .page-lead {
+      font-size: 1.15rem;
+      color: var(--t2);
+      max-width: 760px;
+      margin: 0 auto 36px;
+      line-height: 1.7;
+    }
+
+    /* Interactive Pet Showcase Stage */
+    .pet-stage-card {
+      background: var(--base);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6);
+      margin-bottom: 60px;
+    }
+
+    @media (max-width: 960px) {
+      .pet-stage-card { grid-template-columns: 1fr; }
+    }
+
+    .stage-viewport {
+      background: radial-gradient(circle at 50% 55%, var(--raised) 0%, var(--inset) 70%, var(--void) 100%);
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      min-height: 480px;
+      border-right: 1px solid var(--line);
+      user-select: none;
+    }
+
+    @media (max-width: 960px) {
+      .stage-viewport { border-right: none; border-bottom: 1px solid var(--line); }
+    }
+
+    .stage-top-meta {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .species-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--inset);
+      border: 1px solid var(--line);
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--fil);
+    }
+
+    .mood-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(76, 192, 97, 0.1);
+      border: 1px solid rgba(76, 192, 97, 0.3);
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--ok);
+    }
+
+    /* Main Animated Canvas */
+    #petCanvas {
+      width: 280px;
+      height: 280px;
+      cursor: pointer;
+      filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.8));
+      transition: transform 0.1s;
+    }
+
+    #petCanvas:active {
+      transform: scale(0.96);
+    }
+
+    .speech-bubble {
+      background: var(--inset);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 18px;
+      font-size: 0.88rem;
+      color: var(--fil);
+      position: relative;
+      margin-bottom: 14px;
+      text-align: center;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .speech-bubble::after {
+      content: "";
+      position: absolute;
+      bottom: -7px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+      border-top: 7px solid var(--line);
+    }
+
+    /* Stage Controls Bar */
+    .stage-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    .btn-action {
+      background: var(--raised);
+      border: 1px solid var(--line);
+      color: var(--t2);
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+
+    .btn-action:hover, .btn-action.active {
+      background: var(--overlay);
+      border-color: var(--lst);
+      color: var(--fil);
+    }
+
+    /* Stage Panel Side */
+    .stage-panel {
+      padding: 36px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .panel-header {
+      margin-bottom: 24px;
+    }
+
+    .pet-name-title {
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .pet-role-tag {
+      font-size: 0.8rem;
+      font-family: var(--font-mono);
+      color: var(--mut);
+      font-weight: 500;
+    }
+
+    .pet-desc {
+      color: var(--t2);
+      font-size: 0.94rem;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    /* XP & Companion Level Bar */
+    .level-box {
+      background: var(--inset);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }
+
+    .level-head {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      font-family: var(--font-mono);
+      margin-bottom: 8px;
+    }
+
+    .level-track {
+      width: 100%;
+      height: 8px;
+      background: var(--base);
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--ls);
+    }
+
+    .level-fill {
+      height: 100%;
+      width: 42%;
+      background: linear-gradient(90deg, var(--warn), var(--fil));
+      box-shadow: 0 0 12px var(--fil-glow);
+      transition: width 0.3s ease;
+    }
+
+    /* Pet Attributes Grid */
+    .attr-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .attr-cell {
+      background: var(--inset);
+      border: 1px solid var(--ls);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+    }
+
+    .attr-lbl {
+      font-size: 0.72rem;
+      color: var(--mut);
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+      margin-bottom: 2px;
+    }
+
+    .attr-val {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--fil);
+    }
+
+    /* Species Picker Carousel */
+    .picker-title {
+      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      color: var(--mut);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+    }
+
+    .species-row {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+    }
+
+    .species-btn {
+      background: var(--raised);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      min-width: 80px;
+      transition: all 0.15s;
+    }
+
+    .species-btn:hover {
+      border-color: var(--lst);
+    }
+
+    .species-btn.active {
+      border-color: var(--fil);
+      background: var(--overlay);
+      box-shadow: 0 0 12px var(--fil-dim);
+    }
+
+    .species-icon {
+      font-size: 1.4rem;
+    }
+
+    .species-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* 6 Species Grid Section */
+    .section-title-wrap {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .section-h2 {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+    }
+
+    .section-sub {
+      color: var(--mut);
+      font-size: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .species-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 24px;
+      margin-bottom: 80px;
+    }
+
+    .pet-card {
+      background: var(--base);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 28px;
+      transition: border-color 0.2s, transform 0.2s;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .pet-card:hover {
+      border-color: var(--lst);
+      transform: translateY(-3px);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .card-avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: var(--radius-sm);
+      background: var(--raised);
+      border: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+    }
+
+    .badge-personality {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      background: var(--inset);
+      border: 1px solid var(--line);
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      color: var(--fil);
+    }
+
+    .card-name {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .card-lore {
+      font-size: 0.9rem;
+      color: var(--t2);
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .perks-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-top: 1px solid var(--ls);
+      padding-top: 14px;
+    }
+
+    .perks-list li {
+      font-size: 0.82rem;
+      color: var(--mut);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .perks-list li strong {
+      color: var(--text);
+    }
+
+    /* Architecture Breakdown */
+    .arch-sec {
+      background: var(--inset);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 48px;
+      margin-bottom: 80px;
+    }
+
+    .arch-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      align-items: center;
+    }
+
+    @media (max-width: 880px) {
+      .arch-grid { grid-template-columns: 1fr; }
+    }
+
+    .terminal-box {
+      background: var(--void);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+    }
+
+    .term-bar {
+      background: var(--base);
+      border-bottom: 1px solid var(--line);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .term-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--ls);
+    }
+
+    .term-title {
+      font-size: 0.75rem;
+      color: var(--mut);
+      margin-left: 8px;
+    }
+
+    .term-body {
+      padding: 20px;
+      color: var(--t2);
+      line-height: 1.7;
+    }
+
+    .term-cmd { color: var(--fil); font-weight: 700; }
+    .term-green { color: var(--ok); }
+    .term-mut { color: var(--mut); }
+
+    /* Footer */
+    footer.site-footer {
+      border-top: 1px solid var(--line);
+      padding: 48px 0;
+      color: var(--mut);
+      font-size: 0.88rem;
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      color: var(--mut);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .footer-links a:hover {
+      color: var(--fil);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background Ambient Particles Canvas -->
+  <canvas id="ambient-canvas"></canvas>
+
+  <!-- Top Navigation -->
+  <nav class="top-nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="brand">
+        <div class="presence-mark">
+          <div class="presence-mark-inner"></div>
+        </div>
+        <span class="brand-text">KALKI</span>
+        <span class="brand-badge">FILAMENT v1.4.2</span>
+      </a>
+
+      <ul class="nav-menu">
+        <li><a href="index.html">Overview</a></li>
+        <li><a href="pets.html" class="active">Companion Pets</a></li>
+        <li><a href="security.html">ShieldCore &amp; Tools</a></li>
+        <li><a href="docs.html">Documentation</a></li>
+        <li><a href="download.html">Downloads</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <button class="btn-sound" id="soundToggleBtn">
+          <span id="soundIcon">🔊</span> Audio
+        </button>
+        <a href="https://github.com/maher-kalki/KALKI" class="btn-ghost" target="_blank" rel="noopener">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub
+        </a>
+        <a href="download.html" class="btn-primary">Download v1.4.2</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="page-hero">
+    <div class="container">
+      <div class="pill-status">
+        <span class="pill-dot"></span>
+        ALWAYS-ON-SCREEN DESKTOP COMPANIONS // ZERO OVERHEAD
+      </div>
+      <h1 class="page-title">
+        Not a Web Widget.<br>
+        <span class="filament-glow">A Living Desktop Companion.</span>
+      </h1>
+      <p class="page-lead">
+        KALKI features a dedicated, transparent desktop companion window that floats in your screen corner. When KALKI is minimized or your IDE is fullscreen, your pet stays active—bobbing to Spotify and Apple Music, guarding system memory, and summoning the workspace with a single click.
+      </p>
+    </div>
+  </section>
+
+  <!-- Interactive Pet Playground Stage -->
+  <section class="container">
+    <div class="pet-stage-card">
+      
+      <!-- Stage Viewport (Left) -->
+      <div class="stage-viewport">
+        <div class="stage-top-meta">
+          <div class="species-badge">
+            <span id="activeEmoji">🐱</span>
+            <span id="activeSpecies">GOBI // CYBER KITTEN</span>
+          </div>
+          <div class="mood-indicator" id="activeMood">
+            <span>●</span>
+            <span id="moodText">JAMMING TO BEATS</span>
+          </div>
+        </div>
+
+        <!-- Speech Bubble -->
+        <div class="speech-bubble" id="petSpeech">
+          "Hey Maher! I'm watching your desktop. Turn on some music and let's groove!"
+        </div>
+
+        <!-- 60FPS Pet Canvas -->
+        <canvas id="petCanvas" width="280" height="280" title="Click to Pet or Interact"></canvas>
+
+        <!-- Stage Actions -->
+        <div class="stage-actions">
+          <button class="btn-action" id="feedBtn" title="Feed a digital treat">
+            <span>🐟</span> Feed Treat
+          </button>
+          <button class="btn-action" id="danceBtn" title="Toggle rhythm beat synchronization">
+            <span>🎵</span> Dance Mode
+          </button>
+          <button class="btn-action" id="petBtn" title="Pet your companion">
+            <span>💖</span> Pet (+XP)
+          </button>
+          <button class="btn-action" id="voiceBtn" title="Speak companion dialogue">
+            <span>💬</span> Talk
+          </button>
+        </div>
+      </div>
+
+      <!-- Stage Controls & Lore Panel (Right) -->
+      <div class="stage-panel">
+        <div>
+          <div class="panel-header">
+            <h2 class="pet-name-title" id="panelPetName">Gobi</h2>
+            <div class="pet-role-tag" id="panelPetRole">The Sentient AI Kitten &bull; Audio Synchronized</div>
+          </div>
+
+          <p class="pet-desc" id="panelPetDesc">
+            Gobi is KALKI's flagship desktop companion. Rendered in a transparent, GPU-accelerated frameless window, Gobi dances to the real-time BPM of your system audio, gives subtle ambient status alerts, and instantly summons the KALKI workspace when clicked.
+          </p>
+
+          <!-- Companion Bond / XP Level -->
+          <div class="level-box">
+            <div class="level-head">
+              <span style="color: var(--fil); font-weight: 700;">COMPANION BOND</span>
+              <span id="xpLevelText">LVL 14 &bull; 680 / 1000 XP</span>
+            </div>
+            <div class="level-track">
+              <div class="level-fill" id="xpFillBar" style="width: 68%;"></div>
+            </div>
+          </div>
+
+          <!-- Pet Attributes -->
+          <div class="attr-grid">
+            <div class="attr-cell">
+              <div class="attr-lbl">Specialty</div>
+              <div class="attr-val" id="attrSpecialty">Music Beat Sync</div>
+            </div>
+            <div class="attr-cell">
+              <div class="attr-lbl">Defense Trait</div>
+              <div class="attr-val" id="attrTrait">Ambient Watch</div>
+            </div>
+            <div class="attr-cell">
+              <div class="attr-lbl">Favorite Treat</div>
+              <div class="attr-val" id="attrTreat">Salmon RAM Cookie</div>
+            </div>
+            <div class="attr-cell">
+              <div class="attr-lbl">Process Footprint</div>
+              <div class="attr-val" id="attrFootprint">&lt; 14 MB RAM</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Species Picker Carousel -->
+        <div>
+          <div class="picker-title">Switch Companion Species:</div>
+          <div class="species-row">
+            <button class="species-btn active" data-species="gobi">
+              <span class="species-icon">🐱</span>
+              <span class="species-label">Gobi</span>
+            </button>
+            <button class="species-btn" data-species="kittu">
+              <span class="species-icon">🐕</span>
+              <span class="species-label">Kittu</span>
+            </button>
+            <button class="species-btn" data-species="byte">
+              <span class="species-icon">👾</span>
+              <span class="species-label">Byte</span>
+            </button>
+            <button class="species-btn" data-species="draco">
+              <span class="species-icon">🐉</span>
+              <span class="species-label">Draco</span>
+            </button>
+            <button class="species-btn" data-species="nova">
+              <span class="species-icon">🔮</span>
+              <span class="species-label">Nova</span>
+            </button>
+            <button class="species-btn" data-species="kitsu">
+              <span class="species-icon">🦊</span>
+              <span class="species-label">Kitsu</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- All 6 Species Detailed Roster -->
+  <section class="container" style="padding-bottom: 40px;">
+    <div class="section-title-wrap">
+      <h2 class="section-h2">The Companion Fleet</h2>
+      <p class="section-sub">
+        Choose the pet that suits your workflow. Every species is baked directly into the standalone desktop binary.
+      </p>
+    </div>
+
+    <div class="species-cards-grid">
+      
+      <!-- Gobi -->
+      <div class="pet-card">
+        <div>
+          <div class="card-top">
+            <div class="card-avatar">🐱</div>
+            <span class="badge-personality">PLAYFUL &bull; MUSICAL</span>
+          </div>
+          <h3 class="card-name">Gobi</h3>
+          <p class="card-lore">
+            The original sentient AI kitten. Taps into system audio sessions via WinRT and Windows Media Control to sync bobbing animations to Apple Music, Spotify, and YouTube beats.
+          </p>
+        </div>
+        <div>
+          <ul class="perks-list">
+            <li><strong>Audio Sync:</strong> Dynamic tempo matching (60 - 180 BPM)</li>
+            <li><strong>Summon Action:</strong> Left click launches KALKI Ask view</li>
+            <li><strong>Mood Expressions:</strong> Happy, Jamming, Sleepy, Focused</li>
+          </ul>
+          <button class="btn-ghost" style="width: 100%; justify-content: center;" onclick="selectSpecies('gobi')">Select Gobi</button>
+        </div>
+      </div>
+
+      <!-- Kittu -->
+      <div class="pet-card">
+        <div>
+          <div class="card-top">
+            <div class="card-avatar">🐕</div>
+            <span class="badge-personality">HYPER-VIGILANT &bull; DEFENDER</span>
+          </div>
+          <h3 class="card-name">Kittu</h3>
+          <p class="card-lore">
+            The Chibi Cyber Shiba. Wired directly into the ShieldCore security pipeline. Ears perk up during suspicious background network requests, and barks when a quarantined threat is blocked.
+          </p>
+        </div>
+        <div>
+          <ul class="perks-list">
+            <li><strong>Threat Bark:</strong> Instant audio alert on high-risk detections</li>
+            <li><strong>Network Guard:</strong> Sniffs open port connections and ARP shifts</li>
+            <li><strong>Loyalty Bonus:</strong> +25% XP gain during coding sprints</li>
+          </ul>
+          <button class="btn-ghost" style="width: 100%; justify-content: center;" onclick="selectSpecies('kittu')">Select Kittu</button>
+        </div>
+      </div>
+
+      <!-- Byte -->
+      <div class="pet-card">
+        <div>
+          <div class="card-top">
+            <div class="card-avatar">👾</div>
+            <span class="badge-personality">GLITCH &bull; CODE RUNNER</span>
+          </div>
+          <h3 class="card-name">Byte</h3>
+          <p class="card-lore">
+            A retro holographic glitch sprite engineered for programmers. Emits subtle pixel sparks as tokens stream into the chat composer and pulses with CPU usage telemetry.
+          </p>
+        </div>
+        <div>
+          <ul class="perks-list">
+            <li><strong>Token Streamer:</strong> Vibrates with LLM generation speed</li>
+            <li><strong>Syntax Sparks:</strong> Emits warm filament embers on build success</li>
+            <li><strong>Terminal Mode:</strong> Displays mini error counts in speech bubble</li>
+          </ul>
+          <button class="btn-ghost" style="width: 100%; justify-content: center;" onclick="selectSpecies('byte')">Select Byte</button>
+        </div>
+      </div>
+
+      <!-- Draco -->
+      <div class="pet-card">
+        <div>
+          <div class="card-top">
+            <div class="card-avatar">🐉</div>
+            <span class="badge-personality">FIERCE &bull; HIGH COMPUTE</span>
+          </div>
+          <h3 class="card-name">Draco</h3>
+          <p class="card-lore">
+            The Miniature Cyber Dragon. Breathes subtle warm filament embers when local LLM inference engines (Ollama, llama.cpp) utilize GPU compute cores.
+          </p>
+        </div>
+        <div>
+          <ul class="perks-list">
+            <li><strong>Flame Breath:</strong> Triggered during active local LLM inference</li>
+            <li><strong>Thermal Guard:</strong> Alerts if system temperature rises sharply</li>
+            <li><strong>Deep Roar:</strong> Procedural Web Audio low-frequency purr</li>
+          </ul>
+          <button class="btn-ghost" style="width: 100%; justify-content: center;" onclick="selectSpecies('draco')">Select Draco</button>
+        </div>
+      </div>
+
+      <!-- Nova -->
+      <div class="pet-card">
+        <div>
+          <div class="card-top">
+            <div class="card-avatar">🔮</div>
+            <span class="badge-personality">SERENE &bull; DEEP FOCUS</span>
+          </div>
+          <h3 class="card-name">Nova</h3>
+          <p class="card-lore">
+            A floating astral energy sphere designed for intense study and deep focus sessions. Breathes warm filament light in 4-7-8 rhythmic cycles to keep you centered.
+          </p>
+        </div>
+        <div>
+          <ul class="perks-list">
+            <li><strong>Pomodoro Sync:</strong> Tracks 25/5 study intervals seamlessly</li>
+            <li><strong>Ambient Hum:</strong> Subtle binaural frequency for concentration</li>
+            <li><strong>Distraction Blocker:</strong> Dimmed presence mode during meetings</li>
+          </ul>
+          <button class="btn-ghost" style="width: 100%; justify-content: center;" onclick="selectSpecies('nova')">Select Nova</button>
+        </div>
+      </div>
+
+      <!-- Kitsu -->
+      <div class="pet-card">
+        <div>
+          <div class="card-top">
+            <div class="card-avatar">🦊</div>
+            <span class="badge-personality">STEALTH &bull; CRYPTO VAULT</span>
+          </div>
+          <h3 class="card-name">Kitsu</h3>
+          <p class="card-lore">
+            The Nine-Tailed Cyber Kitsune. The guardian of your encrypted semantic memory and API keys. Swishes iridescent tails whenever DPAPI or AES-256 memory vault is accessed.
+          </p>
+        </div>
+        <div>
+          <ul class="perks-list">
+            <li><strong>Vault Encryption:</strong> Swishes tails on memory storage</li>
+            <li><strong>Anti-Clipper:</strong> Watches clipboard for wallet address tampering</li>
+            <li><strong>Whisper Mode:</strong> Silent low-power nighttime presence</li>
+          </ul>
+          <button class="btn-ghost" style="width: 100%; justify-content: center;" onclick="selectSpecies('kitsu')">Select Kitsu</button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Technical Architecture of Desktop Pet -->
+  <section class="container">
+    <div class="arch-sec">
+      <div class="arch-grid">
+        <div>
+          <div class="pill-status" style="margin-bottom: 16px;">
+            <span>⚙️</span> UNDER THE HOOD
+          </div>
+          <h2 style="font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 18px;">
+            Desktop Overlay Architecture
+          </h2>
+          <p style="color: var(--t2); font-size: 0.98rem; line-height: 1.7; margin-bottom: 18px;">
+            Unlike standard web apps or Electron widgets that hog 800 MB of RAM, KALKI's companion pet runs on an ultra-lightweight native wrapper utilizing PyWebView with isolated WebView2 runtime parameters.
+          </p>
+          <p style="color: var(--t2); font-size: 0.98rem; line-height: 1.7; margin-bottom: 24px;">
+            It runs as an independent child process (<code>desktop_pet.py</code>) completely decoupled from the main UI window. Even if the main KALKI window is closed, your pet remains on your multi-monitor desktop.
+          </p>
+
+          <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+            <a href="docs.html#pet-overlay" class="btn-primary">View Full Pet API</a>
+            <a href="download.html" class="btn-ghost">Get Standalone Installer</a>
+          </div>
+        </div>
+
+        <!-- Terminal Snippet -->
+        <div class="terminal-box">
+          <div class="term-bar">
+            <div class="term-dot"></div>
+            <div class="term-dot"></div>
+            <div class="term-dot"></div>
+            <span class="term-title">terminal &bull; pet launcher</span>
+          </div>
+          <div class="term-body">
+            <div class="term-mut"># Launch standalone pet overlay without opening main UI:</div>
+            <div><span class="term-cmd">python</span> app/desktop_pet.py --pet gobi --scale 1.1</div>
+            <div class="term-green" style="margin-top: 8px;">[KALKI-PET] Initializing transparent borderless viewport...</div>
+            <div class="term-green">[KALKI-PET] WebView2 UserDataFolder: %APPDATA%\KALKI\pet_profile</div>
+            <div class="term-green">[KALKI-PET] Media session hook initialized (Apple Music / Spotify)</div>
+            <div class="term-green">[KALKI-PET] Registered global click-to-summon hook on PID 14902</div>
+            <div style="margin-top: 10px; color: var(--fil);">&gt; Pet active in screen bottom-right. Memory usage: 13.8 MB</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div>
+        <span style="font-weight: 700; color: var(--text);">KALKI</span> &bull; Sovereign AI Desktop Operating Workspace
+        <div style="font-size: 0.78rem; color: var(--mut); margin-top: 4px;">
+          Cold Machined Graphite Surfaces &bull; Warm Ivory Filament Light &bull; 100% Local-First
+        </div>
+      </div>
+
+      <ul class="footer-links">
+        <li><a href="index.html">Overview</a></li>
+        <li><a href="pets.html">Companion Pets</a></li>
+        <li><a href="security.html">ShieldCore &amp; Tools</a></li>
+        <li><a href="docs.html">Documentation</a></li>
+        <li><a href="download.html">Downloads</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <!-- Interactive Sound Synthesizer & Canvas Engine -->
+  <script>
+    /* ==========================================================================
+       Web Audio API Procedural Synthesizer
+       Zero external audio files • 100% offline resilient
+       ========================================================================== */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      beep(freq = 440, type = 'sine', duration = 0.1, gainVal = 0.12) {
+        if (!this.enabled) return;
+        this.init();
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {}
+      }
+
+      // Cute procedural meow / purr
+      meow() {
+        if (!this.enabled) return;
+        this.init();
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          const now = this.ctx.currentTime;
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(740, now + 0.15);
+          osc.frequency.exponentialRampToValueAtTime(420, now + 0.35);
+          gain.gain.setValueAtTime(0.01, now);
+          gain.gain.linearRampToValueAtTime(0.18, now + 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(now + 0.38);
+        } catch (e) {}
+      }
+
+      // Treat Crunch Sound
+      crunch() {
+        if (!this.enabled) return;
+        this.init();
+        try {
+          for (let i = 0; i < 3; i++) {
+            setTimeout(() => {
+              this.beep(800 + Math.random() * 400, 'square', 0.04, 0.08);
+            }, i * 40);
+          }
+        } catch (e) {}
+      }
+
+      // Level Up Chime
+      levelUp() {
+        if (!this.enabled) return;
+        this.init();
+        const notes = [440, 554, 659, 880];
+        notes.forEach((f, i) => {
+          setTimeout(() => this.beep(f, 'sine', 0.25, 0.15), i * 90);
+        });
+      }
+
+      // Dance beat chiptune
+      danceBeat() {
+        if (!this.enabled) return;
+        this.init();
+        this.beep(220, 'triangle', 0.1, 0.2);
+        setTimeout(() => this.beep(660, 'sine', 0.08, 0.1), 120);
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    // Sound Toggle Button
+    const soundBtn = document.getElementById('soundToggleBtn');
+    soundBtn.addEventListener('click', () => {
+      sound.enabled = !sound.enabled;
+      document.getElementById('soundIcon').textContent = sound.enabled ? '🔊' : '🔇';
+      if (sound.enabled) sound.beep(520, 'sine', 0.1);
+    });
+
+    /* ==========================================================================
+       Companion Species Database
+       ========================================================================== */
+    const SPECIES_DATA = {
+      gobi: {
+        name: "Gobi",
+        role: "The Sentient AI Kitten • Audio Synchronized",
+        emoji: "🐱",
+        desc: "Gobi is KALKI's flagship desktop companion. Rendered in a transparent, GPU-accelerated frameless window, Gobi dances to the real-time BPM of your system audio, gives subtle ambient status alerts, and instantly summons the KALKI workspace when clicked.",
+        specialty: "Music Beat Sync",
+        trait: "Ambient Watch",
+        treat: "Salmon RAM Cookie",
+        footprint: "< 14 MB RAM",
+        quotes: [
+          "Hey Maher! I'm watching your desktop. Turn on some music and let's groove!",
+          "Purring along with your Apple Music playlist ♪",
+          "Everything looks peaceful on the desktop right now.",
+          "I love this track! Look at my ears bounce!"
+        ]
+      },
+      kittu: {
+        name: "Kittu",
+        role: "The Chibi Cyber Shiba • Threat Defender",
+        emoji: "🐕",
+        desc: "Kittu is a high-vigilance companion wired directly to ShieldCore antivirus. When unknown processes attempt file encryption or network sweeps, Kittu alerts you immediately with low-latency barks.",
+        specialty: "Heuristic Defense",
+        trait: "Port Sniffer",
+        treat: "Bone Cookie",
+        footprint: "< 15 MB RAM",
+        quotes: [
+          "Woof! ShieldCore active and guarding all loopback ports!",
+          "Zero suspicious processes detected. All quiet on the radar.",
+          "I'm keeping my ears up while you browse. Safe travels!",
+          "Good boy protocol active: 100% loyal to your workspace."
+        ]
+      },
+      byte: {
+        name: "Byte",
+        role: "The Holographic Glitch Sprite • Code Studio",
+        emoji: "👾",
+        desc: "Byte lives inside the syntax tree. Perfect for developers, Byte emits pixel particles whenever code is compiled, tests pass, or LLM tokens stream across the chat console.",
+        specialty: "Token Telemetry",
+        trait: "Glitch Particles",
+        treat: "Energy Byte",
+        footprint: "< 12 MB RAM",
+        quotes: [
+          "01001000 01101001! Byte ready to stream code tokens.",
+          "Tests passed with zero errors! Emitting warm filament sparks.",
+          "RAM usage optimal. Syntax highlighting locked and loaded.",
+          "Need a regex pattern or refactor? Summon KALKI anytime!"
+        ]
+      },
+      draco: {
+        name: "Draco",
+        role: "The Mini Cyber Dragon • GPU & Inference",
+        emoji: "🐉",
+        desc: "Draco thrives on high-compute workloads. When local Ollama or llama.cpp models engage GPU tensors, Draco breathes warm filament embers to celebrate sovereign local inference.",
+        specialty: "Compute Thermal",
+        trait: "Ember Breath",
+        treat: "Flame Chili Chip",
+        footprint: "< 16 MB RAM",
+        quotes: [
+          "*Rumble* Local LLM tensor engine firing on all cylinders!",
+          "Sovereign weights loaded in VRAM. Zero data leaves this machine.",
+          "Warm filament embers ready! What complex puzzle are we solving?",
+          "Dragon scales hardened. Anti-malware shields at maximum."
+        ]
+      },
+      nova: {
+        name: "Nova",
+        role: "The Astral Energy Orb • Deep Focus & Zen",
+        emoji: "🔮",
+        desc: "Nova is engineered for deep focus and study sessions. Nova synchronizes with KALKI's study mode and Pomodoro timers, expanding and glowing in rhythmic 4-7-8 breathing cycles.",
+        specialty: "Mindful Pacing",
+        trait: "Breathing Glow",
+        treat: "Starlight Pearl",
+        footprint: "< 11 MB RAM",
+        quotes: [
+          "Breathe in... and breathe out. Focus session in progress.",
+          "All distractions blocked. Let's enter the flow state.",
+          "25 minutes of deep focus. You are doing fantastic work.",
+          "Warm light pulsating at 0.25 Hz. Stay centered."
+        ]
+      },
+      kitsu: {
+        name: "Kitsu",
+        role: "Nine-Tailed Cyber Kitsune • Vault Guardian",
+        emoji: "🦊",
+        desc: "Kitsu guards KALKI's encrypted semantic memories and API secrets. With nine iridescent tails that swish during DPAPI key access, Kitsu prevents unauthorized memory tampering.",
+        specialty: "DPAPI & AES-256",
+        trait: "Vault Sentry",
+        treat: "Moonlight Mochi",
+        footprint: "< 14 MB RAM",
+        quotes: [
+          "Secrets secured in local Windows DPAPI vault. Safe from prying eyes.",
+          "Your memories are encrypted with AES-256-GCM loopback protection.",
+          "Swishing my tails across the memory graph. Recall is instant.",
+          "No third-party telemetry detected. True sovereign autonomy."
+        ]
+      }
+    };
+
+    let currentSpecies = "gobi";
+    let isDancing = true;
+    let xp = 680;
+    let level = 14;
+
+    function selectSpecies(key) {
+      if (!SPECIES_DATA[key]) return;
+      currentSpecies = key;
+      const data = SPECIES_DATA[key];
+
+      // Update button active state
+      document.querySelectorAll('.species-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.species === key);
+      });
+
+      // Update panel metadata
+      document.getElementById('activeEmoji').textContent = data.emoji;
+      document.getElementById('activeSpecies').textContent = `${data.name.toUpperCase()} // ${data.role.split('•')[0].trim().toUpperCase()}`;
+      document.getElementById('panelPetName').textContent = data.name;
+      document.getElementById('panelPetRole').textContent = data.role;
+      document.getElementById('panelPetDesc').textContent = data.desc;
+      document.getElementById('attrSpecialty').textContent = data.specialty;
+      document.getElementById('attrTrait').textContent = data.trait;
+      document.getElementById('attrTreat').textContent = data.treat;
+      document.getElementById('attrFootprint').textContent = data.footprint;
+
+      // Update speech
+      const randomQuote = data.quotes[Math.floor(Math.random() * data.quotes.length)];
+      document.getElementById('petSpeech').textContent = `"${randomQuote}"`;
+
+      sound.meow();
+    }
+
+    // Attach click listeners to species buttons
+    document.querySelectorAll('.species-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectSpecies(btn.dataset.species);
+      });
+    });
+
+    /* ==========================================================================
+       Interactive Pet Canvas Renderer (60FPS HTML5 Canvas)
+       ========================================================================== */
+    const canvas = document.getElementById('petCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let tick = 0;
+    let particles = [];
+
+    class Particle {
+      constructor(x, y, color = '#fff4e2', speed = 2) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * speed * 2;
+        this.vy = -Math.random() * speed * 2 - 1;
+        this.radius = Math.random() * 3 + 2;
+        this.color = color;
+        this.alpha = 1;
+        this.decay = Math.random() * 0.02 + 0.015;
+      }
+
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.alpha -= this.decay;
+      }
+
+      draw(c) {
+        c.save();
+        c.globalAlpha = Math.max(0, this.alpha);
+        c.fillStyle = this.color;
+        c.beginPath();
+        c.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        c.fill();
+        c.restore();
+      }
+    }
+
+    function addParticles(x, y, count = 12, color = '#fff4e2') {
+      for (let i = 0; i < count; i++) {
+        particles.push(new Particle(x, y, color));
+      }
+    }
+
+    function drawPet() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      tick++;
+
+      const cx = 140;
+      // Bounce amplitude based on dance mode
+      const bounce = isDancing ? Math.sin(tick * 0.09) * 14 : Math.sin(tick * 0.04) * 4;
+      const cy = 150 + bounce;
+
+      // Draw Shadow
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 244, 226, 0.08)';
+      ctx.beginPath();
+      const shadowW = 60 - bounce * 0.5;
+      ctx.ellipse(cx, 235, Math.max(20, shadowW), 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Draw Pet based on species
+      if (currentSpecies === 'gobi') {
+        drawGobi(cx, cy);
+      } else if (currentSpecies === 'kittu') {
+        drawKittu(cx, cy);
+      } else if (currentSpecies === 'byte') {
+        drawByte(cx, cy);
+      } else if (currentSpecies === 'draco') {
+        drawDraco(cx, cy);
+      } else if (currentSpecies === 'nova') {
+        drawNova(cx, cy);
+      } else if (currentSpecies === 'kitsu') {
+        drawKitsu(cx, cy);
+      }
+
+      // Draw floating musical notes if dancing
+      if (isDancing && tick % 40 === 0) {
+        addParticles(cx + (Math.random() - 0.5) * 80, cy - 60, 2, '#fff4e2');
+      }
+
+      // Render & prune particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].update();
+        particles[i].draw(ctx);
+        if (particles[i].alpha <= 0) particles.splice(i, 1);
+      }
+
+      requestAnimationFrame(drawPet);
+    }
+
+    // Specie 1: Gobi (Cyber Kitten)
+    function drawGobi(x, y) {
+      // Ears
+      ctx.fillStyle = '#fff4e2';
+      ctx.beginPath();
+      ctx.moveTo(x - 38, y - 25);
+      ctx.lineTo(x - 52, y - 65);
+      ctx.lineTo(x - 18, y - 36);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(x + 38, y - 25);
+      ctx.lineTo(x + 52, y - 65);
+      ctx.lineTo(x + 18, y - 36);
+      ctx.fill();
+
+      // Body (Machined Graphite)
+      ctx.fillStyle = '#191d22';
+      ctx.strokeStyle = '#333b44';
+      ctx.lineWidth = 3;
+      roundRect(ctx, x - 46, y - 35, 92, 80, 24, true, true);
+
+      // Blinking Eyes (Warm Filament Light)
+      const blink = Math.sin(tick * 0.05) > 0.96;
+      ctx.fillStyle = '#fff4e2';
+      if (blink) {
+        ctx.fillRect(x - 28, y - 5, 16, 3);
+        ctx.fillRect(x + 12, y - 5, 16, 3);
+      } else {
+        ctx.beginPath();
+        ctx.arc(x - 20, y - 5, 8, 0, Math.PI * 2);
+        ctx.arc(x + 20, y - 5, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#070809';
+        ctx.beginPath();
+        ctx.arc(x - 18, y - 6, 3, 0, Math.PI * 2);
+        ctx.arc(x + 22, y - 6, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Amber Cheeks
+      ctx.fillStyle = 'rgba(224, 140, 51, 0.6)';
+      ctx.beginPath();
+      ctx.ellipse(x - 32, y + 10, 6, 4, 0, 0, Math.PI * 2);
+      ctx.ellipse(x + 32, y + 10, 6, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Smiling Mouth
+      ctx.strokeStyle = '#fff4e2';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(x - 6, y + 12, 6, 0.1 * Math.PI, 0.9 * Math.PI);
+      ctx.arc(x + 6, y + 12, 6, 0.1 * Math.PI, 0.9 * Math.PI);
+      ctx.stroke();
+
+      // Titanium Paws
+      ctx.fillStyle = '#323941';
+      ctx.strokeStyle = '#59636f';
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, x - 32, y + 36, 18, 14, 6, true, true);
+      roundRect(ctx, x + 14, y + 36, 18, 14, 6, true, true);
+    }
+
+    // Specie 2: Kittu (Cyber Shiba)
+    function drawKittu(x, y) {
+      // Pointed Fox Ears
+      ctx.fillStyle = '#e08c33';
+      ctx.beginPath();
+      ctx.moveTo(x - 36, y - 20);
+      ctx.lineTo(x - 46, y - 60);
+      ctx.lineTo(x - 16, y - 34);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(x + 36, y - 20);
+      ctx.lineTo(x + 46, y - 60);
+      ctx.lineTo(x + 16, y - 34);
+      ctx.fill();
+
+      // Head
+      ctx.fillStyle = '#262c33';
+      ctx.strokeStyle = '#333b44';
+      ctx.lineWidth = 3;
+      roundRect(ctx, x - 44, y - 35, 88, 78, 22, true, true);
+
+      // White Shiba Muzzle
+      ctx.fillStyle = '#fff4e2';
+      ctx.beginPath();
+      ctx.ellipse(x, y + 12, 22, 16, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Nose
+      ctx.fillStyle = '#070809';
+      ctx.beginPath();
+      ctx.arc(x, y + 6, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eyes
+      ctx.fillStyle = '#fff4e2';
+      ctx.beginPath();
+      ctx.arc(x - 22, y - 6, 6, 0, Math.PI * 2);
+      ctx.arc(x + 22, y - 6, 6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Specie 3: Byte (Glitch Sprite)
+    function drawByte(x, y) {
+      ctx.fillStyle = '#191d22';
+      ctx.strokeStyle = '#fff4e2';
+      ctx.lineWidth = 2;
+      roundRect(ctx, x - 40, y - 40, 80, 80, 10, true, true);
+
+      // Pixel Grid Face
+      ctx.fillStyle = '#fff4e2';
+      // Visor
+      ctx.fillRect(x - 30, y - 16, 60, 14);
+      ctx.fillStyle = '#070809';
+      ctx.fillRect(x - 18, y - 13, 8, 8);
+      ctx.fillRect(x + 10, y - 13, 8, 8);
+
+      // Digital mouth
+      ctx.fillStyle = '#4cc061';
+      ctx.fillRect(x - 16, y + 14, 32, 4);
+
+      // Floating Antenna
+      ctx.strokeStyle = '#fff4e2';
+      ctx.beginPath();
+      ctx.moveTo(x, y - 40);
+      ctx.lineTo(x, y - 56);
+      ctx.stroke();
+      ctx.fillStyle = '#fff4e2';
+      ctx.beginPath();
+      ctx.arc(x, y - 60, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Specie 4: Draco (Cyber Dragon)
+    function drawDraco(x, y) {
+      // Dragon Horns
+      ctx.fillStyle = '#e08c33';
+      ctx.beginPath();
+      ctx.moveTo(x - 30, y - 25);
+      ctx.lineTo(x - 58, y - 65);
+      ctx.lineTo(x - 22, y - 35);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(x + 30, y - 25);
+      ctx.lineTo(x + 58, y - 65);
+      ctx.lineTo(x + 22, y - 35);
+      ctx.fill();
+
+      // Dragon Head
+      ctx.fillStyle = '#191d22';
+      ctx.strokeStyle = '#59636f';
+      ctx.lineWidth = 3;
+      roundRect(ctx, x - 42, y - 32, 84, 76, 18, true, true);
+
+      // Fierce Slit Eyes
+      ctx.fillStyle = '#fff4e2';
+      ctx.beginPath();
+      ctx.ellipse(x - 20, y - 6, 7, 10, 0, 0, Math.PI * 2);
+      ctx.ellipse(x + 20, y - 6, 7, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#070809';
+      ctx.fillRect(x - 22, y - 14, 4, 16);
+      ctx.fillRect(x + 18, y - 14, 4, 16);
+
+      // Ember particles
+      if (Math.random() > 0.7) {
+        addParticles(x + (Math.random() - 0.5) * 30, y + 18, 1, '#e08c33');
+      }
+    }
+
+    // Specie 5: Nova (Astral Orb)
+    function drawNova(x, y) {
+      const pulse = Math.sin(tick * 0.05) * 10;
+      
+      // Outer aura
+      ctx.save();
+      const grad = ctx.createRadialGradient(x, y, 10, x, y, 60 + pulse);
+      grad.addColorStop(0, 'rgba(255, 244, 226, 0.4)');
+      grad.addColorStop(0.5, 'rgba(255, 244, 226, 0.1)');
+      grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y, 65 + pulse, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Core Orb
+      ctx.fillStyle = '#fff4e2';
+      ctx.beginPath();
+      ctx.arc(x, y, 36 + pulse * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Rotating Orbital Rings
+      ctx.strokeStyle = 'rgba(255, 244, 226, 0.6)';
+      ctx.lineWidth = 2;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(tick * 0.02);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 54, 20, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Specie 6: Kitsu (Nine-Tailed Kitsune)
+    function drawKitsu(x, y) {
+      // Swishing Tails
+      ctx.fillStyle = 'rgba(255, 244, 226, 0.25)';
+      for (let i = -4; i <= 4; i++) {
+        const tailAngle = i * 0.25 + Math.sin(tick * 0.06 + i * 0.4) * 0.15;
+        ctx.save();
+        ctx.translate(x, y + 25);
+        ctx.rotate(tailAngle);
+        ctx.beginPath();
+        ctx.ellipse(0, 40, 8, 30, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Kitsune Mask/Head
+      ctx.fillStyle = '#fff4e2';
+      ctx.strokeStyle = '#333b44';
+      ctx.lineWidth = 2;
+      roundRect(ctx, x - 36, y - 30, 72, 68, 20, true, true);
+
+      // Red Fox Markings
+      ctx.fillStyle = '#e08c33';
+      ctx.beginPath();
+      ctx.moveTo(x - 26, y - 10);
+      ctx.lineTo(x - 14, y + 4);
+      ctx.lineTo(x - 30, y + 6);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(x + 26, y - 10);
+      ctx.lineTo(x + 14, y + 4);
+      ctx.lineTo(x + 30, y + 6);
+      ctx.fill();
+
+      // Eyes
+      ctx.strokeStyle = '#070809';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(x - 16, y - 2, 7, 0.9 * Math.PI, 1.9 * Math.PI);
+      ctx.arc(x + 16, y - 2, 7, 1.1 * Math.PI, 2.1 * Math.PI);
+      ctx.stroke();
+    }
+
+    function roundRect(c, x, y, w, h, r, fill, stroke) {
+      c.beginPath();
+      c.moveTo(x + r, y);
+      c.arcTo(x + w, y, x + w, y + h, r);
+      c.arcTo(x + w, y + h, x, y + h, r);
+      c.arcTo(x, y + h, x, y, r);
+      c.arcTo(x, y, x + w, y, r);
+      c.closePath();
+      if (fill) c.fill();
+      if (stroke) c.stroke();
+    }
+
+    // Start Pet Canvas Loop
+    drawPet();
+
+    /* ==========================================================================
+       Interactive Button Events: Feed, Dance, Pet, Talk
+       ========================================================================== */
+    const feedBtn = document.getElementById('feedBtn');
+    feedBtn.addEventListener('click', () => {
+      sound.crunch();
+      addParticles(140, 150, 24, '#e08c33');
+      const treats = ["energy byte", "salmon cookie", "ram chip", "flame chili"];
+      const randomTreat = treats[Math.floor(Math.random() * treats.length)];
+      document.getElementById('petSpeech').textContent = `*Crunch crunch* "Mmm! Delicious ${randomTreat}! Thank you, Maher!"`;
+      gainXP(30);
+    });
+
+    const danceBtn = document.getElementById('danceBtn');
+    danceBtn.addEventListener('click', () => {
+      isDancing = !isDancing;
+      danceBtn.classList.toggle('active', isDancing);
+      document.getElementById('moodText').textContent = isDancing ? "JAMMING TO BEATS" : "CALM & FOCUSED";
+      if (isDancing) {
+        sound.danceBeat();
+        document.getElementById('petSpeech').textContent = `"Turn it up! Dancing to the beat ♪"`;
+      } else {
+        sound.beep(330, 'sine', 0.15);
+        document.getElementById('petSpeech').textContent = `"Taking a breather. Still watching your screen!"`;
+      }
+    });
+
+    const petBtn = document.getElementById('petBtn');
+    petBtn.addEventListener('click', () => {
+      sound.meow();
+      addParticles(140, 130, 20, '#fff4e2');
+      document.getElementById('petSpeech').textContent = `*Purrrrr* "You're the best! +50 XP!"`;
+      gainXP(50);
+    });
+
+    canvas.addEventListener('click', () => {
+      sound.meow();
+      addParticles(140, 140, 16, '#fff4e2');
+      gainXP(20);
+    });
+
+    const voiceBtn = document.getElementById('voiceBtn');
+    voiceBtn.addEventListener('click', () => {
+      const data = SPECIES_DATA[currentSpecies];
+      const quote = data.quotes[Math.floor(Math.random() * data.quotes.length)];
+      document.getElementById('petSpeech').textContent = `"${quote}"`;
+
+      // Browser Web Speech API if supported
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(quote);
+        utter.rate = 1.05;
+        utter.pitch = 1.2;
+        window.speechSynthesis.speak(utter);
+      } else {
+        sound.beep(600, 'sine', 0.1);
+      }
+    });
+
+    function gainXP(amount) {
+      xp += amount;
+      if (xp >= 1000) {
+        level++;
+        xp -= 1000;
+        sound.levelUp();
+        document.getElementById('petSpeech').textContent = `★ LEVEL UP! Companion Bond reached Level ${level}! ★`;
+      }
+      document.getElementById('xpLevelText').textContent = `LVL ${level} • ${xp} / 1000 XP`;
+      document.getElementById('xpFillBar').style.width = `${Math.min(100, (xp / 1000) * 100)}%`;
+    }
+
+    /* ==========================================================================
+       Ambient Canvas Background (Floating warm dust motes)
+       ========================================================================== */
+    const bgCanvas = document.getElementById('ambient-canvas');
+    const bgCtx = bgCanvas.getContext('2d');
+
+    function resizeBg() {
+      bgCanvas.width = window.innerWidth;
+      bgCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeBg);
+    resizeBg();
+
+    const motes = Array.from({ length: 45 }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: -Math.random() * 0.4 - 0.1,
+      radius: Math.random() * 1.5 + 0.5,
+      alpha: Math.random() * 0.25 + 0.05
+    }));
+
+    function drawAmbient() {
+      bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+      bgCtx.fillStyle = '#fff4e2';
+
+      for (let m of motes) {
+        m.x += m.vx;
+        m.y += m.vy;
+        if (m.y < 0) m.y = bgCanvas.height;
+        if (m.x < 0) m.x = bgCanvas.width;
+        if (m.x > bgCanvas.width) m.x = 0;
+
+        bgCtx.save();
+        bgCtx.globalAlpha = m.alpha;
+        bgCtx.beginPath();
+        bgCtx.arc(m.x, m.y, m.radius, 0, Math.PI * 2);
+        bgCtx.fill();
+        bgCtx.restore();
+      }
+
+      requestAnimationFrame(drawAmbient);
+    }
+    drawAmbient();
+  </script>
+</body>
+</html>

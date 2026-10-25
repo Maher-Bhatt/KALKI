@@ -1,27 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 280" width="100%" height="100%">
   <defs>
+    <!-- Background Gradient: Cold Machined Graphite -->
     <radialGradient id="petBg" cx="50%" cy="40%" r="75%">
-      <stop offset="0%" stop-color="#111827"/>
-      <stop offset="60%" stop-color="#070a12"/>
-      <stop offset="100%" stop-color="#020408"/>
+      <stop offset="0%" stop-color="#191d22"/>
+      <stop offset="55%" stop-color="#0d0f12"/>
+      <stop offset="100%" stop-color="#070809"/>
     </radialGradient>
 
     <filter id="petGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feGaussianBlur stdDeviation="5" result="blur"/>
       <feMerge>
         <feMergeNode in="blur"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
 
+    <!-- Warm Filament Mascot Body Gradient -->
     <linearGradient id="petBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00f3ff"/>
-      <stop offset="100%" stop-color="#00a8ff"/>
+      <stop offset="0%" stop-color="#262c33"/>
+      <stop offset="50%" stop-color="#191d22"/>
+      <stop offset="100%" stop-color="#0d0f12"/>
     </linearGradient>
 
+    <!-- Mascot Ears / Highlights: Warm Filament Light -->
     <linearGradient id="hornGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#c084fc"/>
-      <stop offset="100%" stop-color="#a855f7"/>
+      <stop offset="0%" stop-color="#fff4e2"/>
+      <stop offset="100%" stop-color="#e08c33"/>
     </linearGradient>
 
     <style>
@@ -31,93 +35,72 @@
   </defs>
 
   <!-- Background Container -->
-  <rect x="2" y="2" width="456" height="276" rx="18" fill="url(#petBg)" stroke="rgba(0, 243, 255, 0.3)" stroke-width="1.8"/>
+  <rect x="2" y="2" width="456" height="276" rx="18" fill="url(#petBg)" stroke="#333b44" stroke-width="1.6"/>
 
   <!-- Top Badges -->
   <g transform="translate(24, 20)">
-    <rect x="0" y="0" width="185" height="26" rx="13" fill="rgba(168, 85, 247, 0.12)" stroke="rgba(168, 85, 247, 0.4)" stroke-width="1"/>
-    <circle cx="13" cy="13" r="4.5" fill="#a855f7">
-      <animate attributeName="opacity" values="1;0.4;1" dur="1.8s" repeatCount="indefinite"/>
+    <rect x="0" y="0" width="195" height="26" rx="13" fill="rgba(255, 244, 226, 0.08)" stroke="rgba(255, 244, 226, 0.25)" stroke-width="1"/>
+    <circle cx="13" cy="13" r="4.5" fill="#fff4e2">
+      <animate attributeName="opacity" values="1;0.4;1" dur="2.2s" repeatCount="indefinite"/>
     </circle>
-    <text x="26" y="17" fill="#c084fc" class="mono-text" font-size="10.5" font-weight="700">CODEX DESKTOP PET</text>
+    <text x="26" y="17" fill="#fff4e2" class="mono-text" font-size="10.5" font-weight="700">CODEX DESKTOP PET</text>
   </g>
 
   <g transform="translate(325, 20)">
-    <rect x="0" y="0" width="110" height="26" rx="13" fill="rgba(16, 185, 129, 0.1)" stroke="rgba(16, 185, 129, 0.3)" stroke-width="1"/>
-    <circle cx="13" cy="13" r="4.5" fill="#10b981"/>
-    <text x="24" y="17" fill="#10b981" class="mono-text" font-size="10.5" font-weight="700">JAMMING ♪</text>
+    <rect x="0" y="0" width="110" height="26" rx="13" fill="rgba(76, 192, 97, 0.1)" stroke="rgba(76, 192, 97, 0.3)" stroke-width="1"/>
+    <circle cx="13" cy="13" r="4.5" fill="#4cc061"/>
+    <text x="24" y="17" fill="#4cc061" class="mono-text" font-size="10.5" font-weight="700">JAMMING ♪</text>
   </g>
 
   <!-- Speech Bubble -->
-  <g transform="translate(200, 68)">
-    <path d="M 0 12 Q 0 0 12 0 L 216 0 Q 228 0 228 12 L 228 80 Q 228 92 216 92 L 25 92 L 0 108 L 8 92 L 12 92 Q 0 92 0 80 Z" fill="#0f172a" stroke="#00f3ff" stroke-width="1.4" filter="url(#petGlow)"/>
-    <text x="16" y="28" fill="#ffffff" class="sans-text" font-size="14">"Hey Maher!"</text>
-    <text x="16" y="50" fill="#94a3b8" class="mono-text" font-size="10.5">Always on screen corner.</text>
-    <text x="16" y="66" fill="#94a3b8" class="mono-text" font-size="10.5">Dancing to Apple Music ♪</text>
-    <text x="16" y="83" fill="#00f3ff" class="mono-text" font-size="10" font-weight="700">Click pet to restore KALKI →</text>
+  <g transform="translate(195, 68)">
+    <path d="M 0 12 Q 0 0 12 0 L 226 0 Q 238 0 238 12 L 238 82 Q 238 94 226 94 L 25 94 L 0 110 L 8 94 L 12 94 Q 0 94 0 82 Z" fill="#0d0f12" stroke="#333b44" stroke-width="1.4" filter="url(#petGlow)"/>
+    <text x="16" y="28" fill="#fff4e2" class="sans-text" font-size="14">"Hey Maher!"</text>
+    <text x="16" y="50" fill="#b3bcc6" class="mono-text" font-size="10.5">Always on screen corner.</text>
+    <text x="16" y="66" fill="#8a95a1" class="mono-text" font-size="10.5">Dancing to Apple Music ♪</text>
+    <text x="16" y="84" fill="#fff4e2" class="mono-text" font-size="10" font-weight="700">Click pet to restore KALKI →</text>
   </g>
 
-  <!-- Animated Companion Mascot (Gobi Chibi Pixel Sprite) -->
+  <!-- Animated Companion Mascot (Gobi Chibi Cyber Kitten) -->
   <g transform="translate(45, 80)">
-    <!-- SVG Native Animation Transform: Bobbing Up and Down -->
+    <!-- SVG Native Animation Transform: Bobbing to the Music Beat -->
     <animateTransform attributeName="transform" type="translate" values="45,80; 45,66; 45,80" dur="1.1s" repeatCount="indefinite" additive="replace"/>
 
     <!-- Mascot Shadow -->
-    <ellipse cx="65" cy="142" rx="44" ry="9" fill="rgba(0, 243, 255, 0.22)"/>
+    <ellipse cx="65" cy="142" rx="44" ry="9" fill="rgba(255, 244, 226, 0.12)"/>
 
-    <!-- Mascot Body -->
-    <rect x="25" y="40" width="80" height="74" rx="20" fill="url(#petBodyGrad)" filter="url(#petGlow)"/>
+    <!-- Mascot Body: Cold Machined Graphite with Titanium Border -->
+    <rect x="25" y="40" width="80" height="74" rx="20" fill="url(#petBodyGrad)" stroke="#59636f" stroke-width="1.8" filter="url(#petGlow)"/>
 
-    <!-- Mascot Horns -->
+    <!-- Mascot Ears -->
     <polygon points="30,40 18,12 42,32" fill="url(#hornGrad)"/>
     <polygon points="100,40 112,12 88,32" fill="url(#hornGrad)"/>
 
-    <!-- Inner Horn Highlights -->
-    <polygon points="32,36 24,18 38,30" fill="#e9d5ff"/>
-    <polygon points="98,36 106,18 92,30" fill="#e9d5ff"/>
+    <!-- Inner Ear Highlights -->
+    <polygon points="32,36 24,18 38,30" fill="#fff4e2" opacity="0.8"/>
+    <polygon points="98,36 106,18 92,30" fill="#fff4e2" opacity="0.8"/>
 
-    <!-- Blinking Eyes -->
+    <!-- Blinking Eyes (Warm Presence Light) -->
     <g>
-      <circle cx="50" cy="72" r="7.5" fill="#07090e">
+      <circle cx="50" cy="72" r="7.5" fill="#fff4e2">
         <animate attributeName="r" values="7.5;7.5;1;7.5" keyTimes="0;0.92;0.96;1" dur="3.5s" repeatCount="indefinite"/>
       </circle>
-      <circle cx="80" cy="72" r="7.5" fill="#07090e">
+      <circle cx="80" cy="72" r="7.5" fill="#fff4e2">
         <animate attributeName="r" values="7.5;7.5;1;7.5" keyTimes="0;0.92;0.96;1" dur="3.5s" repeatCount="indefinite"/>
       </circle>
-      <circle cx="52" cy="69" r="2.5" fill="#ffffff"/>
-      <circle cx="82" cy="69" r="2.5" fill="#ffffff"/>
+      <circle cx="52" cy="70" r="2.5" fill="#070809"/>
+      <circle cx="82" cy="70" r="2.5" fill="#070809"/>
     </g>
 
-    <!-- Blushing Cheeks -->
-    <ellipse cx="38" cy="84" rx="6.5" ry="4" fill="#ff4d8d" opacity="0.85"/>
-    <ellipse cx="92" cy="84" rx="6.5" ry="4" fill="#ff4d8d" opacity="0.85"/>
+    <!-- Subtle Amber Cheeks -->
+    <ellipse cx="38" cy="84" rx="6.5" ry="4" fill="#e08c33" opacity="0.7"/>
+    <ellipse cx="92" cy="84" rx="6.5" ry="4" fill="#e08c33" opacity="0.7"/>
 
     <!-- Cute Smiling Mouth -->
-    <path d="M 58 84 Q 65 92 72 84" stroke="#07090e" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M 58 84 Q 65 92 72 84" stroke="#fff4e2" stroke-width="2.5" fill="none" stroke-linecap="round"/>
 
-    <!-- Little Paws -->
-    <rect x="36" y="106" width="16" height="12" rx="6" fill="#008ca0"/>
-    <rect x="78" y="106" width="16" height="12" rx="6" fill="#008ca0"/>
-  </g>
-
-  <!-- Floating Musical Notes -->
-  <g transform="translate(140, 110)">
-    <text x="0" y="0" fill="#a855f7" class="mono-text" font-size="24" font-weight="900">
-      ♪
-      <animateTransform attributeName="transform" type="translate" values="0,0; -25,-55; -40,-80" dur="2.2s" repeatCount="indefinite"/>
-      <animate attributeName="opacity" values="0;1;0" dur="2.2s" repeatCount="indefinite"/>
-    </text>
-    <text x="25" y="10" fill="#00f3ff" class="mono-text" font-size="26" font-weight="900">
-      ♫
-      <animateTransform attributeName="transform" type="translate" values="0,0; 25,-60; 35,-85" dur="2.6s" repeatCount="indefinite"/>
-      <animate attributeName="opacity" values="0;1;0" dur="2.6s" repeatCount="indefinite"/>
-    </text>
-  </g>
-
-  <!-- Bottom Footnote -->
-  <g transform="translate(24, 252)">
-    <text x="0" y="0" fill="#64748b" class="mono-text" font-size="10.5">
-      Win32 AttachThreadInput • Isolated Edge WebView2 Profile • 8-Bit Web Audio
-    </text>
+    <!-- Little Titanium Paws -->
+    <rect x="36" y="106" width="16" height="12" rx="6" fill="#323941" stroke="#59636f" stroke-width="1"/>
+    <rect x="78" y="106" width="16" height="12" rx="6" fill="#323941" stroke="#59636f" stroke-width="1"/>
   </g>
 </svg>

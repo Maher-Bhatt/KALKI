@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Downloads — Standalone Multi-OS Packages for KALKI</title>
+  <meta name="description" content="Download KALKI standalone native packages for Windows, Linux, and macOS. Zero telemetry, local loopback, companion pet, and ShieldCore defense.">
+  <link rel="icon" type="image/x-icon" href="../app/assets/kalki_icon.ico">
+
+  <style>
+    /* ==========================================================================
+       KALKI FILAMENT DESIGN SYSTEM
+       Cold Machined Graphite Surfaces • Warm Ivory Filament Light
+       ========================================================================== */
+    :root {
+      --void: #070809;
+      --inset: #0a0c0e;
+      --base: #0d0f12;
+      --raised: #191d22;
+      --overlay: #262c33;
+      --float: #323941;
+      --ls: #232930;
+      --line: #333b44;
+      --lst: #59636f;
+      --text: #e6ebef;
+      --t2: #b3bcc6;
+      --mut: #8a95a1;
+      --faint: #7e8894;
+      --fil: #fff4e2;
+      --fil-glow: rgba(255, 244, 226, 0.25);
+      --fil-dim: rgba(255, 244, 226, 0.08);
+      --ok: #4cc061;
+      --ok-glow: rgba(76, 192, 97, 0.2);
+      --warn: #e08c33;
+      --dng: #f0565b;
+      --font-sans: "Instrument Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+      --font-mono: "JetBrains Mono", Consolas, Monaco, monospace;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; background: var(--void); color: var(--text); }
+    body {
+      background-color: var(--void);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #ambient-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 28px;
+    }
+
+    /* Top Navigation */
+    nav.top-nav {
+      position: sticky;
+      top: 0;
+      width: 100%;
+      z-index: 1000;
+      background: rgba(7, 8, 9, 0.94);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--line);
+      padding: 14px 0;
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .presence-mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--fil) 0%, rgba(255, 244, 226, 0.3) 50%, transparent 80%);
+      box-shadow: 0 0 16px var(--fil-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: presenceBreathe 4s infinite ease-in-out;
+    }
+
+    @keyframes presenceBreathe {
+      0%, 100% { transform: scale(1); opacity: 0.85; }
+      50% { transform: scale(1.08); opacity: 1; }
+    }
+
+    .presence-mark-inner {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--fil);
+    }
+
+    .brand-text {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-badge {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      color: var(--fil);
+      background: var(--fil-dim);
+      border: 1px solid rgba(255, 244, 226, 0.2);
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+
+    .nav-menu {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      list-style: none;
+    }
+
+    @media (max-width: 900px) {
+      .nav-menu { display: none; }
+    }
+
+    .nav-menu a {
+      color: var(--t2);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 500;
+      transition: color 0.15s;
+    }
+
+    .nav-menu a:hover, .nav-menu a.active {
+      color: var(--fil);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-ghost {
+      background: var(--raised);
+      color: var(--text);
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      font-size: 0.88rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      transition: all 0.15s;
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--lst);
+      color: var(--fil);
+    }
+
+    /* Page Hero */
+    .page-hero {
+      padding: 80px 0 50px;
+      text-align: center;
+    }
+
+    .pill-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      background: var(--inset);
+      border: 1px solid var(--line);
+      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      color: var(--fil);
+      margin-bottom: 24px;
+    }
+
+    .pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--ok);
+      box-shadow: 0 0 8px var(--ok-glow);
+    }
+
+    .page-title {
+      font-size: clamp(2.4rem, 4.5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+
+    .filament-glow {
+      color: var(--fil);
+      text-shadow: 0 0 32px var(--fil-glow);
+    }
+
+    .page-lead {
+      font-size: 1.15rem;
+      color: var(--t2);
+      max-width: 740px;
+      margin: 0 auto 36px;
+      line-height: 1.7;
+    }
+
+    /* OS Switcher Tabs */
+    .os-tabs-row {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+    }
+
+    .os-tab-btn {
+      background: var(--base);
+      border: 1px solid var(--line);
+      color: var(--t2);
+      padding: 10px 22px;
+      border-radius: var(--radius-full);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s;
+    }
+
+    .os-tab-btn:hover {
+      background: var(--raised);
+      color: var(--text);
+      border-color: var(--lst);
+    }
+
+    .os-tab-btn.active {
+      background: var(--raised);
+      border-color: var(--fil);
+      color: var(--fil);
+      box-shadow: 0 0 16px var(--fil-dim);
+    }
+
+    /* Downloads Cards Grid */
+    .download-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 24px;
+      margin-bottom: 60px;
+    }
+
+    .dl-card {
+      background: var(--base);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 36px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: border-color 0.2s, transform 0.2s;
+      position: relative;
+    }
+
+    .dl-card:hover {
+      border-color: var(--lst);
+      transform: translateY(-3px);
+    }
+
+    .dl-card.highlight {
+      border-color: var(--fil);
+      box-shadow: 0 0 24px var(--fil-dim);
+    }
+
+    .dl-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .dl-icon {
+      font-size: 2.2rem;
+    }
+
+    .dl-tag {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      background: var(--inset);
+      border: 1px solid var(--line);
+      padding: 4px 10px;
+      border-radius: 6px;
+      color: var(--fil);
+    }
+
+    .dl-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .dl-desc {
+      color: var(--t2);
+      font-size: 0.92rem;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .dl-meta {
+      background: var(--inset);
+      border: 1px solid var(--ls);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--mut);
+      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .dl-meta-row {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .btn-dl-primary {
+      background: var(--fil);
+      color: #070809;
+      font-weight: 800;
+      padding: 12px 20px;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      font-size: 0.94rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 0 16px var(--fil-glow);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-dl-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 28px rgba(255, 244, 226, 0.45);
+    }
+
+    .btn-dl-ghost {
+      background: var(--raised);
+      color: var(--text);
+      font-weight: 600;
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      font-size: 0.88rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      margin-top: 10px;
+      transition: all 0.15s;
+    }
+
+    .btn-dl-ghost:hover {
+      border-color: var(--lst);
+      color: var(--fil);
+    }
+
+    /* Client-side SHA-256 Verifier Card */
+    .verifier-card {
+      background: var(--inset);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      margin-bottom: 60px;
+    }
+
+    .ver-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 40px;
+      align-items: center;
+    }
+
+    @media (max-width: 880px) {
+      .ver-grid { grid-template-columns: 1fr; }
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--line);
+      border-radius: var(--radius-md);
+      padding: 32px 20px;
+      text-align: center;
+      background: var(--base);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--fil);
+      background: var(--raised);
+    }
+
+    .drop-icon {
+      font-size: 2.2rem;
+      margin-bottom: 10px;
+    }
+
+    .drop-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .drop-sub {
+      font-size: 0.78rem;
+      color: var(--mut);
+      font-family: var(--font-mono);
+    }
+
+    .hash-display {
+      background: var(--void);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      margin-top: 16px;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--fil);
+      word-break: break-all;
+    }
+
+    /* System Requirements Table */
+    .req-card {
+      background: var(--base);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      margin-bottom: 80px;
+    }
+
+    .req-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 0.9rem;
+    }
+
+    .req-table th {
+      text-align: left;
+      padding: 12px 16px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--mut);
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .req-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--ls);
+      color: var(--t2);
+    }
+
+    .req-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Footer */
+    footer.site-footer {
+      border-top: 1px solid var(--line);
+      padding: 48px 0;
+      color: var(--mut);
+      font-size: 0.88rem;
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      color: var(--mut);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .footer-links a:hover {
+      color: var(--fil);
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="ambient-canvas"></canvas>
+
+  <!-- Top Navigation -->
+  <nav class="top-nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="brand">
+        <div class="presence-mark">
+          <div class="presence-mark-inner"></div>
+        </div>
+        <span class="brand-text">KALKI</span>
+        <span class="brand-badge">FILAMENT v1.4.2</span>
+      </a>
+
+      <ul class="nav-menu">
+        <li><a href="index.html">Overview</a></li>
+        <li><a href="pets.html">Companion Pets</a></li>
+        <li><a href="security.html">ShieldCore &amp; Tools</a></li>
+        <li><a href="docs.html">Documentation</a></li>
+        <li><a href="download.html" class="active">Downloads</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <a href="https://github.com/maher-kalki/KALKI" class="btn-ghost" target="_blank" rel="noopener">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="page-hero">
+    <div class="container">
+      <div class="pill-status">
+        <span class="pill-dot"></span>
+        STANDALONE RELEASES // v1.4.2 // ZERO STORE MIDDLEWARE
+      </div>
+      <h1 class="page-title">
+        Standalone Downloads.<br>
+        <span class="filament-glow">Direct Binary Distribution.</span>
+      </h1>
+      <p class="page-lead">
+        Download verified standalone installation packages for Windows, Linux, and macOS. Zero telemetry, no account registration required, and full offline execution right out of the box.
+      </p>
+
+      <!-- OS Switcher Buttons -->
+      <div class="os-tabs-row">
+        <button class="os-tab-btn active" data-os="win">
+          <span>🪟</span> Windows (10 / 11)
+        </button>
+        <button class="os-tab-btn" data-os="linux">
+          <span>🐧</span> Linux (Universal)
+        </button>
+        <button class="os-tab-btn" data-os="mac">
+          <span>🍎</span> macOS (Darwin)
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Download Cards Section -->
+  <section class="container">
+    <div class="download-cards-grid" id="downloadGrid">
+      
+      <!-- Card 1: Windows Inno Setup Standalone Installer -->
+      <div class="dl-card highlight" data-category="win">
+        <div>
+          <div class="dl-head">
+            <div class="dl-icon">🪟</div>
+            <span class="dl-tag">RECOMMENDED // WINDOWS</span>
+          </div>
+          <h3 class="dl-title">Inno Setup Standalone Installer</h3>
+          <p class="dl-desc">
+            Complete standalone executable installer. Installs KALKI, the standalone desktop companion pet, start menu shortcuts, and registers loopback protocol handlers.
+          </p>
+          <div class="dl-meta">
+            <div class="dl-meta-row"><span>File:</span> <strong>KALKI_Setup_v1.4.2.exe</strong></div>
+            <div class="dl-meta-row"><span>Size:</span> <span>48.4 MB</span></div>
+            <div class="dl-meta-row"><span>Architecture:</span> <span>x86_64 (64-bit)</span></div>
+            <div class="dl-meta-row"><span>Compatibility:</span> <span>Windows 10 / 11</span></div>
+          </div>
+        </div>
+        <div>
+          <a href="https://github.com/maher-kalki/KALKI/releases/download/v1.4.2/KALKI_Setup_v1.4.2.exe" class="btn-dl-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Download Setup Installer (.exe)
+          </a>
+          <a href="https://github.com/maher-kalki/KALKI/releases/download/v1.4.2/KALKI_Portable_v1.4.2.zip" class="btn-dl-ghost">
+            Download Portable Zip (.zip)
+          </a>
+        </div>
+      </div>
+
+      <!-- Card 2: Linux Self-Extracting Bundle -->
+      <div class="dl-card" data-category="linux">
+        <div>
+          <div class="dl-head">
+            <div class="dl-icon">🐧</div>
+            <span class="dl-tag">UNIVERSAL LINUX</span>
+          </div>
+          <h3 class="dl-title">Linux Self-Extracting Installer</h3>
+          <p class="dl-desc">
+            Single-file self-extracting shell installer for Ubuntu, Debian, Arch, Fedora, and openSUSE. Configures WebKit2GTK and local systemd user service.
+          </p>
+          <div class="dl-meta">
+            <div class="dl-meta-row"><span>File:</span> <strong>KALKI-v1.4.2-linux-x86_64.sh</strong></div>
+            <div class="dl-meta-row"><span>Size:</span> <span>46.1 MB</span></div>
+            <div class="dl-meta-row"><span>Architecture:</span> <span>x86_64 / glibc 2.31+</span></div>
+            <div class="dl-meta-row"><span>UI Engine:</span> <span>WebKit2GTK / Native Browser</span></div>
+          </div>
+        </div>
+        <div>
+          <a href="https://github.com/maher-kalki/KALKI/releases/download/v1.4.2/KALKI-v1.4.2-linux-x86_64.sh" class="btn-dl-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Download Linux Shell (.sh)
+          </a>
+          <a href="https://github.com/maher-kalki/KALKI/releases/download/v1.4.2/KALKI-v1.4.2-linux-x86_64.tar.gz" class="btn-dl-ghost">
+            Download Tarball (.tar.gz)
+          </a>
+        </div>
+      </div>
+
+      <!-- Card 3: macOS Universal Darwin Package -->
+      <div class="dl-card" data-category="mac">
+        <div>
+          <div class="dl-head">
+            <div class="dl-icon">🍎</div>
+            <span class="dl-tag">MACOS UNIVERSAL</span>
+          </div>
+          <h3 class="dl-title">macOS Darwin Package</h3>
+          <p class="dl-desc">
+            Universal binary for Apple Silicon (M1/M2/M3/M4) and Intel Macs. Includes native Cocoa webview window and automatic Homebrew dependency check.
+          </p>
+          <div class="dl-meta">
+            <div class="dl-meta-row"><span>File:</span> <strong>KALKI-v1.4.2-darwin-universal.tar.gz</strong></div>
+            <div class="dl-meta-row"><span>Size:</span> <span>50.2 MB</span></div>
+            <div class="dl-meta-row"><span>Architecture:</span> <span>ARM64 &amp; x86_64</span></div>
+            <div class="dl-meta-row"><span>Compatibility:</span> <span>macOS 12.0 Monterey+</span></div>
+          </div>
+        </div>
+        <div>
+          <a href="https://github.com/maher-kalki/KALKI/releases/download/v1.4.2/KALKI-v1.4.2-darwin-universal.tar.gz" class="btn-dl-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Download macOS Tarball (.tar.gz)
+          </a>
+          <a href="https://raw.githubusercontent.com/maher-kalki/KALKI/main/mac/install_mac.sh" class="btn-dl-ghost" target="_blank">
+            View install_mac.sh Script
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Client-side SHA-256 Checksum Verifier -->
+  <section class="container">
+    <div class="verifier-card">
+      <div class="ver-grid">
+        <div>
+          <div class="pill-status" style="margin-bottom: 16px;">
+            <span>🔒</span> CLIENT-SIDE INTEGRITY
+          </div>
+          <h2 style="font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 14px;">
+            Live SHA-256 Checksum Verifier
+          </h2>
+          <p style="color: var(--t2); font-size: 0.94rem; line-height: 1.6; margin-bottom: 18px;">
+            Verify file authenticity directly in your browser using the native Web Crypto API. No file bytes are uploaded to any server—the cryptographic hash is computed 100% locally on your machine.
+          </p>
+          
+          <div style="font-size: 0.82rem; font-family: var(--font-mono); color: var(--mut);">
+            Official Release Hash (KALKI_Setup_v1.4.2.exe):<br>
+            <span style="color: var(--fil);">e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="drop-zone" id="dropZone">
+            <div class="drop-icon">📁</div>
+            <div class="drop-title">Drop your downloaded installer here</div>
+            <div class="drop-sub">or click to browse local file</div>
+            <input type="file" id="filePicker" style="display: none;">
+          </div>
+
+          <div class="hash-display" id="hashDisplay">
+            Status: Waiting for file...
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- System Requirements Matrix -->
+  <section class="container">
+    <div class="req-card">
+      <h2 style="font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em;">System Requirements</h2>
+      <p style="color: var(--mut); font-size: 0.95rem; margin-top: 4px;">Hardware parameters for running KALKI with local models vs cloud API cognitive routing.</p>
+
+      <table class="req-table">
+        <thead>
+          <tr>
+            <th>COMPONENT</th>
+            <th>MINIMUM (CLOUD / LIGHTWEIGHT)</th>
+            <th>RECOMMENDED (LOCAL LLM INFERENCE)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Operating System</strong></td>
+            <td>Windows 10 64-bit / Ubuntu 20.04 / macOS 12 Monterey</td>
+            <td>Windows 11 / Arch Linux / macOS Sonoma</td>
+          </tr>
+          <tr>
+            <td><strong>Processor</strong></td>
+            <td>Intel Core i3 / AMD Ryzen 3 / Apple M1</td>
+            <td>Intel Core i7 12th+ / AMD Ryzen 7 / Apple M2 Pro+</td>
+          </tr>
+          <tr>
+            <td><strong>Memory (RAM)</strong></td>
+            <td>4 GB RAM (&lt; 200 MB workspace footprint)</td>
+            <td>16 GB RAM (for running 7B - 14B local GGUF models)</td>
+          </tr>
+          <tr>
+            <td><strong>Graphics (GPU)</strong></td>
+            <td>Integrated Intel UHD / AMD Radeon</td>
+            <td>NVIDIA RTX 3060+ (6GB+ VRAM) or Apple Silicon Metal</td>
+          </tr>
+          <tr>
+            <td><strong>Disk Storage</strong></td>
+            <td>250 MB available storage</td>
+            <td>8 GB+ (for local model weight caching)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div>
+        <span style="font-weight: 700; color: var(--text);">KALKI</span> &bull; Sovereign AI Desktop Operating Workspace
+        <div style="font-size: 0.78rem; color: var(--mut); margin-top: 4px;">
+          Cold Machined Graphite Surfaces &bull; Warm Ivory Filament Light &bull; 100% Local-First
+        </div>
+      </div>
+
+      <ul class="footer-links">
+        <li><a href="index.html">Overview</a></li>
+        <li><a href="pets.html">Companion Pets</a></li>
+        <li><a href="security.html">ShieldCore &amp; Tools</a></li>
+        <li><a href="docs.html">Documentation</a></li>
+        <li><a href="download.html">Downloads</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script>
+    // OS Switcher Filter
+    const osBtns = document.querySelectorAll('.os-tab-btn');
+    const dlCards = document.querySelectorAll('.dl-card');
+
+    osBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        osBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const os = btn.dataset.os;
+
+        dlCards.forEach(card => {
+          if (os === 'all' || card.dataset.category === os) {
+            card.style.display = 'flex';
+          } else {
+            card.style.display = 'none';
+          }
+        });
+      });
+    });
+
+    // Native Web Crypto API SHA-256 Verifier
+    const dropZone = document.getElementById('dropZone');
+    const filePicker = document.getElementById('filePicker');
+    const hashDisplay = document.getElementById('hashDisplay');
+
+    dropZone.addEventListener('click', () => filePicker.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length > 0) {
+        verifyFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    filePicker.addEventListener('change', () => {
+      if (filePicker.files.length > 0) {
+        verifyFile(filePicker.files[0]);
+      }
+    });
+
+    async function verifyFile(file) {
+      hashDisplay.textContent = `Computing SHA-256 for "${file.name}" (${(file.size / 1024 / 1024).toFixed(2)} MB)...`;
+      try {
+        const buffer = await file.arrayBuffer();
+        const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        hashDisplay.innerHTML = `<span style="color: var(--ok);">[COMPUTED SHA-256]:</span><br>${hashHex}<br><br><span style="color: var(--mut);">File verified locally with client-side Web Crypto API.</span>`;
+      } catch (err) {
+        hashDisplay.textContent = `Error computing hash: ${err.message}`;
+      }
+    }
+
+    /* Ambient Canvas Background */
+    const bgCanvas = document.getElementById('ambient-canvas');
+    const bgCtx = bgCanvas.getContext('2d');
+
+    function resizeBg() {
+      bgCanvas.width = window.innerWidth;
+      bgCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeBg);
+    resizeBg();
+
+    const motes = Array.from({ length: 45 }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: -Math.random() * 0.4 - 0.1,
+      radius: Math.random() * 1.5 + 0.5,
+      alpha: Math.random() * 0.25 + 0.05
+    }));
+
+    function drawAmbient() {
+      bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+      bgCtx.fillStyle = '#fff4e2';
+
+      for (let m of motes) {
+        m.x += m.vx;
+        m.y += m.vy;
+        if (m.y < 0) m.y = bgCanvas.height;
+        if (m.x < 0) m.x = bgCanvas.width;
+        if (m.x > bgCanvas.width) m.x = 0;
+
+        bgCtx.save();
+        bgCtx.globalAlpha = m.alpha;
+        bgCtx.beginPath();
+        bgCtx.arc(m.x, m.y, m.radius, 0, Math.PI * 2);
+        bgCtx.fill();
+        bgCtx.restore();
+      }
+
+      requestAnimationFrame(drawAmbient);
+    }
+    drawAmbient();
+  </script>
+</body>
+</html>

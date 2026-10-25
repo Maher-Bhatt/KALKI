@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShieldCore &amp; 12 Cyber Tools — KALKI Endpoint Defense</title>
+  <meta name="description" content="Explore KALKI ShieldCore antivirus and 12 built-in cybersecurity tools. Local-first threat detection, Shannon entropy scanning, anti-clipper watchdog, and port reconnaissance.">
+  <link rel="icon" type="image/x-icon" href="../app/assets/kalki_icon.ico">
+
+  <style>
+    /* ==========================================================================
+       KALKI FILAMENT DESIGN SYSTEM
+       Cold Machined Graphite Surfaces • Warm Ivory Filament Light
+       ========================================================================== */
+    :root {
+      --void: #070809;
+      --inset: #0a0c0e;
+      --base: #0d0f12;
+      --raised: #191d22;
+      --overlay: #262c33;
+      --float: #323941;
+      --ls: #232930;
+      --line: #333b44;
+      --lst: #59636f;
+      --text: #e6ebef;
+      --t2: #b3bcc6;
+      --mut: #8a95a1;
+      --faint: #7e8894;
+      --fil: #fff4e2;
+      --fil-glow: rgba(255, 244, 226, 0.25);
+      --fil-dim: rgba(255, 244, 226, 0.08);
+      --ok: #4cc061;
+      --ok-glow: rgba(76, 192, 97, 0.2);
+      --warn: #e08c33;
+      --dng: #f0565b;
+      --font-sans: "Instrument Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+      --font-mono: "JetBrains Mono", Consolas, Monaco, monospace;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; background: var(--void); color: var(--text); }
+    body {
+      background-color: var(--void);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #ambient-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 28px;
+    }
+
+    /* Top Navigation */
+    nav.top-nav {
+      position: sticky;
+      top: 0;
+      width: 100%;
+      z-index: 1000;
+      background: rgba(7, 8, 9, 0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--line);
+      padding: 14px 0;
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .presence-mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--fil) 0%, rgba(255, 244, 226, 0.3) 50%, transparent 80%);
+      box-shadow: 0 0 16px var(--fil-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: presenceBreathe 4s infinite ease-in-out;
+    }
+
+    @keyframes presenceBreathe {
+      0%, 100% { transform: scale(1); opacity: 0.85; }
+      50% { transform: scale(1.08); opacity: 1; }
+    }
+
+    .presence-mark-inner {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--fil);
+    }
+
+    .brand-text {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-badge {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      color: var(--fil);
+      background: var(--fil-dim);
+      border: 1px solid rgba(255, 244, 226, 0.2);
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+
+    .nav-menu {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      list-style: none;
+    }
+
+    @media (max-width: 900px) {
+      .nav-menu { display: none; }
+    }
+
+    .nav-menu a {
+      color: var(--t2);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 500;
+      transition: color 0.15s;
+    }
+
+    .nav-menu a:hover, .nav-menu a.active {
+      color: var(--fil);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-sound {
+      background: var(--inset);
+      border: 1px solid var(--line);
+      color: var(--t2);
+      padding: 7px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+
+    .btn-sound:hover {
+      color: var(--fil);
+      border-color: var(--lst);
+    }
+
+    .btn-primary {
+      background: var(--fil);
+      color: #070809;
+      font-weight: 700;
+      padding: 8px 18px;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      font-size: 0.88rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 0 16px var(--fil-glow);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 24px rgba(255, 244, 226, 0.4);
+    }
+
+    .btn-ghost {
+      background: var(--raised);
+      color: var(--text);
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      font-size: 0.88rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      transition: all 0.15s;
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--lst);
+      color: var(--fil);
+    }
+
+    /* Page Hero */
+    .page-hero {
+      padding: 80px 0 50px;
+      text-align: center;
+    }
+
+    .pill-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      background: var(--inset);
+      border: 1px solid var(--line);
+      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      color: var(--ok);
+      margin-bottom: 24px;
+    }
+
+    .pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--ok);
+      box-shadow: 0 0 8px var(--ok-glow);
+      animation: blinkDot 2s infinite ease-in-out;
+    }
+
+    @keyframes blinkDot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .page-title {
+      font-size: clamp(2.4rem, 4.5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+
+    .filament-glow {
+      color: var(--fil);
+      text-shadow: 0 0 32px var(--fil-glow);
+    }
+
+    .page-lead {
+      font-size: 1.15rem;
+      color: var(--t2);
+      max-width: 780px;
+      margin: 0 auto 36px;
+      line-height: 1.7;
+    }
+
+    /* Live Radar & Telemetry Split Card */
+    .radar-card {
+      background: var(--base);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 40px;
+      align-items: center;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6);
+      margin-bottom: 80px;
+    }
+
+    @media (max-width: 900px) {
+      .radar-card { grid-template-columns: 1fr; }
+    }
+
+    .radar-viewport {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    #radarCanvas {
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      background: var(--inset);
+      border: 2px solid var(--line);
+      box-shadow: 0 0 24px rgba(0, 0, 0, 0.7);
+      cursor: pointer;
+    }
+
+    .radar-hint {
+      margin-top: 14px;
+      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      color: var(--mut);
+    }
+
+    .telemetry-col {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .tele-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--ls);
+      padding-bottom: 12px;
+    }
+
+    .tele-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+
+    .tele-metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .tele-box {
+      background: var(--inset);
+      border: 1px solid var(--ls);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+    }
+
+    .tele-lbl {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      color: var(--mut);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .tele-val {
+      font-size: 1.1rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+    }
+
+    .val-ok { color: var(--ok); }
+    .val-fil { color: var(--fil); }
+
+    .tele-log {
+      background: var(--void);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--t2);
+      line-height: 1.6;
+      height: 140px;
+      overflow-y: auto;
+    }
+
+    .log-line { margin-bottom: 4px; }
+    .log-time { color: var(--mut); }
+    .log-ok { color: var(--ok); }
+    .log-fil { color: var(--fil); }
+
+    /* 12 Cyber Tools Workbench Section */
+    .section-title-wrap {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .section-h2 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+    }
+
+    .section-sub {
+      color: var(--mut);
+      font-size: 1.05rem;
+      max-width: 650px;
+      margin: 0 auto;
+    }
+
+    /* Workbench Layout */
+    .wb-card {
+      background: var(--base);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-bottom: 80px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .wb-nav {
+      background: var(--inset);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      overflow-x: auto;
+      padding: 8px 16px;
+      gap: 8px;
+    }
+
+    .wb-tab {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--mut);
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+
+    .wb-tab:hover {
+      color: var(--text);
+      background: var(--raised);
+    }
+
+    .wb-tab.active {
+      background: var(--raised);
+      border-color: var(--line);
+      color: var(--fil);
+      box-shadow: 0 0 10px var(--fil-dim);
+    }
+
+    .wb-content {
+      padding: 36px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 36px;
+    }
+
+    @media (max-width: 880px) {
+      .wb-content { grid-template-columns: 1fr; }
+    }
+
+    .tool-desc-side {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .tool-name {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tool-tag {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      background: var(--inset);
+      border: 1px solid var(--line);
+      padding: 3px 8px;
+      border-radius: 6px;
+      color: var(--fil);
+    }
+
+    .tool-lead {
+      color: var(--t2);
+      font-size: 0.94rem;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .feature-points {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .feature-points li {
+      font-size: 0.88rem;
+      color: var(--t2);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .feature-points li::before {
+      content: "▹";
+      color: var(--fil);
+      font-weight: bold;
+    }
+
+    /* Terminal Console Display */
+    .tool-term-side {
+      background: var(--void);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .term-head {
+      background: var(--base);
+      border-bottom: 1px solid var(--line);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .term-title {
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      color: var(--mut);
+    }
+
+    .term-input-row {
+      display: flex;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--ls);
+      background: var(--inset);
+      gap: 10px;
+    }
+
+    .term-input {
+      flex: 1;
+      background: var(--base);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      color: var(--text);
+      outline: none;
+    }
+
+    .term-input:focus {
+      border-color: var(--fil);
+    }
+
+    .term-btn-run {
+      background: var(--fil);
+      color: #070809;
+      font-weight: 700;
+      border: none;
+      padding: 0 16px;
+      border-radius: var(--radius-sm);
+      font-size: 0.84rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .term-btn-run:hover {
+      box-shadow: 0 0 14px var(--fil-glow);
+    }
+
+    .term-output {
+      padding: 18px;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--t2);
+      line-height: 1.6;
+      flex: 1;
+      min-height: 220px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    /* Security Grid: 12 Tools Overview */
+    .tools-catalog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 80px;
+    }
+
+    .catalog-item {
+      background: var(--base);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .catalog-item:hover {
+      border-color: var(--lst);
+      transform: translateY(-2px);
+    }
+
+    .catalog-icon {
+      font-size: 1.6rem;
+      margin-bottom: 12px;
+    }
+
+    .catalog-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .catalog-desc {
+      font-size: 0.85rem;
+      color: var(--mut);
+      line-height: 1.5;
+    }
+
+    /* Deep Dive Architecture Callout */
+    .deep-callout {
+      background: var(--inset);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 48px;
+      margin-bottom: 80px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      align-items: center;
+    }
+
+    @media (max-width: 880px) {
+      .deep-callout { grid-template-columns: 1fr; }
+    }
+
+    /* Footer */
+    footer.site-footer {
+      border-top: 1px solid var(--line);
+      padding: 48px 0;
+      color: var(--mut);
+      font-size: 0.88rem;
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      color: var(--mut);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .footer-links a:hover {
+      color: var(--fil);
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="ambient-canvas"></canvas>
+
+  <!-- Top Navigation -->
+  <nav class="top-nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="brand">
+        <div class="presence-mark">
+          <div class="presence-mark-inner"></div>
+        </div>
+        <span class="brand-text">KALKI</span>
+        <span class="brand-badge">FILAMENT v1.4.2</span>
+      </a>
+
+      <ul class="nav-menu">
+        <li><a href="index.html">Overview</a></li>
+        <li><a href="pets.html">Companion Pets</a></li>
+        <li><a href="security.html" class="active">ShieldCore &amp; Tools</a></li>
+        <li><a href="docs.html">Documentation</a></li>
+        <li><a href="download.html">Downloads</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <button class="btn-sound" id="soundToggleBtn">
+          <span id="soundIcon">🔊</span> Audio
+        </button>
+        <a href="https://github.com/maher-kalki/KALKI" class="btn-ghost" target="_blank" rel="noopener">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub
+        </a>
+        <a href="download.html" class="btn-primary">Download v1.4.2</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="page-hero">
+    <div class="container">
+      <div class="pill-status">
+        <span class="pill-dot"></span>
+        SHIELDCORE DEFENSE ENGINE // 12 CYBER TOOLS ONLINE
+      </div>
+      <h1 class="page-title">
+        Native Endpoint Defense.<br>
+        <span class="filament-glow">Zero Cloud Dependency.</span>
+      </h1>
+      <p class="page-lead">
+        KALKI is built from the ground up as a hardened sovereign operating environment. Featuring ShieldCore—an integrated antivirus engine with real-time heuristic entropy scanning, anti-clipper clipboard watchdogs, and a full suite of 12 built-in cybersecurity diagnostic tools.
+      </p>
+    </div>
+  </section>
+
+  <!-- Live Radar & Defense Telemetry -->
+  <section class="container">
+    <div class="radar-card">
+      
+      <!-- Interactive 60FPS Radar Canvas -->
+      <div class="radar-viewport">
+        <canvas id="radarCanvas" width="320" height="320"></canvas>
+        <div class="radar-hint">● Click radar to initiate full heuristic system scan</div>
+      </div>
+
+      <!-- Telemetry Column -->
+      <div class="telemetry-col">
+        <div class="tele-header">
+          <h2 class="tele-title">Defense Telemetry &bull; Loopback</h2>
+          <span style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--ok);">STATUS: SECURED</span>
+        </div>
+
+        <div class="tele-metric-grid">
+          <div class="tele-box">
+            <div class="tele-lbl">Heuristic Engine</div>
+            <div class="tele-val val-ok">ACTIVE (0 Flags)</div>
+          </div>
+          <div class="tele-box">
+            <div class="tele-lbl">Anti-Clipper Watchdog</div>
+            <div class="tele-val val-ok">ARMED (120ms)</div>
+          </div>
+          <div class="tele-box">
+            <div class="tele-lbl">Miner Process Guard</div>
+            <div class="tele-val val-ok">0 PIDs Active</div>
+          </div>
+          <div class="tele-box">
+            <div class="tele-lbl">Loopback Interface</div>
+            <div class="tele-val val-fil">127.0.0.1:8765</div>
+          </div>
+        </div>
+
+        <div class="tele-log" id="telemetryLog">
+          <div class="log-line"><span class="log-time">[09:42:10]</span> <span class="log-ok">[OK]</span> ShieldCore daemon initialized on PID 18320</div>
+          <div class="log-line"><span class="log-time">[09:42:11]</span> <span class="log-ok">[OK]</span> Windows Defender PowerShell bridge connected</div>
+          <div class="log-line"><span class="log-time">[09:42:12]</span> <span class="log-ok">[OK]</span> Shannon entropy baseline calibrated: H &lt; 6.8</div>
+          <div class="log-line"><span class="log-time">[09:42:14]</span> <span class="log-fil">[SYS]</span> Anti-Clipper watching BTC / ETH / SOL patterns</div>
+          <div class="log-line"><span class="log-time">[09:42:15]</span> <span class="log-ok">[OK]</span> All 12 cybersecurity diagnostic tools loaded</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Interactive 12 Cyber Tools Workbench -->
+  <section class="container">
+    <div class="section-title-wrap">
+      <h2 class="section-h2">12 Built-in Cyber Diagnostic Tools</h2>
+      <p class="section-sub">
+        Test and simulate any of the built-in security utilities right here. Fully functional inside KALKI with zero external dependencies.
+      </p>
+    </div>
+
+    <div class="wb-card">
+      <!-- Tool Navigation Tabs -->
+      <div class="wb-nav" id="toolTabs">
+        <button class="wb-tab active" data-tool="port">1. Port Scanner</button>
+        <button class="wb-tab" data-tool="dns">2. DNS Recon</button>
+        <button class="wb-tab" data-tool="headers">3. HTTP Headers</button>
+        <button class="wb-tab" data-tool="entropy">4. Entropy Scanner</button>
+        <button class="wb-tab" data-tool="miner">5. Miner Guard</button>
+        <button class="wb-tab" data-tool="clipper">6. Anti-Clipper</button>
+        <button class="wb-tab" data-tool="phish">7. Phishing Hunter</button>
+        <button class="wb-tab" data-tool="arp">8. ARP Watch</button>
+        <button class="wb-tab" data-tool="ssl">9. SSL Inspector</button>
+        <button class="wb-tab" data-tool="sqli">10. Payload Fuzzer</button>
+        <button class="wb-tab" data-tool="jwt">11. JWT Verifier</button>
+        <button class="wb-tab" data-tool="sanitizer">12. File Sanitizer</button>
+      </div>
+
+      <!-- Workbench Interactive Area -->
+      <div class="wb-content">
+        
+        <!-- Left: Tool Description & Capabilities -->
+        <div class="tool-desc-side">
+          <div>
+            <h3 class="tool-name" id="toolHeading">
+              Port Scanner
+              <span class="tool-tag" id="toolTag">NETWORK RECON</span>
+            </h3>
+            <p class="tool-lead" id="toolLead">
+              Scans target IP addresses or localhost loopback for open TCP ports, detecting unauthorized listeners, exposed database servers, or rogue backdoors.
+            </p>
+
+            <ul class="feature-points" id="toolFeatures">
+              <li>High-speed asynchronous socket connection testing</li>
+              <li>Pre-configured service profiles (HTTP, SSH, MySQL, Redis, VNC)</li>
+              <li>Loopback binding safety verification</li>
+            </ul>
+          </div>
+
+          <div style="font-size: 0.8rem; font-family: var(--font-mono); color: var(--mut);">
+            Engine: Native Python <code>socket</code> / <code>asyncio</code> &bull; Zero external binaries
+          </div>
+        </div>
+
+        <!-- Right: Simulated Interactive Terminal Console -->
+        <div class="tool-term-side">
+          <div class="term-head">
+            <span class="term-title" id="termHeaderTitle">target // 127.0.0.1</span>
+            <span style="font-size: 0.72rem; color: var(--ok); font-family: var(--font-mono);">READY</span>
+          </div>
+
+          <div class="term-input-row">
+            <input type="text" class="term-input" id="toolInput" value="127.0.0.1" placeholder="Enter target...">
+            <button class="term-btn-run" id="toolRunBtn">Execute</button>
+          </div>
+
+          <div class="term-output" id="toolConsoleOutput">
+Click "Execute" to run Port Scanner on 127.0.0.1...
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Complete 12 Tools Catalog Grid -->
+  <section class="container">
+    <div class="section-title-wrap">
+      <h2 class="section-h2">The Offensive &amp; Defensive Matrix</h2>
+      <p class="section-sub">
+        Every tool is integrated directly into KALKI's right-side security dock.
+      </p>
+    </div>
+
+    <div class="tools-catalog-grid">
+      
+      <div class="catalog-item" onclick="selectTool('port')">
+        <div class="catalog-icon">🌐</div>
+        <h4 class="catalog-title">1. Port Scanner</h4>
+        <p class="catalog-desc">Scans loopback and subnet IP addresses for open TCP listeners and exposed database ports.</p>
+      </div>
+
+      <div class="catalog-item" onclick="selectTool('dns')">
+        <div class="catalog-icon">🔍</div>
+        <h4 class="catalog-title">2. DNS &amp; WHOIS Recon</h4>
+        <p class="catalog-desc">Resolves MX, NS, TXT, DMARC, and SPF records to diagnose spoofing vulnerability.</p>
+      </div>
+
+      <div class="catalog-item" onclick="selectTool('headers')">
+        <div class="catalog-icon">🛡️</div>
+        <h4 class="catalog-title">3. HTTP Security Headers</h4>
+        <p class="catalog-desc">Audits web services for CSP, HSTS, X-Frame-Options, and cookie security flags.</p>
+      </div>
+
+      <div class="catalog-item" onclick="selectTool('entropy')">
+        <div class="catalog-icon">📊</div>
+        <h4 class="catalog-title">4. Shannon Entropy Scan</h4>
+        <p class="catalog-desc">Calculates byte entropy to detect packed, obfuscated, or encrypted malware executables.</p>
+      </div>
+
+      <div class="catalog-item" onclick="selectTool('miner')">
+        <div class="catalog-icon">⛏️</div>
+        <h4 class="catalog-title">5. Cryptominer Guard</h4>
+        <p class="catalog-desc">Inspects running PIDs for stratum protocol connections and unauthorized CPU spikes.</p>
+      </div>
+
+      <div class="catalog-item" onclick="selectTool('clipper')">
+        <div class="catalog-icon">📋</div>
+        <h4 class="catalog-title">6. Anti-Clipper Watchdog</h4>
+        <p class="catalog-desc">Monitors clipboard in real time to prevent address swapping targeting BTC, ETH, and SOL.</p>
+      </div>
+
+      <div class="catalog-item" onclick="selectTool('phish')">
+        <div class="catalog-icon">🎣</div>
+        <h4 class="catalog-title">7. Phishing URL Hunter</h4>
+        <p class="catalog-desc">Detects Punycode homograph domain attacks, typosquatting, and fake login redirects.</p>
+      </div>
+
+      <div class="catalog-item" onclick="selectTool('arp')">
+        <div class="catalog-icon">📡</div>
+        <h4 class="catalog-title">8. ARP Poisoning Watch</h4>
+        <p class="catalog-desc">Watches local subnet ARP tables for rogue gateway impersonations and MITM attacks.</p>
+      </div>
+
+      <div class="catalog-item" onclick="selectTool('ssl')">
+        <div class="catalog-icon">🔒</div>
+        <h4 class="catalog-title">9. SSL/TLS Certificate Audit</h4>
+        <p class="catalog-desc">Validates certificate expiration, weak cipher suites, and Certificate Transparency logs.</p>
+      </div>
+
+      <div class="catalog-item" onclick="selectTool('sqli')">
+        <div class="catalog-icon">💥</div>
+        <h4 class="catalog-title">10. SQLi &amp; XSS Fuzzer</h4>
+        <p class="catalog-desc">Automated penetration testing of local web endpoints against OWASP Top 10 vectors.</p>
+      </div>
+
+      <div class="catalog-item" onclick="selectTool('jwt')">
+        <div class="catalog-icon">🔑</div>
+        <h4 class="catalog-title">11. JWT Token Verifier</h4>
+        <p class="catalog-desc">Decodes JWT tokens, checks expiration dates, and alerts on vulnerable "none" algorithm attacks.</p>
+      </div>
+
+      <div class="catalog-item" onclick="selectTool('sanitizer')">
+        <div class="catalog-icon">🧹</div>
+        <h4 class="catalog-title">12. File Metadata Sanitizer</h4>
+        <p class="catalog-desc">Strips EXIF GPS coordinates, camera serial numbers, and embedded macro scripts from files.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Deep Architecture Callout -->
+  <section class="container">
+    <div class="deep-callout">
+      <div>
+        <div class="pill-status" style="margin-bottom: 16px;">
+          <span>🛡️</span> SHIELDCORE ARCHITECTURE
+        </div>
+        <h2 style="font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 18px;">
+          Shannon Entropy &amp; Quarantine Vault
+        </h2>
+        <p style="color: var(--t2); font-size: 0.98rem; line-height: 1.7; margin-bottom: 16px;">
+          Standard antiviruses rely on signature databases that go stale within 48 hours. ShieldCore employs mathematical Shannon entropy scoring:
+        </p>
+        <p style="color: var(--fil); font-family: var(--font-mono); font-size: 0.92rem; background: var(--base); padding: 12px; border-radius: 8px; border: 1px solid var(--line); margin-bottom: 16px;">
+          H(X) = - &Sigma; P(x_i) &times; log_2(P(x_i))
+        </p>
+        <p style="color: var(--t2); font-size: 0.95rem; line-height: 1.7;">
+          When an unknown executable exhibits entropy exceeding 7.2 (indicating packed malware or polymorphic encryption), ShieldCore isolates it in an AES-256 encrypted quarantine vault tied to your Windows DPAPI machine key before execution can occur.
+        </p>
+      </div>
+
+      <div style="background: var(--void); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 28px;">
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--fil); margin-bottom: 14px;">Quarantine Vault Guarantees</h3>
+        <ul class="feature-points" style="gap: 14px;">
+          <li><strong>Zero Execution Risk:</strong> Encrypted with AES-256-GCM + DPAPI, stripping executable permissions.</li>
+          <li><strong>Local Loopback Only:</strong> No virus samples or telemetry transmitted to external cloud servers.</li>
+          <li><strong>One-Click Remediation:</strong> Safely shred quarantined threats with DoD 5220.22-M 3-pass overwrite.</li>
+          <li><strong>Audit Trail:</strong> Every scan event is logged to <code>%APPDATA%\KALKI\logs\security.jsonl</code>.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div>
+        <span style="font-weight: 700; color: var(--text);">KALKI</span> &bull; Sovereign AI Desktop Operating Workspace
+        <div style="font-size: 0.78rem; color: var(--mut); margin-top: 4px;">
+          Cold Machined Graphite Surfaces &bull; Warm Ivory Filament Light &bull; 100% Local-First
+        </div>
+      </div>
+
+      <ul class="footer-links">
+        <li><a href="index.html">Overview</a></li>
+        <li><a href="pets.html">Companion Pets</a></li>
+        <li><a href="security.html">ShieldCore &amp; Tools</a></li>
+        <li><a href="docs.html">Documentation</a></li>
+        <li><a href="download.html">Downloads</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <!-- Radar & Workbench Engine Script -->
+  <script>
+    /* ==========================================================================
+       Sound Synthesizer Engine
+       ========================================================================== */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+      }
+      beep(freq = 440, type = 'sine', duration = 0.1, gainVal = 0.1) {
+        if (!this.enabled) return;
+        this.init();
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {}
+      }
+      radarSweepPing() {
+        if (!this.enabled) return;
+        this.beep(880, 'sine', 0.08, 0.05);
+      }
+      scanSuccess() {
+        if (!this.enabled) return;
+        this.init();
+        [520, 660, 780].forEach((f, i) => {
+          setTimeout(() => this.beep(f, 'triangle', 0.12, 0.1), i * 70);
+        });
+      }
+    }
+
+    const sound = new SoundEngine();
+    document.getElementById('soundToggleBtn').addEventListener('click', () => {
+      sound.enabled = !sound.enabled;
+      document.getElementById('soundIcon').textContent = sound.enabled ? '🔊' : '🔇';
+      if (sound.enabled) sound.beep(520, 'sine', 0.1);
+    });
+
+    /* ==========================================================================
+       60FPS Canvas Radar Scope Renderer
+       ========================================================================== */
+    const rCanvas = document.getElementById('radarCanvas');
+    const rCtx = rCanvas.getContext('2d');
+    let radarAngle = 0;
+    let scanPings = [
+      { x: 210, y: 120, life: 0.8, label: "8765: HTTP" },
+      { x: 110, y: 190, life: 0.5, label: "ANTIVIRUS" },
+      { x: 190, y: 220, life: 0.9, label: "CLIPPER" }
+    ];
+
+    function drawRadar() {
+      rCtx.clearRect(0, 0, rCanvas.width, rCanvas.height);
+      const cx = 160;
+      const cy = 160;
+      const maxRadius = 145;
+
+      // Dark machined radar base
+      rCtx.fillStyle = '#0a0c0e';
+      rCtx.beginPath();
+      rCtx.arc(cx, cy, maxRadius, 0, Math.PI * 2);
+      rCtx.fill();
+
+      // Concentric circles (Status Green & Titanium Line)
+      [35, 70, 105, 140].forEach((r, idx) => {
+        rCtx.strokeStyle = idx === 3 ? '#333b44' : 'rgba(76, 192, 97, 0.18)';
+        rCtx.lineWidth = idx === 3 ? 2 : 1;
+        rCtx.beginPath();
+        rCtx.arc(cx, cy, r, 0, Math.PI * 2);
+        rCtx.stroke();
+      });
+
+      // Crosshairs
+      rCtx.strokeStyle = 'rgba(76, 192, 97, 0.18)';
+      rCtx.beginPath();
+      rCtx.moveTo(cx, cy - maxRadius);
+      rCtx.lineTo(cx, cy + maxRadius);
+      rCtx.moveTo(cx - maxRadius, cy);
+      rCtx.lineTo(cx + maxRadius, cy);
+      rCtx.stroke();
+
+      // Sweeping Beam
+      radarAngle += 0.035;
+      if (radarAngle > Math.PI * 2) radarAngle -= Math.PI * 2;
+
+      rCtx.save();
+      rCtx.translate(cx, cy);
+      rCtx.rotate(radarAngle);
+
+      // Conic beam fade gradient
+      const beamGrad = rCtx.createRadialGradient(0, 0, 0, 0, 0, maxRadius);
+      beamGrad.addColorStop(0, 'rgba(76, 192, 97, 0.35)');
+      beamGrad.addColorStop(1, 'rgba(76, 192, 97, 0.0)');
+
+      rCtx.fillStyle = beamGrad;
+      rCtx.beginPath();
+      rCtx.moveTo(0, 0);
+      rCtx.arc(0, 0, maxRadius, -0.4, 0);
+      rCtx.closePath();
+      rCtx.fill();
+
+      // Leading green line
+      rCtx.strokeStyle = '#4cc061';
+      rCtx.lineWidth = 2;
+      rCtx.beginPath();
+      rCtx.moveTo(0, 0);
+      rCtx.lineTo(maxRadius, 0);
+      rCtx.stroke();
+      rCtx.restore();
+
+      // Target Blips
+      scanPings.forEach(p => {
+        rCtx.save();
+        rCtx.fillStyle = '#4cc061';
+        rCtx.shadowColor = '#4cc061';
+        rCtx.shadowBlur = 8;
+        rCtx.beginPath();
+        rCtx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        rCtx.fill();
+
+        rCtx.fillStyle = '#fff4e2';
+        rCtx.font = "9px 'JetBrains Mono', monospace";
+        rCtx.fillText(p.label, p.x + 8, p.y + 3);
+        rCtx.restore();
+      });
+
+      // Radar Center Pivot
+      rCtx.fillStyle = '#fff4e2';
+      rCtx.shadowColor = '#fff4e2';
+      rCtx.shadowBlur = 10;
+      rCtx.beginPath();
+      rCtx.arc(cx, cy, 4, 0, Math.PI * 2);
+      rCtx.fill();
+
+      requestAnimationFrame(drawRadar);
+    }
+    drawRadar();
+
+    // Radar click interactive full scan
+    rCanvas.addEventListener('click', () => {
+      sound.scanSuccess();
+      const now = new Date().toTimeString().split(' ')[0];
+      const log = document.getElementById('telemetryLog');
+      const newLine = document.createElement('div');
+      newLine.className = 'log-line';
+      newLine.innerHTML = `<span class="log-time">[${now}]</span> <span class="log-fil">[SCAN]</span> On-demand heuristic radar sweep executed. 0 threats detected.`;
+      log.prepend(newLine);
+    });
+
+    /* ==========================================================================
+       12 Cyber Tools Workbench Database & Terminal Simulator
+       ========================================================================== */
+    const TOOLS_DATA = {
+      port: {
+        title: "Port Scanner",
+        tag: "NETWORK RECON",
+        lead: "Scans target IP addresses or localhost loopback for open TCP ports, detecting unauthorized listeners, exposed database servers, or rogue backdoors.",
+        features: [
+          "High-speed asynchronous socket connection testing",
+          "Pre-configured service profiles (HTTP, SSH, MySQL, Redis, VNC)",
+          "Loopback binding safety verification"
+        ],
+        defaultInput: "127.0.0.1",
+        run: (input) => {
+          return `[KALKI-SEC] Starting TCP Port Recon on: ${input}
+Scanning ports: [21, 22, 80, 443, 3000, 3306, 5432, 6379, 8080, 8765]
+-----------------------------------------------------------
+PORT     STATE    SERVICE           LATENCY
+22/tcp   CLOSED   SSH               0.12ms
+80/tcp   CLOSED   HTTP              0.08ms
+443/tcp  CLOSED   HTTPS             0.10ms
+3000/tcp CLOSED   NodeJS / Dev      0.11ms
+8080/tcp CLOSED   HTTP Proxy        0.09ms
+8765/tcp OPEN     KALKI Loopback    0.04ms (Verified Authenticated)
+-----------------------------------------------------------
+Scan completed in 14.8ms. Result: 1 open loopback port. SECURED.`;
+        }
+      },
+      dns: {
+        title: "DNS & WHOIS Recon",
+        tag: "DOMAIN ENUMERATION",
+        lead: "Queries authoritative nameservers for DNS record configurations including MX, TXT, DMARC, and SPF to detect domain hijacking and email spoofing.",
+        features: [
+          "DMARC 'reject' / 'quarantine' policy inspection",
+          "SPF record syntax and IP delegation verification",
+          "Subdomain discovery heuristics"
+        ],
+        defaultInput: "kalki-ai.org",
+        run: (input) => {
+          return `[KALKI-SEC] Resolving authoritative DNS for: ${input}
+Querying root nameservers...
+-----------------------------------------------------------
+RECORD   TYPE   TTL    VALUE
+A        IPv4   300    104.21.72.18
+AAAA     IPv6   300    2606:4700:3033::6815:4812
+MX       Mail   3600   10 mail.protonmail.ch (Priority 10)
+TXT      SPF    3600   "v=spf1 include:_spf.protonmail.ch ~all"
+TXT      DMARC  3600   "v=DMARC1; p=reject; rua=mailto:dmarc@${input}"
+-----------------------------------------------------------
+Security Evaluation:
+[✓] DMARC Policy: STRICT (p=reject) — Protected against impersonation
+[✓] SPF Syntax: Validated. Zero recursive lookup overflows.`;
+        }
+      },
+      headers: {
+        title: "HTTP Security Headers Auditor",
+        tag: "WEB APP DEFENSE",
+        lead: "Performs HTTP response header inspections against OWASP Application Security Verification Standards (ASVS).",
+        features: [
+          "Content-Security-Policy (CSP) script-src strictness validation",
+          "Strict-Transport-Security (HSTS) preload & max-age audit",
+          "X-Frame-Options clickjacking mitigation check"
+        ],
+        defaultInput: "https://kalki-ai.org",
+        run: (input) => {
+          return `[KALKI-SEC] Fetching HTTP security headers for: ${input}
+GET / HTTP/2.0
+-----------------------------------------------------------
+HEADER                          STATUS     VALUE
+Content-Security-Policy         [PASS]     default-src 'self'; script-src 'self'
+Strict-Transport-Security       [PASS]     max-age=63072000; includeSubDomains; preload
+X-Frame-Options                 [PASS]     DENY
+X-Content-Type-Options          [PASS]     nosniff
+Referrer-Policy                 [PASS]     strict-origin-when-cross-origin
+Permissions-Policy              [PASS]     geolocation=(), camera=(), microphone=()
+-----------------------------------------------------------
+Security Score: 100/100 (A+ Grade). Zero clickjacking or MIME-sniffing vectors.`;
+        }
+      },
+      entropy: {
+        title: "Shannon Entropy File Scanner",
+        tag: "MALWARE HEURISTICS",
+        lead: "Measures the randomness of bytes in files to detect packed executables, ransomware encrypted blobs, or obfuscated shellcode.",
+        features: [
+          "Calculates Shannon entropy index H(X) from 0.0 to 8.0",
+          "Flags files exceeding H > 7.2 as packed or encrypted",
+          "Automated quarantine handoff if PE headers are obfuscated"
+        ],
+        defaultInput: "C:\\Windows\\System32\\notepad.exe",
+        run: (input) => {
+          return `[KALKI-SEC] Shannon Entropy Analysis: ${input}
+Reading byte distribution (214,528 bytes)...
+-----------------------------------------------------------
+METRIC                VALUE          EVALUATION
+Shannon Entropy:      6.42 / 8.00    Normal Code Distribution
+Chi-Square Test:      124.8          Standard compiled PE binary
+Null Byte Ratio:      18.4%          Uncompressed machine code
+UPX / Packer Flag:    NONE DETECTED  Clean compilation markers
+Digital Signature:    MICROSOFT CORP Validated SHA-256
+-----------------------------------------------------------
+Verdict: BENIGN FILE. No polymorphic packing or hidden payload detected.`;
+        }
+      },
+      miner: {
+        title: "Cryptomining Process Guard",
+        tag: "RESOURCE DEFENSE",
+        lead: "Inspects system process tables and network sockets to detect silent background cryptocurrency miners (XMRig, Ethminer, WebAssembly miners).",
+        features: [
+          "Identifies CPU consumption signatures matching cryptographic hashing",
+          "Monitors Stratum mining protocol ports (3333, 4444, 5555, 7777)",
+          "Instant PID termination with kernel-level kill signal"
+        ],
+        defaultInput: "--scan-all-pids",
+        run: (input) => {
+          return `[KALKI-SEC] Scanning 194 running processes for mining signatures...
+Sampling CPU hardware performance counters...
+-----------------------------------------------------------
+PID     PROCESS               CPU%    SOCKETS   STRATUM
+18320   kalki_core.exe        1.2%    127.0.0.1 None
+4190    code.exe (VSCode)     2.4%    None      None
+8291    spotify.exe           0.8%    Loopback  None
+1420    chrome.exe            3.1%    HTTPS     None
+-----------------------------------------------------------
+Scan summary:
+Total Mining Signatures Found: 0
+Stratum Protocol Connections: 0
+Suspicious CPU Spike PIDs: NONE. System is 100% clean.`;
+        }
+      },
+      clipper: {
+        title: "Anti-Clipper Watchdog",
+        tag: "CRYPTO THEFT PREVENTION",
+        lead: "Intercepts clipboard alterations in sub-millisecond intervals to prevent malware from swapping cryptocurrency destination addresses.",
+        features: [
+          "Regex validation across Bitcoin (Legacy, SegWit, Bech32), Ethereum, and Solana addresses",
+          "Reverts clipboard substitutions instantly when unauthorized replacement occurs",
+          "Alerts user with desktop companion pet audio warning"
+        ],
+        defaultInput: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+        run: (input) => {
+          return `[KALKI-SEC] Simulating clipboard injection watchdog...
+Target string: "${input}"
+-----------------------------------------------------------
+REGEX PATTERN MATCH:
+[✓] Protocol: Bitcoin Bech32 Address Detected
+[✓] Checksum: Validated BIP-0173 format
+[✓] Watchdog Status: ARMED (Polling interval: 120ms)
+
+[SIMULATION] Injecting malicious address swap attempt:
+Malware attempt: "bc1q999malicious999fakeaddress999999999"
+[ACTION] Intercepted! Replacement blocked.
+[RESTORE] Original address preserved in clipboard buffer.
+[ALERT] Kittu pet alerted Maher with audible notification.`;
+        }
+      },
+      phish: {
+        title: "Phishing & Punycode Hunter",
+        tag: "HOMOGRAPH HUNTER",
+        lead: "Detects deceptive Cyrillic homograph spoofing, fake banking login portals, and malicious URL redirect chains.",
+        features: [
+          "Punycode decodes xn-- domain representations",
+          "Calculates Levenshtein edit distances against Fortune 500 banks",
+          "Zero-trust URL redirect expansion with sandbox crawling"
+        ],
+        defaultInput: "https://pаypal.com/signin",
+        run: (input) => {
+          return `[KALKI-SEC] Inspecting candidate URL for homograph attacks...
+Target: "${input}"
+-----------------------------------------------------------
+DECODED PUNYCODE: xn--pypal-4ve.com
+ALERT: Character #2 is Cyrillic Small Letter 'а' (U+0430)
+Standard Latin: 'a' (U+0061)
+
+LEVENSHTEIN MATCH: 99.4% clone of "paypal.com"
+IP HOSTING: 185.220.101.42 (Known bulletproof VPS provider)
+SSL ISSUER: Let's Encrypt (Created 2 hours ago)
+-----------------------------------------------------------
+VERDICT: HIGH-RISK PHISHING DETECTED!
+Domain added to KALKI local blocking hosts filter.`;
+        }
+      },
+      arp: {
+        title: "Local ARP Poisoning Watch",
+        tag: "L2 NETWORK DEFENSE",
+        lead: "Detects Man-in-the-Middle (MITM) attacks by monitoring local MAC-to-IP bindings for ARP cache poisoning.",
+        features: [
+          "Detects conflicting MAC addresses claiming the default gateway IP",
+          "Promiscuous mode network card detection",
+          "Static ARP fallback pinning for sensitive gateway routes"
+        ],
+        defaultInput: "192.168.1.1",
+        run: (input) => {
+          return `[KALKI-SEC] Querying kernel ARP table for gateway: ${input}
+-----------------------------------------------------------
+INTERFACE   IP ADDRESS      MAC ADDRESS         TYPE
+Ethernet    192.168.1.1     00:1a:2b:3c:4d:5e   Dynamic (GATEWAY)
+Ethernet    192.168.1.104   bc:d0:74:11:22:33   Dynamic (LOCAL)
+-----------------------------------------------------------
+ARP Spoofing Telemetry:
+[✓] Gateway MAC Integrity: STABLE (No duplicate MACs detected)
+[✓] Gratuitous ARP Floods: 0 in last 3600 seconds
+[✓] Promiscuous Mode NICs: NONE
+Status: Local Layer 2 Network is Secure.`;
+        }
+      },
+      ssl: {
+        title: "SSL/TLS Certificate Inspector",
+        tag: "ENCRYPTION AUDIT",
+        lead: "Deep certificate validation analyzing expiration, key size, signature algorithms, and Certificate Transparency (CT) logs.",
+        features: [
+          "Verifies RSA 2048+ / ECC 256+ bit strength",
+          "Alerts on SHA-1 or MD5 deprecated signature algorithms",
+          "Online Certificate Status Protocol (OCSP) live check"
+        ],
+        defaultInput: "github.com",
+        run: (input) => {
+          return `[KALKI-SEC] Performing TLS 1.3 handshake with: ${input}:443
+-----------------------------------------------------------
+SUBJECT: CN=github.com, O=GitHub Inc.
+ISSUER:  DigiCert High Assurance TLS Hybrid ECC SHA256 2020 CA1
+VALID:   From 2026-02-14 to 2027-03-15 (Valid for 142 more days)
+CIPHER:  TLS_AES_128_GCM_SHA256 (128-bit key, TLS 1.3)
+KEY:     Elliptic Curve P-256 (secp256r1)
+OCSP:    Good (Revocation check passed)
+-----------------------------------------------------------
+Verdict: EXCELLENT. Forward secrecy enabled. Modern TLS 1.3.`;
+        }
+      },
+      sqli: {
+        title: "SQLi & XSS Payload Fuzzer",
+        tag: "PENETRATION TESTING",
+        lead: "Simulates common injection payloads in a local sandbox to benchmark your custom web APIs against OWASP Top 10 vulnerabilities.",
+        features: [
+          "Tests Boolean-based and Time-based blind SQL injection vectors",
+          "Payloads for Polyglot XSS (<script>, svg/onload, img onerror)",
+          "Zero damage: Read-only simulation mode against mock targets"
+        ],
+        defaultInput: "http://localhost:3000/api/users?id=1",
+        run: (input) => {
+          return `[KALKI-SEC] Launching sandbox security benchmark against: ${input}
+Payloads sent: 16 vectors
+-----------------------------------------------------------
+PAYLOAD                                        HTTP  RESPONSE
+' OR '1'='1                                    400   [BLOCKED] Parameter sanitized
+' UNION SELECT null, username, password FROM users-- 400   [BLOCKED] SQL keywords rejected
+<svg/onload=alert(1)>                          400   [BLOCKED] HTML entities encoded
+SLEEP(5) /* Time-based check */                400   [BLOCKED] Query timed out safely
+-----------------------------------------------------------
+Benchmark Result: 16/16 Payloads Successfully Neutralized.
+Endpoint demonstrates parameterized query discipline.`;
+        }
+      },
+      jwt: {
+        title: "JWT Security Verifier",
+        tag: "AUTH TOKEN AUDIT",
+        lead: "Inspects JSON Web Tokens for known security misconfigurations including algorithm switching vulnerabilities, weak secrets, and expiration bypasses.",
+        features: [
+          "Detects 'alg': 'none' signature bypass flaws",
+          "Verifies 'exp', 'nbf', and 'iat' epoch timestamps",
+          "Brute-force verification test against top 1,000 weak HMAC secrets"
+        ],
+        defaultInput: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJtYWhlciIsInJvbGUiOiJhZG1pbiIsImV4cCI6MTc5Mjg5NjAwMH0.sampleSignature",
+        run: (input) => {
+          return `[KALKI-SEC] Parsing JSON Web Token...
+-----------------------------------------------------------
+HEADER:
+{
+  "alg": "HS256",
+  "ty": "JWT"
+}
+
+PAYLOAD (DECODED):
+{
+  "sub": "maher",
+  "role": "admin",
+  "exp": 1792896000 (Valid until 2026-10-26)
+}
+
+SECURITY AUDIT:
+[✓] Algorithm: HMAC-SHA256 (Not vulnerable to 'none' exploit)
+[✓] Expiration Claim (exp): Present & active (Not expired)
+[✓] Weak Secret Dictionary Check: 0 matches in top weak keys
+-----------------------------------------------------------
+Verdict: TOKEN PASSES VALIDATION CHECKS.`;
+        }
+      },
+      sanitizer: {
+        title: "File Metadata Sanitizer",
+        tag: "ZERO-TRUST PRIVACY",
+        lead: "Strips hidden metadata, GPS location tags, camera device serials, and embedded macro scripts from images and Office documents.",
+        features: [
+          "Removes EXIF, IPTC, and XMP metadata from JPEG/PNG/WebP",
+          "Cleans VBA macros and hidden OLE streams from docx/xlsx",
+          "Reduces file fingerprinting surface to absolute zero"
+        ],
+        defaultInput: "photo_secret.jpg",
+        run: (input) => {
+          return `[KALKI-SEC] Inspecting binary metadata for: ${input}
+-----------------------------------------------------------
+DETECTED METADATA FIELDS:
+[!] GPS Latitude/Longitude: 37.7749° N, 122.4194° W (San Francisco, CA)
+[!] Camera Device: iPhone 15 Pro (Serial: DNPQ28919A)
+[!] Software: Adobe Photoshop 2026.1
+[!] Original Timestamp: 2026-10-24 14:22:01 UTC
+
+[ACTION] Executing lossless metadata scrub...
+[✓] Stripped 14 EXIF tags.
+[✓] Zeroed GPS coordinate blocks.
+[✓] Cleared software fingerprinting identifiers.
+New sanitized file size: 1.84 MB (-38 KB metadata removed). Zero-trust clean!`;
+        }
+      }
+    };
+
+    let currentToolKey = "port";
+
+    function selectTool(key) {
+      if (!TOOLS_DATA[key]) return;
+      currentToolKey = key;
+      const data = TOOLS_DATA[key];
+
+      // Update tabs
+      document.querySelectorAll('.wb-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.tool === key);
+      });
+
+      // Update description
+      document.getElementById('toolHeading').innerHTML = `${data.title} <span class="tool-tag">${data.tag}</span>`;
+      document.getElementById('toolLead').textContent = data.lead;
+      
+      const featList = document.getElementById('toolFeatures');
+      featList.innerHTML = '';
+      data.features.forEach(f => {
+        const li = document.createElement('li');
+        li.textContent = f;
+        featList.appendChild(li);
+      });
+
+      // Update terminal
+      document.getElementById('termHeaderTitle').textContent = `tool // ${data.title.toLowerCase()}`;
+      document.getElementById('toolInput').value = data.defaultInput;
+      document.getElementById('toolConsoleOutput').textContent = `Click "Execute" to run ${data.title} on ${data.defaultInput}...`;
+
+      sound.beep(480, 'sine', 0.08);
+    }
+
+    // Attach tab click events
+    document.querySelectorAll('.wb-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        selectTool(tab.dataset.tool);
+      });
+    });
+
+    // Run button simulation
+    const runBtn = document.getElementById('toolRunBtn');
+    runBtn.addEventListener('click', () => {
+      const data = TOOLS_DATA[currentToolKey];
+      const val = document.getElementById('toolInput').value || data.defaultInput;
+      
+      sound.beep(640, 'triangle', 0.1);
+      document.getElementById('toolConsoleOutput').textContent = "Executing...\n[+] Sending diagnostic packets...";
+
+      setTimeout(() => {
+        sound.scanSuccess();
+        document.getElementById('toolConsoleOutput').textContent = data.run(val);
+      }, 400);
+    });
+
+    /* ==========================================================================
+       Ambient Canvas Background
+       ========================================================================== */
+    const bgCanvas = document.getElementById('ambient-canvas');
+    const bgCtx = bgCanvas.getContext('2d');
+
+    function resizeBg() {
+      bgCanvas.width = window.innerWidth;
+      bgCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeBg);
+    resizeBg();
+
+    const motes = Array.from({ length: 45 }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: -Math.random() * 0.4 - 0.1,
+      radius: Math.random() * 1.5 + 0.5,
+      alpha: Math.random() * 0.25 + 0.05
+    }));
+
+    function drawAmbient() {
+      bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+      bgCtx.fillStyle = '#fff4e2';
+
+      for (let m of motes) {
+        m.x += m.vx;
+        m.y += m.vy;
+        if (m.y < 0) m.y = bgCanvas.height;
+        if (m.x < 0) m.x = bgCanvas.width;
+        if (m.x > bgCanvas.width) m.x = 0;
+
+        bgCtx.save();
+        bgCtx.globalAlpha = m.alpha;
+        bgCtx.beginPath();
+        bgCtx.arc(m.x, m.y, m.radius, 0, Math.PI * 2);
+        bgCtx.fill();
+        bgCtx.restore();
+      }
+
+      requestAnimationFrame(drawAmbient);
+    }
+    drawAmbient();
+  </script>
+</body>
+</html>
