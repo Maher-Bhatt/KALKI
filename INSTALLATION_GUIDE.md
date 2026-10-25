@@ -77,10 +77,10 @@ KALKI provides production-ready native releases for **Windows**, **Linux**, and 
 
 | Platform | Format / File | Size | Integrity Hash (SHA-256) | Description |
 |---|---|---|---|---|
-| **Windows** | [`Output/windows/KALKI_Setup_v1.4.0.exe`](Output/windows/KALKI_Setup_v1.4.0.exe) | 271.48 MB | `21c8fb8b6c848437d5b6fbcc7e00445914b31fc3aac90a6534648ef58a42bd26` | 1-Click Inno Setup Executable Installer |
+| **Windows** | [`Output/windows/KALKI_Setup_v1.4.0.exe`](Output/windows/KALKI_Setup_v1.4.0.exe) | 271.48 MB | `a0a0dd3e2cf70dca887d6b761a3f6272b0418fcb14360dfece761952e052ccd5` | 1-Click Inno Setup Executable Installer |
 | **Windows** | [`Output/windows/KALKI_v1.4.0.msix`](Output/windows/KALKI_v1.4.0.msix) | 362.28 MB | `1c7d0d0c3eb1bc40280eb4f6c4ff989fc1da9772bf2d5ef76903d7c30e5272a3` | Microsoft Store / Enterprise MSIX Package |
-| **Linux** | [`Output/linux/KALKI_Ubuntu_Installer_v1.4.0.sh`](Output/linux/KALKI_Ubuntu_Installer_v1.4.0.sh) | 11.04 MB | `b99e74ce9e4952044810237bb96a3e144a991aa5705aa6f20c8f5f0b5d5ca357` | Self-extracting automated Linux shell installer |
-| **Linux** | [`Output/linux/KALKI_v1.4.0_Linux.tar.gz`](Output/linux/KALKI_v1.4.0_Linux.tar.gz) | 8.17 MB | `8ae99419b4cfb13a6e927503fafeffca8c253db933f789965d496a75d5ec224f` | Portable distribution tarball with `install.sh` |
+| **Linux** | [`Output/linux/KALKI_Ubuntu_Installer_v1.4.0.sh`](Output/linux/KALKI_Ubuntu_Installer_v1.4.0.sh) | 11.04 MB | `d933d00b9f1621f9a862db99e52e7500f0e88c73d11eed3386cf44101f3a6116` | Self-extracting automated Linux shell installer |
+| **Linux** | [`Output/linux/KALKI_v1.4.0_Linux.tar.gz`](Output/linux/KALKI_v1.4.0_Linux.tar.gz) | 8.17 MB | `0cc8dc57bbca7902baf894621d42cc8ab389c8c915e63c95639786f04d47e85e` | Portable distribution tarball with `install.sh` |
 | **macOS** | [`Output/macos/KALKI_v1.4.0_macOS.tar.gz`](Output/macos/KALKI_v1.4.0_macOS.tar.gz) | 8.17 MB | `8b5fa1a00a12cf6f74a001a1dbfa003e8c4ca9f04ae05d76166ba11cfafca1a3` | Complete macOS bundle for Apple Silicon & Intel |
 | **macOS** | [`Output/macos/install_mac.sh`](Output/macos/install_mac.sh) | 4.6 KB | — | Automated macOS setup & `.app` generator |
 

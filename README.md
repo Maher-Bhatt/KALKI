@@ -65,10 +65,10 @@ KALKI v1.4.2 is fully built, tested, and validated for Windows, Linux, and macOS
 
 | Operating System | Package Format | Binary Size | Integrity Hash (SHA-256) | Installation Command |
 |---|---|---|---|---|
-| **Windows 10 / 11 (64-bit)** | [KALKI_Setup_v1.4.0.exe](Output/windows/KALKI_Setup_v1.4.0.exe) | 271.48 MB | `21c8fb8b6c848437d5b6fbcc7e00445914b31fc3aac90a6534648ef58a42bd26` | Double-click or `KALKI_Setup_v1.4.0.exe /VERYSILENT` |
-| **Linux (Ubuntu / Debian / Arch)** | [KALKI_Ubuntu_Installer_v1.4.0.sh](Output/linux/KALKI_Ubuntu_Installer_v1.4.0.sh) | 11.04 MB | `b99e74ce9e4952044810237bb96a3e144a991aa5705aa6f20c8f5f0b5d5ca357` | `chmod +x KALKI_Ubuntu_Installer_v1.4.0.sh && ./KALKI_Ubuntu_Installer_v1.4.0.sh` |
-| **Linux (Portable)** | [KALKI_v1.4.0_Linux.tar.gz](Output/linux/KALKI_v1.4.0_Linux.tar.gz) | 8.17 MB | `8ae99419b4cfb13a6e927503fafeffca8c253db933f789965d496a75d5ec224f` | `tar -xzf KALKI_v1.4.0_Linux.tar.gz && ./install.sh` |
-| **macOS (Apple Silicon & Intel)** | [KALKI_v1.4.0_macOS.tar.gz](Output/macos/KALKI_v1.4.0_macOS.tar.gz) | 8.17 MB | `8b5fa1a00a12cf6f74a001a1dbfa003e8c4ca9f04ae05d76166ba11cfafca1a3` | `tar -xzf KALKI_v1.4.0_macOS.tar.gz && ./install_mac.sh` |
+| **Windows 10 / 11 (64-bit)** | [KALKI_Setup_v1.4.0.exe](Output/windows/KALKI_Setup_v1.4.0.exe) | 271.48 MB | `a0a0dd3e2cf70dca887d6b761a3f6272b0418fcb14360dfece761952e052ccd5` | Double-click or `KALKI_Setup_v1.4.0.exe /VERYSILENT` |
+| **Linux (Ubuntu / Debian / Arch)** | [KALKI_Ubuntu_Installer_v1.4.0.sh](Output/linux/KALKI_Ubuntu_Installer_v1.4.0.sh) | 11.04 MB | `d933d00b9f1621f9a862db99e52e7500f0e88c73d11eed3386cf44101f3a6116` | `chmod +x KALKI_Ubuntu_Installer_v1.4.0.sh && ./KALKI_Ubuntu_Installer_v1.4.0.sh` |
+| **Linux (Portable)** | [KALKI_v1.4.0_Linux.tar.gz](Output/linux/KALKI_v1.4.0_Linux.tar.gz) | 8.17 MB | `0cc8dc57bbca7902baf894621d42cc8ab389c8c915e63c95639786f04d47e85e` | `tar -xzf KALKI_v1.4.0_Linux.tar.gz && ./install.sh` |
+| **macOS (Apple Silicon & Intel)** | [KALKI_v1.4.0_macOS.tar.gz](Output/macos/KALKI_v1.4.0_macOS.tar.gz) | 8.17 MB | `4e8452b57a2634f90eed379c8d908a828b368dc10fb22a4d74df743e052e98da` | `tar -xzf KALKI_v1.4.0_macOS.tar.gz && ./install_mac.sh` |
 
 ---
 
