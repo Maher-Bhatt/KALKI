@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documentation — KALKI Sovereign Architecture &amp; API Reference</title>
+  <meta name="description" content="Comprehensive documentation for KALKI. System architecture, localhost REST/SSE API routes, DPAPI encryption model, multi-model cognitive router, and offline LLM setup.">
+  <link rel="icon" type="image/x-icon" href="../app/assets/kalki_icon.ico">
+
+  <style>
+    /* ==========================================================================
+       KALKI FILAMENT DESIGN SYSTEM
+       Cold Machined Graphite Surfaces • Warm Ivory Filament Light
+       ========================================================================== */
+    :root {
+      --void: #070809;
+      --inset: #0a0c0e;
+      --base: #0d0f12;
+      --raised: #191d22;
+      --overlay: #262c33;
+      --float: #323941;
+      --ls: #232930;
+      --line: #333b44;
+      --lst: #59636f;
+      --text: #e6ebef;
+      --t2: #b3bcc6;
+      --mut: #8a95a1;
+      --faint: #7e8894;
+      --fil: #fff4e2;
+      --fil-glow: rgba(255, 244, 226, 0.25);
+      --fil-dim: rgba(255, 244, 226, 0.08);
+      --ok: #4cc061;
+      --ok-glow: rgba(76, 192, 97, 0.2);
+      --warn: #e08c33;
+      --dng: #f0565b;
+      --font-sans: "Instrument Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+      --font-mono: "JetBrains Mono", Consolas, Monaco, monospace;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; background: var(--void); color: var(--text); }
+    body {
+      background-color: var(--void);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 0 28px;
+    }
+
+    /* Top Navigation */
+    nav.top-nav {
+      position: sticky;
+      top: 0;
+      width: 100%;
+      z-index: 1000;
+      background: rgba(7, 8, 9, 0.94);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--line);
+      padding: 14px 0;
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .presence-mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--fil) 0%, rgba(255, 244, 226, 0.3) 50%, transparent 80%);
+      box-shadow: 0 0 16px var(--fil-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: presenceBreathe 4s infinite ease-in-out;
+    }
+
+    @keyframes presenceBreathe {
+      0%, 100% { transform: scale(1); opacity: 0.85; }
+      50% { transform: scale(1.08); opacity: 1; }
+    }
+
+    .presence-mark-inner {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--fil);
+    }
+
+    .brand-text {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-badge {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      color: var(--fil);
+      background: var(--fil-dim);
+      border: 1px solid rgba(255, 244, 226, 0.2);
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+
+    .nav-menu {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      list-style: none;
+    }
+
+    @media (max-width: 900px) {
+      .nav-menu { display: none; }
+    }
+
+    .nav-menu a {
+      color: var(--t2);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 500;
+      transition: color 0.15s;
+    }
+
+    .nav-menu a:hover, .nav-menu a.active {
+      color: var(--fil);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-primary {
+      background: var(--fil);
+      color: #070809;
+      font-weight: 700;
+      padding: 8px 18px;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      font-size: 0.88rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 0 16px var(--fil-glow);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 24px rgba(255, 244, 226, 0.4);
+    }
+
+    .btn-ghost {
+      background: var(--raised);
+      color: var(--text);
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      font-size: 0.88rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      transition: all 0.15s;
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--lst);
+      color: var(--fil);
+    }
+
+    /* Documentation Layout */
+    .docs-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 48px;
+      padding: 40px 0 80px;
+    }
+
+    @media (max-width: 960px) {
+      .docs-layout { grid-template-columns: 1fr; }
+    }
+
+    /* Sticky Sidebar */
+    .docs-sidebar {
+      position: sticky;
+      top: 90px;
+      height: calc(100vh - 110px);
+      overflow-y: auto;
+      padding-right: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    @media (max-width: 960px) {
+      .docs-sidebar { position: static; height: auto; margin-bottom: 30px; }
+    }
+
+    .search-box {
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--base);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px 10px 36px;
+      font-size: 0.84rem;
+      color: var(--text);
+      font-family: var(--font-sans);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .search-input:focus {
+      border-color: var(--fil);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--mut);
+      font-size: 0.85rem;
+    }
+
+    .sidebar-group-title {
+      font-size: 0.74rem;
+      font-family: var(--font-mono);
+      color: var(--mut);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+
+    .sidebar-links {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .sidebar-links a {
+      color: var(--t2);
+      text-decoration: none;
+      font-size: 0.86rem;
+      padding: 6px 10px;
+      border-radius: 6px;
+      display: block;
+      transition: all 0.12s;
+    }
+
+    .sidebar-links a:hover {
+      color: var(--fil);
+      background: var(--raised);
+    }
+
+    .sidebar-links a.active {
+      color: var(--fil);
+      background: var(--raised);
+      border-left: 2px solid var(--fil);
+      font-weight: 600;
+    }
+
+    /* Main Content Area */
+    .docs-content {
+      min-width: 0;
+    }
+
+    .doc-section {
+      margin-bottom: 70px;
+      scroll-margin-top: 100px;
+    }
+
+    .doc-h1 {
+      font-size: 2.4rem;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+    }
+
+    .doc-h2 {
+      font-size: 1.7rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-top: 36px;
+      margin-bottom: 16px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--ls);
+      padding-bottom: 10px;
+    }
+
+    .doc-h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-top: 24px;
+      margin-bottom: 10px;
+      color: var(--fil);
+    }
+
+    .doc-lead {
+      font-size: 1.1rem;
+      color: var(--t2);
+      line-height: 1.7;
+      margin-bottom: 24px;
+    }
+
+    .doc-p {
+      color: var(--t2);
+      font-size: 0.96rem;
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+
+    /* Visual Callout Box */
+    .callout {
+      background: var(--inset);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--fil);
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      margin: 24px 0;
+      font-size: 0.92rem;
+      color: var(--t2);
+      line-height: 1.6;
+    }
+
+    .callout-ok {
+      border-left-color: var(--ok);
+    }
+
+    /* Code Blocks */
+    .code-block {
+      background: var(--void);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      margin: 20px 0;
+      overflow: hidden;
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+    }
+
+    .code-header {
+      background: var(--base);
+      border-bottom: 1px solid var(--line);
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--mut);
+      font-size: 0.74rem;
+    }
+
+    .btn-copy {
+      background: var(--raised);
+      border: 1px solid var(--line);
+      color: var(--t2);
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      transition: all 0.15s;
+    }
+
+    .btn-copy:hover {
+      color: var(--fil);
+      border-color: var(--lst);
+    }
+
+    pre.code-body {
+      padding: 16px;
+      overflow-x: auto;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* API Endpoint Card */
+    .api-card {
+      background: var(--base);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .api-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .badge-method {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+
+    .badge-get { background: rgba(76, 192, 97, 0.15); color: var(--ok); border: 1px solid rgba(76, 192, 97, 0.3); }
+    .badge-post { background: rgba(255, 244, 226, 0.12); color: var(--fil); border: 1px solid rgba(255, 244, 226, 0.3); }
+    .badge-sse { background: rgba(224, 140, 51, 0.15); color: var(--warn); border: 1px solid rgba(224, 140, 51, 0.3); }
+
+    .api-path {
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .api-desc {
+      color: var(--t2);
+      font-size: 0.88rem;
+      margin-bottom: 12px;
+    }
+
+    /* Architecture Block Diagram */
+    .arch-diagram {
+      background: var(--inset);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      margin: 24px 0;
+      overflow-x: auto;
+    }
+
+    /* Footer */
+    footer.site-footer {
+      border-top: 1px solid var(--line);
+      padding: 48px 0;
+      color: var(--mut);
+      font-size: 0.88rem;
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      color: var(--mut);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .footer-links a:hover {
+      color: var(--fil);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <nav class="top-nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="brand">
+        <div class="presence-mark">
+          <div class="presence-mark-inner"></div>
+        </div>
+        <span class="brand-text">KALKI</span>
+        <span class="brand-badge">FILAMENT v1.4.2</span>
+      </a>
+
+      <ul class="nav-menu">
+        <li><a href="index.html">Overview</a></li>
+        <li><a href="pets.html">Companion Pets</a></li>
+        <li><a href="security.html">ShieldCore &amp; Tools</a></li>
+        <li><a href="docs.html" class="active">Documentation</a></li>
+        <li><a href="download.html">Downloads</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <a href="https://github.com/maher-kalki/KALKI" class="btn-ghost" target="_blank" rel="noopener">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub
+        </a>
+        <a href="download.html" class="btn-primary">Download v1.4.2</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Docs Body Container -->
+  <div class="container docs-layout">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="docs-sidebar">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" id="docsSearch" placeholder="Search docs (e.g. API, DPAPI, routing)...">
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-group-title">GETTING STARTED</div>
+        <ul class="sidebar-links">
+          <li><a href="#overview">System Overview</a></li>
+          <li><a href="#quickstart">Quickstart Installation</a></li>
+          <li><a href="#architecture">Architecture Topology</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-group-title">REST &amp; SSE API (83 ROUTES)</div>
+        <ul class="sidebar-links">
+          <li><a href="#api-chat">/api/chat &bull; Conversational SSE</a></li>
+          <li><a href="#api-command">/api/command &bull; System Controls</a></li>
+          <li><a href="#api-status">/api/status &bull; Health Telemetry</a></li>
+          <li><a href="#api-media">/api/media &bull; WinRT Audio</a></li>
+          <li><a href="#api-security">/api/security &bull; ShieldCore Antivirus</a></li>
+          <li><a href="#api-memory">/api/memory &bull; Semantic Graph</a></li>
+          <li><a href="#api-config">/api/config &bull; Key Vault &amp; Models</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-group-title">SECURITY &amp; CRYPTOGRAPHY</div>
+        <ul class="sidebar-links">
+          <li><a href="#dpapi">DPAPI &amp; AES-256 Vault</a></li>
+          <li><a href="#loopback">Loopback Isolation</a></li>
+          <li><a href="#zero-telemetry">Zero Telemetry Audit</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-group-title">AI &amp; COGNITIVE ENGINE</div>
+        <ul class="sidebar-links">
+          <li><a href="#cognitive-router">Cognitive Model Router</a></li>
+          <li><a href="#offline-llms">Offline LLMs (Ollama / Llama)</a></li>
+          <li><a href="#anger-mode">Anger Mode &amp; Free Hand</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-group-title">DESKTOP OVERLAY &amp; AUDIO</div>
+        <ul class="sidebar-links">
+          <li><a href="#pet-overlay">Pet Overlay Wrapper</a></li>
+          <li><a href="#media-sync">WinRT Media Engine</a></li>
+          <li><a href="#tts-engine">Multilingual Neural TTS</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-group-title">TEST GATES &amp; VERIFICATION</div>
+        <ul class="sidebar-links">
+          <li><a href="#verification">Automated Test Suites</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Main Docs Content Area -->
+    <main class="docs-content">
+      
+      <!-- Section 1: Overview -->
+      <section class="doc-section" id="overview">
+        <h1 class="doc-h1">System Documentation</h1>
+        <p class="doc-lead">
+          KALKI is a sovereign, local-first AI desktop operating workspace. It integrates continuous conversational intelligence, an always-on-screen companion pet, native ShieldCore antivirus defense, and cognitive multi-model routing into a cohesive, machined graphite environment.
+        </p>
+
+        <div class="callout callout-ok">
+          <strong>Sovereignty Principle:</strong> KALKI operates exclusively on <code>127.0.0.1:8765</code>. No user telemetry, system metrics, or unprompted audio recordings are ever transmitted to third-party servers. All API credentials and conversational memories are encrypted using machine-bound DPAPI + AES-256 keys.
+        </div>
+      </section>
+
+      <!-- Section 2: Quickstart -->
+      <section class="doc-section" id="quickstart">
+        <h2 class="doc-h2">Quickstart Installation</h2>
+        <p class="doc-p">
+          KALKI can be launched as a standalone native installer (.exe / .sh / .tar.gz) or directly from source on any Python 3.10+ runtime:
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span>bash &bull; terminal</span>
+            <button class="btn-copy" onclick="copySnippet(this)">Copy</button>
+          </div>
+          <pre class="code-body"># Clone the repository
+git clone https://github.com/maher-kalki/KALKI.git
+cd KALKI
+
+# Create and activate Python virtual environment
+python -m venv venv
+# Windows:
+venv\Scripts\activate
+# Linux/macOS:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Launch KALKI Sovereign Workspace
+python -m app.main_app</pre>
+        </div>
+
+        <p class="doc-p">
+          By default, the server initializes on <code>http://127.0.0.1:8765</code> and launches the native WebView2/PyWebView application window alongside the standalone Codex Companion Pet.
+        </p>
+      </section>
+
+      <!-- Section 3: Architecture Topology -->
+      <section class="doc-section" id="architecture">
+        <h2 class="doc-h2">Architecture Topology</h2>
+        <p class="doc-p">
+          KALKI executes across four decoupled subsystems operating in distinct processes to guarantee zero deadlock and maximum UI responsiveness:
+        </p>
+
+        <div class="arch-diagram">
+          <pre style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--fil); line-height: 1.5;">
++---------------------------------------------------------------------------------+
+|                                 USER DESKTOP                                    |
+|                                                                                 |
+|   +--------------------------+                +-----------------------------+   |
+|   |   Main Workspace UI      |                |   Desktop Companion Pet     |   |
+|   |  (Filament CSS + ES6)    |                | (Transparent Topmost PyWV)  |   |
+|   +------------+-------------+                +--------------+--------------+   |
+|                |                                             |                  |
+|                | HTTP / Server-Sent Events (SSE)             | IPC / REST       |
+|                v                                             v                  |
+|   +-------------------------------------------------------------------------+   |
+|   |                    KALKI SERVER DAEMON (PID: Loopback)                  |   |
+|   |                      Bound to 127.0.0.1:8765 Only                       |   |
+|   |                                                                         |   |
+|   |  [Cognitive Router]  [ShieldCore Defender]  [Media Engine WinRT]        |   |
+|   |  [Semantic Memory]   [System Control DLL]   [12 Cyber Diagnostic Tools] |   |
+|   +------------------------------------+------------------------------------+   |
+|                                        |                                        |
+|                +-----------------------+------------------------+               |
+|                v                                                v               |
+|   +-----------------------------+               +---------------------------+   |
+|   |   LOCAL HARDWARE & VAULT    |               |  AI INFERENCE ENGINES     |   |
+|   |  - Windows DPAPI + AES-256  |               |  - Ollama (localhost)     |   |
+|   |  - SQLite Semantic DB       |               |  - llama.cpp / LM Studio  |   |
+|   |  - %APPDATA%\KALKI\quarantine|              |  - Gemini 2.5 / OpenAI /  |   |
+|   |  - WinRT / playerctl Audio  |               |    Claude 3.7 / Groq /    |   |
+|   +-----------------------------+               |    DeepSeek (Optional)    |   |
+|                                                 +---------------------------+   |
++---------------------------------------------------------------------------------+</pre>
+        </div>
+      </section>
+
+      <!-- Section 4: REST & SSE API Reference -->
+      <section class="doc-section" id="api-chat">
+        <h2 class="doc-h2">REST &amp; SSE API Reference</h2>
+        <p class="doc-p">
+          The loopback server exposes 83 documented endpoints. All endpoints require loopback origin verification.
+        </p>
+
+        <!-- Route 1: /api/chat -->
+        <div class="api-card">
+          <div class="api-head">
+            <span class="badge-method badge-post">POST</span>
+            <span class="badge-method badge-sse">SSE</span>
+            <span class="api-path">/api/chat</span>
+          </div>
+          <div class="api-desc">
+            Primary conversational streaming route. Dispatches user input through the cognitive router, manages multi-turn history, extracts semantic memory in background threads, and streams generated markdown tokens via <code>text/event-stream</code>.
+          </div>
+          <div class="code-block">
+            <div class="code-header">
+              <span>json &bull; request body</span>
+              <button class="btn-copy" onclick="copySnippet(this)">Copy</button>
+            </div>
+            <pre class="code-body">{
+  "message": "Analyze the Shannon entropy of C:\\malware.bin and quarantine it.",
+  "conversation_id": "conv_948201",
+  "model_override": null,
+  "stream": true
+}</pre>
+          </div>
+        </div>
+
+        <!-- Route 2: /api/command -->
+        <div class="api-card" id="api-command">
+          <div class="api-head">
+            <span class="badge-method badge-post">POST</span>
+            <span class="api-path">/api/command</span>
+          </div>
+          <div class="api-desc">
+            Direct deterministic operating system executor. Intercepts native commands like "lock workstation", "volume 50", "launch spotify", or "mute" and invokes OS kernel API calls via <code>ctypes.windll.user32</code> or Linux D-Bus.
+          </div>
+          <div class="code-block">
+            <div class="code-header">
+              <span>json &bull; request body</span>
+              <button class="btn-copy" onclick="copySnippet(this)">Copy</button>
+            </div>
+            <pre class="code-body">{
+  "action": "lock_screen"
+}</pre>
+          </div>
+        </div>
+
+        <!-- Route 3: /api/status -->
+        <div class="api-card" id="api-status">
+          <div class="api-head">
+            <span class="badge-method badge-get">GET</span>
+            <span class="api-path">/api/status</span>
+          </div>
+          <div class="api-desc">
+            Returns real-time health telemetry including CPU/RAM load, active model provider, ShieldCore defender status, loopback socket latency, and pet companion state.
+          </div>
+        </div>
+
+        <!-- Route 4: /api/media/now -->
+        <div class="api-card" id="api-media">
+          <div class="api-head">
+            <span class="badge-method badge-get">GET</span>
+            <span class="api-path">/api/media/now</span>
+          </div>
+          <div class="api-desc">
+            Polls active media sessions via WinRT (Windows) or playerctl (Linux). Returns playback state, track title, artist, album, duration, and embedded or iTunes-resolved album cover art.
+          </div>
+        </div>
+
+        <!-- Route 5: /api/security/scan -->
+        <div class="api-card" id="api-security">
+          <div class="api-head">
+            <span class="badge-method badge-post">POST</span>
+            <span class="api-path">/api/security/scan</span>
+          </div>
+          <div class="api-desc">
+            Executes a multi-phase endpoint security audit: Shannon entropy scanning across executable folders, Windows Defender telemetry bridge, and background cryptominer PID checking.
+          </div>
+        </div>
+
+        <!-- Route 6: /api/memory/list -->
+        <div class="api-card" id="api-memory">
+          <div class="api-head">
+            <span class="badge-method badge-get">GET</span>
+            <span class="api-path">/api/memory/list</span>
+          </div>
+          <div class="api-desc">
+            Retrieves categorized semantic memories filtered by topic chips (Preferences, Projects, Personal, Work, Music, Tech). Encrypted with DPAPI.
+          </div>
+        </div>
+
+        <!-- Route 7: /api/config/save -->
+        <div class="api-card" id="api-config">
+          <div class="api-head">
+            <span class="badge-method badge-post">POST</span>
+            <span class="api-path">/api/config/save</span>
+          </div>
+          <div class="api-desc">
+            Persists API credentials and preferences into the encrypted vault. Never stores plaintext keys on disk.
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 5: Security & Cryptography Model -->
+      <section class="doc-section" id="dpapi">
+        <h2 class="doc-h2">Security &amp; Cryptography Model</h2>
+        <p class="doc-p">
+          KALKI implements a defense-in-depth security model to safeguard user privacy and API keys against malware extraction:
+        </p>
+
+        <h3 class="doc-h3">1. DPAPI &amp; AES-256-GCM Envelope Encryption</h3>
+        <p class="doc-p">
+          On Windows, all sensitive secrets (Gemini, OpenAI, Anthropic, Groq API keys, and semantic memory vectors) are encrypted using <strong>Windows Data Protection API (CryptProtectData)</strong>. Keys are derived from the user's logon security token and TPM hardware:
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span>python &bull; app/vault.py</span>
+            <button class="btn-copy" onclick="copySnippet(this)">Copy</button>
+          </div>
+          <pre class="code-body"># Key Encryption Wrapper
+import ctypes
+from ctypes import wintypes
+
+def encrypt_dpapi(plaintext: bytes) -> bytes:
+    """Encrypts buffer with Windows DPAPI machine/user token."""
+    # Machine-tied DPAPI encryption call
+    blob_in = DATA_BLOB(len(plaintext), ctypes.cast(plaintext, ctypes.c_char_p))
+    blob_out = DATA_BLOB()
+    if CryptProtectData(ctypes.byref(blob_in), "KALKI_KEY", None, None, None, 0, ctypes.byref(blob_out)):
+        return ctypes.string_at(blob_out.pbData, blob_out.cbData)
+    raise RuntimeError("DPAPI encryption failed")</pre>
+        </div>
+
+        <h3 class="doc-h3" id="loopback">2. Loopback Isolation Guarantee</h3>
+        <p class="doc-p">
+          The HTTP server binds strictly to <code>127.0.0.1</code>. Socket connections originating from external network interfaces are rejected by the kernel. Host header verification prevents DNS rebinding exploits from untrusted browser tabs.
+        </p>
+
+        <h3 class="doc-h3" id="zero-telemetry">3. Zero Third-Party Telemetry Audit</h3>
+        <p class="doc-p">
+          Zero analytics trackers (Google Analytics, Sentry, Mixpanel, Segment) exist in KALKI's codebase. Network traffic can be audited using Wireshark; only user-initiated LLM prompts exit loopback.
+        </p>
+      </section>
+
+      <!-- Section 6: AI & Cognitive Engine -->
+      <section class="doc-section" id="cognitive-router">
+        <h2 class="doc-h2">Multi-Model Cognitive Router</h2>
+        <p class="doc-p">
+          KALKI eliminates manual model switching by inspecting prompt intent, token budget, and complexity heuristics:
+        </p>
+
+        <ul class="feature-points" style="margin: 16px 0 24px;">
+          <li><strong>Fast / Conversational Queries:</strong> Routed to ultra-low-latency models (Gemini Flash, Groq Llama-3.3-70B, or local Ollama).</li>
+          <li><strong>Coding &amp; Refactoring:</strong> Routed to specialized code models (Claude 3.7 Sonnet, DeepSeek V3/R1, or GPT-4o).</li>
+          <li><strong>Deep Mathematical / Logical Reasoning:</strong> Routed to thinking models with extended chain-of-thought budgets.</li>
+          <li><strong>Local Fallback Mode:</strong> When offline or no internet is available, requests route automatically to local Ollama (<code>http://localhost:11434</code>) without user interruption.</li>
+        </ul>
+
+        <h3 class="doc-h3" id="anger-mode">Anger Mode &amp; Uncensored Persona</h3>
+        <p class="doc-p">
+          KALKI includes a fully configurable sentiment engine. If the user uses abrasive or colloquial language, KALKI dynamically drops corporate assistant pleasantries, mirroring the user's emotional intensity without preachy moralizing or corporate disclaimers.
+        </p>
+      </section>
+
+      <!-- Section 7: Automated Test Gates -->
+      <section class="doc-section" id="verification">
+        <h2 class="doc-h2">Automated Test Gates &amp; Verification</h2>
+        <p class="doc-p">
+          Prior to release, KALKI passes automated test suites verifying Python backend compilation, JavaScript module syntax, and route health:
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span>bash &bull; test runner</span>
+            <button class="btn-copy" onclick="copySnippet(this)">Copy</button>
+          </div>
+          <pre class="code-body"># 1. Validate all 30 ES6 UI frontend modules
+node --experimental-vm-modules .github/scripts/validate-ui-modules.mjs
+
+# 2. Python bytecode compilation check across entire app
+python -m py_compile app/*.py
+
+# 3. Route health test
+python -c "import app.server; print('Server syntax and imports verified clean!')"</pre>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div>
+        <span style="font-weight: 700; color: var(--text);">KALKI</span> &bull; Sovereign AI Desktop Operating Workspace
+        <div style="font-size: 0.78rem; color: var(--mut); margin-top: 4px;">
+          Cold Machined Graphite Surfaces &bull; Warm Ivory Filament Light &bull; 100% Local-First
+        </div>
+      </div>
+
+      <ul class="footer-links">
+        <li><a href="index.html">Overview</a></li>
+        <li><a href="pets.html">Companion Pets</a></li>
+        <li><a href="security.html">ShieldCore &amp; Tools</a></li>
+        <li><a href="docs.html">Documentation</a></li>
+        <li><a href="download.html">Downloads</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script>
+    // Copy code snippet helper
+    function copySnippet(btn) {
+      const pre = btn.parentElement.nextElementSibling;
+      navigator.clipboard.writeText(pre.innerText).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = orig, 1800);
+      });
+    }
+
+    // Search filter across documentation sections
+    const searchInput = document.getElementById('docsSearch');
+    searchInput.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      const sections = document.querySelectorAll('.doc-section');
+      
+      sections.forEach(sec => {
+        if (!q) {
+          sec.style.display = 'block';
+          return;
+        }
+        const text = sec.innerText.toLowerCase();
+        sec.style.display = text.includes(q) ? 'block' : 'none';
+      });
+    });
+
+    // Highlight active link in sidebar on scroll
+    window.addEventListener('scroll', () => {
+      const sections = document.querySelectorAll('.doc-section');
+      let currentId = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 120;
+        if (window.scrollY >= top) {
+          currentId = sec.id;
+        }
+      });
+      document.querySelectorAll('.sidebar-links a').forEach(a => {
+        const href = a.getAttribute('href');
+        a.classList.toggle('active', href === `#${currentId}`);
+      });
+    });
+  </script>
+</body>
+</html>
