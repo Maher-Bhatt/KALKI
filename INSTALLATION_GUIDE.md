@@ -2,7 +2,7 @@
 
 Welcome to the official installation and system setup guide for **KALKI AI Assistant v1.4.0**. This document details all hardware prerequisites, required software runtimes, step-by-step setup methods for end-users and developers, configuration options, cybersecurity verification procedures, dynamic auto-model routing, and the standalone always-on-top desktop companion pet.
 
-> 🌐 **Interactive Web Showcase**: You can explore the full interactive marketing experience, live companion pet simulator, and audio synthesizer offline in [marketing/index.html](marketing/index.html) or [showcase.html](showcase.html).
+> 🌐 **Interactive Web Showcase**: You can explore the full interactive marketing experience, live companion pet simulator, and audio synthesizer live at [KALKI — Sovereign AI Desktop Assistant & Endpoint Defense](https://kalki-marketing.vercel.app/) or offline in [marketing/index.html](marketing/index.html).
 
 ---
 
