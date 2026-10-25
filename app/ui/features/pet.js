@@ -30,9 +30,9 @@ import { ok } from '../state/toasts.js';
 const STORAGE_KEY = 'kalki.pet.v1';
 
 const DEFAULT_STATE = {
-  enabled: true,
-  species: 'cat',       // 'cat' | 'dog' | 'dragon' | 'drone' | 'fox'
-  name: 'Kittu',
+  enabled: false,
+  species: 'gobi',
+  name: 'Gobi',
   color: '#fff4e2',     // Filament gold
   level: 1,
   xp: 0,
@@ -144,204 +144,102 @@ export function soundPetLevelUp() {
   playTone(880, 'sine', 0.28, 0.24, 0.09);
 }
 
-/* ── Species SVG Character Designs ───────────────────────────────────── */
+/* ── Species Character Designs & Pixel Sprites ─────────────────────── */
 
-const SPECIES_CONFIG = {
-  cat: {
-    title: 'Kittu',
-    desc: 'Cybernetic feline with reactive ears, twitching tail and neon whiskers.',
-    treat: '🐟 Cyber Fish',
-    svg(c) {
-      return `
-        <svg viewBox="0 0 100 100" class="pet-svg cat-svg">
-          <!-- Ears -->
-          <polygon points="24,38 14,14 42,26" fill="${c}" opacity="0.85" class="pet-ear pet-ear-l" />
-          <polygon points="26,34 20,20 38,28" fill="#ff76a5" opacity="0.6" />
-          <polygon points="76,38 86,14 58,26" fill="${c}" opacity="0.85" class="pet-ear pet-ear-r" />
-          <polygon points="74,34 80,20 62,28" fill="#ff76a5" opacity="0.6" />
-          <!-- Tail -->
-          <path d="M72 70 C88 64, 95 44, 88 32 C85 27, 78 30, 80 36 C84 46, 78 60, 66 65" 
-                stroke="${c}" stroke-width="5" stroke-linecap="round" fill="none" class="pet-tail cat-tail" />
-          <!-- Body -->
-          <ellipse cx="50" cy="68" rx="28" ry="22" fill="#1e2329" stroke="${c}" stroke-width="2" />
-          <!-- Head -->
-          <ellipse cx="50" cy="46" rx="26" ry="22" fill="#262c33" stroke="${c}" stroke-width="2" class="pet-head" />
-          <!-- Eyes -->
-          <ellipse cx="38" cy="44" rx="4.5" ry="6" fill="${c}" class="pet-eye pet-eye-l" />
-          <ellipse cx="62" cy="44" rx="4.5" ry="6" fill="${c}" class="pet-eye pet-eye-r" />
-          <circle cx="39.5" cy="42" r="1.6" fill="#0d0f12" />
-          <circle cx="63.5" cy="42" r="1.6" fill="#0d0f12" />
-          <!-- Snout & Nose -->
-          <polygon points="50,51 47,48 53,48" fill="#ff76a5" />
-          <path d="M47 52 Q50 55 53 52" stroke="#b3bcc6" stroke-width="1.2" fill="none" />
-          <!-- Whiskers -->
-          <line x1="22" y1="47" x2="33" y2="48" stroke="${c}" stroke-width="1.2" opacity="0.75" />
-          <line x1="20" y1="52" x2="32" y2="51" stroke="${c}" stroke-width="1.2" opacity="0.75" />
-          <line x1="78" y1="47" x2="67" y2="48" stroke="${c}" stroke-width="1.2" opacity="0.75" />
-          <line x1="80" y1="52" x2="68" y2="51" stroke="${c}" stroke-width="1.2" opacity="0.75" />
-          <!-- Paws -->
-          <ellipse cx="38" cy="84" rx="6.5" ry="4" fill="#2d343d" stroke="${c}" stroke-width="1.2" />
-          <ellipse cx="62" cy="84" rx="6.5" ry="4" fill="#2d343d" stroke="${c}" stroke-width="1.2" />
-        </svg>`;
-    }
-  },
-  chibi: {
+export const SPECIES_CONFIG = {
+  gobi: {
+    id: 'gobi',
     title: 'Gobi',
-    desc: 'Chibi Pixel Sprite companion inspired by Codex desktop pets.',
+    desc: 'Pixel Sprite Chibi Companion (Flagship Mascot). Blushing cheeks and protective aura.',
     treat: '🍙 Pixel Riceball',
+    sprite: 'assets/pets/gobi.png',
     svg(c) {
       return `
-        <svg viewBox="0 0 100 100" class="pet-svg chibi-svg">
-          <polygon points="25,32 30,16 42,28" fill="#5c3d22" stroke="${c}" stroke-width="2"/>
-          <polygon points="75,32 70,16 58,28" fill="#5c3d22" stroke="${c}" stroke-width="2"/>
-          <rect x="22" y="26" width="56" height="52" rx="14" fill="#9a7049" stroke="${c}" stroke-width="2.5"/>
-          <rect x="30" y="44" width="40" height="28" rx="8" fill="#f5dec7" opacity="0.85"/>
-          <ellipse cx="38" cy="48" rx="4.5" ry="6" fill="#1e1b18"/>
-          <ellipse cx="62" cy="48" rx="4.5" ry="6" fill="#1e1b18"/>
-          <circle cx="36.5" cy="45.5" r="1.8" fill="#ffffff"/>
-          <circle cx="60.5" cy="45.5" r="1.8" fill="#ffffff"/>
-          <ellipse cx="32" cy="54" rx="4" ry="2" fill="#ff7f7f" opacity="0.6"/>
-          <ellipse cx="68" cy="54" rx="4" ry="2" fill="#ff7f7f" opacity="0.6"/>
-          <path d="M47 52 Q50 55 53 52" fill="none" stroke="#331f0d" stroke-width="2" stroke-linecap="round"/>
-          <rect x="28" y="74" width="16" height="12" rx="6" fill="#5c3d22" stroke="${c}" stroke-width="2"/>
-          <rect x="56" y="74" width="16" height="12" rx="6" fill="#5c3d22" stroke="${c}" stroke-width="2"/>
-        </svg>`;
+        <div class="pet-sprite-shell" style="position:relative; width:80px; height:80px; display:grid; place-items:center;">
+          <div class="pet-aura" style="position:absolute; width:72px; height:72px; border-radius:50%; background:radial-gradient(circle, ${c}44 0%, transparent 70%);"></div>
+          <img src="assets/pets/gobi.png" class="pet-pixel-sprite" alt="Gobi" style="width:72px; height:auto; image-rendering:pixelated; position:relative; z-index:2; filter:drop-shadow(0 4px 10px rgba(0,0,0,0.6));" />
+        </div>`;
     }
   },
-  dog: {
+  kittu: {
+    id: 'kittu',
+    title: 'Kittu',
+    desc: 'Cybernetic feline companion with reactive ears and neon whiskers.',
+    treat: '🐟 Cyber Fish',
+    sprite: 'assets/pets/kittu.png',
+    svg(c) {
+      return `
+        <div class="pet-sprite-shell" style="position:relative; width:80px; height:80px; display:grid; place-items:center;">
+          <div class="pet-aura" style="position:absolute; width:72px; height:72px; border-radius:50%; background:radial-gradient(circle, ${c}44 0%, transparent 70%);"></div>
+          <img src="assets/pets/kittu.png" class="pet-pixel-sprite" alt="Kittu" style="width:72px; height:auto; image-rendering:pixelated; position:relative; z-index:2; filter:drop-shadow(0 4px 10px rgba(0,0,0,0.6));" />
+        </div>`;
+    }
+  },
+  byte: {
+    id: 'byte',
     title: 'Byte',
-    desc: 'Robo puppy with floppy cyber ears, holographic collar, and a wagging tail.',
+    desc: 'Robo puppy with floppy cyber ears, holographic collar, and wagging tail.',
     treat: '🍖 Data Bone',
+    sprite: 'assets/pets/byte.png',
     svg(c) {
       return `
-        <svg viewBox="0 0 100 100" class="pet-svg dog-svg">
-          <!-- Tail -->
-          <path d="M72 68 Q88 56 86 40 Q84 36 80 40 Q78 52 68 64" fill="${c}" class="pet-tail dog-tail" />
-          <!-- Body -->
-          <ellipse cx="50" cy="68" rx="27" ry="21" fill="#1e2329" stroke="${c}" stroke-width="2" />
-          <!-- Floppy Ears -->
-          <path d="M26 34 C16 34 14 58 22 62 C26 64 30 52 30 38 Z" fill="#2d343d" stroke="${c}" stroke-width="1.6" class="pet-ear dog-ear-l" />
-          <path d="M74 34 C84 34 86 58 78 62 C74 64 70 52 70 38 Z" fill="#2d343d" stroke="${c}" stroke-width="1.6" class="pet-ear dog-ear-r" />
-          <!-- Head -->
-          <circle cx="50" cy="46" r="23" fill="#262c33" stroke="${c}" stroke-width="2" class="pet-head" />
-          <!-- Eyes -->
-          <ellipse cx="40" cy="44" rx="4" ry="5.5" fill="${c}" class="pet-eye pet-eye-l" />
-          <ellipse cx="60" cy="44" rx="4" ry="5.5" fill="${c}" class="pet-eye pet-eye-r" />
-          <circle cx="41.2" cy="42" r="1.5" fill="#0d0f12" />
-          <circle cx="61.2" cy="42" r="1.5" fill="#0d0f12" />
-          <!-- Nose & Tongue -->
-          <ellipse cx="50" cy="50" rx="4" ry="3" fill="#0d0f12" stroke="${c}" stroke-width="1" />
-          <path d="M48 53 Q50 56 52 53" stroke="${c}" stroke-width="1.2" fill="none" />
-          <ellipse cx="50" cy="57" rx="2.5" ry="3.5" fill="#ff76a5" class="pet-tongue" />
-          <!-- Collar -->
-          <rect x="36" y="65" width="28" height="4" rx="2" fill="${c}" opacity="0.8" />
-          <circle cx="50" cy="70" r="2.5" fill="#ffcc00" />
-          <!-- Paws -->
-          <ellipse cx="38" cy="85" rx="7" ry="4" fill="#2d343d" stroke="${c}" stroke-width="1.2" />
-          <ellipse cx="62" cy="85" rx="7" ry="4" fill="#2d343d" stroke="${c}" stroke-width="1.2" />
-        </svg>`;
+        <div class="pet-sprite-shell" style="position:relative; width:80px; height:80px; display:grid; place-items:center;">
+          <div class="pet-aura" style="position:absolute; width:72px; height:72px; border-radius:50%; background:radial-gradient(circle, ${c}44 0%, transparent 70%);"></div>
+          <img src="assets/pets/byte.png" class="pet-pixel-sprite" alt="Byte" style="width:72px; height:auto; image-rendering:pixelated; position:relative; z-index:2; filter:drop-shadow(0 4px 10px rgba(0,0,0,0.6));" />
+        </div>`;
     }
   },
-  dragon: {
+  draco: {
+    id: 'draco',
     title: 'Draco',
-    desc: 'Cybernetic pocket dragon with pulsing wings, crest horns, and ember breath.',
+    desc: 'Cyber dragon with glowing wings, crest horns, and warm solar ember breath.',
     treat: '🔥 Solar Ember',
+    sprite: 'assets/pets/draco.png',
     svg(c) {
       return `
-        <svg viewBox="0 0 100 100" class="pet-svg dragon-svg">
-          <!-- Wings -->
-          <path d="M30 52 C12 36, 10 18, 28 28 C20 38, 24 46, 34 50 Z" fill="${c}" opacity="0.75" class="pet-wing pet-wing-l" />
-          <path d="M70 52 C88 36, 90 18, 72 28 C80 38, 76 46, 66 50 Z" fill="${c}" opacity="0.75" class="pet-wing pet-wing-r" />
-          <!-- Tail with Arrow tip -->
-          <path d="M68 72 C82 72 90 60 84 48" stroke="${c}" stroke-width="3.5" fill="none" class="pet-tail dragon-tail" />
-          <polygon points="84,48 80,40 90,44" fill="${c}" />
-          <!-- Body -->
-          <ellipse cx="50" cy="68" rx="25" ry="20" fill="#1c242c" stroke="${c}" stroke-width="2" />
-          <!-- Dragon Chest Scales -->
-          <path d="M44 64 Q50 67 56 64 M43 70 Q50 73 57 70" stroke="${c}" stroke-width="1.5" fill="none" opacity="0.8" />
-          <!-- Horns -->
-          <path d="M36 32 C30 16 20 18 24 28" stroke="${c}" stroke-width="3" stroke-linecap="round" fill="none" />
-          <path d="M64 32 C70 16 80 18 76 28" stroke="${c}" stroke-width="3" stroke-linecap="round" fill="none" />
-          <!-- Head -->
-          <ellipse cx="50" cy="44" rx="23" ry="20" fill="#222b34" stroke="${c}" stroke-width="2" class="pet-head" />
-          <!-- Eyes -->
-          <polygon points="36,42 43,40 42,46 37,47" fill="${c}" class="pet-eye pet-eye-l" />
-          <polygon points="64,42 57,40 58,46 63,47" fill="${c}" class="pet-eye pet-eye-r" />
-          <circle cx="40" cy="43" r="1.2" fill="#0d0f12" />
-          <circle cx="60" cy="43" r="1.2" fill="#0d0f12" />
-          <!-- Snout with tiny spark nostrils -->
-          <ellipse cx="50" cy="52" rx="10" ry="6" fill="#182028" stroke="${c}" stroke-width="1.2" />
-          <circle cx="46" cy="52" r="1" fill="${c}" />
-          <circle cx="54" cy="52" r="1" fill="${c}" />
-        </svg>`;
+        <div class="pet-sprite-shell" style="position:relative; width:80px; height:80px; display:grid; place-items:center;">
+          <div class="pet-aura" style="position:absolute; width:72px; height:72px; border-radius:50%; background:radial-gradient(circle, ${c}44 0%, transparent 70%);"></div>
+          <img src="assets/pets/draco.png" class="pet-pixel-sprite" alt="Draco" style="width:72px; height:auto; image-rendering:pixelated; position:relative; z-index:2; filter:drop-shadow(0 4px 10px rgba(0,0,0,0.6));" />
+        </div>`;
     }
   },
-  drone: {
+  kitsu: {
+    id: 'kitsu',
+    title: 'Kitsu',
+    desc: 'Twin-tailed cyber fox with mystical brow markings and keen ears.',
+    treat: '🍬 Star Candy',
+    sprite: 'assets/pets/kitsu.png',
+    svg(c) {
+      return `
+        <div class="pet-sprite-shell" style="position:relative; width:80px; height:80px; display:grid; place-items:center;">
+          <div class="pet-aura" style="position:absolute; width:72px; height:72px; border-radius:50%; background:radial-gradient(circle, ${c}44 0%, transparent 70%);"></div>
+          <img src="assets/pets/kitsu.png" class="pet-pixel-sprite" alt="Kitsu" style="width:72px; height:auto; image-rendering:pixelated; position:relative; z-index:2; filter:drop-shadow(0 4px 10px rgba(0,0,0,0.6));" />
+        </div>`;
+    }
+  },
+  nova: {
+    id: 'nova',
     title: 'Nova',
     desc: 'Levitating AI assistant drone with rotating optic ring and hover thrusters.',
     treat: '🔋 Quantum Battery',
+    sprite: 'assets/pets/nova.png',
     svg(c) {
       return `
-        <svg viewBox="0 0 100 100" class="pet-svg drone-svg">
-          <!-- Thruster Glows -->
-          <ellipse cx="32" cy="74" rx="8" ry="3" fill="${c}" opacity="0.3" class="pet-thruster" />
-          <ellipse cx="68" cy="74" rx="8" ry="3" fill="${c}" opacity="0.3" class="pet-thruster" />
-          <!-- Antenna -->
-          <line x1="50" y1="26" x2="50" y2="15" stroke="${c}" stroke-width="2" />
-          <circle cx="50" cy="14" r="3" fill="${c}" class="pet-antenna-light" />
-          <!-- Wing Rings / Thruster pods -->
-          <ellipse cx="26" cy="52" rx="7" ry="14" fill="#1b2026" stroke="${c}" stroke-width="1.8" />
-          <ellipse cx="74" cy="52" rx="7" ry="14" fill="#1b2026" stroke="${c}" stroke-width="1.8" />
-          <!-- Spherical Body -->
-          <circle cx="50" cy="52" r="25" fill="#242b33" stroke="${c}" stroke-width="2" class="pet-head" />
-          <!-- Orbit Ring -->
-          <ellipse cx="50" cy="52" rx="31" ry="9" stroke="${c}" stroke-width="1.5" stroke-dasharray="4,2" fill="none" opacity="0.75" class="drone-ring" />
-          <!-- Holographic Visor -->
-          <path d="M33 46 Q50 40 67 46 Q67 58 50 59 Q33 58 33 46 Z" fill="#0d1117" stroke="${c}" stroke-width="1.4" />
-          <!-- Optical Sensor / Eye -->
-          <circle cx="50" cy="50" r="5" fill="${c}" class="pet-eye" />
-          <circle cx="50" cy="50" r="2" fill="#fff" />
-          <!-- Status LED strip -->
-          <rect x="42" y="66" width="16" height="2.5" rx="1.2" fill="${c}" opacity="0.8" />
-        </svg>`;
-    }
-  },
-  fox: {
-    title: 'Kitsu',
-    desc: 'Mystical twin-tailed cyber fox with sleek glowing brow markings and keen ears.',
-    treat: '🍬 Star Candy',
-    svg(c) {
-      return `
-        <svg viewBox="0 0 100 100" class="pet-svg fox-svg">
-          <!-- Twin Tails -->
-          <path d="M68 68 C86 64, 94 44, 86 28 C82 34, 76 46, 64 60" fill="${c}" opacity="0.9" class="pet-tail fox-tail-1" />
-          <path d="M72 72 C92 70, 96 52, 90 38 C86 44, 80 54, 70 66" fill="#e08c33" opacity="0.65" class="pet-tail fox-tail-2" />
-          <!-- Pointy Large Ears -->
-          <polygon points="26,38 10,8 44,24" fill="#2d343d" stroke="${c}" stroke-width="1.8" class="pet-ear pet-ear-l" />
-          <polygon points="26,32 18,16 38,24" fill="#e08c33" opacity="0.7" />
-          <polygon points="74,38 90,8 56,24" fill="#2d343d" stroke="${c}" stroke-width="1.8" class="pet-ear pet-ear-r" />
-          <polygon points="74,32 82,16 62,24" fill="#e08c33" opacity="0.7" />
-          <!-- Body -->
-          <ellipse cx="50" cy="70" rx="26" ry="20" fill="#1c2128" stroke="${c}" stroke-width="2" />
-          <!-- Head / Mask -->
-          <polygon points="50,65 24,40 28,30 72,30 76,40" fill="#262c33" stroke="${c}" stroke-width="2" class="pet-head" />
-          <!-- White Cheeks -->
-          <polygon points="50,63 26,42 36,46" fill="#f0f3f6" opacity="0.25" />
-          <polygon points="50,63 74,42 64,46" fill="#f0f3f6" opacity="0.25" />
-          <!-- Forehead Gem -->
-          <polygon points="50,34 47,38 50,42 53,38" fill="${c}" />
-          <!-- Eyes -->
-          <ellipse cx="38" cy="42" rx="4" ry="3" transform="rotate(-10 38 42)" fill="${c}" class="pet-eye pet-eye-l" />
-          <ellipse cx="62" cy="42" rx="4" ry="3" transform="rotate(10 62 42)" fill="${c}" class="pet-eye pet-eye-r" />
-          <!-- Nose -->
-          <circle cx="50" cy="62" r="2" fill="#0d0f12" />
-          <!-- Paws -->
-          <ellipse cx="38" cy="86" rx="6" ry="3.5" fill="#2d343d" stroke="${c}" stroke-width="1.2" />
-          <ellipse cx="62" cy="86" rx="6" ry="3.5" fill="#2d343d" stroke="${c}" stroke-width="1.2" />
-        </svg>`;
+        <div class="pet-sprite-shell" style="position:relative; width:80px; height:80px; display:grid; place-items:center;">
+          <div class="pet-aura" style="position:absolute; width:72px; height:72px; border-radius:50%; background:radial-gradient(circle, ${c}44 0%, transparent 70%);"></div>
+          <img src="assets/pets/nova.png" class="pet-pixel-sprite" alt="Nova" style="width:72px; height:auto; image-rendering:pixelated; position:relative; z-index:2; filter:drop-shadow(0 4px 10px rgba(0,0,0,0.6));" />
+        </div>`;
     }
   }
 };
+
+// Aliases for backwards compatibility with any existing saved states
+SPECIES_CONFIG.cat = SPECIES_CONFIG.kittu;
+SPECIES_CONFIG.chibi = SPECIES_CONFIG.gobi;
+SPECIES_CONFIG.dog = SPECIES_CONFIG.byte;
+SPECIES_CONFIG.dragon = SPECIES_CONFIG.draco;
+SPECIES_CONFIG.drone = SPECIES_CONFIG.nova;
+SPECIES_CONFIG.fox = SPECIES_CONFIG.kitsu;
 
 /* ── Dialogue & Reactions ────────────────────────────────────────────── */
 

@@ -1,275 +1,276 @@
-import os
-import shutil
-import subprocess
-import tempfile
-import glob
-from xml.etree.ElementTree import Element, SubElement, tostring
-from xml.dom import minidom
-
-# Configuration
-APP_NAME = "KALKI"
-try:
-    from version import APP_VERSION as _APP_VERSION
-except ImportError:
-    _APP_VERSION = "1.5.0"
-APP_VERSION = _APP_VERSION + ".0" # Must be X.X.X.X
-PUBLISHER_NAME = "CN=KALKI_Developer"
-PUBLISHER_DISPLAY_NAME = "KALKI Developer"
-APP_DESCRIPTION = "Advanced AI Assistant"
-
-# Paths
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DIST_DIR = os.path.join(BASE_DIR, "dist", "KALKI")
-OUTPUT_DIR = os.path.join(os.path.dirname(BASE_DIR), "Output")
-MSIX_STAGING = os.path.join(BASE_DIR, "build", "msix_staging")
-ASSETS_SRC_ICON = os.path.join(os.path.dirname(BASE_DIR), "assets", "kalki_logo.png")
-
-# Signing certificate.
-#
-# No certificate ships in this repository. Development signing is opt-in and
-# resolved from the environment so that no private key or password ever enters
-# source control or a distributed archive:
-#
-#   KALKI_DEV_CERT_PATH      absolute path to a .pfx outside the repo
-#   KALKI_DEV_CERT_PASSWORD  its password
-#
-# Production Store signing is performed by Microsoft Partner Center and needs
-# neither of these. Leaving them unset produces an unsigned MSIX, which is
-# exactly what Store submission expects.
-CERT_PATH = os.environ.get("KALKI_DEV_CERT_PATH", "")
-CERT_PASS = os.environ.get("KALKI_DEV_CERT_PASSWORD", "")
-CERT_NAME = os.path.basename(CERT_PATH) if CERT_PATH else ""
-
-
-def dev_signing_available():
-    """True only when the maintainer has pointed at an external certificate."""
-    return bool(CERT_PATH and CERT_PASS and os.path.isfile(CERT_PATH))
-
-def find_sdk_tool(tool_name):
-    # Find Windows 10 SDK path
-    base_path = r"C:\Program Files (x86)\Windows Kits\10\bin"
-    if not os.path.exists(base_path):
-        return None
-    # Find newest version
-    versions = [d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
-    if not versions:
-        return None
-    versions.sort(reverse=True)
-    
-    # Prefer x64
-    for v in versions:
-        arch_path = os.path.join(base_path, v, "x64", tool_name)
-        if os.path.exists(arch_path):
-            return arch_path
-            
-    # Fallback to arm64 or x86
-    for v in versions:
-        for arch in ["arm64", "x86"]:
-            arch_path = os.path.join(base_path, v, arch, tool_name)
-            if os.path.exists(arch_path):
-                return arch_path
-    return None
-
-def build_manifest():
-    print("Generating AppxManifest.xml...")
-    
-    Package = Element("Package", {
-        "xmlns": "http://schemas.microsoft.com/appx/manifest/foundation/windows10",
-        "xmlns:uap": "http://schemas.microsoft.com/appx/manifest/uap/windows10",
-        "xmlns:rescap": "http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
-    })
-    
-    Identity = SubElement(Package, "Identity", {
-        "Name": APP_NAME,
-        "ProcessorArchitecture": "x64",
-        "Publisher": PUBLISHER_NAME,
-        "Version": APP_VERSION
-    })
-    
-    Properties = SubElement(Package, "Properties")
-    SubElement(Properties, "DisplayName").text = APP_NAME
-    SubElement(Properties, "PublisherDisplayName").text = PUBLISHER_DISPLAY_NAME
-    SubElement(Properties, "Description").text = APP_DESCRIPTION
-    SubElement(Properties, "Logo").text = r"Assets\StoreLogo.png"
-    
-    Resources = SubElement(Package, "Resources")
-    SubElement(Resources, "Resource", {"Language": "en-us"})
-    
-    Dependencies = SubElement(Package, "Dependencies")
-    SubElement(Dependencies, "TargetDeviceFamily", {
-        "Name": "Windows.Desktop",
-        "--hidden-import=spotipy": "",
-        "--hidden-import=plyer": "",
-        "MinVersion": "10.0.17763.0",
-        "MaxVersionTested": "10.0.22000.0"
-    })
-    
-    Capabilities = SubElement(Package, "Capabilities")
-    SubElement(Capabilities, "rescap:Capability", {"Name": "runFullTrust"})
-    SubElement(Capabilities, "Capability", {"Name": "internetClient"})
-    SubElement(Capabilities, "Capability", {"Name": "privateNetworkClientServer"})
-    
-    Applications = SubElement(Package, "Applications")
-    Application = SubElement(Applications, "Application", {
-        "Id": APP_NAME,
-        "Executable": f"{APP_NAME}.exe",
-        "EntryPoint": "Windows.FullTrustApplication"
-    })
-    
-    VisualElements = SubElement(Application, "uap:VisualElements", {
-        "DisplayName": APP_NAME,
-        "Description": APP_DESCRIPTION,
-        "BackgroundColor": "transparent",
-        "Square150x150Logo": r"Assets\Square150x150Logo.png",
-        "Square44x44Logo": r"Assets\Square44x44Logo.png"
-    })
-    SubElement(VisualElements, "uap:DefaultTile", {"Wide310x150Logo": r"Assets\Wide310x150Logo.png"})
-    SubElement(VisualElements, "uap:SplashScreen", {"Image": r"Assets\SplashScreen.png"})
-    
-    xml_str = minidom.parseString(tostring(Package)).toprettyxml(indent="  ")
-    with open(os.path.join(MSIX_STAGING, "AppxManifest.xml"), "w", encoding="utf-8") as f:
-        f.write(xml_str)
-
-def create_assets():
-    print("Creating Assets...")
-    assets_dir = os.path.join(MSIX_STAGING, "Assets")
-    os.makedirs(assets_dir, exist_ok=True)
-    
-    try:
-        from PIL import Image
-        img = Image.open(ASSETS_SRC_ICON)
-        img.resize((150, 150)).save(os.path.join(assets_dir, "Square150x150Logo.png"))
-        img.resize((44, 44)).save(os.path.join(assets_dir, "Square44x44Logo.png"))
-        img.resize((50, 50)).save(os.path.join(assets_dir, "StoreLogo.png"))
-        img.resize((620, 300)).save(os.path.join(assets_dir, "SplashScreen.png"))
-        img.resize((310, 150)).save(os.path.join(assets_dir, "Wide310x150Logo.png"))
-    except ImportError:
-        print("Pillow not installed, using raw copies (may cause store rejection).")
-        shutil.copy(ASSETS_SRC_ICON, os.path.join(assets_dir, "Square150x150Logo.png"))
-        shutil.copy(ASSETS_SRC_ICON, os.path.join(assets_dir, "Square44x44Logo.png"))
-        shutil.copy(ASSETS_SRC_ICON, os.path.join(assets_dir, "StoreLogo.png"))
-        shutil.copy(ASSETS_SRC_ICON, os.path.join(assets_dir, "SplashScreen.png"))
-        shutil.copy(ASSETS_SRC_ICON, os.path.join(assets_dir, "Wide310x150Logo.png"))
-
-def build_msix():
-    makeappx = find_sdk_tool("makeappx.exe")
-    signtool = find_sdk_tool("signtool.exe")
-    
-    if not makeappx or not signtool:
-        print("Error: Windows 10 SDK (makeappx.exe, signtool.exe) not found!")
-        print("Please install Windows 10 SDK.")
-        return False
-        
-    print(f"Found makeappx: {makeappx}")
-    print(f"Found signtool: {signtool}")
-
-    print("Cleaning staging directory...")
-    if os.path.exists(MSIX_STAGING):
-        shutil.rmtree(MSIX_STAGING)
-    os.makedirs(MSIX_STAGING)
-    
-    print("Copying compiled binaries and payload...")
-    dist_root = os.path.join(BASE_DIR, "dist")
-    if not os.path.exists(DIST_DIR):
-        print(f"Error: {DIST_DIR} not found. Please run PyInstaller first.")
-        return False
-        
-    # 1. Copy main KALKI bundle
-    for item in os.listdir(DIST_DIR):
-        s = os.path.join(DIST_DIR, item)
-        d = os.path.join(MSIX_STAGING, item)
-        if os.path.isdir(s):
-            shutil.copytree(s, d)
-        else:
-            shutil.copy2(s, d)
-
-    # 2. Copy all supporting service binaries
-    service_map = {
-        "KALKI_Setup_Wizard": os.path.join(MSIX_STAGING, "services", "setup_wizard"),
-        "KALKI_Server": os.path.join(MSIX_STAGING, "services", "server"),
-        "KALKI_Listener": os.path.join(MSIX_STAGING, "services", "listener"),
-        "KALKI_Setup_Google": os.path.join(MSIX_STAGING, "services", "setup_google"),
-        "KALKI_Setup_Spotify": os.path.join(MSIX_STAGING, "services", "setup_spotify"),
-    }
-    for svc_folder, dest in service_map.items():
-        src = os.path.join(dist_root, svc_folder)
-        if os.path.exists(src):
-            os.makedirs(os.path.dirname(dest), exist_ok=True)
-            shutil.copytree(src, dest)
-
-    # 3. Copy Assets, Frontend UI, and Browser binaries
-    root_project = os.path.dirname(BASE_DIR)
-    
-    assets_src = os.path.join(root_project, "assets")
-    if os.path.exists(assets_src):
-        shutil.copytree(assets_src, os.path.join(MSIX_STAGING, "assets"))
-
-    plugins_src = os.path.join(BASE_DIR, "plugins")
-    if os.path.exists(plugins_src):
-        shutil.copytree(plugins_src, os.path.join(MSIX_STAGING, "plugins"))
-
-    browsers_src = os.path.join(root_project, "browsers")
-    if os.path.exists(browsers_src):
-        shutil.copytree(browsers_src, os.path.join(MSIX_STAGING, "browsers"))
-
-    # Frontend application bundle. index.html alone renders a blank window.
-    ui_src = os.path.join(BASE_DIR, "ui")
-    if os.path.exists(ui_src):
-        shutil.copytree(ui_src, os.path.join(MSIX_STAGING, "ui"))
-    else:
-        raise SystemExit("app/ui is missing - the frontend bundle must be packaged")
-
-    for f in ["index.html", "manifest.json", "service-worker.js", "config.example.py"]:
-        src_file = os.path.join(BASE_DIR, f)
-        if os.path.exists(src_file):
-            shutil.copy2(src_file, os.path.join(MSIX_STAGING, f))
-
-    for f in ["LICENSE", "TERMS.md"]:
-        src_file = os.path.join(root_project, f)
-        if os.path.exists(src_file):
-            shutil.copy2(src_file, os.path.join(MSIX_STAGING, f))
-            
-    build_manifest()
-    create_assets()
-    
-    print("Packing MSIX...")
-    msix_out = os.path.join(OUTPUT_DIR, f"{APP_NAME}_v{_APP_VERSION}.msix")
-    if os.path.exists(msix_out):
-        os.remove(msix_out)
-        
-    subprocess.run([makeappx, "pack", "/d", MSIX_STAGING, "/p", msix_out, "/o"], check=True)
-    
-    # Development signing is opt-in. With no certificate configured the MSIX is
-    # left unsigned, which is what Microsoft Partner Center expects on
-    # submission - it applies production signing itself.
-    if not CERT_PASS:
-        print("Unsigned MSIX produced. Set KALKI_DEV_CERT_PATH and "
-              "KALKI_DEV_CERT_PASSWORD to sign it for local testing.")
-        print(f"\nSUCCESS! MSIX generated at: {msix_out}")
-        return True
-
-    cert_path = CERT_PATH or os.path.join(tempfile.gettempdir(), "KALKI_Dev_Cert.pfx")
-    if not os.path.exists(cert_path):
-        print("Generating self-signed certificate for local testing...")
-        ps_cmd = f'''
-        $cert = New-SelfSignedCertificate -Type Custom -Subject "{PUBLISHER_NAME}" -KeyUsage DigitalSignature -FriendlyName "KALKI Dev Cert" -CertStoreLocation "Cert:\\CurrentUser\\My" -TextExtension @("2.5.29.37={{text}}1.3.6.1.5.5.7.3.3", "2.5.29.19={{text}}")
-        $pwd = ConvertTo-SecureString -String "{CERT_PASS}" -Force -AsPlainText
-        Export-PfxCertificate -Cert $cert -FilePath "{cert_path}" -Password $pwd
-        '''
-        subprocess.run(["powershell", "-Command", ps_cmd], check=True)
-        
-    # Trust self-signed certificate in CurrentUser\TrustedPeople for seamless local installation
-    ps_trust_cmd = f'''
-    $pwd = ConvertTo-SecureString -String "{CERT_PASS}" -Force -AsPlainText
-    Import-PfxCertificate -FilePath "{cert_path}" -CertStoreLocation "Cert:\\CurrentUser\\TrustedPeople" -Password $pwd -ErrorAction SilentlyContinue
-    '''
-    subprocess.run(["powershell", "-Command", ps_trust_cmd], check=False)
-        
-    print("Signing MSIX...")
-    subprocess.run([signtool, "sign", "/fd", "SHA256", "/a", "/f", cert_path, "/p", CERT_PASS, msix_out], check=True)
-    
-    print(f"\nSUCCESS! MSIX generated at: {msix_out}")
-
-if __name__ == "__main__":
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    build_msix()
+import os
+import shutil
+import subprocess
+import tempfile
+import glob
+from xml.etree.ElementTree import Element, SubElement, tostring
+from xml.dom import minidom
+
+# Configuration
+APP_NAME = "KALKI"
+try:
+    from version import APP_VERSION as _APP_VERSION
+except ImportError:
+    _APP_VERSION = "1.5.0"
+APP_VERSION = _APP_VERSION + ".0" # Must be X.X.X.X
+PUBLISHER_NAME = "CN=KALKI_Developer"
+PUBLISHER_DISPLAY_NAME = "KALKI Developer"
+APP_DESCRIPTION = "Advanced AI Assistant"
+
+# Paths
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DIST_DIR = os.path.join(BASE_DIR, "dist", "KALKI")
+OUTPUT_DIR = os.path.join(os.path.dirname(BASE_DIR), "Output")
+MSIX_STAGING = os.path.join(BASE_DIR, "build", "msix_staging")
+ASSETS_SRC_ICON = os.path.join(os.path.dirname(BASE_DIR), "assets", "kalki_logo.png")
+
+# Signing certificate.
+#
+# No certificate ships in this repository. Development signing is opt-in and
+# resolved from the environment so that no private key or password ever enters
+# source control or a distributed archive:
+#
+#   KALKI_DEV_CERT_PATH      absolute path to a .pfx outside the repo
+#   KALKI_DEV_CERT_PASSWORD  its password
+#
+# Production Store signing is performed by Microsoft Partner Center and needs
+# neither of these. Leaving them unset produces an unsigned MSIX, which is
+# exactly what Store submission expects.
+CERT_PATH = os.environ.get("KALKI_DEV_CERT_PATH", "")
+CERT_PASS = os.environ.get("KALKI_DEV_CERT_PASSWORD", "")
+CERT_NAME = os.path.basename(CERT_PATH) if CERT_PATH else ""
+
+
+def dev_signing_available():
+    """True only when the maintainer has pointed at an external certificate."""
+    return bool(CERT_PATH and CERT_PASS and os.path.isfile(CERT_PATH))
+
+def find_sdk_tool(tool_name):
+    # Find Windows 10 SDK path
+    base_path = r"C:\Program Files (x86)\Windows Kits\10\bin"
+    if not os.path.exists(base_path):
+        return None
+    # Find newest version
+    versions = [d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
+    if not versions:
+        return None
+    versions.sort(reverse=True)
+    
+    # Prefer x64
+    for v in versions:
+        arch_path = os.path.join(base_path, v, "x64", tool_name)
+        if os.path.exists(arch_path):
+            return arch_path
+            
+    # Fallback to arm64 or x86
+    for v in versions:
+        for arch in ["arm64", "x86"]:
+            arch_path = os.path.join(base_path, v, arch, tool_name)
+            if os.path.exists(arch_path):
+                return arch_path
+    return None
+
+def build_manifest():
+    print("Generating AppxManifest.xml...")
+    
+    Package = Element("Package", {
+        "xmlns": "http://schemas.microsoft.com/appx/manifest/foundation/windows10",
+        "xmlns:uap": "http://schemas.microsoft.com/appx/manifest/uap/windows10",
+        "xmlns:rescap": "http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+    })
+    
+    Identity = SubElement(Package, "Identity", {
+        "Name": APP_NAME,
+        "ProcessorArchitecture": "x64",
+        "Publisher": PUBLISHER_NAME,
+        "Version": APP_VERSION
+    })
+    
+    Properties = SubElement(Package, "Properties")
+    SubElement(Properties, "DisplayName").text = APP_NAME
+    SubElement(Properties, "PublisherDisplayName").text = PUBLISHER_DISPLAY_NAME
+    SubElement(Properties, "Description").text = APP_DESCRIPTION
+    SubElement(Properties, "Logo").text = r"Assets\StoreLogo.png"
+    
+    Resources = SubElement(Package, "Resources")
+    SubElement(Resources, "Resource", {"Language": "en-us"})
+    
+    Dependencies = SubElement(Package, "Dependencies")
+    SubElement(Dependencies, "TargetDeviceFamily", {
+        "Name": "Windows.Desktop",
+        "MinVersion": "10.0.17763.0",
+        "MaxVersionTested": "10.0.26100.0"
+    })
+    
+    Capabilities = SubElement(Package, "Capabilities")
+    SubElement(Capabilities, "rescap:Capability", {"Name": "runFullTrust"})
+    SubElement(Capabilities, "Capability", {"Name": "internetClient"})
+    SubElement(Capabilities, "Capability", {"Name": "privateNetworkClientServer"})
+    
+    Applications = SubElement(Package, "Applications")
+    Application = SubElement(Applications, "Application", {
+        "Id": APP_NAME,
+        "Executable": f"{APP_NAME}.exe",
+        "EntryPoint": "Windows.FullTrustApplication"
+    })
+    
+    VisualElements = SubElement(Application, "uap:VisualElements", {
+        "DisplayName": APP_NAME,
+        "Description": APP_DESCRIPTION,
+        "BackgroundColor": "transparent",
+        "Square150x150Logo": r"Assets\Square150x150Logo.png",
+        "Square44x44Logo": r"Assets\Square44x44Logo.png"
+    })
+    SubElement(VisualElements, "uap:DefaultTile", {"Wide310x150Logo": r"Assets\Wide310x150Logo.png"})
+    SubElement(VisualElements, "uap:SplashScreen", {"Image": r"Assets\SplashScreen.png"})
+    
+    xml_str = minidom.parseString(tostring(Package)).toprettyxml(indent="  ")
+    with open(os.path.join(MSIX_STAGING, "AppxManifest.xml"), "w", encoding="utf-8") as f:
+        f.write(xml_str)
+
+def create_assets():
+    print("Creating Assets...")
+    assets_dir = os.path.join(MSIX_STAGING, "Assets")
+    os.makedirs(assets_dir, exist_ok=True)
+    
+    try:
+        from PIL import Image
+        img = Image.open(ASSETS_SRC_ICON)
+        img.resize((150, 150)).save(os.path.join(assets_dir, "Square150x150Logo.png"))
+        img.resize((44, 44)).save(os.path.join(assets_dir, "Square44x44Logo.png"))
+        img.resize((50, 50)).save(os.path.join(assets_dir, "StoreLogo.png"))
+        img.resize((620, 300)).save(os.path.join(assets_dir, "SplashScreen.png"))
+        img.resize((310, 150)).save(os.path.join(assets_dir, "Wide310x150Logo.png"))
+    except ImportError:
+        print("Pillow not installed, using raw copies (may cause store rejection).")
+        shutil.copy(ASSETS_SRC_ICON, os.path.join(assets_dir, "Square150x150Logo.png"))
+        shutil.copy(ASSETS_SRC_ICON, os.path.join(assets_dir, "Square44x44Logo.png"))
+        shutil.copy(ASSETS_SRC_ICON, os.path.join(assets_dir, "StoreLogo.png"))
+        shutil.copy(ASSETS_SRC_ICON, os.path.join(assets_dir, "SplashScreen.png"))
+        shutil.copy(ASSETS_SRC_ICON, os.path.join(assets_dir, "Wide310x150Logo.png"))
+
+def build_msix():
+    makeappx = find_sdk_tool("makeappx.exe")
+    signtool = find_sdk_tool("signtool.exe")
+    
+    if not makeappx or not signtool:
+        print("Error: Windows 10 SDK (makeappx.exe, signtool.exe) not found!")
+        print("Please install Windows 10 SDK.")
+        return False
+        
+    print(f"Found makeappx: {makeappx}")
+    print(f"Found signtool: {signtool}")
+
+    print("Cleaning staging directory...")
+    if os.path.exists(MSIX_STAGING):
+        shutil.rmtree(MSIX_STAGING)
+    os.makedirs(MSIX_STAGING)
+    
+    print("Copying compiled binaries and payload...")
+    dist_root = os.path.join(BASE_DIR, "dist")
+    if not os.path.exists(DIST_DIR):
+        print(f"Error: {DIST_DIR} not found. Please run PyInstaller first.")
+        return False
+        
+    # 1. Copy main KALKI bundle
+    for item in os.listdir(DIST_DIR):
+        s = os.path.join(DIST_DIR, item)
+        d = os.path.join(MSIX_STAGING, item)
+        if os.path.isdir(s):
+            shutil.copytree(s, d)
+        else:
+            shutil.copy2(s, d)
+
+    # 2. Copy all supporting service binaries
+    service_map = {
+        "KALKI_Pet": os.path.join(MSIX_STAGING, "services", "pet"),
+        "KALKI_Setup_Wizard": os.path.join(MSIX_STAGING, "services", "setup_wizard"),
+        "KALKI_Server": os.path.join(MSIX_STAGING, "services", "server"),
+        "KALKI_Listener": os.path.join(MSIX_STAGING, "services", "listener"),
+        "KALKI_Setup_Google": os.path.join(MSIX_STAGING, "services", "setup_google"),
+        "KALKI_Setup_Spotify": os.path.join(MSIX_STAGING, "services", "setup_spotify"),
+    }
+    for svc_folder, dest in service_map.items():
+        src = os.path.join(dist_root, svc_folder)
+        if os.path.exists(src):
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            shutil.copytree(src, dest)
+
+    # 3. Copy Assets, Frontend UI, and Browser binaries
+    root_project = os.path.dirname(BASE_DIR)
+    
+    assets_src = os.path.join(root_project, "assets")
+    if os.path.exists(assets_src):
+        shutil.copytree(assets_src, os.path.join(MSIX_STAGING, "assets"))
+
+    plugins_src = os.path.join(BASE_DIR, "plugins")
+    if os.path.exists(plugins_src):
+        shutil.copytree(plugins_src, os.path.join(MSIX_STAGING, "plugins"))
+
+    browsers_src = os.path.join(root_project, "browsers")
+    if os.path.exists(browsers_src):
+        shutil.copytree(browsers_src, os.path.join(MSIX_STAGING, "browsers"))
+
+    # Frontend application bundle. index.html alone renders a blank window.
+    ui_src = os.path.join(BASE_DIR, "ui")
+    if os.path.exists(ui_src):
+        shutil.copytree(ui_src, os.path.join(MSIX_STAGING, "ui"))
+    else:
+        raise SystemExit("app/ui is missing - the frontend bundle must be packaged")
+
+    for f in ["index.html", "manifest.json", "service-worker.js", "config.example.py"]:
+        src_file = os.path.join(BASE_DIR, f)
+        if os.path.exists(src_file):
+            shutil.copy2(src_file, os.path.join(MSIX_STAGING, f))
+
+    for f in ["LICENSE", "TERMS.md"]:
+        src_file = os.path.join(root_project, f)
+        if os.path.exists(src_file):
+            shutil.copy2(src_file, os.path.join(MSIX_STAGING, f))
+            
+    build_manifest()
+    create_assets()
+    
+    print("Packing MSIX...")
+    msix_win_dir = os.path.join(OUTPUT_DIR, "windows")
+    os.makedirs(msix_win_dir, exist_ok=True)
+    msix_out = os.path.join(msix_win_dir, f"{APP_NAME}_v{_APP_VERSION}.msix")
+    if os.path.exists(msix_out):
+        os.remove(msix_out)
+        
+    subprocess.run([makeappx, "pack", "/d", MSIX_STAGING, "/p", msix_out, "/o"], check=True)
+    
+    # Development signing is opt-in. With no certificate configured the MSIX is
+    # left unsigned, which is what Microsoft Partner Center expects on
+    # submission - it applies production signing itself.
+    if not CERT_PASS:
+        print("Unsigned MSIX produced. Set KALKI_DEV_CERT_PATH and "
+              "KALKI_DEV_CERT_PASSWORD to sign it for local testing.")
+        print(f"\nSUCCESS! MSIX generated at: {msix_out}")
+        return True
+
+    cert_path = CERT_PATH or os.path.join(tempfile.gettempdir(), "KALKI_Dev_Cert.pfx")
+    if not os.path.exists(cert_path):
+        print("Generating self-signed certificate for local testing...")
+        ps_cmd = f'''
+        $cert = New-SelfSignedCertificate -Type Custom -Subject "{PUBLISHER_NAME}" -KeyUsage DigitalSignature -FriendlyName "KALKI Dev Cert" -CertStoreLocation "Cert:\\CurrentUser\\My" -TextExtension @("2.5.29.37={{text}}1.3.6.1.5.5.7.3.3", "2.5.29.19={{text}}")
+        $pwd = ConvertTo-SecureString -String "{CERT_PASS}" -Force -AsPlainText
+        Export-PfxCertificate -Cert $cert -FilePath "{cert_path}" -Password $pwd
+        '''
+        subprocess.run(["powershell", "-Command", ps_cmd], check=True)
+        
+    # Trust self-signed certificate in CurrentUser\TrustedPeople for seamless local installation
+    ps_trust_cmd = f'''
+    $pwd = ConvertTo-SecureString -String "{CERT_PASS}" -Force -AsPlainText
+    Import-PfxCertificate -FilePath "{cert_path}" -CertStoreLocation "Cert:\\CurrentUser\\TrustedPeople" -Password $pwd -ErrorAction SilentlyContinue
+    '''
+    subprocess.run(["powershell", "-Command", ps_trust_cmd], check=False)
+        
+    print("Signing MSIX...")
+    subprocess.run([signtool, "sign", "/fd", "SHA256", "/a", "/f", cert_path, "/p", CERT_PASS, msix_out], check=True)
+    
+    print(f"\nSUCCESS! MSIX generated at: {msix_out}")
+
+if __name__ == "__main__":
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    build_msix()

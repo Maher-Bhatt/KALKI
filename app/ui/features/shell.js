@@ -51,7 +51,6 @@ export function buildShell(root) {
   const titlebar = h('div.title.pywebview-drag-region', null,
     h('div.title-brand', null,
       h('span.dot.active', { title: 'Desktop Sovereign Engine Linked' }),
-      h('span.title-brand-name', null, 'KALKI'),
       h('span.badge-core', null, 'DESKTOP OS CORE')
     ),
     palBtn,
@@ -67,22 +66,7 @@ export function buildShell(root) {
         type: 'button',
         title: 'Pin Always-on-Top',
         onClick: () => desktop.togglePin().then(r => ok(r?.pinned ? 'Window Pinned on Top' : 'Window Unpinned'))
-      }, icon('pin', 13)),
-      h('button.win-btn', {
-        type: 'button',
-        title: 'Minimize Window',
-        onClick: () => desktop.minimize()
-      }, '🗕'),
-      h('button.win-btn', {
-        type: 'button',
-        title: 'Maximize / Restore',
-        onClick: () => desktop.toggleMaximize()
-      }, '🗖'),
-      h('button.win-btn.close-btn', {
-        type: 'button',
-        title: 'Close to System Tray',
-        onClick: () => desktop.close()
-      }, '✕')
+      }, icon('pin', 13))
     )
   );
 

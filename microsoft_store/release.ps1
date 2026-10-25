@@ -59,6 +59,7 @@ if (-not $SkipBuild) {
 $distDir = Join-Path $AppDir 'dist'
 $copyMap = [ordered]@{
     'KALKI' = ''
+    'KALKI_Pet' = 'services\pet'
     'KALKI_Setup_Wizard' = 'services\setup_wizard'
     'KALKI_Server' = 'services\server'
     'KALKI_Listener' = 'services\listener'

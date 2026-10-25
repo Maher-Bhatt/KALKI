@@ -63,6 +63,7 @@ Log "Copying isolated PyInstaller runtimes..."
 # AppxManifest and put helper programs in named service directories.
 $distFolders = [ordered]@{
     "KALKI" = ""
+    "KALKI_Pet" = "services\pet"
     "KALKI_Server" = "services\server"
     "KALKI_Listener" = "services\listener"
     "KALKI_Setup_Wizard" = "services\setup_wizard"
