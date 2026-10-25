@@ -12,7 +12,7 @@
 <br>
 
 <p align="center">
-  <a href="marketing/index.html">
+  <a href="https://kalki-marketing.vercel.app/" target="_blank" rel="noopener">
     <img src="https://img.shields.io/badge/%F0%9F%8C%90_LAUNCH_LIVE_INTERACTIVE_WEB_PORTAL-FFF4E2?style=for-the-badge&labelColor=070809&color=FFF4E2" alt="Launch Live Interactive Web Portal" height="38">
   </a>
 </p>
@@ -22,10 +22,10 @@
 </p>
 
 <p align="center">
-  <strong><a href="marketing/download.html">⚡ Standalone Downloads</a></strong> &nbsp;•&nbsp;
-  <strong><a href="marketing/pets.html">🐱 Companion Pets Fleet</a></strong> &nbsp;•&nbsp;
-  <strong><a href="marketing/security.html">🛡️ ShieldCore Cyber &amp; 12 Tools</a></strong> &nbsp;•&nbsp;
-  <strong><a href="marketing/docs.html">📚 Architecture &amp; API Docs</a></strong> &nbsp;•&nbsp;
+  <strong><a href="https://kalki-marketing.vercel.app/download.html" target="_blank" rel="noopener">⚡ Standalone Downloads</a></strong> &nbsp;•&nbsp;
+  <strong><a href="https://kalki-marketing.vercel.app/pets.html" target="_blank" rel="noopener">🐱 Companion Pets Fleet</a></strong> &nbsp;•&nbsp;
+  <strong><a href="https://kalki-marketing.vercel.app/security.html" target="_blank" rel="noopener">🛡️ ShieldCore Cyber &amp; 12 Tools</a></strong> &nbsp;•&nbsp;
+  <strong><a href="https://kalki-marketing.vercel.app/docs.html" target="_blank" rel="noopener">📚 Architecture &amp; API Docs</a></strong> &nbsp;•&nbsp;
   <strong><a href="INSTALLATION_GUIDE.md">📖 Install Guide</a></strong>
 </p>
 
@@ -51,11 +51,11 @@ KALKI features a fully-realized multi-page marketing and documentation website d
 
 | Page | Description | Direct Link |
 |---|---|---|
-| **Overview Portal** | 3D Filament WebGL Core, system architecture, feature breakdown, and terminal simulator. | [marketing/index.html](marketing/index.html) |
-| **Companion Pets Fleet** | Deep lore & interactive playground for all 6 companion species (Gobi, Kittu, Byte, Draco, Nova, Kitsu) with feeding, dance mode, speech synthesis, and Web Audio SFX. | [marketing/pets.html](marketing/pets.html) |
-| **ShieldCore &amp; 12 Cyber Tools** | 60FPS radar sweep scope, live heuristic telemetry, and interactive sandbox workbench testing all 12 offensive/defensive cyber tools in the browser. | [marketing/security.html](marketing/security.html) |
-| **System Documentation** | Searchable system manual covering all 83 REST/SSE API routes, DPAPI & AES-256 vault security, and offline LLM setup. | [marketing/docs.html](marketing/docs.html) |
-| **Standalone Downloads** | Multi-OS binaries for Windows, Linux, and macOS with client-side SHA-256 Web Crypto verification. Zero store middleware. | [marketing/download.html](marketing/download.html) |
+| **Overview Portal** | 3D Filament WebGL Core, system architecture, feature breakdown, and terminal simulator. | [KALKI — Sovereign AI Desktop Assistant & Endpoint Defense](https://kalki-marketing.vercel.app/) |
+| **Companion Pets Fleet** | Deep lore & interactive playground for all 6 companion species (Gobi, Kittu, Byte, Draco, Nova, Kitsu) with feeding, dance mode, speech synthesis, and Web Audio SFX. | [Companion Pets Fleet](https://kalki-marketing.vercel.app/pets.html) |
+| **ShieldCore &amp; 12 Cyber Tools** | 60FPS radar sweep scope, live heuristic telemetry, and interactive sandbox workbench testing all 12 offensive/defensive cyber tools in the browser. | [ShieldCore & 12 Cyber Tools](https://kalki-marketing.vercel.app/security.html) |
+| **System Documentation** | Searchable system manual covering all 83 REST/SSE API routes, DPAPI & AES-256 vault security, and offline LLM setup. | [System Documentation](https://kalki-marketing.vercel.app/docs.html) |
+| **Standalone Downloads** | Multi-OS binaries for Windows, Linux, and macOS with client-side SHA-256 Web Crypto verification. Zero store middleware. | [Standalone Downloads](https://kalki-marketing.vercel.app/download.html) |
 
 ---
 
@@ -219,7 +219,7 @@ Experience KALKI's real-time desktop subsystems in action:
 </p>
 
 <p align="center">
-  <a href="marketing/index.html"><strong>🌐 Open Full Live Interactive Experience (Interactive Workspace Simulator, Live Pet Playground & Synthesizer) →</strong></a>
+  <a href="https://kalki-marketing.vercel.app/" target="_blank" rel="noopener"><strong>🌐 Open Full Live Interactive Experience (Interactive Workspace Simulator, Live Pet Playground & Synthesizer) →</strong></a>
 </p>
 
 ---
@@ -252,7 +252,7 @@ python -m unittest app/sandbox_tool_test.py
 - 📚 [**Complete System Documentation (KALKI_COMPLETE_SYSTEM_DOCUMENTATION.md)**](KALKI_COMPLETE_SYSTEM_DOCUMENTATION.md): Deep architectural manual covering all 30 frontend modules, server APIs, and cryptographic security.
 - 📝 [**Release Notes (release_notes.md)**](release_notes.md): Chronological history of all features, bug fixes, and improvements.
 - 📋 [**Changelog (CHANGES.md)**](CHANGES.md): Granular file-by-file update log.
-- 🌐 [**Marketing & Interactive Showcase Portal**](marketing/index.html): Complete standalone web portal with multi-page structure ready for public hosting.
+- 🌐 [**KALKI — Sovereign AI Desktop Assistant & Endpoint Defense**](https://kalki-marketing.vercel.app/): Live multi-page web portal deployed on Vercel (also available locally in `marketing/index.html`).
 
 ---
 
