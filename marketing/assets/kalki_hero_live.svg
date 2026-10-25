@@ -1,185 +1,276 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 320" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 340" width="100%" height="100%">
   <defs>
     <!-- Background Gradient -->
-    <radialGradient id="bgGrad" cx="50%" cy="30%" r="80%">
-      <stop offset="0%" stop-color="#0e172a"/>
-      <stop offset="60%" stop-color="#07090e"/>
+    <radialGradient id="bgRadial" cx="50%" cy="35%" r="75%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="45%" stop-color="#070a12"/>
       <stop offset="100%" stop-color="#020408"/>
     </radialGradient>
 
-    <!-- Neon Glow Filters -->
-    <filter id="glowCyan" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="8" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
+    <!-- Center Ambient Glow -->
+    <radialGradient id="centerAura" cx="35%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(0, 243, 255, 0.18)"/>
+      <stop offset="50%" stop-color="rgba(168, 85, 247, 0.1)"/>
+      <stop offset="100%" stop-color="rgba(0, 0, 0, 0)"/>
+    </radialGradient>
 
-    <filter id="glowPurple" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="12" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-
-    <!-- Linear Gradients -->
-    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="50%" stop-color="#00f3ff"/>
-      <stop offset="100%" stop-color="#a855f7"/>
-    </linearGradient>
-
-    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+    <!-- Border Glow Gradient -->
+    <linearGradient id="borderGlow" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#00f3ff"/>
-      <stop offset="50%" stop-color="#a855f7"/>
+      <stop offset="35%" stop-color="#a855f7"/>
+      <stop offset="70%" stop-color="#3b82f6"/>
       <stop offset="100%" stop-color="#10b981"/>
     </linearGradient>
 
-    <linearGradient id="scanlineGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="rgba(0, 243, 255, 0)"/>
-      <stop offset="50%" stop-color="rgba(0, 243, 255, 0.15)"/>
-      <stop offset="100%" stop-color="rgba(0, 243, 255, 0)"/>
+    <!-- Text Neon Gradient -->
+    <linearGradient id="kalkiGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="40%" stop-color="#e0f7ff"/>
+      <stop offset="75%" stop-color="#00f3ff"/>
+      <stop offset="100%" stop-color="#c084fc"/>
     </linearGradient>
 
+    <!-- Equalizer Gradient -->
+    <linearGradient id="eqGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#00f3ff"/>
+      <stop offset="60%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+
+    <!-- Core Filters -->
+    <filter id="neonBlur" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur1"/>
+      <feGaussianBlur stdDeviation="16" result="blur2"/>
+      <feMerge>
+        <feMergeNode in="blur2"/>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
     <style>
-      .mono-text { font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace; }
-      .sans-text { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight: 800; }
+      .mono { font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace; }
+      .sans { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
       
-      @keyframes pulseGlow {
-        0%, 100% { opacity: 0.8; transform: scale(1); }
-        50% { opacity: 1; transform: scale(1.03); }
+      @keyframes scanMotion {
+        0% { transform: translateY(-340px); }
+        100% { transform: translateY(340px); }
       }
 
-      @keyframes scanline {
-        0% { transform: translateY(-320px); }
-        100% { transform: translateY(320px); }
+      @keyframes ringPulse {
+        0%, 100% { transform: scale(1); opacity: 0.7; }
+        50% { transform: scale(1.06); opacity: 1; }
       }
 
-      @keyframes eqBounce1 { 0%, 100% { height: 10px; y: 250px; } 50% { height: 28px; y: 232px; } }
-      @keyframes eqBounce2 { 0%, 100% { height: 22px; y: 238px; } 50% { height: 12px; y: 248px; } }
-      @keyframes eqBounce3 { 0%, 100% { height: 16px; y: 244px; } 50% { height: 32px; y: 228px; } }
-      @keyframes eqBounce4 { 0%, 100% { height: 30px; y: 230px; } 50% { height: 14px; y: 246px; } }
-      @keyframes eqBounce5 { 0%, 100% { height: 14px; y: 246px; } 50% { height: 26px; y: 234px; } }
-
-      @keyframes borderDash {
-        0% { stroke-dashoffset: 0; }
-        100% { stroke-dashoffset: 1000; }
+      @keyframes radarSweep {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
       }
 
-      .eq1 { animation: eqBounce1 0.7s infinite ease-in-out; }
-      .eq2 { animation: eqBounce2 0.9s infinite ease-in-out 0.2s; }
-      .eq3 { animation: eqBounce3 0.6s infinite ease-in-out 0.1s; }
-      .eq4 { animation: eqBounce4 0.8s infinite ease-in-out 0.3s; }
-      .eq5 { animation: eqBounce5 1.0s infinite ease-in-out 0.15s; }
-      
-      .animated-border {
-        stroke-dasharray: 60 120;
-        animation: borderDash 25s linear infinite;
+      .scanline {
+        animation: scanMotion 7s linear infinite;
+      }
+
+      .pulse-ring {
+        transform-origin: 100px 170px;
+        animation: ringPulse 3s infinite ease-in-out;
       }
     </style>
   </defs>
 
-  <!-- Card Background -->
-  <rect x="2" y="2" width="936" height="316" rx="20" fill="url(#bgGrad)"/>
-  
-  <!-- Subtle Cyber Grid -->
-  <g opacity="0.08" stroke="#00f3ff" stroke-width="1">
-    <line x1="0" y1="64" x2="940" y2="64"/>
-    <line x1="0" y1="128" x2="940" y2="128"/>
-    <line x1="0" y1="192" x2="940" y2="192"/>
-    <line x1="0" y1="256" x2="940" y2="256"/>
-    <line x1="188" y1="0" x2="188" y2="320"/>
-    <line x1="376" y1="0" x2="376" y2="320"/>
-    <line x1="564" y1="0" x2="564" y2="320"/>
-    <line x1="752" y1="0" x2="752" y2="320"/>
+  <!-- Base Canvas -->
+  <rect x="2" y="2" width="956" height="336" rx="22" fill="url(#bgRadial)"/>
+
+  <!-- Ambient Glowing Aura Behind Logo -->
+  <circle cx="280" cy="170" r="220" fill="url(#centerAura)"/>
+
+  <!-- Cyber Grid Lines -->
+  <g opacity="0.06" stroke="#00f3ff" stroke-width="1">
+    <line x1="0" y1="56" x2="960" y2="56"/>
+    <line x1="0" y1="112" x2="960" y2="112"/>
+    <line x1="0" y1="170" x2="960" y2="170"/>
+    <line x1="0" y1="228" x2="960" y2="228"/>
+    <line x1="0" y1="284" x2="960" y2="284"/>
+    <line x1="160" y1="0" x2="160" y2="340"/>
+    <line x1="320" y1="0" x2="320" y2="340"/>
+    <line x1="480" y1="0" x2="480" y2="340"/>
+    <line x1="640" y1="0" x2="640" y2="340"/>
+    <line x1="800" y1="0" x2="800" y2="340"/>
   </g>
 
-  <!-- Moving Scanline -->
-  <g style="animation: scanline 6s linear infinite;">
-    <rect x="2" y="0" width="936" height="120" fill="url(#scanlineGrad)"/>
+  <!-- Animated Scanline Glass Layer -->
+  <g class="scanline" opacity="0.12">
+    <rect x="2" y="0" width="956" height="140" fill="url(#borderGlow)"/>
   </g>
 
-  <!-- Glowing Animated Border -->
-  <rect x="2" y="2" width="936" height="316" rx="20" fill="none" stroke="url(#borderGrad)" stroke-width="2.5" class="animated-border" filter="url(#glowCyan)"/>
+  <!-- Outer Glass Frame -->
+  <rect x="2" y="2" width="956" height="336" rx="22" fill="none" stroke="url(#borderGlow)" stroke-width="1.8" opacity="0.85"/>
+  <rect x="5" y="5" width="950" height="330" rx="19" fill="none" stroke="rgba(255, 255, 255, 0.04)" stroke-width="1"/>
 
-  <!-- Top Pill / Telemetry Status -->
-  <g transform="translate(40, 36)">
-    <rect x="0" y="0" width="220" height="28" rx="14" fill="rgba(0, 243, 255, 0.08)" stroke="rgba(0, 243, 255, 0.3)" stroke-width="1"/>
-    <circle cx="16" cy="14" r="5" fill="#00f3ff">
-      <animate attributeName="opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite"/>
+  <!-- Top Status Bar -->
+  <g transform="translate(40, 32)">
+    <!-- Version Chip -->
+    <rect x="0" y="0" width="180" height="28" rx="14" fill="rgba(0, 243, 255, 0.08)" stroke="rgba(0, 243, 255, 0.3)" stroke-width="1"/>
+    <circle cx="16" cy="14" r="4.5" fill="#00f3ff">
+      <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/>
     </circle>
-    <text x="30" y="18" fill="#00f3ff" class="mono-text" font-size="11" font-weight="600" letter-spacing="1">SYSTEM READY // v1.4.2</text>
-  </g>
+    <text x="30" y="18" fill="#00f3ff" class="mono" font-size="11" font-weight="700" letter-spacing="1">SYSTEM // v1.4.2</text>
 
-  <g transform="translate(680, 36)">
-    <rect x="0" y="0" width="220" height="28" rx="14" fill="rgba(16, 185, 129, 0.08)" stroke="rgba(16, 185, 129, 0.3)" stroke-width="1"/>
-    <circle cx="16" cy="14" r="5" fill="#10b981">
-      <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/>
-    </circle>
-    <text x="30" y="18" fill="#10b981" class="mono-text" font-size="11" font-weight="600" letter-spacing="1">SHIELDCORE: ACTIVE</text>
-  </g>
-
-  <!-- Brand Logo & Title -->
-  <g transform="translate(40, 100)">
-    <!-- Hexagonal Core Icon -->
-    <g transform="translate(0, 10)" filter="url(#glowCyan)">
-      <polygon points="35,0 70,20 70,60 35,80 0,60 0,20" fill="rgba(0, 243, 255, 0.12)" stroke="#00f3ff" stroke-width="2.5"/>
-      <polygon points="35,15 55,27 55,53 35,65 15,53 15,27" fill="#07090e" stroke="#a855f7" stroke-width="2"/>
-      <circle cx="35" cy="40" r="8" fill="#00f3ff">
-        <animate attributeName="r" values="7;10;7" dur="2.5s" repeatCount="indefinite"/>
+    <!-- Defender Status Chip -->
+    <g transform="translate(195, 0)">
+      <rect x="0" y="0" width="190" height="28" rx="14" fill="rgba(16, 185, 129, 0.08)" stroke="rgba(16, 185, 129, 0.3)" stroke-width="1"/>
+      <circle cx="16" cy="14" r="4.5" fill="#10b981">
+        <animate attributeName="opacity" values="1;0.4;1" dur="1.6s" repeatCount="indefinite"/>
       </circle>
+      <text x="30" y="18" fill="#10b981" class="mono" font-size="11" font-weight="700" letter-spacing="1">SHIELDCORE: ACTIVE</text>
     </g>
 
-    <!-- Main Title -->
-    <text x="95" y="52" fill="url(#textGrad)" class="sans-text" font-size="52" letter-spacing="-1">KALKI</text>
-    <text x="268" y="52" fill="#f8fafc" class="sans-text" font-size="34" letter-spacing="-0.5" opacity="0.95">AI ASSISTANT</text>
-
-    <!-- Subtitle -->
-    <text x="96" y="84" fill="#94a3b8" class="mono-text" font-size="14" font-weight="500" letter-spacing="0.5">
-      SOVEREIGN DESKTOP INTELLIGENCE • DESKTOP COMPANION PET • SHIELDCORE DEFENSE
-    </text>
+    <!-- Model Auto-Router Chip -->
+    <g transform="translate(700, 0)">
+      <rect x="0" y="0" width="180" height="28" rx="14" fill="rgba(168, 85, 247, 0.08)" stroke="rgba(168, 85, 247, 0.3)" stroke-width="1"/>
+      <circle cx="16" cy="14" r="4.5" fill="#a855f7">
+        <animate attributeName="opacity" values="1;0.3;1" dur="2.2s" repeatCount="indefinite"/>
+      </circle>
+      <text x="30" y="18" fill="#c084fc" class="mono" font-size="11" font-weight="700" letter-spacing="1">ROUTER: COGNITIVE</text>
+    </g>
   </g>
 
-  <!-- Bottom Interactive Capability Pills & Audio Visualizer -->
-  <g transform="translate(40, 220)">
-    <!-- Capability Badges -->
-    <g transform="translate(0, 10)">
-      <rect x="0" y="0" width="145" height="34" rx="8" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)"/>
-      <text x="14" y="22" fill="#e2e8f0" class="mono-text" font-size="11.5">● 100% LOCAL-FIRST</text>
+  <!-- Central Holographic Mascot & Typography Hub -->
+  <g transform="translate(50, 95)">
+    <!-- 3D Cyber Reactor Hex Core -->
+    <g transform="translate(0, 5)">
+      <!-- Outer Pulsing Ring -->
+      <polygon points="50,5 95,30 95,85 50,110 5,85 5,30" fill="rgba(0, 243, 255, 0.06)" stroke="#00f3ff" stroke-width="2" class="pulse-ring" filter="url(#softGlow)"/>
+      
+      <!-- Inner Core Hexagon -->
+      <polygon points="50,18 83,38 83,77 50,97 17,77 17,38" fill="#060911" stroke="#a855f7" stroke-width="2.5" filter="url(#softGlow)"/>
+      
+      <!-- Center Reactor Glowing Sphere -->
+      <circle cx="50" cy="57" r="16" fill="url(#borderGlow)" filter="url(#neonBlur)">
+        <animate attributeName="r" values="14;18;14" dur="2.4s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="50" cy="57" r="8" fill="#ffffff"/>
+      
+      <!-- Corner Energy Nodes -->
+      <circle cx="5" cy="30" r="3" fill="#00f3ff"/>
+      <circle cx="95" cy="30" r="3" fill="#00f3ff"/>
+      <circle cx="95" cy="85" r="3" fill="#a855f7"/>
+      <circle cx="5" cy="85" r="3" fill="#a855f7"/>
     </g>
 
-    <g transform="translate(155, 10)">
-      <rect x="0" y="0" width="160" height="34" rx="8" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)"/>
-      <text x="14" y="22" fill="#e2e8f0" class="mono-text" font-size="11.5">● ZERO TELEMETRY</text>
+    <!-- Main Title: KALKI -->
+    <g transform="translate(130, 0)">
+      <text x="0" y="72" fill="url(#kalkiGrad)" class="sans" font-size="68" font-weight="900" letter-spacing="-1.5" filter="url(#softGlow)">
+        KALKI
+      </text>
+      
+      <!-- Gradient Badge for AI Operating System -->
+      <rect x="250" y="24" width="180" height="34" rx="10" fill="rgba(255, 255, 255, 0.05)" stroke="rgba(255, 255, 255, 0.15)"/>
+      <text x="264" y="47" fill="#f8fafc" class="sans" font-size="17" font-weight="800" letter-spacing="1">DESKTOP AI</text>
+
+      <!-- Subtitle -->
+      <text x="2" y="104" fill="#94a3b8" class="mono" font-size="13" font-weight="600" letter-spacing="2">
+        SOVEREIGN WORKSPACE • DESKTOP COMPANION PET • SHIELDCORE DEFENSE
+      </text>
+    </g>
+  </g>
+
+  <!-- Bottom Capabilities & Animated Equalizer Waves -->
+  <g transform="translate(50, 248)">
+    <!-- Pill 1: 100% Local -->
+    <rect x="0" y="0" width="150" height="36" rx="10" fill="rgba(15, 23, 42, 0.7)" stroke="rgba(0, 243, 255, 0.25)" stroke-width="1.2"/>
+    <text x="18" y="23" fill="#e2e8f0" class="mono" font-size="11.5" font-weight="600">● 100% LOCAL-FIRST</text>
+
+    <!-- Pill 2: Zero Telemetry -->
+    <g transform="translate(162, 0)">
+      <rect x="0" y="0" width="155" height="36" rx="10" fill="rgba(15, 23, 42, 0.7)" stroke="rgba(0, 243, 255, 0.25)" stroke-width="1.2"/>
+      <text x="18" y="23" fill="#e2e8f0" class="mono" font-size="11.5" font-weight="600">● ZERO TELEMETRY</text>
     </g>
 
-    <g transform="translate(325, 10)">
-      <rect x="0" y="0" width="160" height="34" rx="8" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)"/>
-      <text x="14" y="22" fill="#e2e8f0" class="mono-text" font-size="11.5">● 12 CYBER TOOLS</text>
+    <!-- Pill 3: 12 Cyber Tools -->
+    <g transform="translate(329, 0)">
+      <rect x="0" y="0" width="155" height="36" rx="10" fill="rgba(15, 23, 42, 0.7)" stroke="rgba(16, 185, 129, 0.3)" stroke-width="1.2"/>
+      <text x="18" y="23" fill="#34d399" class="mono" font-size="11.5" font-weight="600">● 12 CYBER TOOLS</text>
     </g>
 
-    <g transform="translate(495, 10)">
-      <rect x="0" y="0" width="175" height="34" rx="8" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)"/>
-      <text x="14" y="22" fill="#e2e8f0" class="mono-text" font-size="11.5">● COGNITIVE ROUTER</text>
+    <!-- Pill 4: Codex Pet -->
+    <g transform="translate(496, 0)">
+      <rect x="0" y="0" width="165" height="36" rx="10" fill="rgba(15, 23, 42, 0.7)" stroke="rgba(168, 85, 247, 0.3)" stroke-width="1.2"/>
+      <text x="18" y="23" fill="#c084fc" class="mono" font-size="11.5" font-weight="600">● CODEX PET OVERLAY</text>
     </g>
 
-    <!-- Animated Audio Waveform Equalizer (Real-time Simulation) -->
-    <g transform="translate(740, 0)">
-      <text x="0" y="16" fill="#64748b" class="mono-text" font-size="10" letter-spacing="1">AUDIO ENGINE</text>
-      <rect x="0" y="246" width="6" height="14" rx="3" fill="#00f3ff" class="eq1"/>
-      <rect x="10" y="238" width="6" height="22" rx="3" fill="#00f3ff" class="eq2"/>
-      <rect x="20" y="244" width="6" height="16" rx="3" fill="#a855f7" class="eq3"/>
-      <rect x="30" y="230" width="6" height="30" rx="3" fill="#a855f7" class="eq4"/>
-      <rect x="40" y="246" width="6" height="14" rx="3" fill="#00f3ff" class="eq5"/>
-      <rect x="50" y="238" width="6" height="22" rx="3" fill="#00f3ff" class="eq2"/>
-      <rect x="60" y="244" width="6" height="16" rx="3" fill="#a855f7" class="eq1"/>
-      <rect x="70" y="230" width="6" height="30" rx="3" fill="#a855f7" class="eq3"/>
-      <rect x="80" y="246" width="6" height="14" rx="3" fill="#00f3ff" class="eq4"/>
-      <rect x="90" y="238" width="6" height="22" rx="3" fill="#00f3ff" class="eq5"/>
-      <rect x="100" y="244" width="6" height="16" rx="3" fill="#10b981" class="eq2"/>
-      <rect x="110" y="234" width="6" height="26" rx="3" fill="#10b981" class="eq4"/>
+    <!-- Real High-Fidelity Audio Equalizer (Native Animated SVG Rectangles) -->
+    <g transform="translate(685, -15)">
+      <text x="0" y="14" fill="#64748b" class="mono" font-size="10" font-weight="700" letter-spacing="1">AUDIO ENGINE // 60FPS</text>
+      
+      <!-- Bars with SVG <animate> tags for universal browser & GitHub compatibility -->
+      <!-- Bar 1 -->
+      <rect x="0" y="32" width="6" height="18" rx="3" fill="url(#eqGrad)">
+        <animate attributeName="height" values="10;32;14;28;10" dur="0.9s" repeatCount="indefinite"/>
+        <animate attributeName="y" values="40;18;36;22;40" dur="0.9s" repeatCount="indefinite"/>
+      </rect>
+
+      <!-- Bar 2 -->
+      <rect x="11" y="26" width="6" height="24" rx="3" fill="url(#eqGrad)">
+        <animate attributeName="height" values="24;12;36;18;24" dur="0.75s" repeatCount="indefinite"/>
+        <animate attributeName="y" values="26;38;14;32;26" dur="0.75s" repeatCount="indefinite"/>
+      </rect>
+
+      <!-- Bar 3 -->
+      <rect x="22" y="20" width="6" height="30" rx="3" fill="url(#eqGrad)">
+        <animate attributeName="height" values="30;14;38;20;30" dur="1.1s" repeatCount="indefinite"/>
+        <animate attributeName="y" values="20;36;12;30;20" dur="1.1s" repeatCount="indefinite"/>
+      </rect>
+
+      <!-- Bar 4 -->
+      <rect x="33" y="28" width="6" height="22" rx="3" fill="url(#eqGrad)">
+        <animate attributeName="height" values="16;38;22;30;16" dur="0.8s" repeatCount="indefinite"/>
+        <animate attributeName="y" values="34;12;28;20;34" dur="0.8s" repeatCount="indefinite"/>
+      </rect>
+
+      <!-- Bar 5 -->
+      <rect x="44" y="22" width="6" height="28" rx="3" fill="url(#eqGrad)">
+        <animate attributeName="height" values="28;16;34;12;28" dur="1.0s" repeatCount="indefinite"/>
+        <animate attributeName="y" values="22;34;16;38;22" dur="1.0s" repeatCount="indefinite"/>
+      </rect>
+
+      <!-- Bar 6 -->
+      <rect x="55" y="16" width="6" height="34" rx="3" fill="url(#eqGrad)">
+        <animate attributeName="height" values="34;20;14;38;34" dur="0.85s" repeatCount="indefinite"/>
+        <animate attributeName="y" values="16;30;36;12;16" dur="0.85s" repeatCount="indefinite"/>
+      </rect>
+
+      <!-- Bar 7 -->
+      <rect x="66" y="30" width="6" height="20" rx="3" fill="url(#eqGrad)">
+        <animate attributeName="height" values="20;36;16;32;20" dur="0.95s" repeatCount="indefinite"/>
+        <animate attributeName="y" values="30;14;34;18;30" dur="0.95s" repeatCount="indefinite"/>
+      </rect>
+
+      <!-- Bar 8 -->
+      <rect x="77" y="24" width="6" height="26" rx="3" fill="url(#eqGrad)">
+        <animate attributeName="height" values="26;12;34;18;26" dur="0.7s" repeatCount="indefinite"/>
+        <animate attributeName="y" values="24;38;16;32;24" dur="0.7s" repeatCount="indefinite"/>
+      </rect>
+
+      <!-- Bar 9 -->
+      <rect x="88" y="18" width="6" height="32" rx="3" fill="url(#eqGrad)">
+        <animate attributeName="height" values="32;18;38;14;32" dur="1.05s" repeatCount="indefinite"/>
+        <animate attributeName="y" values="18;32;12;36;18" dur="1.05s" repeatCount="indefinite"/>
+      </rect>
+
+      <!-- Bar 10 -->
+      <rect x="99" y="32" width="6" height="18" rx="3" fill="url(#eqGrad)">
+        <animate attributeName="height" values="14;28;10;34;14" dur="0.88s" repeatCount="indefinite"/>
+        <animate attributeName="y" values="36;22;40;16;36" dur="0.88s" repeatCount="indefinite"/>
+      </rect>
     </g>
   </g>
 </svg>
