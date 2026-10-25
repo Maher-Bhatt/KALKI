@@ -14,7 +14,8 @@ import { store, applyUi, notify, subscribe } from '../state/store.js';
 import { dismiss } from '../state/toasts.js';
 import { createPresence, presenceLabel } from '../components/presence.js';
 import { openDialog } from '../components/dialog.js';
-import { system } from '../api/endpoints.js';
+import { system, desktop } from '../api/endpoints.js';
+import { ok } from '../state/toasts.js';
 import { refreshStatus } from '../state/status.js';
 import { openDiagnostics } from './diagnostics.js';
 import { openPalette } from './palette.js';
@@ -47,13 +48,41 @@ export function buildShell(root) {
     icon('search', 14), 'Search or run a command', h('kbd', null, keyLabel('mod+k')));
 
   const micChip = h('span.chip.ok', { id: 'mic' }, 'Mic ready');
-  const titlebar = h('div.title', null,
-    h('span', null, 'KALKI'),
+  const titlebar = h('div.title.pywebview-drag-region', null,
+    h('div.title-brand', null,
+      h('span.dot.active', { title: 'Desktop Sovereign Engine Linked' }),
+      h('span.title-brand-name', null, 'KALKI'),
+      h('span.badge-core', null, 'DESKTOP OS CORE')
+    ),
     palBtn,
-    h('div.row.g8', { title: 'Privacy indicators are always visible' },
+    h('div.title-actions', null,
       micChip,
-      h('span.chip', null, 'Screen not shared'),
-      h('span.chip', null, 'Local-first')
+      h('span.chip.desktop-badge', null, 'Local IPC'),
+      h('button.win-btn.pet-btn', {
+        type: 'button',
+        title: 'Toggle Desktop Companion Pet Mascot',
+        onClick: () => desktop.togglePet().then(() => ok('Desktop Companion Pet toggled'))
+      }, icon('pet', 13), 'Pet'),
+      h('button.win-btn', {
+        type: 'button',
+        title: 'Pin Always-on-Top',
+        onClick: () => desktop.togglePin().then(r => ok(r?.pinned ? 'Window Pinned on Top' : 'Window Unpinned'))
+      }, icon('pin', 13)),
+      h('button.win-btn', {
+        type: 'button',
+        title: 'Minimize Window',
+        onClick: () => desktop.minimize()
+      }, '🗕'),
+      h('button.win-btn', {
+        type: 'button',
+        title: 'Maximize / Restore',
+        onClick: () => desktop.toggleMaximize()
+      }, '🗖'),
+      h('button.win-btn.close-btn', {
+        type: 'button',
+        title: 'Close to System Tray',
+        onClick: () => desktop.close()
+      }, '✕')
     )
   );
 

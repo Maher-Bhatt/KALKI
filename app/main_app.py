@@ -818,74 +818,239 @@ if __name__ == '__main__':
     
 
     class WebApi:
-
         def minimize(self):
-
-            if window: window.minimize()
+            if window:
+                try: window.minimize()
+                except Exception: pass
 
         def toggle_maximize(self):
-
-            if window: window.toggle_fullscreen()
+            if window:
+                try: window.toggle_fullscreen()
+                except Exception: pass
 
         def close(self):
-
             if window:
-
                 if getattr(config, "ENABLE_GLOBAL_HOTKEY", False):
-
-                    window.hide()
-
+                    try: window.hide()
+                    except Exception: pass
                 else:
-
                     try:
-
                         window.destroy()
-
                     except Exception:
-
                         os._exit(0)
 
-        def say_text(self, text):
-
-            """Speak a short UI-triggered command without exposing a shell bridge."""
-
-            import urllib.request
-
-            import json as _json
-
-            payload = _json.dumps({"cmd": str(text or "")}).encode("utf-8")
-
-            request = urllib.request.Request(
-
-                f"http://127.0.0.1:{config.PORT}/api/command",
-
-                data=payload,
-
-                headers={
-
-                    "Content-Type": "application/json",
-
-                    runtime_security.TOKEN_HEADER: runtime_security.get_api_token(),
-
-                },
-
-                method="POST",
-
-            )
-
+        def toggle_pin(self):
+            """Toggle stay on top (pin)."""
             try:
+                if window:
+                    current = getattr(window, "on_top", False)
+                    window.on_top = not current
+                    return {"ok": True, "pinned": window.on_top}
+            except Exception as e:
+                return {"ok": False, "error": str(e)}
+            return {"ok": False}
 
+        def toggle_pet(self):
+            """Toggle or spawn the floating companion pet."""
+            try:
+                _launch_desktop_pet()
+                return {"ok": True}
+            except Exception as e:
+                return {"ok": False, "error": str(e)}
+
+        def exec_command(self, cmd, cwd=None):
+            """Execute a real system terminal command on the host OS."""
+            try:
+                import subprocess, time
+                t0 = time.time()
+                work_dir = cwd if cwd and os.path.exists(cwd) else BASE_DIR
+                res = subprocess.run(
+                    cmd,
+                    shell=True,
+                    cwd=work_dir,
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+                dur = round((time.time() - t0) * 1000)
+                return {
+                    "ok": True,
+                    "exit_code": res.returncode,
+                    "stdout": res.stdout,
+                    "stderr": res.stderr,
+                    "duration_ms": dur
+                }
+            except subprocess.TimeoutExpired:
+                return {"ok": False, "error": "Command timed out after 30 seconds."}
+            except Exception as e:
+                return {"ok": False, "error": str(e)}
+
+        def read_file(self, file_path):
+            """Read content of a local file."""
+            try:
+                p = os.path.abspath(file_path)
+                if not os.path.isfile(p):
+                    return {"ok": False, "error": f"File not found: {file_path}"}
+                with open(p, "r", encoding="utf-8", errors="replace") as f:
+                    content = f.read()
+                return {"ok": True, "path": p, "content": content}
+            except Exception as e:
+                return {"ok": False, "error": str(e)}
+
+        def write_file(self, file_path, content):
+            """Write content to a local file."""
+            try:
+                p = os.path.abspath(file_path)
+                os.makedirs(os.path.dirname(p), exist_ok=True)
+                with open(p, "w", encoding="utf-8") as f:
+                    f.write(content)
+                return {"ok": True, "path": p, "bytes": len(content)}
+            except Exception as e:
+                return {"ok": False, "error": str(e)}
+
+        def list_directory(self, dir_path=None):
+            """List files and folders in a local directory."""
+            try:
+                target = os.path.abspath(dir_path or os.getcwd())
+                if not os.path.isdir(target):
+                    return {"ok": False, "error": f"Directory not found: {target}"}
+                items = []
+                for entry in os.scandir(target):
+                    try:
+                        stat = entry.stat()
+                        items.append({
+                            "name": entry.name,
+                            "path": entry.path,
+                            "is_dir": entry.is_dir(),
+                            "size": stat.st_size if not entry.is_dir() else 0,
+                            "modified": stat.st_mtime
+                        })
+                    except Exception:
+                        pass
+                items.sort(key=lambda x: (not x["is_dir"], x["name"].lower()))
+                return {"ok": True, "path": target, "items": items}
+            except Exception as e:
+                return {"ok": False, "error": str(e)}
+
+        def open_folder_dialog(self):
+            """Native folder picker."""
+            try:
+                if window:
+                    res = window.create_file_dialog(webview.FOLDER_DIALOG)
+                    if res and len(res) > 0:
+                        return {"ok": True, "path": res[0]}
+                return {"ok": False, "cancelled": True}
+            except Exception as e:
+                return {"ok": False, "error": str(e)}
+
+        def open_file_dialog(self):
+            """Native file picker."""
+            try:
+                if window:
+                    res = window.create_file_dialog(webview.OPEN_DIALOG)
+                    if res and len(res) > 0:
+                        return {"ok": True, "path": res[0]}
+                return {"ok": False, "cancelled": True}
+            except Exception as e:
+                return {"ok": False, "error": str(e)}
+
+        def reveal_in_explorer(self, target_path):
+            """Reveal file or folder in OS File Manager."""
+            try:
+                p = os.path.abspath(target_path)
+                if sys.platform == "win32":
+                    subprocess.Popen(f'explorer /select,"{p}"', shell=True)
+                elif sys.platform == "darwin":
+                    subprocess.Popen(["open", "-R", p])
+                else:
+                    subprocess.Popen(["xdg-open", os.path.dirname(p)])
+                return {"ok": True}
+            except Exception as e:
+                return {"ok": False, "error": str(e)}
+
+        def get_system_telemetry(self):
+            """Get live hardware and system telemetry via psutil."""
+            try:
+                import psutil
+                cpu_pct = psutil.cpu_percent(interval=None)
+                mem = psutil.virtual_memory()
+                disk = psutil.disk_usage('/')
+                net = psutil.net_io_counters()
+                return {
+                    "ok": True,
+                    "cpu_percent": cpu_pct,
+                    "memory": {
+                        "total_mb": round(mem.total / (1024*1024)),
+                        "used_mb": round(mem.used / (1024*1024)),
+                        "percent": mem.percent
+                    },
+                    "disk": {
+                        "total_gb": round(disk.total / (1024*1024*1024), 1),
+                        "used_gb": round(disk.used / (1024*1024*1024), 1),
+                        "percent": disk.percent
+                    },
+                    "network": {
+                        "bytes_sent": net.bytes_sent,
+                        "bytes_recv": net.bytes_recv
+                    },
+                    "os": sys.platform,
+                    "hostname": os.environ.get("COMPUTERNAME", os.environ.get("HOSTNAME", "Desktop"))
+                }
+            except Exception as e:
+                return {"ok": False, "error": str(e)}
+
+        def get_process_list(self):
+            """Get active running processes sorted by memory/cpu."""
+            try:
+                import psutil
+                procs = []
+                for p in psutil.process_iter(['pid', 'name', 'memory_info', 'cpu_percent']):
+                    try:
+                        info = p.info
+                        mem_mb = round(info['memory_info'].rss / (1024*1024), 1) if info.get('memory_info') else 0
+                        procs.append({
+                            "pid": info['pid'],
+                            "name": info['name'],
+                            "mem_mb": mem_mb,
+                            "cpu": info.get('cpu_percent', 0.0)
+                        })
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        pass
+                procs.sort(key=lambda x: x["mem_mb"], reverse=True)
+                return {"ok": True, "processes": procs[:50]}
+            except Exception as e:
+                return {"ok": False, "error": str(e)}
+
+        def kill_process(self, pid):
+            """Terminate a process by PID."""
+            try:
+                import psutil
+                proc = psutil.Process(int(pid))
+                proc.kill()
+                return {"ok": True, "message": f"Killed process {pid}"}
+            except Exception as e:
+                return {"ok": False, "error": str(e)}
+
+        def say_text(self, text):
+            """Speak a short UI-triggered command without exposing a shell bridge."""
+            import urllib.request
+            import json as _json
+            payload = _json.dumps({"cmd": str(text or "")}).encode("utf-8")
+            request = urllib.request.Request(
+                f"http://127.0.0.1:{config.PORT}/api/command",
+                data=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    runtime_security.TOKEN_HEADER: runtime_security.get_api_token(),
+                },
+                method="POST",
+            )
+            try:
                 with urllib.request.urlopen(request, timeout=5):
-
                     return True
-
             except Exception as exc:
-
                 print(f"[KALKI] quick action failed: {exc}")
-
                 return False
-
-            
 
     api = WebApi()
 
