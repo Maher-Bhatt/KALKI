@@ -114,41 +114,57 @@ class PetApi:
 
     def get_pet_state(self):
         """Loads pet state from user data or defaults."""
-        try:
-            pet_file = os.path.join(_runtime.user_data_dir, "pet_state.json")
-            if os.path.exists(pet_file):
-                with open(pet_file, "r", encoding="utf-8") as f:
-                    return json.load(f)
-        except Exception:
-            pass
+        for pf in [
+            os.path.join(_runtime.user_data_dir, "data", "pet_state.json"),
+            os.path.join(_runtime.user_data_dir, "pet_state.json")
+        ]:
+            if os.path.exists(pf):
+                try:
+                    with open(pf, "r", encoding="utf-8") as f:
+                        return json.load(f)
+                except Exception:
+                    pass
         return {"species": "gobi", "name": "Gobi", "sound": True, "enabled": True}
 
     def save_pet_state(self, state_dict):
         """Saves pet state to user data directory."""
-        try:
-            pet_file = os.path.join(_runtime.user_data_dir, "pet_state.json")
-            os.makedirs(_runtime.user_data_dir, exist_ok=True)
-            with open(pet_file, "w", encoding="utf-8") as f:
-                json.dump(state_dict, f, indent=2)
-            return True
-        except Exception as e:
-            print(f"[DesktopPet] Failed saving state: {e}")
-            return False
+        success = False
+        for folder in [_runtime.user_data_dir, os.path.join(_runtime.user_data_dir, "data")]:
+            try:
+                os.makedirs(folder, exist_ok=True)
+                pf = os.path.join(folder, "pet_state.json")
+                with open(pf, "w", encoding="utf-8") as f:
+                    json.dump(state_dict, f, indent=2)
+                success = True
+            except Exception as e:
+                print(f"[DesktopPet] Failed saving state to {folder}: {e}")
+        return success
 
     def quit_pet(self):
         """Closes the desktop pet window."""
         os._exit(0)
 
 def _apply_stealth_window_styles():
-    """Removes the window from the Windows taskbar so it behaves as an overlay."""
+    """Removes the window from the Windows taskbar and applies full DWM per-pixel transparency."""
     if sys.platform != "win32":
         return
     import ctypes
     import threading
     user32 = ctypes.windll.user32
+    dwmapi = ctypes.windll.dwmapi
+
+    class MARGINS(ctypes.Structure):
+        _fields_ = [
+            ("cxLeftWidth", ctypes.c_int),
+            ("cxRightWidth", ctypes.c_int),
+            ("cyTopHeight", ctypes.c_int),
+            ("cyBottomHeight", ctypes.c_int),
+        ]
+
     GWL_EXSTYLE = -20
     WS_EX_APPWINDOW = 0x00040000
     WS_EX_TOOLWINDOW = 0x00000080
+    WS_EX_LAYERED = 0x00080000
     SWP_FRAMECHANGED = 0x0020
     SWP_NOMOVE = 0x0002
     SWP_NOSIZE = 0x0001
@@ -161,14 +177,17 @@ def _apply_stealth_window_styles():
             hwnd = user32.FindWindowW(None, "KALKI Desktop Companion")
             if hwnd:
                 try:
+                    # Extend frame across entire window to enable true DWM desktop transparency
+                    margins = MARGINS(-1, -1, -1, -1)
+                    dwmapi.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(margins))
+
                     style = user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
-                    if (style & WS_EX_APPWINDOW) or not (style & WS_EX_TOOLWINDOW):
-                        new_style = (style & ~WS_EX_APPWINDOW) | WS_EX_TOOLWINDOW
-                        user32.SetWindowLongW(hwnd, GWL_EXSTYLE, new_style)
-                        user32.SetWindowPos(
-                            hwnd, 0, 0, 0, 0, 0,
-                            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED
-                        )
+                    new_style = (style & ~WS_EX_APPWINDOW) | WS_EX_TOOLWINDOW | WS_EX_LAYERED
+                    user32.SetWindowLongW(hwnd, GWL_EXSTYLE, new_style)
+                    user32.SetWindowPos(
+                        hwnd, 0, 0, 0, 0, 0,
+                        SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED
+                    )
                     break
                 except Exception:
                     pass
@@ -207,7 +226,7 @@ def main():
         js_api=api
     )
 
-    webview.start(private_mode=False)
+    webview.start(gui="edgechromium", private_mode=False)
 
 if __name__ == "__main__":
     try:

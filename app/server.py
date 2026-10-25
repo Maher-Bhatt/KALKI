@@ -4249,7 +4249,7 @@ def resolve_auto_model(last_user):
     best_groq = "qwen/qwen3.8-27b" if "qwen/qwen3.8-27b" in AVAILABLE_GROQ_MODELS else (AVAILABLE_GROQ_MODELS[0] if AVAILABLE_GROQ_MODELS else "llama-3.1-8b-instant")
     
     if "gemini" in low_prompt and has_gemini:
-        return "gemini-3.5-flash"
+        return "gemini-2.5-flash"
     elif ("gpt" in low_prompt or "openai" in low_prompt) and has_openai:
         return "gpt-4o-mini"
     elif ("groq" in low_prompt or "llama" in low_prompt) and has_groq:
@@ -4257,12 +4257,12 @@ def resolve_auto_model(last_user):
     else:
         is_complex = any(k in low_prompt for k in _HARD_HINTS) or "```" in (last_user or "") or len(low_prompt.split()) > 14
         if is_complex:
-            if has_gemini: return "gemini-3.5-flash"
+            if has_gemini: return "gemini-2.5-flash"
             elif has_openai: return "gpt-4o"
             elif has_groq: return best_groq
             else: return "ollama"
         else:
-            if has_gemini: return "gemini-3.5-flash"
+            if has_gemini: return "gemini-2.5-flash"
             elif has_groq: return best_groq
             elif has_openai: return "gpt-4o-mini"
             else: return "ollama"
@@ -4377,7 +4377,7 @@ def ask_ai_stream(user_messages):
     if chosen.startswith("gemini-"):
         # Gemini automatic quota & model fallback cascade
         gemini_candidates = [chosen]
-        for m_cand in ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-flash-latest", "gemini-2.5-flash"]:
+        for m_cand in ["gemini-2.5-flash", "gemini-flash-latest"]:
             if m_cand not in gemini_candidates:
                 gemini_candidates.append(m_cand)
                 
@@ -5135,8 +5135,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/pet":
             pet_file = os.path.join(DATA_DIR, "pet_state.json")
             pet_data = {
-                "species": "cat",
-                "name": "Kittu",
+                "species": "gobi",
+                "name": "Gobi",
                 "color": "#ffb833",
                 "sound": True,
                 "enabled": True,
@@ -5466,7 +5466,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/models":
             models = ["auto"]
             if getattr(config, "GEMINI_API_KEY", "") and not getattr(config, "GEMINI_API_KEY", "").startswith("PASTE_"):
-                models += ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash"]
+                models += ["gemini-2.5-flash", "gemini-flash-latest"]
             if getattr(config, "OPENAI_API_KEY", "") and not getattr(config, "OPENAI_API_KEY", "").startswith("PASTE_"):
                 models += ["gpt-4o-mini", "gpt-4o"]
             if getattr(config, "ANTHROPIC_API_KEY", "") and not getattr(config, "ANTHROPIC_API_KEY", "").startswith("PASTE_"):
@@ -5872,8 +5872,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/pet":
             pet_file = os.path.join(DATA_DIR, "pet_state.json")
             pet_data = {
-                "species": "cat",
-                "name": "Kittu",
+                "species": "gobi",
+                "name": "Gobi",
                 "color": "#ffb833",
                 "sound": True,
                 "enabled": True,
@@ -5892,6 +5892,10 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 os.makedirs(DATA_DIR, exist_ok=True)
                 with open(pet_file, "w", encoding="utf-8") as f:
+                    json.dump(pet_data, f, indent=2)
+                # Also mirror to root user_data_dir so standalone desktop_pet.py always shares state
+                root_pet = os.path.join(os.path.dirname(DATA_DIR), "pet_state.json")
+                with open(root_pet, "w", encoding="utf-8") as f:
                     json.dump(pet_data, f, indent=2)
             except Exception:
                 pass
@@ -5962,8 +5966,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/pet":
             pet_file = os.path.join(DATA_DIR, "pet_state.json")
             pet_data = {
-                "species": "cat",
-                "name": "Kittu",
+                "species": "gobi",
+                "name": "Gobi",
                 "color": "#ffb833",
                 "sound": True,
                 "enabled": True,
@@ -5982,6 +5986,10 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 os.makedirs(DATA_DIR, exist_ok=True)
                 with open(pet_file, "w", encoding="utf-8") as f:
+                    json.dump(pet_data, f, indent=2)
+                # Also mirror to root user_data_dir so standalone desktop_pet.py always shares state
+                root_pet = os.path.join(os.path.dirname(DATA_DIR), "pet_state.json")
+                with open(root_pet, "w", encoding="utf-8") as f:
                     json.dump(pet_data, f, indent=2)
             except Exception:
                 pass
@@ -6096,8 +6104,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/pet":
             pet_file = os.path.join(DATA_DIR, "pet_state.json")
             pet_data = {
-                "species": "cat",
-                "name": "Kittu",
+                "species": "gobi",
+                "name": "Gobi",
                 "color": "#ffb833",
                 "sound": True,
                 "enabled": True,
@@ -6116,6 +6124,10 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 os.makedirs(DATA_DIR, exist_ok=True)
                 with open(pet_file, "w", encoding="utf-8") as f:
+                    json.dump(pet_data, f, indent=2)
+                # Also mirror to root user_data_dir so standalone desktop_pet.py always shares state
+                root_pet = os.path.join(os.path.dirname(DATA_DIR), "pet_state.json")
+                with open(root_pet, "w", encoding="utf-8") as f:
                     json.dump(pet_data, f, indent=2)
             except Exception:
                 pass
@@ -6200,8 +6212,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/pet":
             pet_file = os.path.join(DATA_DIR, "pet_state.json")
             pet_data = {
-                "species": "cat",
-                "name": "Kittu",
+                "species": "gobi",
+                "name": "Gobi",
                 "color": "#ffb833",
                 "sound": True,
                 "enabled": True,
@@ -6220,6 +6232,10 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 os.makedirs(DATA_DIR, exist_ok=True)
                 with open(pet_file, "w", encoding="utf-8") as f:
+                    json.dump(pet_data, f, indent=2)
+                # Also mirror to root user_data_dir so standalone desktop_pet.py always shares state
+                root_pet = os.path.join(os.path.dirname(DATA_DIR), "pet_state.json")
+                with open(root_pet, "w", encoding="utf-8") as f:
                     json.dump(pet_data, f, indent=2)
             except Exception:
                 pass
@@ -6866,8 +6882,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/pet":
             pet_file = os.path.join(DATA_DIR, "pet_state.json")
             pet_data = {
-                "species": "cat",
-                "name": "Kittu",
+                "species": "gobi",
+                "name": "Gobi",
                 "color": "#ffb833",
                 "sound": True,
                 "enabled": True,
@@ -6886,6 +6902,10 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 os.makedirs(DATA_DIR, exist_ok=True)
                 with open(pet_file, "w", encoding="utf-8") as f:
+                    json.dump(pet_data, f, indent=2)
+                # Also mirror to root user_data_dir so standalone desktop_pet.py always shares state
+                root_pet = os.path.join(os.path.dirname(DATA_DIR), "pet_state.json")
+                with open(root_pet, "w", encoding="utf-8") as f:
                     json.dump(pet_data, f, indent=2)
             except Exception:
                 pass

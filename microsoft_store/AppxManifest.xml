@@ -6,13 +6,7 @@
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
   IgnorableNamespaces="uap rescap desktop">
 
-  <!--
-    â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—
-    â•‘  PARTNER CENTER PRODUCT IDENTITY                            â•‘
-    â•‘  Replace the 3 PLACEHOLDER values below with the real       â•‘
-    â•‘  values from Partner Center â†’ Product Identity page.        â•‘
-    â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  -->
+  <!-- Partner Center Verified Production Identity -->
   <Identity
     Name="MaherBhatt.Kalki"
     Publisher="CN=5077752A-5182-4523-A5DB-4EBB2626926D"

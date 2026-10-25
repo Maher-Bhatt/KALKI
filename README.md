@@ -69,7 +69,8 @@ KALKI v1.5.0 is fully built, tested, and validated for Windows, Linux, and macOS
 
 | Operating System | Package Format | Binary Size | Integrity Hash (SHA-256) | Installation Command |
 |---|---|---|---|---|
-| **Windows 10 / 11 (64-bit)** | [KALKI_Setup_v1.5.0.exe](Output/windows/KALKI_Setup_v1.5.0.exe) | 276.16 MB | `af2245dd2c3632769ebea360c8ea9d9cf05884f949ccf71170cb013ce415f451` | Double-click or `KALKI_Setup_v1.5.0.exe /VERYSILENT` |
+| **Windows 10 / 11 (1-Click Installer)** | [KALKI_Setup_v1.5.0.exe](Output/windows/KALKI_Setup_v1.5.0.exe) | 289.59 MB | 655d4f0feb130f2c871292d4f072988f7eb636974bda4e58053d8df7d6a54368 | Double-click or KALKI_Setup_v1.5.0.exe /VERYSILENT |
+| **Windows 10 / 11 (Store MSIX Package)** | [KALKI_v1.5.0.msix](Output/windows/KALKI_v1.5.0.msix) | 408.76 MB | 67493dccc55c4d7518f4ad0bcc3b44e43c5a5f961be52e39872372029bd3ef9e | Add-AppxPackage -Path KALKI_v1.5.0.msix |
 | **Linux (Ubuntu / Debian / Arch)** | [KALKI_Ubuntu_Installer_v1.5.0.sh](Output/linux/KALKI_Ubuntu_Installer_v1.5.0.sh) | 10.93 MB | `dd464a90da803943cd635da44c0f7b83250ad66b69a47064196748e53ea3814c` | `chmod +x KALKI_Ubuntu_Installer_v1.5.0.sh && ./KALKI_Ubuntu_Installer_v1.5.0.sh` |
 | **Linux (Portable)** | [KALKI_v1.5.0_Linux.tar.gz](Output/linux/KALKI_v1.5.0_Linux.tar.gz) | 8.20 MB | `2e38db79219edb5e65c7d54e348aebb3e9bf61045c88179c1bed3ccf38a6b21b` | `tar -xzf KALKI_v1.5.0_Linux.tar.gz && ./install.sh` |
 | **macOS (Apple Silicon & Intel)** | [KALKI_v1.5.0_macOS.tar.gz](Output/macos/KALKI_v1.5.0_macOS.tar.gz) | 8.20 MB | `149dd774f24d0f1c2a722ce2a118640ff0e53aeb4bb940f5558726db35ed08e8` | `tar -xzf KALKI_v1.5.0_macOS.tar.gz && ./install_mac.sh` |

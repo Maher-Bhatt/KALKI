@@ -2,33 +2,26 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KALKI Desktop Companion</title>
 <style>
-  /* ==========================================================================
-     KALKI FILAMENT DESIGN SYSTEM
-     Cold Machined Graphite Surfaces • Warm Ivory Filament Light
-     ========================================================================== */
   :root {
     --void: #070809;
     --inset: #0a0c0e;
     --base: #0d0f12;
     --raised: #191d22;
-    --overlay: #262c33;
     --line: #333b44;
-    --lst: #59636f;
     --text: #e6ebef;
     --t2: #b3bcc6;
     --mut: #8a95a1;
     --fil: #fff4e2;
     --fil-glow: rgba(255, 244, 226, 0.28);
-    --fil-dim: rgba(255, 244, 226, 0.08);
     --ok: #4cc061;
-    --warn: #e08c33;
-    --aura-color: var(--fil);
+    --aura-color: #fff4e2;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-  
+
   html, body {
     width: 100vw;
     height: 100vh;
@@ -37,7 +30,6 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", Roboto, sans-serif;
   }
 
-  /* Main Container docked to bottom right */
   #pet-root {
     position: absolute;
     bottom: 12px;
@@ -46,49 +38,19 @@
     flex-direction: column;
     align-items: flex-end;
     gap: 8px;
-    width: 250px;
+    width: 240px;
+    background: transparent !important;
   }
 
-  /* Draggable Handle & Pet Avatar */
-  .pet-character-wrap {
-    position: relative;
-    width: 110px;
-    height: 110px;
-    cursor: grab;
-    -webkit-app-region: drag;
-    display: grid;
-    place-items: center;
-    filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.7));
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .pet-character-wrap:active { cursor: grabbing; }
-
-  /* Aura Ring in Warm Filament Glow */
-  .pet-aura {
-    position: absolute;
-    width: 96px;
-    height: 96px;
-    border-radius: 50%;
-    background: radial-gradient(circle, var(--fil-glow) 0%, rgba(255, 244, 226, 0.05) 55%, transparent 75%);
-    opacity: 0.35;
-    animation: auraPulse 3.5s ease-in-out infinite;
-    pointer-events: none;
-  }
-
-  @keyframes auraPulse {
-    0%, 100% { transform: scale(0.92); opacity: 0.25; }
-    50%      { transform: scale(1.14); opacity: 0.55; }
-  }
-
-  /* Floating speech bubble */
+  /* Speech Bubble */
   .speech-bubble {
-    width: 242px;
-    background: rgba(13, 15, 18, 0.94);
+    width: 236px;
+    background: rgba(13, 15, 18, 0.95);
     border: 1px solid var(--line);
     border-top: 2px solid var(--fil);
-    border-radius: 14px;
-    padding: 12px 14px;
-    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.75), 0 0 16px var(--fil-dim);
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8), 0 0 16px rgba(255, 244, 226, 0.08);
     backdrop-filter: blur(16px);
     display: none;
     flex-direction: column;
@@ -99,7 +61,7 @@
   .speech-bubble.active { display: flex; }
 
   @keyframes popIn {
-    from { opacity: 0; transform: translateY(10px) scale(0.95); }
+    from { opacity: 0; transform: translateY(8px) scale(0.96); }
     to   { opacity: 1; transform: translateY(0) scale(1); }
   }
 
@@ -109,70 +71,37 @@
     justify-content: space-between;
   }
   .bubble-title {
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 700;
     color: var(--fil);
     display: flex;
     align-items: center;
     gap: 6px;
     font-family: monospace;
+    letter-spacing: 0.04em;
   }
   .bubble-close-btn {
     background: transparent;
     border: none;
     color: var(--mut);
     cursor: pointer;
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1;
     padding: 2px 4px;
     border-radius: 4px;
     transition: all 0.15s;
   }
-  .bubble-close-btn:hover { color: var(--fil); background: rgba(255, 255, 255, 0.08); }
+  .bubble-close-btn:hover { color: var(--fil); background: rgba(255, 255, 255, 0.1); }
 
   .bubble-content {
-    font-size: 12px;
+    font-size: 11.5px;
     color: var(--t2);
     line-height: 1.45;
-    max-height: 110px;
+    max-height: 100px;
     overflow-y: auto;
     word-break: break-word;
   }
   .bubble-content strong { color: var(--fil); }
-
-  .bubble-input-row {
-    display: flex;
-    gap: 6px;
-    margin-top: 4px;
-  }
-  .bubble-input {
-    flex: 1;
-    height: 28px;
-    border-radius: 6px;
-    border: 1px solid var(--line);
-    background: var(--void);
-    color: var(--text);
-    font-size: 11.5px;
-    padding: 0 8px;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-  .bubble-input:focus { border-color: var(--fil); }
-  .bubble-send-btn {
-    height: 28px;
-    padding: 0 10px;
-    background: var(--fil);
-    color: #070809;
-    border: none;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 800;
-    cursor: pointer;
-    display: grid;
-    place-items: center;
-    transition: all 0.15s;
-  }
-  .bubble-send-btn:hover { box-shadow: 0 0 10px var(--fil-glow); }
 
   .quick-chips {
     display: flex;
@@ -181,8 +110,8 @@
     margin-top: 2px;
   }
   .q-chip {
-    font-size: 10px;
-    padding: 3px 7px;
+    font-size: 9.5px;
+    padding: 3px 6px;
     border-radius: 4px;
     background: var(--raised);
     color: var(--t2);
@@ -191,53 +120,116 @@
     transition: all 0.15s;
   }
   .q-chip:hover {
-    background: var(--overlay);
+    background: #262c33;
     color: var(--fil);
-    border-color: var(--lst);
+    border-color: #59636f;
   }
 
-  /* Animations for pet body parts */
-  @keyframes petBreathe {
-    0%, 100% { transform: scale(1) translateY(0); }
-    50%      { transform: scale(1.03) translateY(-2px); }
+  .bubble-input-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
   }
-  @keyframes petTailWag {
-    0%, 100% { transform: rotate(0deg); }
-    50%      { transform: rotate(18deg); }
+  .bubble-input {
+    flex: 1;
+    height: 26px;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+    background: var(--void);
+    color: var(--text);
+    font-size: 11px;
+    padding: 0 8px;
+    outline: none;
+    transition: border-color 0.15s;
   }
-  @keyframes petEarTwitch {
-    0%, 100% { transform: rotate(0deg); }
-    50%      { transform: rotate(-10deg); }
+  .bubble-input:focus { border-color: var(--fil); }
+  .bubble-send-btn {
+    height: 26px;
+    padding: 0 8px;
+    background: var(--fil);
+    color: #070809;
+    border: none;
+    border-radius: 5px;
+    font-size: 10.5px;
+    font-weight: 800;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: all 0.15s;
   }
-  @keyframes petDanceBob {
-    0%   { transform: rotate(-6deg) translateY(0); }
-    50%  { transform: rotate(0deg) translateY(-10px); }
-    100% { transform: rotate(6deg) translateY(0); }
-  }
-  @keyframes floatNote {
-    0%   { opacity: 1; transform: translateY(0) scale(0.8) rotate(0deg); }
-    100% { opacity: 0; transform: translateY(-42px) scale(1.3) rotate(20deg); }
-  }
+  .bubble-send-btn:hover { box-shadow: 0 0 8px var(--fil-glow); }
 
-  .pet-svg {
+  /* Draggable Character Wrap */
+  .pet-character-wrap {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    display: grid;
+    place-items: center;
+    cursor: grab;
+    -webkit-app-region: drag;
+    background: transparent !important;
+  }
+  .pet-character-wrap:active { cursor: grabbing; }
+
+  /* Aura Ring */
+  .pet-aura {
+    position: absolute;
     width: 90px;
     height: 90px;
-    animation: petBreathe 3.4s ease-in-out infinite;
-    pointer-events: auto;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--fil-glow) 0%, rgba(255, 244, 226, 0.04) 55%, transparent 75%);
+    opacity: 0.45;
+    animation: auraPulse 3.5s ease-in-out infinite;
+    pointer-events: none;
+    transition: background 0.3s ease;
   }
 
-  /* Dancing state triggered when music is playing */
-  .is-dancing .pet-svg {
-    animation: petDanceBob 0.48s cubic-bezier(0.2, 0.8, 0.4, 1) infinite alternate !important;
+  @keyframes auraPulse {
+    0%, 100% { transform: scale(0.92); opacity: 0.3; }
+    50%      { transform: scale(1.12); opacity: 0.6; }
+  }
+
+  /* Pixel Pet Mascot Sprite */
+  .pet-pixel-img {
+    position: relative;
+    z-index: 2;
+    width: 92px;
+    height: 92px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.8));
+    animation: floatBounce 3s ease-in-out infinite;
+    transition: transform 0.2s ease, filter 0.2s ease;
+    pointer-events: auto;
+  }
+  .pet-pixel-img:hover {
+    filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 10px var(--fil-glow));
+  }
+
+  @keyframes floatBounce {
+    0%, 100% { transform: translateY(0px) scale(1); }
+    50%      { transform: translateY(-7px) scale(1.02); }
+  }
+
+  /* Music Dancing State */
+  .is-dancing .pet-pixel-img {
+    animation: petDanceBob 0.45s cubic-bezier(0.2, 0.8, 0.4, 1) infinite alternate !important;
   }
   .is-dancing .pet-aura {
-    animation: auraPulse 0.48s ease-in-out infinite alternate !important;
-    opacity: 0.6;
+    animation: auraPulse 0.45s ease-in-out infinite alternate !important;
+    opacity: 0.75;
+  }
+
+  @keyframes petDanceBob {
+    0%   { transform: translateY(0px) rotate(-6deg); }
+    100% { transform: translateY(-12px) rotate(6deg); }
   }
 
   .floating-note {
     position: absolute;
-    font-size: 18px;
+    font-size: 16px;
     color: var(--fil);
     pointer-events: none;
     z-index: 50;
@@ -245,7 +237,12 @@
     animation: floatNote 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   }
 
-  /* Badge and control bar under pet */
+  @keyframes floatNote {
+    0%   { opacity: 1; transform: translateY(0) scale(0.8) rotate(0deg); }
+    100% { opacity: 0; transform: translateY(-38px) scale(1.3) rotate(20deg); }
+  }
+
+  /* Control Pill Bar under pet */
   .pet-pill {
     display: flex;
     align-items: center;
@@ -254,9 +251,9 @@
     border: 1px solid var(--line);
     padding: 3px 8px;
     border-radius: 12px;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(12px);
     -webkit-app-region: no-drag;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5);
   }
   .pet-name-label {
     font-size: 10px;
@@ -264,12 +261,12 @@
     color: var(--fil);
   }
   .pet-mood-tag {
-    font-size: 9px;
+    font-size: 8.5px;
     padding: 1px 5px;
-    border-radius: 4px;
-    background: rgba(76, 192, 97, 0.12);
+    border-radius: 3px;
+    background: rgba(76, 192, 97, 0.14);
     color: var(--ok);
-    border: 1px solid rgba(76, 192, 97, 0.25);
+    border: 1px solid rgba(76, 192, 97, 0.3);
     font-family: monospace;
   }
   .btn-mini {
@@ -292,14 +289,14 @@
   <div class="speech-bubble" id="speech-bubble">
     <div class="bubble-header">
       <span class="bubble-title">
-        <span id="bubble-species-icon">🐱</span>
+        <span id="bubble-species-icon">🍙</span>
         <span id="bubble-species-name">GOBI // COMPANION</span>
       </span>
       <button class="bubble-close-btn" id="bubble-close">✕</button>
     </div>
     
     <div class="bubble-content" id="bubble-text">
-      Hey Maher! I'm guarding your screen. Click me anytime to restore KALKI or type a quick command!
+      Hey! I'm Gobi, your sovereign AI desktop companion. Click me anytime to restore KALKI or type a command!
     </div>
 
     <div class="quick-chips">
@@ -315,1239 +312,316 @@
     </div>
   </div>
 
-  <!-- Pet Character Container -->
-  <div class="pet-character-wrap" id="pet-wrap" title="Click to interact / Drag to move">
-    <div class="pet-aura"></div>
-    <canvas id="pet-3d-canvas" width="130" height="130" style="width:120px; height:120px; cursor:grab; border-radius:50%; -webkit-app-region:drag;"></canvas>
+  <!-- Draggable Character Wrap -->
+  <div class="pet-character-wrap" id="pet-wrap" title="Click to interact · Drag to move">
+    <div class="pet-aura" id="pet-aura"></div>
+    <img id="pet-sprite" src="assets/pets/gobi.png" class="pet-pixel-img" alt="KALKI Companion Pet" />
   </div>
 
-  <!-- Docked pill bar under pet -->
+  <!-- Pill bar under pet -->
   <div class="pet-pill">
     <span class="pet-name-label" id="pill-name">Gobi</span>
     <span class="pet-mood-tag" id="pill-mood">Ready</span>
-    <button class="btn-mini" id="btn-next-pet" title="Switch Companion Species">🔄</button>
+    <button class="btn-mini" id="btn-next-pet" title="Switch Mascot Companion">🔄</button>
     <button class="btn-mini" id="btn-pet-sound" title="Toggle Sound FX">🔊</button>
-    <button class="btn-mini" id="btn-pet-wake" title="Restore KALKI Window">⚡</button>
+    <button class="btn-mini" id="btn-pet-wake" title="Restore KALKI Main Window">⚡</button>
+    <button class="btn-mini" id="btn-pet-close" title="Close Companion Overlay">✕</button>
   </div>
 </div>
 
 <script>
-
-/* ==========================================================================
-   3D Mascot Companion Engine Embedded
-   ========================================================================== */
-/**
- * KALKI 3D Companion Mascot Engine
- * Real-Time Isometric & Perspective 3D Polygon Rendering on HTML5 Canvas
- * Zero External Dependencies • 60 FPS • Dynamic Filament Shading & Depth Sorting
- */
-
-(function(global) {
+(function() {
   'use strict';
 
-  // Math Helpers
-  const DEG2RAD = Math.PI / 180;
-
-  function rotateX(v, angle) {
-    const c = Math.cos(angle), s = Math.sin(angle);
-    return { x: v.x, y: v.y * c - v.z * s, z: v.y * s + v.z * c };
-  }
-
-  function rotateY(v, angle) {
-    const c = Math.cos(angle), s = Math.sin(angle);
-    return { x: v.x * c + v.z * s, y: v.y, z: -v.x * s + v.z * c };
-  }
-
-  function rotateZ(v, angle) {
-    const c = Math.cos(angle), s = Math.sin(angle);
-    return { x: v.x * c - v.y * s, y: v.x * s + v.y * c, z: v.z };
-  }
-
-  function transformVertex(v, rx, ry, rz, tx, ty, tz) {
-    let p = rotateZ(v, rz);
-    p = rotateX(p, rx);
-    p = rotateY(p, ry);
-    return { x: p.x + tx, y: p.y + ty, z: p.z + tz };
-  }
-
-  function crossProduct(a, b) {
-    return {
-      x: a.y * b.z - a.z * b.y,
-      y: a.z * b.x - a.x * b.z,
-      z: a.x * b.y - a.y * b.x
-    };
-  }
-
-  function normalize(v) {
-    const len = Math.hypot(v.x, v.y, v.z) || 1;
-    return { x: v.x / len, y: v.y / len, z: v.z / len };
-  }
-
-  function dot(a, b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z;
-  }
-
-  // Key light coming from top-right front
-  const KEY_LIGHT = normalize({ x: 0.45, y: -0.75, z: 0.65 });
-
-  // Color shading helper
-  function shadeColor(hex, lum) {
-    hex = String(hex).replace(/[^0-9a-f]/gi, '');
-    if (hex.length < 6) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
-    lum = Math.max(0.12, Math.min(1.4, lum));
-    let rgb = '#', c, i;
-    for (i = 0; i < 3; i++) {
-      c = parseInt(hex.substr(i*2, 2), 16);
-      c = Math.round(Math.min(Math.max(0, c * lum), 255)).toString(16);
-      rgb += ('00' + c).substr(c.length);
-    }
-    return rgb;
-  }
-
-  /* -------------------------------------------------------------
-     3D Geometry Builders for the 6 Mascot Species
-     ------------------------------------------------------------- */
-
-  function makeBox(w, h, d, color, edgeColor = '#333b44') {
-    const hw = w / 2, hh = h / 2, hd = d / 2;
-    const verts = [
-      { x: -hw, y: -hh, z: -hd }, { x:  hw, y: -hh, z: -hd },
-      { x:  hw, y:  hh, z: -hd }, { x: -hw, y:  hh, z: -hd },
-      { x: -hw, y: -hh, z:  hd }, { x:  hw, y: -hh, z:  hd },
-      { x:  hw, y:  hh, z:  hd }, { x: -hw, y:  hh, z:  hd }
-    ];
-    const faces = [
-      { indices: [0, 1, 2, 3], color, edgeColor }, // back
-      { indices: [5, 4, 7, 6], color, edgeColor }, // front
-      { indices: [4, 0, 3, 7], color, edgeColor }, // left
-      { indices: [1, 5, 6, 2], color, edgeColor }, // right
-      { indices: [4, 5, 1, 0], color, edgeColor }, // top
-      { indices: [3, 2, 6, 7], color, edgeColor }  // bottom
-    ];
-    return { verts, faces };
-  }
-
-  function makeIcosahedron(radius, color, edgeColor = '#fff4e2') {
-    const t = (1 + Math.sqrt(5)) / 2;
-    const r = radius / Math.sqrt(1 + t * t);
-    const verts = [
-      { x: -r, y:  t*r, z: 0 }, { x:  r, y:  t*r, z: 0 }, { x: -r, y: -t*r, z: 0 }, { x:  r, y: -t*r, z: 0 },
-      { x: 0, y: -r, z:  t*r }, { x: 0, y:  r, z:  t*r }, { x: 0, y: -r, z: -t*r }, { x: 0, y:  r, z: -t*r },
-      { x:  t*r, y: 0, z: -r }, { x:  t*r, y: 0, z:  r }, { x: -t*r, y: 0, z: -r }, { x: -t*r, y: 0, z:  r }
-    ];
-    const triIndices = [
-      [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
-      [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
-      [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
-      [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]
-    ];
-    const faces = triIndices.map(idx => ({ indices: idx, color, edgeColor }));
-    return { verts, faces };
-  }
-
-  class Mascot3DEngine {
-    constructor(canvas, options = {}) {
-      this.canvas = canvas;
-      this.ctx = canvas.getContext('2d');
-      this.options = Object.assign({
-        species: 'gobi',
-        scale: 1.0,
-        fov: 340,
-        isDancing: false,
-        autoOrbit: true,
-        showPlatform: true,
-        interactive: true
-      }, options);
-
-      this.currentSpecies = this.options.species;
-      this.isDancing = this.options.isDancing;
-      this.tick = 0;
-      this.animId = null;
-
-      // Camera & Rotation State
-      this.rotX = 0.14; // slight tilt down
-      this.rotY = 0.0;
-      this.rotZ = 0.0;
-      this.targetRotX = 0.14;
-      this.targetRotY = 0.0;
-
-      // Mouse drag state
-      this.isDragging = false;
-      this.lastMouseX = 0;
-      this.lastMouseY = 0;
-
-      // Dynamic action states
-      this.jumpY = 0;
-      this.jumpVy = 0;
-      this.happinessTimer = 0;
-      this.particles = [];
-      this.treats = [];
-
-      this.initEvents();
-      this.resize();
-      this.start();
-    }
-
-    initEvents() {
-      if (!this.options.interactive) return;
-
-      const c = this.canvas;
-      const getPos = (e) => {
-        const rect = c.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        return {
-          x: clientX - rect.left,
-          y: clientY - rect.top,
-          normX: (clientX - rect.left - rect.width / 2) / (rect.width / 2),
-          normY: (clientY - rect.top - rect.height / 2) / (rect.height / 2)
-        };
-      };
-
-      c.addEventListener('mousedown', (e) => {
-        this.isDragging = true;
-        this.lastMouseX = e.clientX;
-        this.lastMouseY = e.clientY;
-      });
-
-      window.addEventListener('mousemove', (e) => {
-        if (this.isDragging) {
-          const dx = e.clientX - this.lastMouseX;
-          const dy = e.clientY - this.lastMouseY;
-          this.targetRotY += dx * 0.012;
-          this.targetRotX += dy * 0.012;
-          this.targetRotX = Math.max(-0.6, Math.min(0.7, this.targetRotX));
-          this.lastMouseX = e.clientX;
-          this.lastMouseY = e.clientY;
-        } else {
-          // Look-at mouse tracking when hovering
-          const rect = c.getBoundingClientRect();
-          if (
-            e.clientX >= rect.left && e.clientX <= rect.right &&
-            e.clientY >= rect.top && e.clientY <= rect.bottom
-          ) {
-            const p = getPos(e);
-            this.targetRotY = p.normX * 0.42;
-            this.targetRotX = 0.14 + p.normY * 0.28;
-          }
-        }
-      });
-
-      window.addEventListener('mouseup', () => {
-        this.isDragging = false;
-      });
-
-      c.addEventListener('click', () => {
-        this.triggerJump();
-      });
-    }
-
-    resize() {
-      const dpr = window.devicePixelRatio || 1;
-      const rect = this.canvas.getBoundingClientRect();
-      const w = rect.width || this.canvas.width || 280;
-      const h = rect.height || this.canvas.height || 280;
-      this.canvas.width = w * dpr;
-      this.canvas.height = h * dpr;
-      this.ctx.scale(dpr, dpr);
-      this.displayWidth = w;
-      this.displayHeight = h;
-    }
-
-    setSpecies(name) {
-      if (['gobi', 'kittu', 'byte', 'draco', 'nova', 'kitsu'].includes(name)) {
-        this.currentSpecies = name;
-        this.triggerMorph();
-      }
-    }
-
-    setDancing(val) {
-      this.isDancing = Boolean(val);
-    }
-
-    triggerJump() {
-      if (this.jumpY === 0) {
-        this.jumpVy = -9.0;
-        this.happinessTimer = 45;
-        this.addSparkles(0, -10, 16, '#fff4e2');
-      }
-    }
-
-    triggerMorph() {
-      this.targetRotY += Math.PI * 2;
-      this.addSparkles(0, 0, 20, '#e08c33');
-    }
-
-    feedTreat(type = 'cookie') {
-      const colors = {
-        cookie: '#e08c33',
-        fish: '#fff4e2',
-        energy: '#4cc061',
-        ember: '#ff5533',
-        pearl: '#e8f4fc'
-      };
-      this.treats.push({
-        x: (Math.random() - 0.5) * 30,
-        y: -90,
-        z: 20 + Math.random() * 20,
-        vy: 2.0,
-        rot: 0,
-        color: colors[type] || '#fff4e2'
-      });
-      this.happinessTimer = 60;
-    }
-
-    addSparkles(x, y, count = 12, color = '#fff4e2') {
-      for (let i = 0; i < count; i++) {
-        this.particles.push({
-          x: x + (Math.random() - 0.5) * 20,
-          y: y + (Math.random() - 0.5) * 20,
-          z: (Math.random() - 0.5) * 30,
-          vx: (Math.random() - 0.5) * 3.5,
-          vy: -Math.random() * 3.5 - 1.2,
-          vz: (Math.random() - 0.5) * 3.5,
-          life: 1.0,
-          decay: 0.02 + Math.random() * 0.02,
-          color: color,
-          size: Math.random() * 2.8 + 1.6
-        });
-      }
-    }
-
-    start() {
-      if (!this.animId) {
-        const loop = () => {
-          this.render();
-          this.animId = requestAnimationFrame(loop);
-        };
-        this.animId = requestAnimationFrame(loop);
-      }
-    }
-
-    stop() {
-      if (this.animId) {
-        cancelAnimationFrame(this.animId);
-        this.animId = null;
-      }
-    }
-
-    render() {
-      this.tick++;
-      const ctx = this.ctx;
-      const w = this.displayWidth || 280;
-      const h = this.displayHeight || 280;
-      const cx = w / 2;
-      const cy = h / 2 + 10;
-
-      ctx.clearRect(0, 0, w, h);
-
-      // Smooth camera interpolation
-      if (!this.isDragging && this.options.autoOrbit) {
-        this.rotY += 0.007; // gentle idle orbit
-      }
-      this.rotX += (this.targetRotX - this.rotX) * 0.08;
-      this.rotY += (this.targetRotY - this.rotY) * 0.08;
-
-      // Jump & Bounce Physics
-      if (this.jumpVy !== 0 || this.jumpY !== 0) {
-        this.jumpY += this.jumpVy;
-        this.jumpVy += 0.52; // gravity
-        if (this.jumpY >= 0) {
-          this.jumpY = 0;
-          this.jumpVy = 0;
-        }
-      }
-
-      const danceBounce = this.isDancing ? Math.sin(this.tick * 0.16) * 12 : Math.sin(this.tick * 0.05) * 3.5;
-      const danceRoll = this.isDancing ? Math.cos(this.tick * 0.16) * 0.08 : 0;
-      const mascotY = this.jumpY + danceBounce;
-
-      // 1. Draw 3D Platform (Holographic Wireframe Pedestal)
-      if (this.options.showPlatform) {
-        this.drawPlatform(ctx, cx, cy, this.rotX, this.rotY);
-      }
-
-      // 2. Gather 3D Polygons for Current Species
-      const sceneFaces = this.buildSpeciesGeometry(this.currentSpecies, mascotY, danceRoll);
-
-      // 3. Transform, Light, and Project
-      const projectedFaces = [];
-      const fov = this.options.fov;
-      const scale = this.options.scale;
-
-      for (const face of sceneFaces) {
-        const worldVerts = [];
-        let sumZ = 0;
-
-        for (const v of face.verts) {
-          const transformed = transformVertex(v, this.rotX, this.rotY, this.rotZ + danceRoll, 0, mascotY, 0);
-          worldVerts.push(transformed);
-          sumZ += transformed.z;
-        }
-
-        const avgZ = sumZ / worldVerts.length;
-        const depth = avgZ + fov;
-        if (depth <= 10) continue; // behind camera
-
-        // Calculate face normal using first 3 vertices
-        if (worldVerts.length >= 3) {
-          const v0 = worldVerts[0], v1 = worldVerts[1], v2 = worldVerts[2];
-          const edge1 = { x: v1.x - v0.x, y: v1.y - v0.y, z: v1.z - v0.z };
-          const edge2 = { x: v2.x - v0.x, y: v2.y - v0.y, z: v2.z - v0.z };
-          const normal = normalize(crossProduct(edge1, edge2));
-
-          // Backface culling for solid meshes (unless doubleSided is true)
-          if (!face.doubleSided && normal.z >= 0.05) {
-            continue;
-          }
-
-          // Volumetric Diffuse Lighting
-          const diffuse = Math.max(0, dot(normal, KEY_LIGHT));
-          const lum = face.emissive ? 1.3 : 0.32 + diffuse * 0.78;
-          const shadedColor = face.rawColor ? face.color : shadeColor(face.color, lum);
-
-          // Project 3D -> 2D
-          const screenPts = worldVerts.map(pt => {
-            const f = fov / (pt.z + fov);
-            return {
-              x: cx + pt.x * scale * f,
-              y: cy + pt.y * scale * f
-            };
-          });
-
-          projectedFaces.push({
-            pts: screenPts,
-            avgZ: avgZ,
-            fillColor: shadedColor,
-            edgeColor: face.edgeColor || '#333b44',
-            lineWidth: face.lineWidth || 1.1,
-            emissive: face.emissive || false
-          });
-        }
-      }
-
-      // 4. Depth Sort (Painter's Algorithm: Furthest First)
-      projectedFaces.sort((a, b) => a.avgZ - b.avgZ);
-
-      // 5. Rasterize 3D Faces
-      for (const f of projectedFaces) {
-        ctx.beginPath();
-        ctx.moveTo(f.pts[0].x, f.pts[0].y);
-        for (let i = 1; i < f.pts.length; i++) {
-          ctx.lineTo(f.pts[i].x, f.pts[i].y);
-        }
-        ctx.closePath();
-
-        ctx.fillStyle = f.fillColor;
-        ctx.fill();
-
-        if (f.edgeColor) {
-          ctx.strokeStyle = f.edgeColor;
-          ctx.lineWidth = f.lineWidth;
-          ctx.stroke();
-        }
-
-        // Emissive filament specular glint
-        if (f.emissive) {
-          ctx.save();
-          ctx.shadowColor = 'rgba(255, 244, 226, 0.4)';
-          ctx.shadowBlur = 8;
-          ctx.stroke();
-          ctx.restore();
-        }
-      }
-
-      // 6. Update & Render Falling Treats
-      this.updateTreats(ctx, cx, cy);
-
-      // 7. Update & Render Sparkles/Embers
-      this.updateParticles(ctx, cx, cy);
-    }
-
-    drawPlatform(ctx, cx, cy, rx, ry) {
-      const platY = 68;
-      const radius = 64;
-      const rings = [radius, radius * 0.72, radius * 0.45];
-
-      ctx.save();
-      ctx.lineWidth = 1.0;
-
-      // Rotating holographic radar rays
-      const angleOffset = this.tick * 0.02;
-      for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
-        const rad = a + angleOffset;
-        const x1 = Math.cos(rad) * radius;
-        const z1 = Math.sin(rad) * radius;
-        const p1 = this.projectPt({ x: x1, y: platY, z: z1 }, cx, cy, rx, ry);
-        const p0 = this.projectPt({ x: 0, y: platY, z: 0 }, cx, cy, rx, ry);
-        if (p0 && p1) {
-          ctx.strokeStyle = 'rgba(51, 59, 68, 0.35)';
-          ctx.beginPath();
-          ctx.moveTo(p0.x, p0.y);
-          ctx.lineTo(p1.x, p1.y);
-          ctx.stroke();
-        }
-      }
-
-      // Concentric rings
-      for (let r of rings) {
-        ctx.beginPath();
-        let first = true;
-        for (let i = 0; i <= 32; i++) {
-          const theta = (i / 32) * Math.PI * 2;
-          const x = Math.cos(theta) * r;
-          const z = Math.sin(theta) * r;
-          const p = this.projectPt({ x, y: platY, z }, cx, cy, rx, ry);
-          if (p) {
-            if (first) { ctx.moveTo(p.x, p.y); first = false; }
-            else { ctx.lineTo(p.x, p.y); }
-          }
-        }
-        ctx.strokeStyle = (r === radius) ? 'rgba(255, 244, 226, 0.3)' : 'rgba(76, 192, 97, 0.2)';
-        ctx.stroke();
-      }
-
-      // Mascot Ground Shadow
-      const shadowP = this.projectPt({ x: 0, y: platY - 1, z: 0 }, cx, cy, rx, ry);
-      if (shadowP) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-        ctx.beginPath();
-        ctx.ellipse(shadowP.x, shadowP.y, 40, 14, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      ctx.restore();
-    }
-
-    projectPt(v, cx, cy, rx, ry) {
-      const p = transformVertex(v, rx, ry, 0, 0, 0, 0);
-      const fov = this.options.fov;
-      if (p.z + fov <= 10) return null;
-      const f = fov / (p.z + fov);
-      return {
-        x: cx + p.x * this.options.scale * f,
-        y: cy + p.y * this.options.scale * f
-      };
-    }
-
-    updateTreats(ctx, cx, cy) {
-      for (let i = this.treats.length - 1; i >= 0; i--) {
-        const t = this.treats[i];
-        t.y += t.vy;
-        t.vy += 0.4;
-        t.rot += 0.08;
-
-        if (t.y >= 64) {
-          t.y = 64;
-          t.vy = -t.vy * 0.4;
-          this.addSparkles(t.x, t.y, 6, t.color);
-          if (Math.abs(t.vy) < 0.6) {
-            this.treats.splice(i, 1);
-            continue;
-          }
-        }
-
-        const p = this.projectPt(t, cx, cy, this.rotX, this.rotY);
-        if (p) {
-          ctx.save();
-          ctx.translate(p.x, p.y);
-          ctx.rotate(t.rot);
-          ctx.fillStyle = t.color;
-          ctx.shadowColor = t.color;
-          ctx.shadowBlur = 6;
-          ctx.fillRect(-6, -6, 12, 12);
-          ctx.restore();
-        }
-      }
-    }
-
-    updateParticles(ctx, cx, cy) {
-      for (let i = this.particles.length - 1; i >= 0; i--) {
-        const p = this.particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.z += p.vz;
-        p.life -= p.decay;
-
-        if (p.life <= 0) {
-          this.particles.splice(i, 1);
-          continue;
-        }
-
-        const pt = this.projectPt(p, cx, cy, this.rotX, this.rotY);
-        if (pt) {
-          ctx.save();
-          ctx.globalAlpha = Math.max(0, p.life);
-          ctx.fillStyle = p.color;
-          ctx.beginPath();
-          ctx.arc(pt.x, pt.y, p.size, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
-        }
-      }
-    }
-
-    /* -------------------------------------------------------------
-       Species Mesh Generators (Faceted Polyhedral 3D Solids)
-       ------------------------------------------------------------- */
-    buildSpeciesGeometry(species, mascotY, danceRoll) {
-      const faces = [];
-      const t = this.tick;
-
-      if (species === 'gobi') {
-        // GOBI: The Sentient AI Kitten
-        // Head Cuboid (Machined Graphite)
-        const head = makeBox(46, 40, 38, '#191d22', '#333b44');
-        this.addMeshToFaces(faces, head, 0, -8, 0);
-
-        // Triangular Ears (Filament Ivory + Amber Interior)
-        const earTwitch = Math.sin(t * 0.08) * 4;
-        const leftEar = {
-          verts: [
-            { x: -21, y: -28, z: -8 }, { x: -7, y: -28, z: 8 },
-            { x: -26 + earTwitch, y: -52, z: 0 }
-          ],
-          color: '#fff4e2', edgeColor: '#e08c33', doubleSided: true
-        };
-        const rightEar = {
-          verts: [
-            { x: 21, y: -28, z: -8 }, { x: 7, y: -28, z: 8 },
-            { x: 26 - earTwitch, y: -52, z: 0 }
-          ],
-          color: '#fff4e2', edgeColor: '#e08c33', doubleSided: true
-        };
-        faces.push(leftEar, rightEar);
-
-        // Glowing Visor / Eyes
-        const blink = Math.sin(t * 0.04) > 0.95;
-        const eyeColor = blink ? '#333b44' : '#fff4e2';
-        const leftEye = {
-          verts: [
-            { x: -16, y: -12, z: 20 }, { x: -6, y: -12, z: 20 },
-            { x: -6, y: -4, z: 20 }, { x: -16, y: -4, z: 20 }
-          ],
-          color: eyeColor, edgeColor: '#fff4e2', emissive: !blink
-        };
-        const rightEye = {
-          verts: [
-            { x: 6, y: -12, z: 20 }, { x: 16, y: -12, z: 20 },
-            { x: 16, y: -4, z: 20 }, { x: 6, y: -4, z: 20 }
-          ],
-          color: eyeColor, edgeColor: '#fff4e2', emissive: !blink
-        };
-        faces.push(leftEye, rightEye);
-
-        // Amber Cheeks
-        faces.push(
-          { verts: [{x:-18, y:2, z:20}, {x:-12, y:2, z:20}, {x:-12, y:6, z:20}, {x:-18, y:6, z:20}], color: '#e08c33', edgeColor: null, emissive: true },
-          { verts: [{x:12, y:2, z:20}, {x:18, y:2, z:20}, {x:18, y:6, z:20}, {x:12, y:6, z:20}], color: '#e08c33', edgeColor: null, emissive: true }
-        );
-
-        // Collar & Golden Emissive Bell
-        const collar = makeBox(32, 6, 32, '#262c33', '#59636f');
-        this.addMeshToFaces(faces, collar, 0, 16, 0);
-        const bell = makeBox(8, 8, 8, '#fff4e2', '#ffd899');
-        this.addMeshToFaces(faces, bell, 0, 20, 18);
-
-        // Floating Paws
-        const pawBob = Math.sin(t * 0.12) * 3;
-        const leftPaw = makeBox(12, 10, 14, '#323941', '#59636f');
-        this.addMeshToFaces(faces, leftPaw, -16, 28 + pawBob, 12);
-        const rightPaw = makeBox(12, 10, 14, '#323941', '#59636f');
-        this.addMeshToFaces(faces, rightPaw, 16, 28 - pawBob, 12);
-
-        // 3D Wagging Tail (Segmented)
-        const tailWag = Math.sin(t * 0.1) * 16;
-        for (let seg = 0; seg < 3; seg++) {
-          const tailBox = makeBox(6, 6, 8, '#262c33', '#333b44');
-          this.addMeshToFaces(faces, tailBox, tailWag * (seg * 0.3), 10 - seg * 6, -18 - seg * 8);
-        }
-
-      } else if (species === 'kittu') {
-        // KITTU: The Cyber Shiba Defender
-        // Head
-        const head = makeBox(44, 40, 36, '#262c33', '#333b44');
-        this.addMeshToFaces(faces, head, 0, -8, 0);
-
-        // Snout Muzzle
-        const snout = makeBox(22, 16, 20, '#fff4e2', '#59636f');
-        this.addMeshToFaces(faces, snout, 0, 2, 22);
-        const nose = makeBox(6, 5, 4, '#070809', '#070809');
-        this.addMeshToFaces(faces, nose, 0, -2, 33);
-
-        // Sharp Shiba Ears
-        faces.push(
-          { verts: [{x:-20, y:-28, z:-4}, {x:-6, y:-28, z:6}, {x:-24, y:-54, z:2}], color: '#e08c33', edgeColor: '#fff4e2', doubleSided: true },
-          { verts: [{x:20, y:-28, z:-4}, {x:6, y:-28, z:6}, {x:24, y:-54, z:2}], color: '#e08c33', edgeColor: '#fff4e2', doubleSided: true }
-        );
-
-        // ShieldCore Green Emblem Chestplate
-        const chest = makeBox(28, 18, 12, '#191d22', '#4cc061');
-        this.addMeshToFaces(faces, chest, 0, 20, 12);
-        const emblem = makeBox(8, 8, 4, '#4cc061', '#4cc061');
-        this.addMeshToFaces(faces, emblem, 0, 20, 19);
-
-        // Curled Tail over back
-        const wag = Math.sin(t * 0.18) * 8;
-        for (let i = 0; i < 4; i++) {
-          const seg = makeBox(7, 7, 7, '#e08c33', '#fff4e2');
-          this.addMeshToFaces(faces, seg, wag * 0.3, 10 - i * 6, -18 + i * 4);
-        }
-
-      } else if (species === 'byte') {
-        // BYTE: The Holographic Glitch Cube
-        // Outer Wireframe Cage (Rotates on independent axis)
-        const cageSize = 48;
-        const cage = makeBox(cageSize, cageSize, cageSize, '#191d22', '#fff4e2');
-        this.addMeshToFaces(faces, cage, 0, 0, 0);
-
-        // Inner Glowing Voxel Core
-        const core = makeBox(24, 24, 24, '#fff4e2', '#ffd899');
-        this.addMeshToFaces(faces, core, 0, 0, 0);
-
-        // Digital LED Eyes
-        const eyeGlitch = (Math.sin(t * 0.2) > 0.8) ? 3 : 0;
-        faces.push(
-          { verts: [{x:-12, y:-6+eyeGlitch, z:26}, {x:-4, y:-6+eyeGlitch, z:26}, {x:-4, y:0+eyeGlitch, z:26}, {x:-12, y:0+eyeGlitch, z:26}], color: '#4cc061', edgeColor: null, emissive: true },
-          { verts: [{x:4, y:-6-eyeGlitch, z:26}, {x:12, y:-6-eyeGlitch, z:26}, {x:12, y:0-eyeGlitch, z:26}, {x:4, y:0-eyeGlitch, z:26}], color: '#4cc061', edgeColor: null, emissive: true }
-        );
-
-        // Antenna with pulsing orb
-        const antennaMast = makeBox(3, 20, 3, '#fff4e2', '#59636f');
-        this.addMeshToFaces(faces, antennaMast, 0, -32, 0);
-        const node = makeBox(8, 8, 8, '#fff4e2', '#fff4e2');
-        this.addMeshToFaces(faces, node, 0, -44, 0);
-
-        // 4 Orbiting Satellites
-        for (let s = 0; s < 4; s++) {
-          const orbAngle = t * 0.06 + (s * Math.PI / 2);
-          const ox = Math.cos(orbAngle) * 38;
-          const oz = Math.sin(orbAngle) * 38;
-          const oy = Math.sin(t * 0.08 + s) * 12;
-          const sat = makeBox(6, 6, 6, '#4cc061', '#fff4e2');
-          this.addMeshToFaces(faces, sat, ox, oy, oz);
-        }
-
-      } else if (species === 'draco') {
-        // DRACO: The Mini Cyber Dragon
-        // Dragon Skull
-        const head = makeBox(40, 36, 42, '#191d22', '#e08c33');
-        this.addMeshToFaces(faces, head, 0, -6, 0);
-
-        // Curved Swept Horns
-        faces.push(
-          { verts: [{x:-16, y:-24, z:-6}, {x:-6, y:-24, z:4}, {x:-32, y:-54, z:-18}], color: '#e08c33', edgeColor: '#ffd899', doubleSided: true },
-          { verts: [{x:16, y:-24, z:-6}, {x:6, y:-24, z:4}, {x:32, y:-54, z:-18}], color: '#e08c33', edgeColor: '#ffd899', doubleSided: true }
-        );
-
-        // Slit Eyes
-        faces.push(
-          { verts: [{x:-14, y:-8, z:22}, {x:-6, y:-10, z:22}, {x:-8, y:-4, z:22}], color: '#e08c33', edgeColor: '#fff4e2', emissive: true },
-          { verts: [{x:14, y:-8, z:22}, {x:6, y:-10, z:22}, {x:8, y:-4, z:22}], color: '#e08c33', edgeColor: '#fff4e2', emissive: true }
-        );
-
-        // Flapping 3D Wings
-        const wingFlap = Math.sin(t * 0.16) * 22;
-        faces.push(
-          { verts: [{x:-18, y:4, z:-4}, {x:-58, y:-18 + wingFlap, z:-8}, {x:-46, y:22 + wingFlap, z:-12}], color: 'rgba(224, 140, 51, 0.85)', edgeColor: '#fff4e2', doubleSided: true },
-          { verts: [{x:18, y:4, z:-4}, {x:58, y:-18 + wingFlap, z:-8}, {x:46, y:22 + wingFlap, z:-12}], color: 'rgba(224, 140, 51, 0.85)', edgeColor: '#fff4e2', doubleSided: true }
-        );
-
-        // Spiked Tail with Arrowhead Spade
-        const tailSwish = Math.sin(t * 0.12) * 14;
-        faces.push(
-          { verts: [{x:tailSwish, y:18, z:-34}, {x:tailSwish - 8, y:24, z:-46}, {x:tailSwish + 8, y:24, z:-46}], color: '#e08c33', edgeColor: '#fff4e2', doubleSided: true }
-        );
-
-      } else if (species === 'nova') {
-        // NOVA: The Astral Energy Polyhedron
-        // 20-faced Geodesic Icosahedron
-        const ico = makeIcosahedron(28, '#0d0f12', '#fff4e2');
-        this.addMeshToFaces(faces, ico, 0, 0, 0);
-
-        // Inner Radiant Octahedron
-        const core = makeBox(14, 14, 14, '#fff4e2', '#ffd899');
-        this.addMeshToFaces(faces, core, 0, 0, 0);
-
-        // Gyroscopic Rings (Rotated in space)
-        const rCount = 20;
-        const ringRad = 42;
-        for (let i = 0; i < rCount; i++) {
-          const a1 = (i / rCount) * Math.PI * 2 + t * 0.03;
-          const a2 = ((i + 1) / rCount) * Math.PI * 2 + t * 0.03;
-          faces.push({
-            verts: [
-              { x: Math.cos(a1) * ringRad, y: Math.sin(a1) * ringRad, z: 0 },
-              { x: Math.cos(a2) * ringRad, y: Math.sin(a2) * ringRad, z: 0 },
-              { x: Math.cos(a2) * (ringRad - 2), y: Math.sin(a2) * (ringRad - 2), z: 0 }
-            ],
-            color: '#fff4e2', edgeColor: '#fff4e2', emissive: true, doubleSided: true
-          });
-        }
-
-      } else if (species === 'kitsu') {
-        // KITSU: Nine-Tailed Cyber Kitsune
-        // Fox Mask Head
-        const head = makeBox(42, 38, 36, '#fff4e2', '#333b44');
-        this.addMeshToFaces(faces, head, 0, -8, 0);
-
-        // Slanted Fox Eyes
-        faces.push(
-          { verts: [{x:-15, y:-6, z:19}, {x:-6, y:-8, z:19}, {x:-8, y:-2, z:19}], color: '#e08c33', edgeColor: null, emissive: true },
-          { verts: [{x:15, y:-6, z:19}, {x:6, y:-8, z:19}, {x:8, y:-2, z:19}], color: '#e08c33', edgeColor: null, emissive: true }
-        );
-
-        // Forehead Red Diamond Crest
-        faces.push({
-          verts: [{x:0, y:-18, z:19}, {x:4, y:-14, z:19}, {x:0, y:-10, z:19}, {x:-4, y:-14, z:19}],
-          color: '#e08c33', edgeColor: '#ffd899', emissive: true
-        });
-
-        // 9 Harmonic Fan Tails
-        const tailCount = 9;
-        for (let k = 0; k < tailCount; k++) {
-          const spreadAngle = ((k - 4) / 4) * 0.85; // fan from -0.85 rad to +0.85 rad
-          const wavePhase = t * 0.12 - k * 0.38;
-          const waveAmp = Math.sin(wavePhase) * 14;
-
-          const baseX = Math.sin(spreadAngle) * 18;
-          const tipX = Math.sin(spreadAngle) * 48 + waveAmp;
-          const tipY = -28 + Math.abs(k - 4) * 6;
-          const tipZ = -36 - Math.cos(spreadAngle) * 14;
-
-          faces.push({
-            verts: [
-              { x: baseX - 3, y: 16, z: -18 },
-              { x: baseX + 3, y: 16, z: -18 },
-              { x: tipX, y: tipY, z: tipZ }
-            ],
-            color: (k % 2 === 0) ? '#e08c33' : '#fff4e2',
-            edgeColor: '#333b44',
-            doubleSided: true
-          });
-        }
-      }
-
-      return faces;
-    }
-
-    addMeshToFaces(destFaces, mesh, ox, oy, oz) {
-      for (const f of mesh.faces) {
-        const faceVerts = f.indices.map(i => {
-          const v = mesh.verts[i];
-          return { x: v.x + ox, y: v.y + oy, z: v.z + oz };
-        });
-        destFaces.push({
-          verts: faceVerts,
-          color: f.color,
-          edgeColor: f.edgeColor,
-          emissive: f.emissive || false
-        });
-      }
-    }
-  }
-
-  // Export to global scope
-  global.Mascot3DEngine = Mascot3DEngine;
-
-})(typeof window !== 'undefined' ? window : this);
-
-
-let petCanvasEl = null;
-let mascotEngine = null;
-
-function init3DMascot() {
-  petCanvasEl = document.getElementById('pet-3d-canvas');
-  if (petCanvasEl && typeof Mascot3DEngine !== 'undefined') {
-    mascotEngine = new Mascot3DEngine(petCanvasEl, {
-      species: 'gobi',
-      scale: 0.92,
-      fov: 320,
-      isDancing: false,
-      autoOrbit: true,
-      showPlatform: true,
-      interactive: true
-    });
-
-    window.addEventListener('mousemove', (e) => {
-      const cx = window.innerWidth / 2;
-      const cy = window.innerHeight / 2;
-      const normX = (e.clientX - cx) / cx;
-      const normY = (e.clientY - cy) / cy;
-      if (mascotEngine) {
-        mascotEngine.targetRotY = normX * 0.45;
-        mascotEngine.targetRotX = 0.14 + normY * 0.28;
-      }
-    });
-  }
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init3DMascot);
-} else {
-  init3DMascot();
-}
-
-
-/* ==========================================================================
-   Procedural Sound Synthesizer (Web Audio API)
-   ========================================================================== */
-class SoundEngine {
-  constructor() {
-    this.ctx = null;
-    this.muted = false;
-  }
-  async init() {
-    if (!this.ctx) {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      this.ctx = new AudioContext();
-    }
-    if (this.ctx.state === 'suspended') {
-      await this.ctx.resume();
-    }
-    return this.ctx;
-  }
-  async playPurr() {
-    if (this.muted) return;
-    const ctx = await this.init();
-    if (!ctx) return;
+  const SPECIES_LIST = ['gobi', 'kittu', 'byte', 'draco', 'kitsu', 'nova'];
+  const SPECIES_INFO = {
+    gobi: { title: 'Gobi', icon: '🍙', aura: '#fff4e2', soundTone: 520, quote: "Gobi is standing guard! Screen protected, Sir." },
+    kittu: { title: 'Kittu', icon: '🐱', aura: '#ff76a5', soundTone: 680, quote: "*purrrrr* Kittu is purring happily on your desktop!" },
+    byte: { title: 'Byte', icon: '🐶', aura: '#00e5ff', soundTone: 440, quote: "*woof woof!* Byte is ready to fetch your commands!" },
+    draco: { title: 'Draco', icon: '🐲', aura: '#e08c33', soundTone: 380, quote: "Draco is breathing warm embers. Core systems nominal!" },
+    kitsu: { title: 'Kitsu', icon: '🦊', aura: '#c084fc', soundTone: 600, quote: "Kitsu's twin tails swish gracefully in the desktop breeze." },
+    nova: { title: 'Nova', icon: '🤖', aura: '#4cc061', soundTone: 760, quote: "Nova thrusters steady at 100%. Optic sensor locked on." }
+  };
+
+  // State
+  let petState = {
+    species: 'gobi',
+    name: 'Gobi',
+    sound: true,
+    enabled: true
+  };
+
+  let isDancing = false;
+  let audioCtx = null;
+
+  // DOM Elements
+  const petWrap = document.getElementById('pet-wrap');
+  const petSprite = document.getElementById('pet-sprite');
+  const petAura = document.getElementById('pet-aura');
+  const speechBubble = document.getElementById('speech-bubble');
+  const bubbleText = document.getElementById('bubble-text');
+  const bubbleSpeciesName = document.getElementById('bubble-species-name');
+  const bubbleSpeciesIcon = document.getElementById('bubble-species-icon');
+  const bubbleInp = document.getElementById('bubble-inp');
+  const bubbleSend = document.getElementById('bubble-send');
+  const bubbleClose = document.getElementById('bubble-close');
+  const pillName = document.getElementById('pill-name');
+  const pillMood = document.getElementById('pill-mood');
+  const btnNext = document.getElementById('btn-next-pet');
+  const btnSound = document.getElementById('btn-pet-sound');
+  const btnWake = document.getElementById('btn-pet-wake');
+  const btnClose = document.getElementById('btn-pet-close');
+  const chipOpen = document.getElementById('chip-open-kalki');
+
+  // Sound Synth
+  function playBeep(freq = 520, duration = 0.12) {
+    if (!petState.sound) return;
     try {
-      const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(520, now);
-      osc.frequency.exponentialRampToValueAtTime(740, now + 0.14);
-      osc.frequency.exponentialRampToValueAtTime(420, now + 0.32);
-      gain.gain.setValueAtTime(0.01, now);
-      gain.gain.linearRampToValueAtTime(0.16, now + 0.08);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
       osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.35);
-    } catch(e) {}
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    } catch (e) {}
   }
-  async playChime() {
-    if (this.muted) return;
-    const ctx = await this.init();
-    if (!ctx) return;
-    try {
-      const now = ctx.currentTime;
-      [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, now + idx * 0.07);
-        gain.gain.setValueAtTime(0.08, now + idx * 0.07);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.28);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now + idx * 0.07);
-        osc.stop(now + idx * 0.07 + 0.29);
-      });
-    } catch(e) {}
+
+  // Update UI appearance
+  function applySpecies(speciesId, customName) {
+    let cleanId = (speciesId || 'gobi').toLowerCase();
+    // Support legacy names
+    if (cleanId === 'cat') cleanId = 'kittu';
+    if (cleanId === 'chibi') cleanId = 'gobi';
+    if (cleanId === 'dog') cleanId = 'byte';
+    if (cleanId === 'dragon') cleanId = 'draco';
+    if (cleanId === 'drone') cleanId = 'nova';
+    if (cleanId === 'fox') cleanId = 'kitsu';
+
+    if (!SPECIES_INFO[cleanId]) cleanId = 'gobi';
+
+    const info = SPECIES_INFO[cleanId];
+    petState.species = cleanId;
+    if (customName) petState.name = customName;
+
+    // Resolve sprite path
+    const src1 = `assets/pets/${cleanId}.png`;
+    petSprite.src = src1;
+    petSprite.onerror = () => {
+      petSprite.src = `/ui/assets/pets/${cleanId}.png`;
+    };
+
+    // Update labels and aura
+    const displayName = customName || info.title;
+    pillName.textContent = displayName;
+    bubbleSpeciesName.textContent = `${displayName.toUpperCase()} // COMPANION`;
+    bubbleSpeciesIcon.textContent = info.icon;
+    document.documentElement.style.setProperty('--fil-glow', `${info.aura}44`);
+    petAura.style.background = `radial-gradient(circle, ${info.aura}66 0%, ${info.aura}0a 55%, transparent 75%)`;
   }
-}
-const sounds = new SoundEngine();
 
-/* ==========================================================================
-   Full 6 Companion Species in Filament Design System
-   ========================================================================== */
-const PET_SVGS = {
-  // 1. Gobi (Sentient AI Kitten)
-  gobi: `<svg class="pet-svg" viewBox="0 0 100 100">
-    <ellipse cx="72" cy="74" rx="14" ry="4" fill="#333b44" style="transform-origin:65px 74px; animation:petTailWag 1.8s ease-in-out infinite;" />
-    <rect x="25" y="32" width="50" height="44" rx="14" fill="#191d22" stroke="#59636f" stroke-width="2.2" />
-    <polygon points="28,32 18,12 38,26" fill="#fff4e2" style="transform-origin:28px 26px; animation:petEarTwitch 2.6s ease-in-out infinite;" />
-    <polygon points="72,32 82,12 62,26" fill="#fff4e2" style="transform-origin:72px 26px; animation:petEarTwitch 2.6s ease-in-out infinite alternate;" />
-    <circle cx="40" cy="50" r="5.5" fill="#fff4e2" />
-    <circle cx="60" cy="50" r="5.5" fill="#fff4e2" />
-    <circle cx="41.5" cy="49" r="1.8" fill="#070809" />
-    <circle cx="61.5" cy="49" r="1.8" fill="#070809" />
-    <ellipse cx="32" cy="58" rx="4" ry="2.5" fill="#e08c33" opacity="0.8" />
-    <ellipse cx="68" cy="58" rx="4" ry="2.5" fill="#e08c33" opacity="0.8" />
-    <path d="M 45 60 Q 50 65 55 60" stroke="#fff4e2" stroke-width="2.5" fill="none" stroke-linecap="round" />
-    <rect x="33" y="74" width="12" height="8" rx="4" fill="#323941" />
-    <rect x="55" y="74" width="12" height="8" rx="4" fill="#323941" />
-  </svg>`,
-
-  // 2. Kittu (Cyber Shiba)
-  kittu: `<svg class="pet-svg" viewBox="0 0 100 100">
-    <ellipse cx="74" cy="70" rx="12" ry="5" fill="#e08c33" style="transform-origin:65px 70px; animation:petTailWag 0.9s ease-in-out infinite;" />
-    <rect x="25" y="32" width="50" height="44" rx="14" fill="#191d22" stroke="#59636f" stroke-width="2.2" />
-    <polygon points="28,32 18,12 38,26" fill="#e08c33" />
-    <polygon points="72,32 82,12 62,26" fill="#e08c33" />
-    <ellipse cx="50" cy="58" rx="16" ry="12" fill="#fff4e2" />
-    <circle cx="50" cy="54" r="3.5" fill="#070809" />
-    <circle cx="40" cy="48" r="4.5" fill="#fff4e2" />
-    <circle cx="60" cy="48" r="4.5" fill="#fff4e2" />
-    <circle cx="41.2" cy="47" r="1.5" fill="#070809" />
-    <circle cx="61.2" cy="47" r="1.5" fill="#070809" />
-  </svg>`,
-
-  // 3. Byte (Glitch Sprite)
-  byte: `<svg class="pet-svg" viewBox="0 0 100 100">
-    <rect x="24" y="28" width="52" height="52" rx="8" fill="#191d22" stroke="#fff4e2" stroke-width="2" />
-    <rect x="30" y="42" width="40" height="12" fill="#fff4e2" />
-    <rect x="36" y="44" width="6" height="6" fill="#070809" />
-    <rect x="58" y="44" width="6" height="6" fill="#070809" />
-    <rect x="38" y="62" width="24" height="4" fill="#4cc061" />
-    <line x1="50" y1="28" x2="50" y2="16" stroke="#fff4e2" stroke-width="2" />
-    <circle cx="50" cy="14" r="4" fill="#fff4e2" />
-  </svg>`,
-
-  // 4. Draco (Cyber Dragon)
-  draco: `<svg class="pet-svg" viewBox="0 0 100 100">
-    <polygon points="30,28 20,10 38,24" fill="#e08c33" />
-    <polygon points="70,28 80,10 62,24" fill="#e08c33" />
-    <rect x="25" y="30" width="50" height="46" rx="14" fill="#191d22" stroke="#59636f" stroke-width="2.2" />
-    <ellipse cx="40" cy="48" rx="4.5" ry="7" fill="#fff4e2" />
-    <ellipse cx="60" cy="48" rx="4.5" ry="7" fill="#fff4e2" />
-    <line x1="40" y1="42" x2="40" y2="54" stroke="#070809" stroke-width="2" />
-    <line x1="60" y1="42" x2="60" y2="54" stroke="#070809" stroke-width="2" />
-    <circle cx="47" cy="58" r="1.5" fill="#e08c33" />
-    <circle cx="53" cy="58" r="1.5" fill="#e08c33" />
-  </svg>`,
-
-  // 5. Nova (Astral Focus Orb)
-  nova: `<svg class="pet-svg" viewBox="0 0 100 100">
-    <ellipse cx="50" cy="50" rx="34" ry="12" fill="none" stroke="#fff4e2" stroke-width="1.8" stroke-dasharray="4,3" />
-    <circle cx="50" cy="50" r="24" fill="#0d0f12" stroke="#59636f" stroke-width="2" />
-    <circle cx="50" cy="50" r="14" fill="#191d22" />
-    <circle cx="50" cy="50" r="7" fill="#fff4e2" />
-  </svg>`,
-
-  // 6. Kitsu (Nine-Tailed Kitsune)
-  kitsu: `<svg class="pet-svg" viewBox="0 0 100 100">
-    <ellipse cx="76" cy="68" rx="14" ry="5" fill="#e08c33" opacity="0.6" style="transform-origin:65px 68px; animation:petTailWag 1.4s ease-in-out infinite;" />
-    <rect x="25" y="32" width="50" height="44" rx="14" fill="#fff4e2" stroke="#333b44" stroke-width="2" />
-    <polygon points="28,32 18,14 38,26" fill="#e08c33" />
-    <polygon points="72,32 82,14 62,26" fill="#e08c33" />
-    <circle cx="40" cy="50" r="4.5" fill="#070809" />
-    <circle cx="60" cy="50" r="4.5" fill="#070809" />
-    <circle cx="41.2" cy="49" r="1.5" fill="#fff4e2" />
-    <circle cx="61.2" cy="49" r="1.5" fill="#fff4e2" />
-  </svg>`
-};
-
-const SPECIES = ['gobi', 'kittu', 'byte', 'draco', 'nova', 'kitsu'];
-const NAMES = {
-  gobi: 'Gobi',
-  kittu: 'Kittu',
-  byte: 'Byte',
-  draco: 'Draco',
-  nova: 'Nova',
-  kitsu: 'Kitsu'
-};
-const ROLES = {
-  gobi: 'AI Kitten • Beat Sync',
-  kittu: 'Cyber Shiba • Guard',
-  byte: 'Glitch Sprite • Code',
-  draco: 'Mini Dragon • Compute',
-  nova: 'Astral Orb • Focus',
-  kitsu: 'Kitsune • Vault'
-};
-const ICONS = {
-  gobi: '🐱',
-  kittu: '🐕',
-  byte: '👾',
-  draco: '🐉',
-  nova: '🔮',
-  kitsu: '🦊'
-};
-
-const API_BASE = (window.location.protocol.startsWith('http'))
-  ? window.location.origin
-  : 'http://127.0.0.1:8888';
-
-let currentSpeciesIdx = 0;
-let isDancing = false;
-
-function setSpecies(idx, syncServer = true) {
-  currentSpeciesIdx = (idx + SPECIES.length) % SPECIES.length;
-  const sp = SPECIES[currentSpeciesIdx];
-  const name = NAMES[sp];
-  
-  if (typeof mascotEngine !== 'undefined') mascotEngine.setSpecies(sp);
-  document.getElementById('pill-name').textContent = name;
-  document.getElementById('bubble-species-name').textContent = `${name.toUpperCase()} // ${ROLES[sp].toUpperCase()}`;
-  document.getElementById('bubble-species-icon').textContent = ICONS[sp];
-
-  if (syncServer && window.pywebview && window.pywebview.api && window.pywebview.api.save_pet_state) {
+  // Sync state from server or native Python API
+  async function syncState() {
     try {
-      window.pywebview.api.save_pet_state({ species: sp, name: name });
-    } catch(e) {}
-  }
-}
-
-async function initPetState() {
-  if (window.pywebview && window.pywebview.api && window.pywebview.api.get_pet_state) {
-    try {
-      const saved = await window.pywebview.api.get_pet_state();
-      if (saved && saved.species) {
-        const found = SPECIES.indexOf(saved.species);
-        if (found !== -1) {
-          setSpecies(found, false);
-          return;
+      let state = null;
+      if (window.pywebview?.api?.get_pet_state) {
+        state = await window.pywebview.api.get_pet_state();
+      } else {
+        const res = await fetch('/api/pet');
+        if (res.ok) state = await res.json();
+      }
+      if (state && state.species) {
+        if (state.species !== petState.species || (state.name && state.name !== petState.name)) {
+          applySpecies(state.species, state.name);
+        }
+        if (typeof state.sound === 'boolean') {
+          petState.sound = state.sound;
+          btnSound.textContent = state.sound ? '🔊' : '🔇';
         }
       }
-    } catch(e) {}
+    } catch (e) {}
   }
-  setSpecies(0, false);
-}
-initPetState();
 
-// Elements & Listeners
-const petWrap = document.getElementById('pet-wrap');
-const speechBubble = document.getElementById('speech-bubble');
-const bubbleClose = document.getElementById('bubble-close');
-const bubbleText = document.getElementById('bubble-text');
-const bubbleInp = document.getElementById('bubble-inp');
-const bubbleSend = document.getElementById('bubble-send');
-const pillMood = document.getElementById('pill-mood');
-
-petWrap.addEventListener('click', () => {
-  if (typeof mascotEngine !== 'undefined') mascotEngine.triggerJump();
-  sounds.playPurr();
-  speechBubble.classList.toggle('active');
-  if (speechBubble.classList.contains('active')) {
-    bubbleInp.focus();
+  // Persist state
+  async function persistState() {
+    try {
+      if (window.pywebview?.api?.save_pet_state) {
+        await window.pywebview.api.save_pet_state(petState);
+      }
+    } catch (e) {}
+    try {
+      await fetch('/api/pet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(petState)
+      });
+    } catch (e) {}
   }
-  // Instantly bring main KALKI workspace to the foreground
-  if (window.pywebview && window.pywebview.api && window.pywebview.api.open_main_app) {
-    window.pywebview.api.open_main_app();
+
+  // Cycle species
+  async function cycleNextSpecies() {
+    const curIdx = SPECIES_LIST.indexOf(petState.species);
+    const nextIdx = (curIdx + 1) % SPECIES_LIST.length;
+    const nextSpecies = SPECIES_LIST[nextIdx];
+    petState.name = SPECIES_INFO[nextSpecies].title;
+    applySpecies(nextSpecies, petState.name);
+    playBeep(SPECIES_INFO[nextSpecies].soundTone, 0.15);
+    bubbleText.textContent = SPECIES_INFO[nextSpecies].quote;
+    speechBubble.classList.add('active');
+    await persistState();
   }
-});
 
-bubbleClose.addEventListener('click', () => {
-  speechBubble.classList.remove('active');
-});
-
-document.getElementById('chip-open-kalki').addEventListener('click', () => {
-  if (window.pywebview && window.pywebview.api && window.pywebview.api.open_main_app) {
-    window.pywebview.api.open_main_app();
+  // Floating note particles
+  function spawnNote() {
+    const notes = ['♪', '♫', '♬', '♩'];
+    const el = document.createElement('div');
+    el.className = 'floating-note';
+    el.textContent = notes[Math.floor(Math.random() * notes.length)];
+    const rx = Math.random() * 40 - 20;
+    el.style.left = `calc(50% + ${rx}px)`;
+    el.style.top = '10px';
+    petWrap.appendChild(el);
+    setTimeout(() => el.remove(), 1200);
   }
-  bubbleText.innerHTML = "Restoring main KALKI workspace...";
-});
 
-document.querySelectorAll('.q-chip[data-cmd]').forEach(chip => {
-  chip.addEventListener('click', () => {
-    sendQuery(chip.getAttribute('data-cmd'));
+  // Music Poller
+  async function checkMusic() {
+    try {
+      let state = null;
+      if (window.pywebview?.api?.get_music_state) {
+        state = await window.pywebview.api.get_music_state();
+      } else {
+        const res = await fetch('/api/media/now-playing');
+        if (res.ok) state = await res.json();
+      }
+
+      const playing = state && (state.status === 'playing' || state.state === 'playing');
+      if (playing !== isDancing) {
+        isDancing = playing;
+        petWrap.classList.toggle('is-dancing', isDancing);
+        pillMood.textContent = isDancing ? 'Jamming' : 'Ready';
+        pillMood.style.color = isDancing ? '#fff4e2' : 'var(--ok)';
+      }
+      if (isDancing && Math.random() > 0.4) {
+        spawnNote();
+      }
+    } catch (e) {}
+  }
+
+  // Execute quick command or query
+  async function sendCommand(cmd) {
+    if (!cmd) return;
+    bubbleText.innerHTML = `<strong>Executing:</strong> "${cmd}"...`;
+    speechBubble.classList.add('active');
+    playBeep(520, 0.1);
+    try {
+      const res = await fetch('/api/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cmd })
+      });
+      const data = await res.json();
+      bubbleText.textContent = data.reply || data.output || data.message || "Command executed, Sir.";
+      playBeep(640, 0.15);
+    } catch (e) {
+      bubbleText.textContent = `Offline or busy. Click ⚡ to restore KALKI.`;
+    }
+  }
+
+  // Event Listeners
+  petWrap.addEventListener('click', (e) => {
+    // Avoid double trigger if clicking child
+    playBeep(SPECIES_INFO[petState.species]?.soundTone || 520, 0.1);
+    speechBubble.classList.toggle('active');
+    if (speechBubble.classList.contains('active')) {
+      bubbleText.textContent = SPECIES_INFO[petState.species]?.quote || "Standing guard, Sir.";
+    }
   });
-});
 
-document.getElementById('btn-next-pet').addEventListener('click', () => {
-  sounds.playChime();
-  setSpecies(currentSpeciesIdx + 1, true);
-});
+  bubbleClose.addEventListener('click', () => {
+    speechBubble.classList.remove('active');
+  });
 
-const btnSound = document.getElementById('btn-pet-sound');
-btnSound.addEventListener('click', () => {
-  sounds.muted = !sounds.muted;
-  btnSound.textContent = sounds.muted ? '🔇' : '🔊';
-  if (!sounds.muted) sounds.playPurr();
-});
+  btnNext.addEventListener('click', (e) => {
+    e.stopPropagation();
+    cycleNextSpecies();
+  });
 
-document.getElementById('btn-pet-wake').addEventListener('click', () => {
-  if (window.pywebview && window.pywebview.api && window.pywebview.api.open_main_app) {
-    window.pywebview.api.open_main_app();
-  }
-});
+  btnSound.addEventListener('click', (e) => {
+    e.stopPropagation();
+    petState.sound = !petState.sound;
+    btnSound.textContent = petState.sound ? '🔊' : '🔇';
+    playBeep(480, 0.1);
+    persistState();
+  });
 
-// Query Dispatcher to Loopback API
-async function sendQuery(q) {
-  if (!q.trim()) return;
-  sounds.playChime();
-  bubbleText.innerHTML = "<em>Thinking...</em>";
-  speechBubble.classList.add('active');
-  pillMood.textContent = "Processing";
-
-  try {
-    const res = await fetch(`${API_BASE}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages: [{ role: 'user', content: q.trim() }],
-        source: 'desktop_pet',
-        stream: false
-      })
-    });
-    const data = await res.json();
-    if (data.reply) {
-      bubbleText.innerHTML = data.reply.replace(/\n/g, '<br>');
-      pillMood.textContent = "Ready";
-    } else {
-      bubbleText.textContent = "Request processed.";
-      pillMood.textContent = "Ready";
-    }
-  } catch (err) {
-    // If backend is busy, still acknowledge
-    bubbleText.textContent = `Command "${q}" dispatched. Restoring workspace...`;
-    pillMood.textContent = "Ready";
-    if (window.pywebview && window.pywebview.api) {
+  btnWake.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (window.pywebview?.api?.open_main_app) {
       window.pywebview.api.open_main_app();
+    } else {
+      fetch('/api/wake', { method: 'POST', body: '{}' }).catch(() => {});
     }
-  }
-}
+    speechBubble.classList.remove('active');
+  });
 
-bubbleInp.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    const v = bubbleInp.value;
-    bubbleInp.value = '';
-    sendQuery(v);
-  }
-});
+  chipOpen.addEventListener('click', () => {
+    if (window.pywebview?.api?.open_main_app) {
+      window.pywebview.api.open_main_app();
+    } else {
+      fetch('/api/wake', { method: 'POST', body: '{}' }).catch(() => {});
+    }
+  });
 
-bubbleSend.addEventListener('click', () => {
-  const v = bubbleInp.value;
-  bubbleInp.value = '';
-  sendQuery(v);
-});
+  btnClose.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (window.pywebview?.api?.quit_pet) {
+      window.pywebview.api.quit_pet();
+    } else {
+      window.close();
+    }
+  });
 
-// Music & Dance Loop
-function spawnNote() {
-  const note = document.createElement('div');
-  note.className = 'floating-note';
-  note.textContent = ['♪', '♫', '♬', '✨'][Math.floor(Math.random() * 4)];
-  note.style.left = `${30 + Math.random() * 50}px`;
-  note.style.bottom = `${80 + Math.random() * 20}px`;
-  petWrap.appendChild(note);
-  setTimeout(() => note.remove(), 1200);
-}
+  // Quick Chips
+  document.querySelectorAll('.q-chip[data-cmd]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const cmd = chip.getAttribute('data-cmd');
+      sendCommand(cmd);
+    });
+  });
 
-setInterval(async () => {
-  let media = null;
-  // First attempt native Python WinRT query
-  if (window.pywebview && window.pywebview.api && window.pywebview.api.get_music_state) {
-    try {
-      media = await window.pywebview.api.get_music_state();
-    } catch(e) {}
-  }
-  // Fallback to loopback HTTP
-  if (!media) {
-    try {
-      const r = await fetch(`${API_BASE}/api/media/now_json`);
-      if (r.ok) media = await r.json();
-    } catch(e) {}
-  }
-
-  if (media) {
-    const playing = media.status === 'playing' || (media.title && media.title !== 'Nothing playing' && media.title !== 'Unknown');
-    if (playing !== isDancing) {
-      isDancing = playing;
-      petWrap.classList.toggle('is-dancing', isDancing);
-      if (typeof mascotEngine !== 'undefined') mascotEngine.setDancing(isDancing);
-      pillMood.textContent = isDancing ? "Jamming ♪" : "Ready";
-      if (isDancing) {
-        bubbleText.textContent = `Grooving to ${media.title || 'music'}!`;
+  // Input Send
+  bubbleSend.addEventListener('click', () => {
+    const val = bubbleInp.value.trim();
+    if (val) {
+      sendCommand(val);
+      bubbleInp.value = '';
+    }
+  });
+  bubbleInp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const val = bubbleInp.value.trim();
+      if (val) {
+        sendCommand(val);
+        bubbleInp.value = '';
       }
     }
-    if (isDancing && Math.random() > 0.4) {
-      spawnNote();
-    }
-  }
-}, 1600);
+  });
+
+  // Initial Setup
+  applySpecies('gobi', 'Gobi');
+  syncState();
+
+  // Polling Intervals
+  setInterval(syncState, 1000);
+  setInterval(checkMusic, 800);
+
+})();
 </script>
 </body>
 </html>
