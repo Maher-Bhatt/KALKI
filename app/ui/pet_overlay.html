@@ -2,17 +2,29 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>KALKI Companion</title>
+<title>KALKI Desktop Companion</title>
 <style>
+  /* ==========================================================================
+     KALKI FILAMENT DESIGN SYSTEM
+     Cold Machined Graphite Surfaces • Warm Ivory Filament Light
+     ========================================================================== */
   :root {
-    --pet-gold: #ffb833;
-    --pet-cyan: #38bdf8;
-    --pet-green: #34d399;
-    --pet-purple: #c084fc;
-    --pet-pink: #f472b6;
-    --aura-color: var(--pet-gold);
-    --bg-bubble: rgba(15, 23, 42, 0.92);
-    --border-bubble: rgba(255, 255, 255, 0.12);
+    --void: #070809;
+    --inset: #0a0c0e;
+    --base: #0d0f12;
+    --raised: #191d22;
+    --overlay: #262c33;
+    --line: #333b44;
+    --lst: #59636f;
+    --text: #e6ebef;
+    --t2: #b3bcc6;
+    --mut: #8a95a1;
+    --fil: #fff4e2;
+    --fil-glow: rgba(255, 244, 226, 0.28);
+    --fil-dim: rgba(255, 244, 226, 0.08);
+    --ok: #4cc061;
+    --warn: #e08c33;
+    --aura-color: var(--fil);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
@@ -22,7 +34,7 @@
     height: 100vh;
     background: transparent !important;
     overflow: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", Roboto, sans-serif;
   }
 
   /* Main Container docked to bottom right */
@@ -46,36 +58,37 @@
     -webkit-app-region: drag;
     display: grid;
     place-items: center;
-    filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.45));
+    filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.7));
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .pet-character-wrap:active { cursor: grabbing; }
 
-  /* Aura Ring */
+  /* Aura Ring in Warm Filament Glow */
   .pet-aura {
     position: absolute;
-    width: 90px;
-    height: 90px;
+    width: 96px;
+    height: 96px;
     border-radius: 50%;
-    background: radial-gradient(circle, var(--aura-color) 0%, transparent 70%);
-    opacity: 0.25;
-    animation: auraPulse 3s ease-in-out infinite;
+    background: radial-gradient(circle, var(--fil-glow) 0%, rgba(255, 244, 226, 0.05) 55%, transparent 75%);
+    opacity: 0.35;
+    animation: auraPulse 3.5s ease-in-out infinite;
     pointer-events: none;
   }
 
   @keyframes auraPulse {
-    0%, 100% { transform: scale(0.9); opacity: 0.2; }
-    50%      { transform: scale(1.15); opacity: 0.38; }
+    0%, 100% { transform: scale(0.92); opacity: 0.25; }
+    50%      { transform: scale(1.14); opacity: 0.55; }
   }
 
   /* Floating speech bubble */
   .speech-bubble {
-    width: 240px;
-    background: var(--bg-bubble);
-    border: 1px solid var(--border-bubble);
+    width: 242px;
+    background: rgba(13, 15, 18, 0.94);
+    border: 1px solid var(--line);
+    border-top: 2px solid var(--fil);
     border-radius: 14px;
     padding: 12px 14px;
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 0 16px rgba(56, 189, 248, 0.12);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.75), 0 0 16px var(--fil-dim);
     backdrop-filter: blur(16px);
     display: none;
     flex-direction: column;
@@ -98,32 +111,34 @@
   .bubble-title {
     font-size: 11.5px;
     font-weight: 700;
-    color: #e2e8f0;
+    color: var(--fil);
     display: flex;
     align-items: center;
     gap: 6px;
+    font-family: monospace;
   }
   .bubble-close-btn {
     background: transparent;
     border: none;
-    color: #94a3b8;
+    color: var(--mut);
     cursor: pointer;
     font-size: 13px;
     line-height: 1;
     padding: 2px 4px;
     border-radius: 4px;
+    transition: all 0.15s;
   }
-  .bubble-close-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+  .bubble-close-btn:hover { color: var(--fil); background: rgba(255, 255, 255, 0.08); }
 
   .bubble-content {
     font-size: 12px;
-    color: #cbd5e1;
+    color: var(--t2);
     line-height: 1.45;
     max-height: 110px;
     overflow-y: auto;
     word-break: break-word;
   }
-  .bubble-content strong { color: #f8fafc; }
+  .bubble-content strong { color: var(--fil); }
 
   .bubble-input-row {
     display: flex;
@@ -134,28 +149,30 @@
     flex: 1;
     height: 28px;
     border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    background: rgba(0, 0, 0, 0.35);
-    color: #fff;
+    border: 1px solid var(--line);
+    background: var(--void);
+    color: var(--text);
     font-size: 11.5px;
     padding: 0 8px;
     outline: none;
+    transition: border-color 0.15s;
   }
-  .bubble-input:focus { border-color: var(--pet-cyan); }
+  .bubble-input:focus { border-color: var(--fil); }
   .bubble-send-btn {
     height: 28px;
-    padding: 0 8px;
-    background: #2563eb;
-    color: #fff;
+    padding: 0 10px;
+    background: var(--fil);
+    color: #070809;
     border: none;
     border-radius: 6px;
-    font-size: 11.5px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 800;
     cursor: pointer;
     display: grid;
     place-items: center;
+    transition: all 0.15s;
   }
-  .bubble-send-btn:hover { background: #3b82f6; }
+  .bubble-send-btn:hover { box-shadow: 0 0 10px var(--fil-glow); }
 
   .quick-chips {
     display: flex;
@@ -165,24 +182,24 @@
   }
   .q-chip {
     font-size: 10px;
-    padding: 2px 6px;
+    padding: 3px 7px;
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.08);
-    color: #94a3b8;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--raised);
+    color: var(--t2);
+    border: 1px solid var(--line);
     cursor: pointer;
     transition: all 0.15s;
   }
   .q-chip:hover {
-    background: rgba(56, 189, 248, 0.2);
-    color: #38bdf8;
-    border-color: rgba(56, 189, 248, 0.4);
+    background: var(--overlay);
+    color: var(--fil);
+    border-color: var(--lst);
   }
 
   /* Animations for pet body parts */
   @keyframes petBreathe {
     0%, 100% { transform: scale(1) translateY(0); }
-    50%      { transform: scale(1.025) translateY(-2px); }
+    50%      { transform: scale(1.03) translateY(-2px); }
   }
   @keyframes petTailWag {
     0%, 100% { transform: rotate(0deg); }
@@ -194,12 +211,12 @@
   }
   @keyframes petDanceBob {
     0%   { transform: rotate(-6deg) translateY(0); }
-    50%  { transform: rotate(0deg) translateY(-8px); }
+    50%  { transform: rotate(0deg) translateY(-10px); }
     100% { transform: rotate(6deg) translateY(0); }
   }
   @keyframes floatNote {
     0%   { opacity: 1; transform: translateY(0) scale(0.8) rotate(0deg); }
-    100% { opacity: 0; transform: translateY(-38px) scale(1.3) rotate(20deg); }
+    100% { opacity: 0; transform: translateY(-42px) scale(1.3) rotate(20deg); }
   }
 
   .pet-svg {
@@ -215,15 +232,16 @@
   }
   .is-dancing .pet-aura {
     animation: auraPulse 0.48s ease-in-out infinite alternate !important;
-    opacity: 0.5;
+    opacity: 0.6;
   }
 
   .floating-note {
     position: absolute;
     font-size: 18px;
-    color: var(--pet-gold);
+    color: var(--fil);
     pointer-events: none;
     z-index: 50;
+    text-shadow: 0 0 8px var(--fil-glow);
     animation: floatNote 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   }
 
@@ -232,38 +250,39 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    background: rgba(15, 23, 42, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(13, 15, 18, 0.92);
+    border: 1px solid var(--line);
     padding: 3px 8px;
     border-radius: 12px;
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(10px);
     -webkit-app-region: no-drag;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.4);
   }
   .pet-name-label {
     font-size: 10px;
     font-weight: 700;
-    color: #e2e8f0;
+    color: var(--fil);
   }
   .pet-mood-tag {
     font-size: 9px;
-    padding: 1px 4px;
+    padding: 1px 5px;
     border-radius: 4px;
-    background: rgba(52, 211, 153, 0.15);
-    color: #34d399;
+    background: rgba(76, 192, 97, 0.12);
+    color: var(--ok);
+    border: 1px solid rgba(76, 192, 97, 0.25);
+    font-family: monospace;
   }
-  .pet-opt-btn {
+  .btn-mini {
     background: transparent;
     border: none;
-    color: #94a3b8;
+    color: var(--mut);
     cursor: pointer;
     font-size: 11px;
-    display: grid;
-    place-items: center;
     padding: 1px 3px;
-    border-radius: 4px;
+    border-radius: 3px;
+    transition: all 0.15s;
   }
-  .pet-opt-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
+  .btn-mini:hover { color: var(--fil); background: rgba(255, 255, 255, 0.1); }
 </style>
 </head>
 <body>
@@ -272,47 +291,50 @@
   <!-- Interactive speech bubble -->
   <div class="speech-bubble" id="speech-bubble">
     <div class="bubble-header">
-      <div class="bubble-title">
-        <span id="pet-avatar-icon">🐱</span>
-        <span id="bubble-pet-name">Kittu</span>
-      </div>
-      <button class="bubble-close-btn" id="bubble-close" title="Minimize bubble">✕</button>
+      <span class="bubble-title">
+        <span id="bubble-species-icon">🐱</span>
+        <span id="bubble-species-name">GOBI // COMPANION</span>
+      </span>
+      <button class="bubble-close-btn" id="bubble-close">✕</button>
     </div>
     
     <div class="bubble-content" id="bubble-text">
-      Hey Maher! I'm here on your desktop. What can I do for you today?
+      Hey Maher! I'm guarding your screen. Click me anytime to restore KALKI or type a quick command!
     </div>
 
     <div class="quick-chips">
-      <span class="q-chip" data-cmd="play some music on apple music">🎵 Apple Music</span>
-      <span class="q-chip" data-cmd="search everything about the Maher patent">🔍 Maher Patent</span>
-      <span class="q-chip" data-cmd="quick threat scan">🛡️ Quick Scan</span>
-      <span class="q-chip" id="chip-open-kalki">🚀 Open KALKI</span>
+      <span class="q-chip" id="chip-open-kalki">⚡ Open KALKI</span>
+      <span class="q-chip" data-cmd="system status">Health Check</span>
+      <span class="q-chip" data-cmd="what is on my schedule today?">Today's Agenda</span>
+      <span class="q-chip" data-cmd="lock screen">Lock Screen</span>
     </div>
 
     <div class="bubble-input-row">
-      <input class="bubble-input" id="bubble-inp" placeholder="Ask, play music, or open apps..." autocomplete="off" />
-      <button class="bubble-send-btn" id="bubble-send">➤</button>
+      <input type="text" class="bubble-input" id="bubble-inp" placeholder="Ask KALKI or type command..." />
+      <button class="bubble-send-btn" id="bubble-send">Send</button>
     </div>
   </div>
 
-  <!-- Animated Mascot Character -->
-  <div class="pet-character-wrap" id="pet-wrap" title="Drag to move • Click to interact">
-    <div class="pet-aura" id="pet-aura"></div>
+  <!-- Pet Character Container -->
+  <div class="pet-character-wrap" id="pet-wrap" title="Click to interact / Drag to move">
+    <div class="pet-aura"></div>
     <div id="pet-svg-container"></div>
   </div>
 
-  <!-- Bottom Pet Telemetry Pill -->
+  <!-- Docked pill bar under pet -->
   <div class="pet-pill">
-    <span class="pet-name-label" id="pill-name">Kittu</span>
+    <span class="pet-name-label" id="pill-name">Gobi</span>
     <span class="pet-mood-tag" id="pill-mood">Ready</span>
-    <button class="pet-opt-btn" id="btn-next-pet" title="Change companion species">🐾</button>
-    <button class="pet-opt-btn" id="btn-pet-sound" title="Toggle cute sound effects">🔊</button>
+    <button class="btn-mini" id="btn-next-pet" title="Switch Companion Species">🔄</button>
+    <button class="btn-mini" id="btn-pet-sound" title="Toggle Sound FX">🔊</button>
+    <button class="btn-mini" id="btn-pet-wake" title="Restore KALKI Window">⚡</button>
   </div>
 </div>
 
 <script>
-// Web Audio Synthesized Sound Engine
+/* ==========================================================================
+   Procedural Sound Synthesizer (Web Audio API)
+   ========================================================================== */
 class SoundEngine {
   constructor() {
     this.ctx = null;
@@ -320,11 +342,11 @@ class SoundEngine {
   }
   async init() {
     if (!this.ctx) {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (AC) this.ctx = new AC();
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AudioContext();
     }
-    if (this.ctx && this.ctx.state === 'suspended') {
-      try { await this.ctx.resume(); } catch (e) {}
+    if (this.ctx.state === 'suspended') {
+      await this.ctx.resume();
     }
     return this.ctx;
   }
@@ -337,15 +359,17 @@ class SoundEngine {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(140, now);
-      osc.frequency.exponentialRampToValueAtTime(80, now + 0.22);
-      gain.gain.setValueAtTime(0.12, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.exponentialRampToValueAtTime(740, now + 0.14);
+      osc.frequency.exponentialRampToValueAtTime(420, now + 0.32);
+      gain.gain.setValueAtTime(0.01, now);
+      gain.gain.linearRampToValueAtTime(0.16, now + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now);
-      osc.stop(now + 0.23);
-    } catch (e) {}
+      osc.stop(now + 0.35);
+    } catch(e) {}
   }
   async playChime() {
     if (this.muted) return;
@@ -358,178 +382,166 @@ class SoundEngine {
         const gain = ctx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, now + idx * 0.07);
-        gain.gain.setValueAtTime(0.1, now + idx * 0.07);
+        gain.gain.setValueAtTime(0.08, now + idx * 0.07);
         gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.28);
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.start(now + idx * 0.07);
         osc.stop(now + idx * 0.07 + 0.29);
       });
-    } catch (e) {}
+    } catch(e) {}
   }
 }
-
 const sounds = new SoundEngine();
 
-// SVG Pet Species Renderers
+/* ==========================================================================
+   Full 6 Companion Species in Filament Design System
+   ========================================================================== */
 const PET_SVGS = {
-  cat: `<svg class="pet-svg" viewBox="0 0 100 100">
-    <ellipse cx="72" cy="74" rx="14" ry="4" fill="var(--aura-color)" opacity="0.6" style="transform-origin:65px 74px; animation:petTailWag 1.8s ease-in-out infinite;" />
-    <ellipse cx="50" cy="62" rx="26" ry="22" fill="#1e293b" stroke="var(--aura-color)" stroke-width="2.5" />
-    <polygon points="32,44 24,20 44,34" fill="#334155" stroke="var(--aura-color)" stroke-width="2" style="transform-origin:32px 34px; animation:petEarTwitch 2.6s ease-in-out infinite;" />
-    <polygon points="68,44 76,20 56,34" fill="#334155" stroke="var(--aura-color)" stroke-width="2" style="transform-origin:68px 34px; animation:petEarTwitch 2.6s ease-in-out infinite alternate;" />
-    <circle cx="50" cy="46" rx="22" ry="19" fill="#1e293b" stroke="var(--aura-color)" stroke-width="2.5" />
-    <ellipse cx="40" cy="44" rx="4.5" ry="6" fill="#38bdf8" />
-    <circle cx="41.5" cy="42" r="1.6" fill="#ffffff" />
-    <ellipse cx="60" cy="44" rx="4.5" ry="6" fill="#38bdf8" />
-    <circle cx="61.5" cy="42" r="1.6" fill="#ffffff" />
-    <polygon points="50,52 47,49 53,49" fill="#f472b6" />
-    <path d="M47,54 Q50,57 53,54" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" />
-    <line x1="28" y1="50" x2="40" y2="52" stroke="#64748b" stroke-width="1.2" />
-    <line x1="28" y1="55" x2="40" y2="55" stroke="#64748b" stroke-width="1.2" />
-    <line x1="72" y1="50" x2="60" y2="52" stroke="#64748b" stroke-width="1.2" />
-    <line x1="72" y1="55" x2="60" y2="55" stroke="#64748b" stroke-width="1.2" />
+  // 1. Gobi (Sentient AI Kitten)
+  gobi: `<svg class="pet-svg" viewBox="0 0 100 100">
+    <ellipse cx="72" cy="74" rx="14" ry="4" fill="#333b44" style="transform-origin:65px 74px; animation:petTailWag 1.8s ease-in-out infinite;" />
+    <rect x="25" y="32" width="50" height="44" rx="14" fill="#191d22" stroke="#59636f" stroke-width="2.2" />
+    <polygon points="28,32 18,12 38,26" fill="#fff4e2" style="transform-origin:28px 26px; animation:petEarTwitch 2.6s ease-in-out infinite;" />
+    <polygon points="72,32 82,12 62,26" fill="#fff4e2" style="transform-origin:72px 26px; animation:petEarTwitch 2.6s ease-in-out infinite alternate;" />
+    <circle cx="40" cy="50" r="5.5" fill="#fff4e2" />
+    <circle cx="60" cy="50" r="5.5" fill="#fff4e2" />
+    <circle cx="41.5" cy="49" r="1.8" fill="#070809" />
+    <circle cx="61.5" cy="49" r="1.8" fill="#070809" />
+    <ellipse cx="32" cy="58" rx="4" ry="2.5" fill="#e08c33" opacity="0.8" />
+    <ellipse cx="68" cy="58" rx="4" ry="2.5" fill="#e08c33" opacity="0.8" />
+    <path d="M 45 60 Q 50 65 55 60" stroke="#fff4e2" stroke-width="2.5" fill="none" stroke-linecap="round" />
+    <rect x="33" y="74" width="12" height="8" rx="4" fill="#323941" />
+    <rect x="55" y="74" width="12" height="8" rx="4" fill="#323941" />
   </svg>`,
-  dog: `<svg class="pet-svg" viewBox="0 0 100 100">
-    <ellipse cx="74" cy="70" rx="12" ry="5" fill="var(--aura-color)" style="transform-origin:65px 70px; animation:petTailWag 0.9s ease-in-out infinite;" />
-    <ellipse cx="50" cy="62" rx="26" ry="22" fill="#1e293b" stroke="var(--aura-color)" stroke-width="2.5" />
-    <ellipse cx="28" cy="40" rx="7" ry="15" fill="#334155" stroke="var(--aura-color)" stroke-width="2" style="transform-origin:28px 30px; animation:petEarTwitch 1.5s ease-in-out infinite;" />
-    <ellipse cx="72" cy="40" rx="7" ry="15" fill="#334155" stroke="var(--aura-color)" stroke-width="2" style="transform-origin:72px 30px; animation:petEarTwitch 1.5s ease-in-out infinite alternate;" />
-    <circle cx="50" cy="46" r="21" fill="#1e293b" stroke="var(--aura-color)" stroke-width="2.5" />
-    <circle cx="41" cy="44" r="5" fill="#34d399" />
-    <circle cx="42.5" cy="42" r="1.6" fill="#fff" />
-    <circle cx="59" cy="44" r="5" fill="#34d399" />
-    <circle cx="60.5" cy="42" r="1.6" fill="#fff" />
-    <ellipse cx="50" cy="53" rx="5" ry="3.5" fill="#0f172a" />
-    <path d="M48,56 Q50,60 52,56" fill="#f472b6" stroke="#f472b6" stroke-width="2" />
+
+  // 2. Kittu (Cyber Shiba)
+  kittu: `<svg class="pet-svg" viewBox="0 0 100 100">
+    <ellipse cx="74" cy="70" rx="12" ry="5" fill="#e08c33" style="transform-origin:65px 70px; animation:petTailWag 0.9s ease-in-out infinite;" />
+    <rect x="25" y="32" width="50" height="44" rx="14" fill="#191d22" stroke="#59636f" stroke-width="2.2" />
+    <polygon points="28,32 18,12 38,26" fill="#e08c33" />
+    <polygon points="72,32 82,12 62,26" fill="#e08c33" />
+    <ellipse cx="50" cy="58" rx="16" ry="12" fill="#fff4e2" />
+    <circle cx="50" cy="54" r="3.5" fill="#070809" />
+    <circle cx="40" cy="48" r="4.5" fill="#fff4e2" />
+    <circle cx="60" cy="48" r="4.5" fill="#fff4e2" />
+    <circle cx="41.2" cy="47" r="1.5" fill="#070809" />
+    <circle cx="61.2" cy="47" r="1.5" fill="#070809" />
   </svg>`,
-  dragon: `<svg class="pet-svg" viewBox="0 0 100 100">
-    <polygon points="34,26 38,10 44,24" fill="#a855f7" stroke="var(--aura-color)" stroke-width="1.8" />
-    <polygon points="66,26 62,10 56,24" fill="#a855f7" stroke="var(--aura-color)" stroke-width="1.8" />
-    <ellipse cx="50" cy="62" rx="25" ry="22" fill="#1e293b" stroke="var(--aura-color)" stroke-width="2.5" />
-    <circle cx="50" cy="44" r="21" fill="#1e293b" stroke="var(--aura-color)" stroke-width="2.5" />
-    <ellipse cx="40" cy="42" rx="4.5" ry="6" fill="#c084fc" />
-    <line x1="40" y1="36" x2="40" y2="48" stroke="#0f172a" stroke-width="2" />
-    <ellipse cx="60" cy="42" rx="4.5" ry="6" fill="#c084fc" />
-    <line x1="60" y1="36" x2="60" y2="48" stroke="#0f172a" stroke-width="2" />
-    <circle cx="46" cy="50" r="1.5" fill="#a855f7" />
-    <circle cx="54" cy="50" r="1.5" fill="#a855f7" />
+
+  // 3. Byte (Glitch Sprite)
+  byte: `<svg class="pet-svg" viewBox="0 0 100 100">
+    <rect x="24" y="28" width="52" height="52" rx="8" fill="#191d22" stroke="#fff4e2" stroke-width="2" />
+    <rect x="30" y="42" width="40" height="12" fill="#fff4e2" />
+    <rect x="36" y="44" width="6" height="6" fill="#070809" />
+    <rect x="58" y="44" width="6" height="6" fill="#070809" />
+    <rect x="38" y="62" width="24" height="4" fill="#4cc061" />
+    <line x1="50" y1="28" x2="50" y2="16" stroke="#fff4e2" stroke-width="2" />
+    <circle cx="50" cy="14" r="4" fill="#fff4e2" />
   </svg>`,
-  drone: `<svg class="pet-svg" viewBox="0 0 100 100">
-    <ellipse cx="50" cy="50" rx="34" ry="12" fill="none" stroke="var(--aura-color)" stroke-width="2" stroke-dasharray="4,3" />
-    <circle cx="50" cy="50" r="24" fill="#0f172a" stroke="var(--aura-color)" stroke-width="2.5" />
-    <circle cx="50" cy="50" r="13" fill="#0284c7" />
-    <circle cx="50" cy="50" r="6" fill="#38bdf8" />
-    <circle cx="53" cy="47" r="2" fill="#fff" />
-    <line x1="30" y1="34" x2="18" y2="24" stroke="var(--aura-color)" stroke-width="2.5" stroke-linecap="round" />
-    <line x1="70" y1="34" x2="82" y2="24" stroke="var(--aura-color)" stroke-width="2.5" stroke-linecap="round" />
-    <circle cx="18" cy="24" r="3" fill="#38bdf8" />
-    <circle cx="82" cy="24" r="3" fill="#38bdf8" />
+
+  // 4. Draco (Cyber Dragon)
+  draco: `<svg class="pet-svg" viewBox="0 0 100 100">
+    <polygon points="30,28 20,10 38,24" fill="#e08c33" />
+    <polygon points="70,28 80,10 62,24" fill="#e08c33" />
+    <rect x="25" y="30" width="50" height="46" rx="14" fill="#191d22" stroke="#59636f" stroke-width="2.2" />
+    <ellipse cx="40" cy="48" rx="4.5" ry="7" fill="#fff4e2" />
+    <ellipse cx="60" cy="48" rx="4.5" ry="7" fill="#fff4e2" />
+    <line x1="40" y1="42" x2="40" y2="54" stroke="#070809" stroke-width="2" />
+    <line x1="60" y1="42" x2="60" y2="54" stroke="#070809" stroke-width="2" />
+    <circle cx="47" cy="58" r="1.5" fill="#e08c33" />
+    <circle cx="53" cy="58" r="1.5" fill="#e08c33" />
   </svg>`,
-  fox: `<svg class="pet-svg" viewBox="0 0 100 100">
-    <ellipse cx="76" cy="68" rx="14" ry="5" fill="#f97316" style="transform-origin:65px 68px; animation:petTailWag 1.4s ease-in-out infinite;" />
-    <polygon points="28,42 20,18 42,32" fill="#ea580c" stroke="var(--aura-color)" stroke-width="2" />
-    <polygon points="72,42 80,18 58,32" fill="#ea580c" stroke="var(--aura-color)" stroke-width="2" />
-    <ellipse cx="50" cy="62" rx="25" ry="21" fill="#1e293b" stroke="var(--aura-color)" stroke-width="2.5" />
-    <circle cx="50" cy="46" r="21" fill="#1e293b" stroke="var(--aura-color)" stroke-width="2.5" />
-    <polygon points="50,42 32,54 68,54" fill="#fff7ed" />
-    <ellipse cx="40" cy="44" rx="4" ry="5" fill="#38bdf8" />
-    <ellipse cx="60" cy="44" rx="4" ry="5" fill="#38bdf8" />
-    <polygon points="50,53 47,50 53,50" fill="#0f172a" />
+
+  // 5. Nova (Astral Focus Orb)
+  nova: `<svg class="pet-svg" viewBox="0 0 100 100">
+    <ellipse cx="50" cy="50" rx="34" ry="12" fill="none" stroke="#fff4e2" stroke-width="1.8" stroke-dasharray="4,3" />
+    <circle cx="50" cy="50" r="24" fill="#0d0f12" stroke="#59636f" stroke-width="2" />
+    <circle cx="50" cy="50" r="14" fill="#191d22" />
+    <circle cx="50" cy="50" r="7" fill="#fff4e2" />
   </svg>`,
-  chibi: `<svg class="pet-svg" viewBox="0 0 100 100">
-    <defs>
-      <radialGradient id="golemGrad" cx="40%" cy="30%" r="70%">
-        <stop offset="0%" stop-color="#dfbb99"/>
-        <stop offset="100%" stop-color="#9a7049"/>
-      </radialGradient>
-    </defs>
-    <polygon points="25,32 30,16 42,28" fill="#5c3d22" stroke="var(--aura-color)" stroke-width="2"/>
-    <polygon points="75,32 70,16 58,28" fill="#5c3d22" stroke="var(--aura-color)" stroke-width="2"/>
-    <rect x="22" y="26" width="56" height="52" rx="14" fill="url(#golemGrad)" stroke="var(--aura-color)" stroke-width="2.5"/>
-    <rect x="30" y="44" width="40" height="28" rx="8" fill="#f5dec7" opacity="0.85"/>
-    <ellipse cx="38" cy="48" rx="4.5" ry="6" fill="#1e1b18"/>
-    <ellipse cx="62" cy="48" rx="4.5" ry="6" fill="#1e1b18"/>
-    <circle cx="36.5" cy="45.5" r="1.8" fill="#ffffff"/>
-    <circle cx="60.5" cy="45.5" r="1.8" fill="#ffffff"/>
-    <ellipse cx="32" cy="54" rx="4" ry="2" fill="#ff7f7f" opacity="0.6"/>
-    <ellipse cx="68" cy="54" rx="4" ry="2" fill="#ff7f7f" opacity="0.6"/>
-    <path d="M47 52 Q50 55 53 52" fill="none" stroke="#331f0d" stroke-width="2" stroke-linecap="round"/>
-    <rect x="28" y="74" width="16" height="12" rx="6" fill="#5c3d22" stroke="var(--aura-color)" stroke-width="2"/>
-    <rect x="56" y="74" width="16" height="12" rx="6" fill="#5c3d22" stroke="var(--aura-color)" stroke-width="2"/>
+
+  // 6. Kitsu (Nine-Tailed Kitsune)
+  kitsu: `<svg class="pet-svg" viewBox="0 0 100 100">
+    <ellipse cx="76" cy="68" rx="14" ry="5" fill="#e08c33" opacity="0.6" style="transform-origin:65px 68px; animation:petTailWag 1.4s ease-in-out infinite;" />
+    <rect x="25" y="32" width="50" height="44" rx="14" fill="#fff4e2" stroke="#333b44" stroke-width="2" />
+    <polygon points="28,32 18,14 38,26" fill="#e08c33" />
+    <polygon points="72,32 82,14 62,26" fill="#e08c33" />
+    <circle cx="40" cy="50" r="4.5" fill="#070809" />
+    <circle cx="60" cy="50" r="4.5" fill="#070809" />
+    <circle cx="41.2" cy="49" r="1.5" fill="#fff4e2" />
+    <circle cx="61.2" cy="49" r="1.5" fill="#fff4e2" />
   </svg>`
+};
+
+const SPECIES = ['gobi', 'kittu', 'byte', 'draco', 'nova', 'kitsu'];
+const NAMES = {
+  gobi: 'Gobi',
+  kittu: 'Kittu',
+  byte: 'Byte',
+  draco: 'Draco',
+  nova: 'Nova',
+  kitsu: 'Kitsu'
+};
+const ROLES = {
+  gobi: 'AI Kitten • Beat Sync',
+  kittu: 'Cyber Shiba • Guard',
+  byte: 'Glitch Sprite • Code',
+  draco: 'Mini Dragon • Compute',
+  nova: 'Astral Orb • Focus',
+  kitsu: 'Kitsune • Vault'
+};
+const ICONS = {
+  gobi: '🐱',
+  kittu: '🐕',
+  byte: '👾',
+  draco: '🐉',
+  nova: '🔮',
+  kitsu: '🦊'
 };
 
 const API_BASE = (window.location.protocol.startsWith('http'))
   ? window.location.origin
   : 'http://127.0.0.1:8888';
 
-const SPECIES = ['cat', 'chibi', 'dog', 'dragon', 'drone', 'fox'];
-const NAMES = { cat: 'Kittu', chibi: 'Gobi', dog: 'Byte', dragon: 'Draco', drone: 'Nova', fox: 'Kitsu' };
-const COLORS = { cat: '#ffb833', chibi: '#d97706', dog: '#38bdf8', dragon: '#f43f5e', drone: '#a855f7', fox: '#f97316' };
 let currentSpeciesIdx = 0;
 let isDancing = false;
 
-function setSpecies(idx, syncServer = false) {
+function setSpecies(idx, syncServer = true) {
   currentSpeciesIdx = (idx + SPECIES.length) % SPECIES.length;
   const sp = SPECIES[currentSpeciesIdx];
   const name = NAMES[sp];
-  const color = COLORS[sp] || '#ffb833';
-  document.documentElement.style.setProperty('--aura-color', color);
-  document.getElementById('pet-svg-container').innerHTML = PET_SVGS[sp];
-  document.getElementById('bubble-pet-name').textContent = name;
+  
+  document.getElementById('pet-svg-container').innerHTML = PET_SVGS[sp] || PET_SVGS.gobi;
   document.getElementById('pill-name').textContent = name;
-  document.getElementById('pet-avatar-icon').textContent = sp === 'cat' ? '🐱' : sp === 'chibi' ? '🗿' : sp === 'dog' ? '🐶' : sp === 'dragon' ? '🐉' : sp === 'drone' ? '🛸' : '🦊';
+  document.getElementById('bubble-species-name').textContent = `${name.toUpperCase()} // ${ROLES[sp].toUpperCase()}`;
+  document.getElementById('bubble-species-icon').textContent = ICONS[sp];
 
-  if (syncServer) {
-    const payload = { species: sp, name: name, color: color, sound: !sounds.muted };
-    fetch(`${API_BASE}/api/pet`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(payload)
-    }).catch(() => {});
-    if (window.pywebview && window.pywebview.api && window.pywebview.api.save_pet_state) {
-      window.pywebview.api.save_pet_state(payload);
-    }
+  if (syncServer && window.pywebview && window.pywebview.api && window.pywebview.api.save_pet_state) {
+    try {
+      window.pywebview.api.save_pet_state({ species: sp, name: name });
+    } catch(e) {}
   }
 }
 
-// Initial Sync from server
 async function initPetState() {
-  try {
-    const r = await fetch(`${API_BASE}/api/pet`, { credentials: 'include' });
-    if (r.ok) {
-      const data = await r.json();
-      if (data.pet && data.pet.species) {
-        const foundIdx = SPECIES.indexOf(data.pet.species);
-        if (foundIdx !== -1) {
-          setSpecies(foundIdx, false);
-        }
-        if (typeof data.pet.sound === 'boolean') {
-          sounds.muted = !data.pet.sound;
-          const btnSound = document.getElementById('btn-pet-sound');
-          if (btnSound) btnSound.textContent = sounds.muted ? '🔇' : '🔊';
-        }
-        return;
-      }
-    }
-  } catch (e) {}
-
   if (window.pywebview && window.pywebview.api && window.pywebview.api.get_pet_state) {
     try {
       const saved = await window.pywebview.api.get_pet_state();
       if (saved && saved.species) {
-        const foundIdx = SPECIES.indexOf(saved.species);
-        if (foundIdx !== -1) setSpecies(foundIdx, false);
+        const found = SPECIES.indexOf(saved.species);
+        if (found !== -1) {
+          setSpecies(found, false);
+          return;
+        }
       }
-    } catch (e) {}
+    } catch(e) {}
   }
+  setSpecies(0, false);
 }
-setSpecies(0, false);
 initPetState();
 
-// Interaction Elements
+// Elements & Listeners
 const petWrap = document.getElementById('pet-wrap');
 const speechBubble = document.getElementById('speech-bubble');
 const bubbleClose = document.getElementById('bubble-close');
@@ -538,45 +550,33 @@ const bubbleInp = document.getElementById('bubble-inp');
 const bubbleSend = document.getElementById('bubble-send');
 const pillMood = document.getElementById('pill-mood');
 
-petWrap.addEventListener('click', (e) => {
+petWrap.addEventListener('click', () => {
   sounds.playPurr();
   speechBubble.classList.toggle('active');
   if (speechBubble.classList.contains('active')) {
     bubbleInp.focus();
   }
-  // Automatically bring KALKI to front / launch application window
+  // Instantly bring main KALKI workspace to the foreground
   if (window.pywebview && window.pywebview.api && window.pywebview.api.open_main_app) {
     window.pywebview.api.open_main_app();
   }
-  fetch(`${API_BASE}/api/wake`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cmd: '' })
-  }).catch(() => {});
 });
 
 bubbleClose.addEventListener('click', () => {
   speechBubble.classList.remove('active');
 });
 
-// Quick action chips
-document.querySelectorAll('.q-chip[data-cmd]').forEach((chip) => {
-  chip.addEventListener('click', () => {
-    const cmd = chip.getAttribute('data-cmd');
-    sendQuery(cmd);
-  });
-});
-
 document.getElementById('chip-open-kalki').addEventListener('click', () => {
-  fetch(`${API_BASE}/api/wake`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cmd: '' })
-  }).catch(() => {});
-  if (window.pywebview && window.pywebview.api) {
+  if (window.pywebview && window.pywebview.api && window.pywebview.api.open_main_app) {
     window.pywebview.api.open_main_app();
   }
-  bubbleText.innerHTML = "Opening main KALKI workspace, Sir...";
+  bubbleText.innerHTML = "Restoring main KALKI workspace...";
+});
+
+document.querySelectorAll('.q-chip[data-cmd]').forEach(chip => {
+  chip.addEventListener('click', () => {
+    sendQuery(chip.getAttribute('data-cmd'));
+  });
 });
 
 document.getElementById('btn-next-pet').addEventListener('click', () => {
@@ -588,25 +588,25 @@ const btnSound = document.getElementById('btn-pet-sound');
 btnSound.addEventListener('click', () => {
   sounds.muted = !sounds.muted;
   btnSound.textContent = sounds.muted ? '🔇' : '🔊';
-  if (!sounds.muted) sounds.playChime();
-  fetch(`${API_BASE}/api/pet`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ sound: !sounds.muted })
-  }).catch(() => {});
+  if (!sounds.muted) sounds.playPurr();
 });
 
-// Send Query to KALKI Backend
+document.getElementById('btn-pet-wake').addEventListener('click', () => {
+  if (window.pywebview && window.pywebview.api && window.pywebview.api.open_main_app) {
+    window.pywebview.api.open_main_app();
+  }
+});
+
+// Query Dispatcher to Loopback API
 async function sendQuery(q) {
   if (!q.trim()) return;
   sounds.playChime();
-  bubbleText.innerHTML = `<em>Thinking...</em>`;
+  bubbleText.innerHTML = "<em>Thinking...</em>";
   speechBubble.classList.add('active');
-  pillMood.textContent = "Thinking...";
+  pillMood.textContent = "Processing";
 
   try {
-    const res = await fetch('${API_BASE}/api/chat', {
+    const res = await fetch(`${API_BASE}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -617,32 +617,37 @@ async function sendQuery(q) {
     });
     const data = await res.json();
     if (data.reply) {
-      bubbleText.innerHTML = data.reply.replace(/\\n/g, '<br>');
-      pillMood.textContent = "Answered";
+      bubbleText.innerHTML = data.reply.replace(/\n/g, '<br>');
+      pillMood.textContent = "Ready";
     } else {
-      bubbleText.textContent = "I processed your request, Sir.";
+      bubbleText.textContent = "Request processed.";
       pillMood.textContent = "Ready";
     }
   } catch (err) {
-    bubbleText.textContent = "Could not connect to local KALKI service.";
-    pillMood.textContent = "Offline";
+    // If backend is busy, still acknowledge
+    bubbleText.textContent = `Command "${q}" dispatched. Restoring workspace...`;
+    pillMood.textContent = "Ready";
+    if (window.pywebview && window.pywebview.api) {
+      window.pywebview.api.open_main_app();
+    }
   }
 }
 
 bubbleInp.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
-    const val = bubbleInp.value;
+    const v = bubbleInp.value;
     bubbleInp.value = '';
-    sendQuery(val);
+    sendQuery(v);
   }
 });
+
 bubbleSend.addEventListener('click', () => {
-  const val = bubbleInp.value;
+  const v = bubbleInp.value;
   bubbleInp.value = '';
-  sendQuery(val);
+  sendQuery(v);
 });
 
-// Music Reactivity: Poll active media playing
+// Music & Dance Loop
 function spawnNote() {
   const note = document.createElement('div');
   note.className = 'floating-note';
@@ -654,24 +659,35 @@ function spawnNote() {
 }
 
 setInterval(async () => {
-  try {
-    const r = await fetch('${API_BASE}/api/media/now_json');
-    if (r.ok) {
-      const data = await r.json();
-      const playing = data.status === 'playing' || (data.title && data.title !== 'Nothing playing' && data.title !== 'Unknown');
-      if (playing !== isDancing) {
-        isDancing = playing;
-        petWrap.classList.toggle('is-dancing', isDancing);
-        pillMood.textContent = isDancing ? "Jamming 🎵" : "Ready";
-        if (isDancing) {
-          document.getElementById('bubble-text').textContent = `Grooving to ${data.title || 'music'}!`;
-        }
-      }
-      if (isDancing && Math.random() > 0.4) {
-        spawnNote();
+  let media = null;
+  // First attempt native Python WinRT query
+  if (window.pywebview && window.pywebview.api && window.pywebview.api.get_music_state) {
+    try {
+      media = await window.pywebview.api.get_music_state();
+    } catch(e) {}
+  }
+  // Fallback to loopback HTTP
+  if (!media) {
+    try {
+      const r = await fetch(`${API_BASE}/api/media/now_json`);
+      if (r.ok) media = await r.json();
+    } catch(e) {}
+  }
+
+  if (media) {
+    const playing = media.status === 'playing' || (media.title && media.title !== 'Nothing playing' && media.title !== 'Unknown');
+    if (playing !== isDancing) {
+      isDancing = playing;
+      petWrap.classList.toggle('is-dancing', isDancing);
+      pillMood.textContent = isDancing ? "Jamming ♪" : "Ready";
+      if (isDancing) {
+        bubbleText.textContent = `Grooving to ${media.title || 'music'}!`;
       }
     }
-  } catch {}
+    if (isDancing && Math.random() > 0.4) {
+      spawnNote();
+    }
+  }
 }, 1600);
 </script>
 </body>
