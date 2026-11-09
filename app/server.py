@@ -95,6 +95,8 @@ import semantic_memory
 import settings_schema
 import routes_productivity
 import routes_memory
+import routes_threads
+import threads
 import tool_policy
 import command_intent
 import db
@@ -3721,6 +3723,30 @@ def pick_model(text):
 AI_APPROVAL_SECONDS = 180
 
 
+def _share_exchange(user_text, reply, source):
+    """Save a voice or Telegram turn into the shared conversation and tell the app.
+    If saving fails the turn still gets announced: the reply matters more."""
+    thread_id = None
+    try:
+        thread_id = threads.append_exchange(user_text, reply, source)
+    except Exception as e:
+        runtime_log.log_event(LOG_PATH, "error", "thread_save_failed", detail=str(e))
+    with _state_lock:
+        STATE["conversation_seq"] += 1
+        STATE["recent_exchange"] = {
+            "seq": STATE["conversation_seq"], "threadId": thread_id,
+            "user": user_text, "reply": reply, "ts": time.time(),
+        }
+
+
+def _shared_context(limit=8):
+    try:
+        return threads.recent_context(limit=limit)
+    except Exception as e:
+        runtime_log.log_event(LOG_PATH, "error", "thread_read_failed", detail=str(e))
+        return []
+
+
 def _remember_from_turn(user_text, reply_text):
     """Learn from a turn in the background. A reply built on untrusted content is left
     out: the extractor saves straight to memory, which would skip the approval gate."""
@@ -5826,7 +5852,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": False, "error": "request body must be a JSON object"}, status=400)
             return
 
-        route = routes_productivity.POST_ROUTES.get(path) or routes_memory.POST_ROUTES.get(path)
+        route = (routes_productivity.POST_ROUTES.get(path) or routes_memory.POST_ROUTES.get(path)
+                 or routes_threads.POST_ROUTES.get(path))
         if route:
             payload, status = route(body)
             self._json(payload, status=status)
@@ -6249,7 +6276,7 @@ class Handler(BaseHTTPRequestHandler):
                 handled, reply = handle_local(cmd)
                 if not handled:
                     try:
-                        convo = load_history()[-8:] + [{"role": "user", "content": cmd}]
+                        convo = _shared_context() + [{"role": "user", "content": cmd}]
                         reply = ask_ai(convo)
                     except Exception as e:
                         reply = f"My link hiccuped, Sir — say that again? ({str(e)[:80]})"
@@ -6259,12 +6286,7 @@ class Handler(BaseHTTPRequestHandler):
 
                 # Record exchange so UI can render it
                 reply = maybe_add_joke_offer(cmd, reply)
-                with _state_lock:
-                    STATE["conversation_seq"] += 1
-                    STATE["recent_exchange"] = {
-                        "seq": STATE["conversation_seq"],
-                        "user": cmd, "reply": reply, "ts": time.time(),
-                    }
+                _share_exchange(cmd, reply, "voice")
                 append_history(cmd, reply)
                 speak(reply)
                 self._json({"ok": True, "reply": reply, "handled": handled})
@@ -6359,6 +6381,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/chat":
             messages = body.get("messages") or []
             is_voice = (body.get("source") == "voice")
+            # Other sources have no window keeping their conversation, so the server does.
+            shared_source = body.get("source") if body.get("source") in ("voice", "telegram") else None
+            if body.get("threadId"):
+                threads.set_active(str(body["threadId"]))
             stream_req = body.get("stream", False)
             client_speech = bool(body.get("clientSpeech"))
             # Wake + command in one breath arrives here (not /api/wake), so
@@ -6374,13 +6400,8 @@ class Handler(BaseHTTPRequestHandler):
                     break
 
             def _record_exchange(reply):
-                if is_voice:
-                    with _state_lock:
-                        STATE["conversation_seq"] += 1
-                        STATE["recent_exchange"] = {
-                            "seq": STATE["conversation_seq"],
-                            "user": user_text, "reply": reply, "ts": time.time(),
-                        }
+                if shared_source:
+                    _share_exchange(user_text, reply, shared_source)
 
             handled, local_reply = handle_local(user_text)
             if handled:
@@ -6452,7 +6473,7 @@ class Handler(BaseHTTPRequestHandler):
                 start_time = time.time()
                 try:
                     # Prepend recent conversation so KALKI remembers context.
-                    convo = load_history()[-8:] + messages
+                    convo = (_shared_context() + messages) if shared_source else messages
                     reply = ask_ai(convo)
                 except Exception as e:
                     self._json({"ok": False, "error": str(e)})
