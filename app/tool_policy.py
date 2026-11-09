@@ -46,7 +46,7 @@ KNOWN_TOOLS = set(_FIXED_RISK) | {"manage_tasks", "system_control"}
 UNTRUSTED_SOURCES = {"search_web", "read_url", "read_emails", "read_local_document",
                      "get_calendar_events", "get_daily_briefing"}
 
-# system_control asks for its own confirmation before risky actions.
+# system_control holds its own risky actions for approval, with its own wording.
 SELF_GATED = {"system_control"}
 
 _SENSITIVE_FILES = ("*.env", ".env*", "id_rsa*", "id_ed25519*", "*token*", "*vault*", "*credential*", "*password*",
