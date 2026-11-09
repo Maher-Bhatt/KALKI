@@ -37,6 +37,11 @@ jobs:
       - name: Compile Python sources
         run: python -m compileall -q app
 
+      - name: Static checks (undefined and shadowed names)
+        run: |
+          python -m pip install ruff
+          python -m ruff check app tests --isolated --select F821,F823
+
       - name: Validate frontend JavaScript
         shell: bash
         run: |

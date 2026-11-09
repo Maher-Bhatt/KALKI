@@ -111,7 +111,7 @@ def _status():
     global LAST_STATUS
     try:
         request = urllib.request.Request(
-            f"{SERVER}/api/status",
+            f"{SERVER}/api/status?client=listener",
             headers={runtime_security.TOKEN_HEADER: runtime_security.get_api_token()},
         )
         with urllib.request.urlopen(request, timeout=2) as r:

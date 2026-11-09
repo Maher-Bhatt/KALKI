@@ -496,7 +496,7 @@
       if (window.pywebview?.api?.get_music_state) {
         state = await window.pywebview.api.get_music_state();
       } else {
-        const res = await fetch('/api/media/now-playing');
+        const res = await fetch('/api/media/now');
         if (res.ok) state = await res.json();
       }
 
@@ -516,16 +516,21 @@
   // Execute quick command or query
   async function sendCommand(cmd) {
     if (!cmd) return;
-    bubbleText.innerHTML = `<strong>Executing:</strong> "${cmd}"...`;
+    bubbleText.textContent = `Working on: "${cmd}"...`;
     speechBubble.classList.add('active');
     playBeep(520, 0.1);
     try {
-      const res = await fetch('/api/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cmd })
-      });
-      const data = await res.json();
+      let data;
+      if (window.pywebview?.api?.send_command) {
+        data = await window.pywebview.api.send_command(cmd);
+      } else {
+        const res = await fetch('/api/command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cmd })
+        });
+        data = await res.json();
+      }
       bubbleText.textContent = data.reply || data.output || data.message || "Command executed, Sir.";
       playBeep(640, 0.15);
     } catch (e) {

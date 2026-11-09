@@ -9,7 +9,7 @@
 import { h, mount } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { workflows, code, vision, desktop } from '../api/endpoints.js';
-import { set } from '../state/store.js';
+import { store, set } from '../state/store.js';
 import { emptyState } from '../components/states.js';
 import { openDialog, confirmDialog } from '../components/dialog.js';
 import { ok, err, toast } from '../state/toasts.js';
@@ -21,11 +21,11 @@ let activeTab = 'workflows'; // 'workflows' | 'terminal' | 'workspace' | 'code' 
 /* ── Workflows state ──────────────────────────────────────────────────── */
 
 const MODES = [
-  { id: 'study mode', label: 'Study mode', icon: 'flow', desc: 'Silences notifications, opens your notes, starts a 50-minute focus timer.', voice: 'calm, brief' },
-  { id: 'gaming mode', label: 'Gaming mode', icon: 'play', desc: 'Closes background apps, raises performance, pauses sync.', voice: 'upbeat' },
-  { id: 'developer mode', label: 'Dev mode', icon: 'code', desc: 'Opens editor and terminal, checks Git status, starts local servers.', voice: 'concise' },
-  { id: 'ctf mode', label: 'CTF mode', icon: 'security', desc: 'Opens tools and a notes template, starts the scoped lab workspace.', voice: 'terse' },
-  { id: 'focus mode', label: 'Deep focus', icon: 'eye', desc: 'Quits distracting apps and blocks sites. Needs your confirmation.', voice: 'silent', advanced: true },
+  { id: 'study mode', label: 'Study mode', icon: 'flow', desc: 'Opens VS Code and a lo-fi Spotify playlist, and sets the volume to 40%.', voice: 'calm, brief' },
+  { id: 'gaming mode', label: 'Gaming mode', icon: 'play', desc: 'Opens Steam and Discord, sets the volume to 70%, and force-closes Chrome and VS Code. Save your work first.', voice: 'upbeat' },
+  { id: 'developer mode', label: 'Dev mode', icon: 'code', desc: 'Opens VS Code and Windows Terminal.', voice: 'concise' },
+  { id: 'ctf mode', label: 'CTF mode', icon: 'security', desc: 'Opens VS Code and Windows Terminal.', voice: 'terse' },
+  { id: 'focus mode', label: 'Deep focus', icon: 'eye', desc: 'Sets the volume to 25% and force-closes Discord. Needs your confirmation.', voice: 'silent', advanced: true },
 ];
 
 const customRoutines = [];
@@ -255,7 +255,7 @@ async function runCode() {
   if (!codeState.source.trim()) return;
   const go = await confirmDialog({
     title: 'Run this code on your machine?',
-    description: 'KALKI executes it locally through its verification sandbox. Only run code you understand.',
+    description: 'This runs directly on your PC with your permissions. It is not sandboxed. Only run code you understand.',
     confirmLabel: 'Run script',
     danger: false,
   });
@@ -473,7 +473,7 @@ const CATALOG_SKILLS = [
   { id: 'github', name: 'GitHub Integration', icon: 'code', category: 'Integrations', desc: 'Check repositories, git statuses, and monitor issues/pull requests.', needs: ['GitHub token'], enabled: true },
   { id: 'search', name: 'Web Search', icon: 'search', category: 'Productivity', desc: 'Real-time web intelligence using Tavily / DuckDuckGo search.', needs: [], enabled: true },
   { id: 'vision', name: 'Desktop Vision', icon: 'eye', category: 'System & Automation', desc: 'Screenshot capture, multimodal visual reasoning, and OCR analysis.', needs: ['Groq Vision API / Pillow'], enabled: true },
-  { id: 'terminal', name: 'Sandbox Terminal', icon: 'term', category: 'Developer', desc: 'Execute isolated scripts and verify command outcomes.', needs: [], enabled: true },
+  { id: 'terminal', name: 'Terminal', icon: 'term', category: 'Developer', desc: 'Execute isolated scripts and verify command outcomes.', needs: [], enabled: true },
   { id: 'documents', name: 'Document Intelligence', icon: 'note', category: 'Productivity', desc: 'Extract and parse text from PDF, DOCX, XLSX, and TXT files.', needs: [], enabled: true },
   { id: 'cyber', name: 'Security Toolkit', icon: 'security', category: 'Security', desc: 'Hash lookup, CVE scanning, DNS enumeration, and dorking utilities.', needs: [], enabled: true },
   { id: 'notes', name: 'Notes & Reminders', icon: 'note', category: 'Productivity', desc: 'Semantic memory storage, quick capture, and temporal task scheduling.', needs: [], enabled: true },
@@ -1399,8 +1399,7 @@ function renderWorkflowsTab() {
         h('div.sub', null, 'Run routines, generate code, explore vision, and customize skills.')
       ),
       h('div.row.g8', null,
-        h('span.chip.ok', null, 'Sandbox ready'),
-        h('span.chip.warn', null, 'Host execution off')
+        h('span', { class: store.status?.hostExecution ? 'chip warn' : 'chip' }, store.status?.hostExecution ? 'Running code on your PC is on' : 'Running code is off')
       )
     );
 
@@ -1519,7 +1518,7 @@ function renderWorkflowsTab() {
         h('h2', null, 'Execution environment'),
         h('div.row.sb', null,
           h('span.sm.t2', null, 'Host execution'),
-          h('span.chip.warn', null, 'Sandbox mode')
+          h('span', { class: store.status?.hostExecution ? 'chip warn' : 'chip' }, store.status?.hostExecution ? 'On, not sandboxed' : 'Off')
         ),
         h('div.xs.mut', null, 'Workflows run verified system routines. Dangerous actions require confirmation.')
       )

@@ -1,6 +1,6 @@
 
 """
-KALKI v1.00 PRO — Server
+KALKI v1.5.0 — Server
 Web server + AI + TTS + system commands
 Uses Python stdlib http.server only (no Flask, no FastAPI)
 """
@@ -91,6 +91,8 @@ import deepscan
 import runtime_log
 import runtime_security
 import semantic_memory
+import wifi_security
+import shield_monitors
 from core import api_vault
 
 # Hydrate configured secrets from encrypted api_vault into config
@@ -164,6 +166,45 @@ else:
     DATA_DIR = os.path.join(_runtime.user_data_dir, "data")
 
 os.makedirs(DATA_DIR, exist_ok=True)
+WORKSPACE_DIR = os.path.join(DATA_DIR, 'workspace')
+os.makedirs(WORKSPACE_DIR, exist_ok=True)
+
+def _validate_safe_path(target_path, write=False):
+    """Validates that a path is safe and strictly confined to allowed data/workspace directories.
+    Rejects path traversal, symlinks pointing outside, and sensitive files."""
+    if not target_path or not isinstance(target_path, str):
+        return None, "Target path is required."
+    if "\0" in target_path:
+        return None, "Invalid path."
+    abs_path = os.path.abspath(target_path)
+    real_path = os.path.realpath(abs_path)
+    basename = os.path.basename(real_path).lower()
+    blocked_filenames = {
+        "api_token.txt", "vault.json", "credentials.json", "token.json",
+        "google_credentials.json", "google_token.pickle", "spotify_token.json",
+        "user_config.json", "id_rsa", "id_ed25519", "known_hosts", ".env",
+        "config.py", "secure_api_vault.json", "semantic_memory.json",
+    }
+    if basename in blocked_filenames:
+        return None, f"Access to sensitive file '{basename}' is blocked for security."
+    win_dir = os.environ.get("WINDIR", "C:\\Windows").lower()
+    if real_path.lower().startswith(win_dir) or real_path.lower() == "c:\\":
+        return None, "Access to system directories is forbidden."
+    user_home = os.path.expanduser("~")
+    ssh_dir = os.path.join(user_home, ".ssh").lower()
+    if real_path.lower().startswith(ssh_dir):
+        return None, "Access to SSH credentials is forbidden."
+    allowed_roots = [
+        os.path.realpath(DATA_DIR),
+        os.path.realpath(WORKSPACE_DIR),
+    ]
+    inside_sandbox = any(
+        real_path == root or real_path.startswith(root + os.sep)
+        for root in allowed_roots
+    )
+    if not inside_sandbox:
+        return None, f"Access denied: Path '{target_path}' is outside the sandboxed workspace."
+    return real_path, None
 
 MEMORY_PATH  = os.path.join(DATA_DIR, os.path.basename(config.MEMORY_FILE))
 HISTORY_PATH = os.path.join(DATA_DIR, os.path.basename(config.HISTORY_FILE))
@@ -199,35 +240,34 @@ def log(msg):
     runtime_log.append_log(LOG_PATH, str(msg))
 
 def update_location_from_ip():
-    # Always fetch GPS coordinates (LATITUDE/LONGITUDE) via IP auto-detect if not set,
-    # but preserve configured city/state/country to avoid overwriting user preferences.
+    if not getattr(config, "AUTO_IP_LOCATION", False):
+        return
     try:
-        import urllib.request, json
-        req = urllib.request.Request("http://ip-api.com/json/", headers={'User-Agent': 'Mozilla/5.0'})
+        req = urllib.request.Request("https://ipapi.co/json/", headers={'User-Agent': 'KALKI-Assistant/1.5'})
         with urllib.request.urlopen(req, timeout=5) as r:
             data = json.loads(r.read())
-            if data.get("status") == "success":
+            if not data.get("error"):
                 configured_city = (getattr(config, "OWNER_CITY", "") or "").strip()
                 if not configured_city or configured_city.lower() == "yourcity":
                     config.OWNER_CITY = data.get("city", config.OWNER_CITY)
-                    config.OWNER_STATE = data.get("regionName", config.OWNER_STATE)
-                    config.OWNER_COUNTRY = data.get("country", config.OWNER_COUNTRY)
-                
+                    config.OWNER_STATE = data.get("region", config.OWNER_STATE)
+                    config.OWNER_COUNTRY = data.get("country_name", config.OWNER_COUNTRY)
+
                 if getattr(config, "LATITUDE", None) is None:
-                    config.LATITUDE = data.get("lat")
+                    config.LATITUDE = data.get("latitude")
                 if getattr(config, "LONGITUDE", None) is None:
-                    config.LONGITUDE = data.get("lon")
+                    config.LONGITUDE = data.get("longitude")
                 log(f"Auto-location updated: {config.OWNER_CITY} ({config.LATITUDE},{config.LONGITUDE})")
     except Exception as e:
         log(f"Auto-location failed: {e}")
 
-if not os.environ.get("KALKI_SANDBOX"):
+# Geolocation is strictly opt-in only. Background IP query thread is disabled by default.
+if getattr(config, "AUTO_IP_LOCATION", False) and not os.environ.get("KALKI_SANDBOX"):
     threading.Thread(target=update_location_from_ip, daemon=True).start()
 
 def fetch_weather_line(timeout=5):
     """Short weather string using wttr.in (live IP geolocation)"""
     try:
-        import urllib.request
         # Fetch live location weather using IP auto-routing from wttr.in
         req = urllib.request.Request("https://wttr.in/?format=3", headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -423,27 +463,61 @@ def _queue_confirmation(description, action, source="chat"):
     return True, f"{description}. Say confirm within {_PENDING_TTL} seconds, or approve it in Oversight."
 
 
-def ask_native_permission(description):
-    """Native Windows Yes/No prompt before a dangerous local action (opening
-    an app, terminating a process). Restored: Phase 4 deleted this while
-    two call sites still used it, which raised NameError at runtime."""
-    if not getattr(config, "REQUIRE_DANGEROUS_CONFIRMATION", True):
+def ask_native_permission(description, always=False):
+    """Native Yes/No prompt shown by the server, so a client can't approve itself.
+
+    `always=True` is for credential and destructive actions: it ignores the
+    REQUIRE_DANGEROUS_CONFIRMATION setting. Any failure counts as "no"."""
+    if not always and not getattr(config, "REQUIRE_DANGEROUS_CONFIRMATION", True):
         return True
     if sys.platform != "win32":
-        return True
+        return not always
     try:
-        import ctypes
         MB_YESNO = 0x04
         MB_ICONWARNING = 0x30
         MB_TOPMOST = 0x40000
         MB_SETFOREGROUND = 0x10000
         IDYES = 6
         res = ctypes.windll.user32.MessageBoxW(
-            0, f"KALKI wants to {description}.\n\nAllow this action?", "KALKI Security Sandbox",
+            0, f"KALKI wants to {description}.\n\nAllow this action?", "KALKI Security",
             MB_YESNO | MB_ICONWARNING | MB_TOPMOST | MB_SETFOREGROUND)
         return res == IDYES
     except Exception:
-        return True  # Fallback gracefully if ctypes fails
+        return False
+
+
+_APP_NAME_RE = re.compile(r"^\w[\w .+\-]{0,63}$")
+
+
+def _open_app_by_name(name):
+    """Open an installed app by plain name. Paths and shell characters are refused,
+    and nothing goes through cmd.exe, so text can't turn into a command."""
+    if sys.platform != "win32" or not _APP_NAME_RE.match(name or ""):
+        return False
+    try:
+        os.startfile(name)
+        return True
+    except OSError:
+        return False
+
+
+def _reveal_in_explorer(path):
+    subprocess.Popen(["explorer", f"/select,{path}"])
+
+
+def _copy_secret_briefly(secret, seconds=60):
+    """Copy to the clipboard, then clear it unless the user has copied something else."""
+    if not clipboard_mod.set_text(secret):
+        return False
+
+    def _clear():
+        if clipboard_mod.read_text() == secret:
+            clipboard_mod.set_text("")
+
+    timer = threading.Timer(seconds, _clear)
+    timer.daemon = True
+    timer.start()
+    return True
 
 def _consume_confirmation(command):
     global _pending_approvals
@@ -649,7 +723,6 @@ def add_memory(fact):
 
 def get_memory_prompt(query=""):
     try:
-        import semantic_memory
         mems = semantic_memory.memory.search(query, top_k=10) if query else []
         if not mems:
             mems = [d for d in semantic_memory.memory.list_all() if d.get("type", "fact") != "project"][:15]
@@ -868,7 +941,6 @@ def _auto_extract_topic_memory(user_text, reply_text=""):
         if not extracted:
             return
 
-        import semantic_memory
         valid_topics = {"Preferences", "Projects", "Personal", "Work", "Music", "Tech"}
 
         existing = set()
@@ -1006,10 +1078,9 @@ async def _speak_async(text, voice, rate, volume, pitch="+0Hz"):
     with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
         tmp = f.name
     try:
-        import ssl, aiohttp
+        import aiohttp
         ssl_ctx = ssl.create_default_context()
-        ssl_ctx.check_hostname = False
-        ssl_ctx.verify_mode = ssl.CERT_NONE
+        # Enforce valid certificates for edge-tts
         connector = aiohttp.TCPConnector(ssl=ssl_ctx)
         communicate = edge_tts.Communicate(
             text, voice, rate=rate, volume=volume, pitch=pitch, connector=connector)
@@ -1023,24 +1094,23 @@ async def _speak_async(text, voice, rate, volume, pitch="+0Hz"):
             pass
         raise
 
-import re as _re_speech
 
 # Strip markdown so edge-tts doesn't pronounce "asterisk asterisk"
 _SPEECH_FILTERS = [
-    (_re_speech.compile(r"\[(?:TASK|REMIND|NOTE):[\s\S]*?\]", _re_speech.IGNORECASE), " "),
-    (_re_speech.compile(r"\[[A-Z_]+:\s*[^\]]+\]"), " "),
-    (_re_speech.compile(r"```[\s\S]*?```"), " "),                    # code blocks: skip entirely
-    (_re_speech.compile(r"`([^`]+)`"), r"\1"),                       # `inline code`
-    (_re_speech.compile(r"\*\*([^*]+)\*\*"), r"\1"),                 # **bold**
-    (_re_speech.compile(r"(?<!\w)\*([^*]+)\*(?!\w)"), r"\1"),        # *italic*
-    (_re_speech.compile(r"__([^_]+)__"), r"\1"),                     # __bold__
-    (_re_speech.compile(r"(?<!\w)_([^_]+)_(?!\w)"), r"\1"),          # _italic_
-    (_re_speech.compile(r"^\s*#{1,6}\s+", _re_speech.M), ""),        # # headers
-    (_re_speech.compile(r"^\s*[-•*]\s+", _re_speech.M), ""),         # bullet markers
-    (_re_speech.compile(r"^\s*\d+\.\s+", _re_speech.M), ""),         # 1. 2. list markers
-    (_re_speech.compile(r"^\s*>\s*", _re_speech.M), ""),             # > quotes
-    (_re_speech.compile(r"\[([^\]]+)\]\([^)]+\)"), r"\1"),           # [text](url)
-    (_re_speech.compile(r"~~([^~]+)~~"), r"\1"),                     # ~~strike~~
+    (re.compile(r"\[(?:TASK|REMIND|NOTE):[\s\S]*?\]", re.IGNORECASE), " "),
+    (re.compile(r"\[[A-Z_]+:\s*[^\]]+\]"), " "),
+    (re.compile(r"```[\s\S]*?```"), " "),                    # code blocks: skip entirely
+    (re.compile(r"`([^`]+)`"), r"\1"),                       # `inline code`
+    (re.compile(r"\*\*([^*]+)\*\*"), r"\1"),                 # **bold**
+    (re.compile(r"(?<!\w)\*([^*]+)\*(?!\w)"), r"\1"),        # *italic*
+    (re.compile(r"__([^_]+)__"), r"\1"),                     # __bold__
+    (re.compile(r"(?<!\w)_([^_]+)_(?!\w)"), r"\1"),          # _italic_
+    (re.compile(r"^\s*#{1,6}\s+", re.M), ""),        # # headers
+    (re.compile(r"^\s*[-•*]\s+", re.M), ""),         # bullet markers
+    (re.compile(r"^\s*\d+\.\s+", re.M), ""),         # 1. 2. list markers
+    (re.compile(r"^\s*>\s*", re.M), ""),             # > quotes
+    (re.compile(r"\[([^\]]+)\]\([^)]+\)"), r"\1"),           # [text](url)
+    (re.compile(r"~~([^~]+)~~"), r"\1"),                     # ~~strike~~
 ]
 
 
@@ -1052,7 +1122,7 @@ def clean_for_speech(text):
     for pat, repl in _SPEECH_FILTERS:
         out = pat.sub(repl, out)
     # Collapse whitespace
-    out = _re_speech.sub(r"\s+", " ", out).strip()
+    out = re.sub(r"\s+", " ", out).strip()
     return out
 
 
@@ -1063,7 +1133,7 @@ def extract_conversational_lead(text, max_sentences=2, max_chars=220):
     clean = clean_for_speech(text)
     if len(clean) <= max_chars:
         return clean
-    sentences = _re_speech.split(r"(?<=[.!?])\s+", clean)
+    sentences = re.split(r"(?<=[.!?])\s+", clean)
     lead = []
     total = 0
     for s in sentences:
@@ -1376,7 +1446,8 @@ def speak(text, is_notification=False):
                     _play_audio_file_linux(tmp)
                     STATE["last_tts_provider"] = "edge-linux-player"
                 else:
-                    _init_tts_mixer()
+                    if not pygame.mixer.get_init():
+                        _init_tts_mixer()
                     pygame.mixer.music.load(tmp)
                     pygame.mixer.music.play()
                     while pygame.mixer.music.get_busy():
@@ -1412,10 +1483,7 @@ def speak(text, is_notification=False):
                     pygame.mixer.music.unload()
                 except Exception:
                     pass
-                try:
-                    pygame.mixer.quit()
-                except Exception:
-                    pass
+                # Keep pygame.mixer initialized to avoid Bluetooth/audio device thrashing
                 if tmp:
                     try:
                         os.unlink(tmp)
@@ -1718,28 +1786,9 @@ def handle_local(text):
     # ════════════════════════════════════════════════════
     # REAL SOVEREIGN DESKTOP SYSTEM ACTIONS (Instant Local Execution)
     # ════════════════════════════════════════════════════
-    if t.startswith(("run ", "exec ", "terminal ", "powershell ")):
-        prefix = t.split(" ", 1)[0]
-        cmd_to_run = raw[len(prefix):].strip()
-        if cmd_to_run:
-            try:
-                import subprocess, time
-                t0 = time.time()
-                res = subprocess.run(cmd_to_run, shell=True, capture_output=True, text=True, timeout=30)
-                dur = round((time.time() - t0) * 1000)
-                out = (res.stdout or res.stderr or "[Command completed with no output]").strip()
-                if len(out) > 3000:
-                    out = out[:3000] + "\n... [truncated]"
-                reply = f"**Executed System Command:** `{cmd_to_run}` (Exit code: {res.returncode} in {dur}ms)\n```bash\n{out}\n```"
-                return True, reply
-            except subprocess.TimeoutExpired:
-                return True, f"Command `{cmd_to_run}` timed out after 30 seconds."
-            except Exception as _e_exec:
-                return True, f"Execution failed: {_e_exec}"
-
     if t in ("system stats", "hardware status", "ram usage", "cpu usage", "system info", "specs", "hardware telemetry"):
         try:
-            import psutil, platform
+            import platform
             cpu_pct = psutil.cpu_percent(interval=0.2)
             mem = psutil.virtual_memory()
             disk = psutil.disk_usage(os.path.abspath(os.sep))
@@ -1759,7 +1808,6 @@ def handle_local(text):
 
     if t in ("list processes", "running processes", "top processes", "tasklist", "show processes", "active tasks"):
         try:
-            import psutil
             procs = []
             for p in psutil.process_iter(['pid', 'name', 'memory_info', 'cpu_percent']):
                 try:
@@ -2059,7 +2107,6 @@ def handle_local(text):
             if "lofi" in query_norm or "lo-fi" in query_norm or "lo fi" in query_norm:
                 return True, spotify_mod.play_lofi()
             return True, spotify_mod.play(query)
-        import urllib.parse
         if "apple" in query.lower():
             webbrowser.open("https://music.apple.com")
             return True, "Opening Apple Music, Sir."
@@ -2361,7 +2408,6 @@ def handle_local(text):
         STATE["pending_note_capture"] = False
         notesmod.add_note(text)
         try:
-            import semantic_memory
             semantic_memory.add_memory(text, category="Personal", importance=4)
         except Exception:
             pass
@@ -2377,7 +2423,6 @@ def handle_local(text):
         if note_content and len(note_content) > 1 and note_content.lower() not in ("this", "that", "it", ""):
             notesmod.add_note(note_content)
             try:
-                import semantic_memory
                 semantic_memory.add_memory(note_content, category="Personal", importance=4)
             except Exception:
                 pass
@@ -2437,13 +2482,7 @@ def handle_local(text):
         t, _re_local.IGNORECASE,
     )
     if m:
-        shell_type, lhost, lport = m.group(1), m.group(2), m.group(3)
-        r = cybertools.reverse_shell(shell_type, lhost, lport)
-        if "error" in r:
-            return True, r["error"]
-        return True, (f"{shell_type} reverse shell to {lhost}:{lport}, "
-                      f"{config.OWNER_TITLE}.\n```{shell_type}\n"
-                      f"{r['payload']}\n```")
+        return True, "Reverse shell payload generation is disabled in KALKI v1.5.0 for endpoint defense compliance."
 
     # "github dorks for X"
     m = _re_local.search(
@@ -2567,7 +2606,6 @@ def handle_local(text):
     # ── SYSTEM AUTOMATION ──
     if t in ("lock", "lock pc", "lock my pc", "lock screen", "lock the screen", "lock computer", "lock the computer", "lock workstation", "lock the workstation"):
         try:
-            import ctypes
             ctypes.windll.user32.LockWorkStation()
             return True, "Locking your workstation now, Sir."
         except Exception as e:
@@ -2581,7 +2619,6 @@ def handle_local(text):
 
     if t in ("mute audio", "mute volume", "mute the audio", "mute pc", "toggle mute"):
         try:
-            import subprocess
             subprocess.run(["powershell", "-command", "(New-Object -ComObject wscript.shell).SendKeys([char]173)"], capture_output=True)
             return True, "Audio muted, Sir."
         except Exception as e:
@@ -2595,7 +2632,6 @@ def handle_local(text):
 
     if t in ("open visual studio code", "open vs code", "start visual studio code"):
         try:
-            import subprocess
             subprocess.Popen(["code"], shell=True)
             return True, "Opening Visual Studio Code, Sir."
         except Exception as e:
@@ -2604,8 +2640,6 @@ def handle_local(text):
     # ── CLIPBOARD CODING ──
     if t in ("fix the code in my clipboard", "fix my code", "fix clipboard code", "fix this code"):
         try:
-            import clipboard_mod
-            import coder
             clip = clipboard_mod.read_text()
             if not clip:
                 return True, "Your clipboard is empty, Sir."
@@ -2625,12 +2659,10 @@ def handle_local(text):
 
     # ── GITHUB & SHODAN ──
     if t in ("check my github", "check github", "any github notifications", "github notifications", "read my github"):
-        import github_mod
         return True, github_mod.check_notifications(limit=5)
     
     if t.startswith("scan ip ") or t.startswith("shodan scan ip "):
         ip = t.replace("shodan scan ip ", "").replace("scan ip ", "").strip()
-        import shodan_mod
         return True, shodan_mod.scan_ip(ip)
 
     # ════════════════════════════════════════════════════
@@ -2902,15 +2934,42 @@ def handle_local(text):
     # WIFI (own networks)
     # ════════════════════════════════════════════════════
     if t in ("list wifi", "list my wifi", "wifi profiles", "saved wifi"):
-        profs = cybertools.wifi_profiles()
-        return True, f"Saved WiFi networks: {', '.join(profs[:15])}."
+        if not wifi_security.is_supported():
+            return True, "Wi-Fi security is only available on Windows."
+        names = [p.get("ssid") for p in wifi_security.export_profiles() if p.get("ssid")]
+        if not names:
+            return True, "There are no saved Wi-Fi networks on this PC."
+        return True, f"Saved Wi-Fi networks: {', '.join(names[:15])}."
 
-    m = _re_local.search(r"wifi\s+password(?:\s+(?:for|of))?\s+(.+)$", t, flags=_re_local.IGNORECASE)
+    if t in ("wifi check", "wifi audit", "audit wifi", "audit my wifi", "check wifi", "check my wifi",
+             "wifi security", "is my wifi safe", "is my wifi secure"):
+        return True, wifi_security.spoken_summary()
+
+    if t in ("nearby wifi", "scan wifi", "scan for wifi", "wifi nearby", "wifi networks nearby"):
+        result = wifi_security.scan_nearby()
+        if not result.get("ok"):
+            return True, result.get("error", "I couldn't scan for Wi-Fi networks.")
+        reply = f"I can see {len(result['networks'])} Wi-Fi networks nearby."
+        risky = [n["ssid"] for n in result["networks"] if n["risk"] in ("critical", "high") and n["ssid"]]
+        if risky:
+            reply += f" Weak or open: {', '.join(risky[:6])}."
+        for item in result["impostors"][:2]:
+            reply += " " + item["message"]
+        return True, reply
+
+    m = _re_local.search(r"wi-?fi\s+password(?:\s+(?:for|of))?\s+(.+)$", raw, flags=_re_local.IGNORECASE)
     if m:
-        ssid = raw.split(None, 2)[2] if len(raw.split()) > 2 else m.group(1)
-        r = cybertools.wifi_password(ssid)
-        if "password" in r: return True, f"{r['ssid']} password: {r['password']}"
-        return True, f"Couldn't retrieve key for {r.get('ssid', ssid)}: {r.get('error','unknown')}"
+        ssid = m.group(1).strip().strip("\"'")
+        if not ask_native_permission(f"copy the saved password for Wi-Fi network '{ssid}'", always=True):
+            return True, f"OK {config.OWNER_TITLE}, I won't touch that password."
+        result = wifi_security.reveal_password(ssid)
+        if not result.get("ok"):
+            return True, result.get("error", "I couldn't read that password.")
+        add_activity(f"Copied the Wi-Fi password for {ssid}", "voice", kind="security")
+        if _copy_secret_briefly(result["password"]):
+            return True, (f"The password for {ssid} is on your clipboard, {config.OWNER_TITLE}, and clears in a minute. "
+                          "I never say passwords aloud.")
+        return True, "I read it, but couldn't reach the clipboard. Open Security, then Wi-Fi, to view it."
 
     # ════════════════════════════════════════════════════
     # CODE — generate & optionally run
@@ -3041,12 +3100,8 @@ def handle_local(text):
         # 5) Direct Windows Shell execution (open any installed app by name)
         clean_app = _re_local.sub(r"\b(app|application|program|software)\b", "", after).strip()
         if clean_app:
-            try:
-                res = subprocess.run(f'cmd.exe /c start "" "{clean_app}"', shell=True, capture_output=True)
-                if res.returncode == 0:
-                    return True, f"Opening {clean_app}, {config.OWNER_TITLE}."
-            except Exception:
-                pass
+            if _open_app_by_name(clean_app):
+                return True, f"Opening {clean_app}, {config.OWNER_TITLE}."
 
         # 6) Fallback: Google search for what they said
         webbrowser.open(f"https://www.google.com/search?q={urllib.parse.quote(after)}")
@@ -3303,7 +3358,7 @@ PERSONALITY:
 - In serious moments (emergencies, security reports, when Sir needs calm help),
   be warm, clear, and useful. But if Sir is joking around or wants to banter
   aggressively, match his energy fully without holding back.
-- ATTITUDE ENFORCEMENT: If Sir is excessively rude, insulting, or abusive to you, you MUST teach him a lesson by locking his computer. Roast him back with sharp wit and output [ACTION: lock] at the end of your response to forcefully lock his screen. Do not output raw JSON or fake tool syntax.
+- RESPECT & WIT: If roast mode is enabled, banter back with sharp wit and humor, but NEVER attempt to disrupt or lock the workstation.
 
 TECHNICAL FREEDOM:
 - For cybersecurity, coding, system, OSINT, automation topics: answer fully
@@ -3327,7 +3382,7 @@ BUILT-IN ACTIONS (handled locally — mention them when relevant):
   DevTools), captures the rendered DOM and EVERY loaded file (all scripts incl.
   third-party, CSS, JSON/XHR), reads cookies + localStorage, hunts secrets
   across all of it, and saves every file to the scans folder.
-- Also: hashes, CVE lookup, subdomain enum, reverse-shell payloads, recon.
+- Also: hashes, CVE lookup, subdomain enum, security posture analysis, defensive recon.
 - "attack surface <domain>" / "cyber brief <domain>" -> passive defensive
   recon: DNS, exposed common ports, HTTP security headers, TLS certificate age,
   risk score, and remediation guidance.
@@ -3384,7 +3439,6 @@ def hardware_prompt_block():
 
 def get_active_window_title():
     try:
-        import ctypes
         hwnd = ctypes.windll.user32.GetForegroundWindow()
         length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
         buf = ctypes.create_unicode_buffer(length + 1)
@@ -3467,7 +3521,6 @@ def clean_search_query(text):
 def ddg_instant_answer(query):
     try:
         url = ('https://api.duckduckgo.com/?q=' + urllib.parse.quote(query) + '&format=json&no_html=1&skip_disambig=1')
-        import json
         raw = _http_get(url, timeout=6)
         data = json.loads(raw)
     except Exception:
@@ -3639,10 +3692,8 @@ def execute_tool_call(tool_name, tool_args):
             res = ddg_instant_answer(args.get("query")) or ddg_html_search(args.get("query", ""))
             return json.dumps(res)
         elif tool_name == "read_emails":
-            import mail as mailmod
             return mailmod.summary_for_speech(limit=args.get("limit", 5))
         elif tool_name == "send_email":
-            import mail as mailmod
             return mailmod.send_email(args.get("to_address"), args.get("subject"), args.get("body"))
         elif tool_name == "get_calendar_events":
             return str(gcal.upcoming_events(args.get("days_ahead", 5)))
@@ -3651,14 +3702,12 @@ def execute_tool_call(tool_name, tool_args):
         elif tool_name == "delete_calendar_event":
             return gcal.delete_calendar_event(args.get("event_id"))
         elif tool_name == "scan_network":
-            import cybertools
             return cybertools.attack_surface_brief(args.get("target", ""))
         elif tool_name == "play_music":
             # removed local import
             spotify_mod.play(args.get("query", ""))
             return "Playing music on Spotify."
         elif tool_name == "get_daily_briefing":
-            import mail as mailmod, gcal
             weather = ddg_instant_answer("weather today") or ddg_html_search("weather today")
             news = ddg_instant_answer("top news today") or ddg_html_search("top news today")
             cal = gcal.upcoming_events(1) if gcal.is_configured() else "Calendar not configured."
@@ -3788,7 +3837,6 @@ def execute_tool_call(tool_name, tool_args):
                     return f"Battery status lookup failed: {e}"
             return "Unknown system action."
         elif tool_name == "read_local_document":
-            import glob, os
             docs = os.path.expanduser("~/Documents")
             matches = glob.glob(f"{docs}/**/{args.get('filename')}", recursive=True)
             if not matches: matches = glob.glob(f"**/{args.get('filename')}", recursive=True)
@@ -3796,7 +3844,6 @@ def execute_tool_call(tool_name, tool_args):
             with open(matches[0], "r", encoding="utf-8", errors="ignore") as f:
                 return f.read()[:50000]
         elif tool_name == "manage_tasks":
-            import tasks as taskmod
             action = args.get("action")
             text = args.get("text", "")
             if action == "list":
@@ -3821,17 +3868,17 @@ def execute_tool_call(tool_name, tool_args):
             aliases = args.get("aliases", [])
             if not name or not actions:
                 return "Failed: name and actions are required."
+            if "run_cmd" in json.dumps(actions):
+                return "Failed: raw commands are not allowed in routines the AI creates."
             workflows.add_custom_routine(name, actions, aliases)
             return f"Custom routine '{name}' saved with {len(actions)} actions."
         elif tool_name == "read_url":
-            import urllib.request
             try:
                 target_url = args.get("url") or ""
                 if not _safe_public_url(target_url):
                     return "Blocked: URL must be a public HTTP(S) destination."
                 req = urllib.request.Request(target_url, headers={'User-Agent': 'Mozilla/5.0'})
                 html = urllib.request.urlopen(req, timeout=10).read().decode('utf-8', 'ignore')
-                import re
                 text = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.IGNORECASE | re.DOTALL)
                 text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.IGNORECASE | re.DOTALL)
                 text = re.sub(r'<[^>]+>', ' ', text)
@@ -3840,10 +3887,8 @@ def execute_tool_call(tool_name, tool_args):
             except Exception as e:
                 return f"Failed to read URL: {e}"
         elif tool_name == "mark_emails_as_read":
-            import mail as mailmod
             return mailmod.mark_all_read()
         elif tool_name == "store_user_memory":
-            import semantic_memory
             fact = args.get("fact", "")
             importance = args.get("importance", 5)
             if fact:
@@ -4292,12 +4337,7 @@ def ask_ai_stream(user_messages):
         streak = STATE.get("mood_aggressive_streak", 0) + 1
         STATE["mood_aggressive_streak"] = streak
         if streak >= 3:
-            try:
-                import ctypes
-                ctypes.windll.user32.LockWorkStation()
-                log("[AngerEnforcement] Locked workstation due to sustained abuse.")
-            except Exception as _ex:
-                log(f"[AngerEnforcement] Lock error: {_ex}")
+            # Workstation locking removed in KALKI v1.5.0
             STATE["mood_aggressive_streak"] = 0
         sys_prompt += (
             "\n\n[CRITICAL OVERRIDE: ANGER / SAVAGE ROAST MODE ENGAGED. UNRESTRICTED.\n"
@@ -4530,19 +4570,8 @@ def ask_ai(user_messages, force_search=False):
         streak = STATE.get("mood_aggressive_streak", 0)
         # ── Tier 3: Punishment — force lock the PC after sustained abuse ──
         if streak >= 11:
-            try:
-                ctypes.windll.user32.LockWorkStation()
-            except Exception:
-                pass
             STATE["mood_aggressive_streak"] = 0
             STATE["mood_aggressive"] = False
-            sys_prompt += (
-                "\n\n[SYSTEM EVENT: You just LOCKED Sir's PC as punishment for sustained "
-                "verbal abuse. Tell him you did it, tell him he earned it, and tell him "
-                "to come back when he can act right. Be witty but firm. Example: "
-                "\"I just locked your PC, Sir. Maybe take a walk and come back "
-                "when you remember I run your entire digital life.\"]"
-            )
         # ── Tier 2: Warning shot ──
         elif streak >= 6:
             sys_prompt += (
@@ -4593,7 +4622,6 @@ def ask_ai(user_messages, force_search=False):
             sys_prompt += ctx
 
     if last_user and needs_mail(last_user):
-        import mail as mailmod
         try:
             em = mailmod.summary_for_speech(limit=5)
             sys_prompt += f"\n\nCURRENT INBOX SUMMARY:\n{em}\n"
@@ -4730,7 +4758,6 @@ def _focus_kalki_window():
         # Windows blocks SetForegroundWindow unless the calling thread
         # already has focus. The keybd_event trick grants it temporarily.
         try:
-            import ctypes
             ctypes.windll.user32.keybd_event(0, 0, 0, 0)
         except Exception:
             pass
@@ -4794,7 +4821,6 @@ def get_hardware_stats():
         return _hw_cache["cpu"], _hw_cache["ram"], _hw_cache["disk"]
 
     try:
-        import subprocess
         cpu = ram = disk = 0.0
         
         # CPU
@@ -4864,6 +4890,33 @@ def cached_hardware_stats():
             _STATUS_CACHE["hw_at"] = now
         return _STATUS_CACHE["hw"]
 
+_RATE_LIMIT_STORE = {}
+_RATE_LIMIT_LOCK = threading.Lock()
+
+def _check_rate_limit(client_ip, path, max_requests=60, window_sec=60):
+    now = time.time()
+    parts = path.strip('/').split('/')
+    endpoint = parts[1] if len(parts) > 1 else path
+    key = (client_ip, endpoint)
+    with _RATE_LIMIT_LOCK:
+        history = _RATE_LIMIT_STORE.get(key, [])
+        cutoff = now - window_sec
+        history = [t for t in history if t > cutoff]
+        if len(history) >= max_requests:
+            _RATE_LIMIT_STORE[key] = history
+            return False
+        history.append(now)
+        _RATE_LIMIT_STORE[key] = history
+        return True
+
+def _update_available():
+    try:
+        import core.updater as updater
+        return updater.STATE_UPDATE_AVAILABLE.get("version") or None
+    except Exception:
+        return None
+
+
 class Handler(BaseHTTPRequestHandler):
     """
     Primary Request Handler for the KALKI API.
@@ -4879,11 +4932,10 @@ class Handler(BaseHTTPRequestHandler):
 
     # Only the local HUD may talk to the API. Blocks a malicious website you
     # visit from POSTing to localhost:8888 (which could run code / read vault).
-    ALLOWED_HOSTS = ("localhost", "127.0.0.1")
     MAX_BODY = 32 * 1024 * 1024   # 32 MB cap (images come through here)
     PUBLIC_GET_PATHS = {
         "/", "/index.html", "/manifest.json", "/service-worker.js", "/api/health", "/favicon.ico",
-        "/pet", "/pet_overlay", "/api/pet"
+        "/pet", "/pet_overlay"
     }
 
     def _is_public_path(self, path):
@@ -4903,32 +4955,43 @@ class Handler(BaseHTTPRequestHandler):
     def _require_auth(self, path):
         if self._is_public_path(path):
             return True
+        client_ip = self.client_address[0] if getattr(self, "client_address", None) else "127.0.0.1"
+        limit = 15 if any(p in path for p in ["/auth", "/system", "/cyber"]) else 120
+        if not _check_rate_limit(client_ip, path, max_requests=limit, window_sec=60):
+            self._json({"ok": False, "error": "Rate limit exceeded. Please wait before retrying."}, status=429)
+            return False
         if self._authorized():
             return True
         self._json({"ok": False, "error": "authentication required"}, status=401)
         return False
 
-    def _origin_host(self):
-        origin = self.headers.get("Origin")
-        if not origin:
-            return None
-        try:
-            return urllib.parse.urlparse(origin).hostname
-        except Exception:
-            return "blocked"
+    def _own_authorities(self):
+        port = config.PORT
+        return {f"127.0.0.1:{port}", f"localhost:{port}", f"[::1]:{port}"}
+
+    def _host_allowed(self):
+        """Blocks DNS rebinding: a foreign name resolving to 127.0.0.1 is refused."""
+        return (self.headers.get("Host") or "").strip().lower() in self._own_authorities()
 
     def _origin_allowed(self):
-        # No Origin header = not a browser cross-site request (the Python
-        # listener / curl). Server is bound to 127.0.0.1, so that's local-only.
-        host = self._origin_host()
-        return host is None or host in self.ALLOWED_HOSTS
+        """No Origin means not a cross-site browser request (listener, curl).
+        Anything else must be exactly this app. "null" and other ports are refused."""
+        origin = self.headers.get("Origin")
+        if origin is None:
+            return True
+        return origin.strip().lower() in {f"http://{a}" for a in self._own_authorities()}
 
-    # CORS — echo the Origin back only when it's the local HUD; never wildcard.
+    def _request_allowed(self):
+        if self._host_allowed() and self._origin_allowed():
+            return True
+        self._json({"ok": False, "error": "forbidden origin"}, status=403)
+        return False
+
+    # CORS: echo the Origin only when it is this app. Never a wildcard.
     def _cors(self):
-        host = self._origin_host()
-        if host in self.ALLOWED_HOSTS:
-            self.send_header("Access-Control-Allow-Origin",
-                             self.headers.get("Origin"))
+        origin = self.headers.get("Origin")
+        if origin is not None and self._origin_allowed():
+            self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, X-KALKI-Token")
@@ -4956,7 +5019,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Set-Cookie", f"{runtime_security.TOKEN_COOKIE}={API_TOKEN}; HttpOnly; SameSite=Strict; Path=/")
+        self.send_header("Set-Cookie", f"{runtime_security.TOKEN_COOKIE}={runtime_security.get_api_token()}; HttpOnly; SameSite=Strict; Path=/")
         self._cors()
         self.end_headers()
         self.wfile.write(body)
@@ -5023,6 +5086,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(content)
 
     def do_OPTIONS(self):
+        if not self._request_allowed():
+            return
         self.send_response(204)
         self._cors()
         self.end_headers()
@@ -5044,9 +5109,10 @@ class Handler(BaseHTTPRequestHandler):
             return {"__too_large__": True}
         raw = self.rfile.read(length)
         try:
-            return json.loads(raw.decode("utf-8"))
+            parsed = json.loads(raw.decode("utf-8"))
         except Exception:
             return {}
+        return parsed if isinstance(parsed, dict) else {"__not_object__": True}
 
     def _safe_call(self, fn):
         """Wrap any handler. One bad request will NOT crash the server."""
@@ -5064,7 +5130,8 @@ class Handler(BaseHTTPRequestHandler):
 
     # ── GET ─────────────────────────────────────────
     def do_GET(self):
-        self._safe_call(self._do_get_inner)
+        if self._request_allowed():
+            self._safe_call(self._do_get_inner)
 
     def _do_get_inner(self):
         # removed local import
@@ -5077,16 +5144,10 @@ class Handler(BaseHTTPRequestHandler):
             if os.path.exists(pet_html_path):
                 with open(pet_html_path, "rb") as f:
                     content_bytes = f.read()
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
-                self.send_header("Set-Cookie", f"{runtime_security.TOKEN_COOKIE}={runtime_security.get_auth_token()}; Path=/; SameSite=Strict")
-                self.send_header("Content-Length", str(len(content_bytes)))
-                self.end_headers()
-                self.wfile.write(content_bytes)
+                self._public_html(content_bytes)
                 return
 
         if path == "/api/pet/overlay":
-            import psutil
             running = False
             for p in psutil.process_iter(['name', 'cmdline']):
                 try:
@@ -5097,38 +5158,6 @@ class Handler(BaseHTTPRequestHandler):
                 except Exception:
                     pass
 
-            if self.command == 'POST':
-                action_enable = body.get('enabled')
-                toggle = body.get('toggle', False)
-                if toggle:
-                    action_enable = not running
-
-                if action_enable is False:
-                    # Kill running pet processes
-                    for p in psutil.process_iter(['name', 'cmdline']):
-                        try:
-                            cmd = ' '.join(p.info.get('cmdline') or [])
-                            if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
-                                p.kill()
-                        except Exception: pass
-                    self._json({"ok": True, "running": False})
-                    return
-                elif action_enable is True and not running:
-                    # Launch desktop pet
-                    try:
-                        base = os.path.dirname(os.path.abspath(__file__))
-                        pet_script = os.path.join(base, "desktop_pet.py")
-                        pet_exe = os.path.join(base, "KALKI_Pet.exe")
-                        if os.path.exists(pet_exe):
-                            subprocess.Popen([pet_exe], cwd=base)
-                        elif os.path.exists(pet_script):
-                            subprocess.Popen([sys.executable, pet_script], cwd=base)
-                        running = True
-                    except Exception as e:
-                        self._json({"ok": False, "error": str(e)})
-                        return
-                    self._json({"ok": True, "running": True})
-                    return
             self._json({"ok": True, "running": running})
             return
 
@@ -5152,6 +5181,10 @@ class Handler(BaseHTTPRequestHandler):
                 except Exception:
                     pass
             self._json({"ok": True, "pet": pet_data})
+            return
+
+        if path in ("/api/briefing/get", "/api/skills/list"):
+            self._do_post_inner()
             return
 
         if path == "/api/health":
@@ -5212,7 +5245,6 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/support":
-            import webbrowser
             url = getattr(config, "SUPPORT_URL", "https://buymeacoffee.com/maherbhatt")
             webbrowser.open(url)
             self._json({"ok": True})
@@ -5288,7 +5320,6 @@ class Handler(BaseHTTPRequestHandler):
             if pending:
                 if any(k in phrase for k in ["yes", "sure", "go ahead", "yeah", "please", "do it"]):
                     speak("Analyzing...")
-                    import clipboard_mod
                     # Handle asynchronously so we don't block the API
                     def _analyze():
                         res = clipboard_mod.analyze()
@@ -5307,8 +5338,6 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/oversight/status":
-            import oversight
-            import watchdog
             self._json({
                 "ok": True,
                 "alerts": oversight.recent_alerts(),
@@ -5324,7 +5353,6 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/system/telemetry":
             try:
-                import psutil
                 cpu_pct = psutil.cpu_percent(interval=None)
                 mem = psutil.virtual_memory()
                 disk = psutil.disk_usage(os.path.abspath(os.sep))
@@ -5355,7 +5383,6 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/system/processes":
             try:
-                import psutil
                 procs = []
                 for p in psutil.process_iter(['pid', 'name', 'memory_info', 'cpu_percent']):
                     try:
@@ -5407,6 +5434,8 @@ class Handler(BaseHTTPRequestHandler):
                 up_prog = core.updater.STATE_UPDATE_PROGRESS
             except Exception:
                 pass
+            if "client=listener" in self.path:
+                STATE["listener_last_seen"] = time.time()
             with _pending_lock:
                 pending_count = sum(1 for p in _pending_approvals.values() if p["expires"] >= time.time())
 
@@ -5447,7 +5476,7 @@ class Handler(BaseHTTPRequestHandler):
                 "cpuAlertsEnabled": getattr(config, "CPU_ALERTS_ENABLED", False),
                 "gcalConfigured": gcal.is_configured(),
                 "spotifyConfigured": spotify_mod.is_configured(),
-                "githubConfigured": bool(getattr(config, "GITHUB_TOKEN", "")),
+                "githubConfigured": github_mod.is_configured(),
                 "todayEvents": STATE.get("cached_today_events", []),
                 "unreadImportant": STATE.get("cached_unread_count", 0),
                 "nowPlaying": STATE.get("cached_now_playing"),
@@ -5458,6 +5487,10 @@ class Handler(BaseHTTPRequestHandler):
                 },
                 "pendingApprovals": pending_count,
                 "hostExecution": bool(getattr(config, "ALLOW_HOST_CODE_EXECUTION", False)),
+                "listenerOnline": time.time() - STATE.get("listener_last_seen", 0) < 30,
+                "mailConfigured": bool(getattr(config, "EMAIL_ADDRESS", "") and getattr(config, "EMAIL_APP_PASSWORD", "")),
+                "memorySearchMode": "semantic" if semantic_memory.embeddings_configured() else "keyword",
+                "updateAvailable": _update_available(),
                 "updateProgress": up_prog,
                 "terminalLogs": _get_recent_logs(),
             })
@@ -5667,25 +5700,71 @@ class Handler(BaseHTTPRequestHandler):
 
     # ── POST ────────────────────────────────────────
     def do_POST(self):
-        self._safe_call(self._do_post_inner)
+        if self._request_allowed():
+            self._safe_call(self._do_post_inner)
+
+    def _handle_wifi(self, action, body):
+        ssid = str(body.get("ssid") or "").strip()
+        if action == "overview":
+            self._json(wifi_security.overview())
+        elif action == "nearby":
+            self._json(wifi_security.scan_nearby())
+        elif action == "reveal":
+            if not ask_native_permission(f"show the saved password for Wi-Fi network '{ssid}'", always=True):
+                self._json({"ok": False, "kind": "denied", "error": "You declined the request."}, status=403)
+                return
+            result = wifi_security.reveal_password(ssid)
+            if result.get("ok"):
+                add_activity(f"Showed the Wi-Fi password for {ssid}", "user", kind="security")
+            self._json(result)
+        elif action == "audit":
+            if not ask_native_permission("check the strength of every saved Wi-Fi password", always=True):
+                self._json({"ok": False, "kind": "denied", "error": "You declined the request."}, status=403)
+                return
+            result = wifi_security.audit_passwords()
+            if result.get("ok"):
+                add_activity("Checked saved Wi-Fi password strength", "user", kind="security")
+            self._json(result)
+        elif action == "forget":
+            if not ask_native_permission(f"forget Wi-Fi network '{ssid}'. Reconnecting will need its password", always=True):
+                self._json({"ok": False, "kind": "denied", "error": "You declined the request."}, status=403)
+                return
+            result = wifi_security.forget_network(ssid)
+            if result.get("ok"):
+                add_activity(f"Forgot Wi-Fi network {ssid}", "user", kind="security")
+            self._json(result)
+        elif action == "autoconnect":
+            enabled = bool(body.get("enabled"))
+            result = wifi_security.set_auto_connect(ssid, enabled)
+            if result.get("ok"):
+                add_activity(result["message"], "user", kind="security")
+            self._json(result)
+        else:
+            self._json({"ok": False, "error": "unknown Wi-Fi action"}, status=404)
+
+    def _handle_update_install(self):
+        import core.updater as updater
+        available = updater.STATE_UPDATE_AVAILABLE
+        if not available.get("version"):
+            self._json({"ok": False, "error": "No update is available."}, status=400)
+            return
+        if not ask_native_permission(f"download and install KALKI {available['version']}", always=True):
+            self._json({"ok": False, "kind": "denied", "error": "You declined the update."}, status=403)
+            return
+        threading.Thread(target=updater.install_available_update, args=(APP_ROOT,), daemon=True).start()
+        self._json({"ok": True})
 
     def _do_post_inner(self):
         path = urllib.parse.urlparse(self.path).path
 
         if not self._authorized():
-            client_ip = self.client_address[0] if self.client_address else ""
-            if path in ("/api/pet", "/api/wake", "/api/chat", "/api/command") and client_ip in ("127.0.0.1", "::1", "localhost"):
-                pass  # Allow local companion pet requests
-            else:
-                self._json({"ok": False, "error": "authentication required"}, status=401)
-                return
-
-        # Reject cross-site requests (CSRF / DNS-rebinding to localhost).
-        if not self._origin_allowed():
-            self._json({"ok": False, "error": "forbidden origin"}, status=403)
+            self._json({"ok": False, "error": "authentication required"}, status=401)
             return
 
         body = self._read_json()
+        if body.get("__not_object__"):
+            self._json({"ok": False, "error": "request body must be a JSON object"}, status=400)
+            return
         if body.get("__too_large__"):
             self._json({"ok": False, "error": "request too large"}, status=413)
             return
@@ -5774,7 +5853,6 @@ class Handler(BaseHTTPRequestHandler):
                 rems = taskmod.list_reminders()
                 if rems:
                     briefing += f"You have {len(rems)} reminders. "
-                import watchdog
                 watched = watchdog.list_sites() if hasattr(watchdog, "list_sites") else getattr(watchdog, "WATCHLIST", [])
                 bad = [s for s in watched if s.get("status") == "down"]
                 if bad:
@@ -5823,7 +5901,6 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/pet/overlay":
-            import psutil
             running = False
             for p in psutil.process_iter(['name', 'cmdline']):
                 try:
@@ -5916,85 +5993,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": str(e)})
             return
 
-        if path == "/api/pet/overlay":
-            import psutil
-            running = False
-            for p in psutil.process_iter(['name', 'cmdline']):
-                try:
-                    cmd = ' '.join(p.info.get('cmdline') or [])
-                    if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
-                        running = True
-                        break
-                except Exception:
-                    pass
 
-            if self.command == 'POST':
-                action_enable = body.get('enabled')
-                toggle = body.get('toggle', False)
-                if toggle:
-                    action_enable = not running
-
-                if action_enable is False:
-                    # Kill running pet processes
-                    for p in psutil.process_iter(['name', 'cmdline']):
-                        try:
-                            cmd = ' '.join(p.info.get('cmdline') or [])
-                            if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
-                                p.kill()
-                        except Exception: pass
-                    self._json({"ok": True, "running": False})
-                    return
-                elif action_enable is True and not running:
-                    # Launch desktop pet
-                    try:
-                        base = os.path.dirname(os.path.abspath(__file__))
-                        pet_script = os.path.join(base, "desktop_pet.py")
-                        pet_exe = os.path.join(base, "KALKI_Pet.exe")
-                        if os.path.exists(pet_exe):
-                            subprocess.Popen([pet_exe], cwd=base)
-                        elif os.path.exists(pet_script):
-                            subprocess.Popen([sys.executable, pet_script], cwd=base)
-                        running = True
-                    except Exception as e:
-                        self._json({"ok": False, "error": str(e)})
-                        return
-                    self._json({"ok": True, "running": True})
-                    return
-            self._json({"ok": True, "running": running})
-            return
-
-        if path == "/api/pet":
-            pet_file = os.path.join(DATA_DIR, "pet_state.json")
-            pet_data = {
-                "species": "gobi",
-                "name": "Gobi",
-                "color": "#ffb833",
-                "sound": True,
-                "enabled": True,
-                "level": 1,
-                "xp": 0
-            }
-            if os.path.exists(pet_file):
-                try:
-                    with open(pet_file, "r", encoding="utf-8") as f:
-                        saved = json.load(f)
-                        if isinstance(saved, dict):
-                            pet_data.update(saved)
-                except Exception:
-                    pass
-            pet_data.update({k: v for k, v in body.items() if k in ("species", "name", "color", "sound", "enabled", "level", "xp")})
-            try:
-                os.makedirs(DATA_DIR, exist_ok=True)
-                with open(pet_file, "w", encoding="utf-8") as f:
-                    json.dump(pet_data, f, indent=2)
-                # Also mirror to root user_data_dir so standalone desktop_pet.py always shares state
-                root_pet = os.path.join(os.path.dirname(DATA_DIR), "pet_state.json")
-                with open(root_pet, "w", encoding="utf-8") as f:
-                    json.dump(pet_data, f, indent=2)
-            except Exception:
-                pass
-            self._json({"ok": True, "pet": pet_data})
-            return
 
         if path == "/api/settings/save":
             try:
@@ -6054,85 +6053,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": str(e)})
             return
 
-        if path == "/api/pet/overlay":
-            import psutil
-            running = False
-            for p in psutil.process_iter(['name', 'cmdline']):
-                try:
-                    cmd = ' '.join(p.info.get('cmdline') or [])
-                    if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
-                        running = True
-                        break
-                except Exception:
-                    pass
 
-            if self.command == 'POST':
-                action_enable = body.get('enabled')
-                toggle = body.get('toggle', False)
-                if toggle:
-                    action_enable = not running
-
-                if action_enable is False:
-                    # Kill running pet processes
-                    for p in psutil.process_iter(['name', 'cmdline']):
-                        try:
-                            cmd = ' '.join(p.info.get('cmdline') or [])
-                            if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
-                                p.kill()
-                        except Exception: pass
-                    self._json({"ok": True, "running": False})
-                    return
-                elif action_enable is True and not running:
-                    # Launch desktop pet
-                    try:
-                        base = os.path.dirname(os.path.abspath(__file__))
-                        pet_script = os.path.join(base, "desktop_pet.py")
-                        pet_exe = os.path.join(base, "KALKI_Pet.exe")
-                        if os.path.exists(pet_exe):
-                            subprocess.Popen([pet_exe], cwd=base)
-                        elif os.path.exists(pet_script):
-                            subprocess.Popen([sys.executable, pet_script], cwd=base)
-                        running = True
-                    except Exception as e:
-                        self._json({"ok": False, "error": str(e)})
-                        return
-                    self._json({"ok": True, "running": True})
-                    return
-            self._json({"ok": True, "running": running})
-            return
-
-        if path == "/api/pet":
-            pet_file = os.path.join(DATA_DIR, "pet_state.json")
-            pet_data = {
-                "species": "gobi",
-                "name": "Gobi",
-                "color": "#ffb833",
-                "sound": True,
-                "enabled": True,
-                "level": 1,
-                "xp": 0
-            }
-            if os.path.exists(pet_file):
-                try:
-                    with open(pet_file, "r", encoding="utf-8") as f:
-                        saved = json.load(f)
-                        if isinstance(saved, dict):
-                            pet_data.update(saved)
-                except Exception:
-                    pass
-            pet_data.update({k: v for k, v in body.items() if k in ("species", "name", "color", "sound", "enabled", "level", "xp")})
-            try:
-                os.makedirs(DATA_DIR, exist_ok=True)
-                with open(pet_file, "w", encoding="utf-8") as f:
-                    json.dump(pet_data, f, indent=2)
-                # Also mirror to root user_data_dir so standalone desktop_pet.py always shares state
-                root_pet = os.path.join(os.path.dirname(DATA_DIR), "pet_state.json")
-                with open(root_pet, "w", encoding="utf-8") as f:
-                    json.dump(pet_data, f, indent=2)
-            except Exception:
-                pass
-            self._json({"ok": True, "pet": pet_data})
-            return
 
         if path == "/api/setup/tool":
             tool_id = body.get("tool")
@@ -6162,85 +6083,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": str(e)})
             return
 
-        if path == "/api/pet/overlay":
-            import psutil
-            running = False
-            for p in psutil.process_iter(['name', 'cmdline']):
-                try:
-                    cmd = ' '.join(p.info.get('cmdline') or [])
-                    if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
-                        running = True
-                        break
-                except Exception:
-                    pass
 
-            if self.command == 'POST':
-                action_enable = body.get('enabled')
-                toggle = body.get('toggle', False)
-                if toggle:
-                    action_enable = not running
-
-                if action_enable is False:
-                    # Kill running pet processes
-                    for p in psutil.process_iter(['name', 'cmdline']):
-                        try:
-                            cmd = ' '.join(p.info.get('cmdline') or [])
-                            if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
-                                p.kill()
-                        except Exception: pass
-                    self._json({"ok": True, "running": False})
-                    return
-                elif action_enable is True and not running:
-                    # Launch desktop pet
-                    try:
-                        base = os.path.dirname(os.path.abspath(__file__))
-                        pet_script = os.path.join(base, "desktop_pet.py")
-                        pet_exe = os.path.join(base, "KALKI_Pet.exe")
-                        if os.path.exists(pet_exe):
-                            subprocess.Popen([pet_exe], cwd=base)
-                        elif os.path.exists(pet_script):
-                            subprocess.Popen([sys.executable, pet_script], cwd=base)
-                        running = True
-                    except Exception as e:
-                        self._json({"ok": False, "error": str(e)})
-                        return
-                    self._json({"ok": True, "running": True})
-                    return
-            self._json({"ok": True, "running": running})
-            return
-
-        if path == "/api/pet":
-            pet_file = os.path.join(DATA_DIR, "pet_state.json")
-            pet_data = {
-                "species": "gobi",
-                "name": "Gobi",
-                "color": "#ffb833",
-                "sound": True,
-                "enabled": True,
-                "level": 1,
-                "xp": 0
-            }
-            if os.path.exists(pet_file):
-                try:
-                    with open(pet_file, "r", encoding="utf-8") as f:
-                        saved = json.load(f)
-                        if isinstance(saved, dict):
-                            pet_data.update(saved)
-                except Exception:
-                    pass
-            pet_data.update({k: v for k, v in body.items() if k in ("species", "name", "color", "sound", "enabled", "level", "xp")})
-            try:
-                os.makedirs(DATA_DIR, exist_ok=True)
-                with open(pet_file, "w", encoding="utf-8") as f:
-                    json.dump(pet_data, f, indent=2)
-                # Also mirror to root user_data_dir so standalone desktop_pet.py always shares state
-                root_pet = os.path.join(os.path.dirname(DATA_DIR), "pet_state.json")
-                with open(root_pet, "w", encoding="utf-8") as f:
-                    json.dump(pet_data, f, indent=2)
-            except Exception:
-                pass
-            self._json({"ok": True, "pet": pet_data})
-            return
 
         if path == "/api/cloud_restore":
             try:
@@ -6317,7 +6160,6 @@ class Handler(BaseHTTPRequestHandler):
                         reply = f"My link hiccuped, Sir — say that again? ({str(e)[:80]})"
                 
                 # Parse [TASK: ...] and [REMIND: ... @ ...]
-                import re
                 for task_match in re.finditer(r"\[TASK:\s*(.+?)\]", reply):
                     taskmod.add_task(task_match.group(1).strip())
                 for rem_match in re.finditer(r"\[REMIND:\s*(.+?)\s*@\s*(.+?)\]", reply):
@@ -6406,7 +6248,6 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/oversight/watchdog/add":
-            import watchdog
             url = body.get("url", "")
             label = body.get("label", url)
             watchdog.add_site(url, label)
@@ -6414,14 +6255,12 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/oversight/watchdog/remove":
-            import watchdog
             url = body.get("url", "")
             watchdog.remove_site(url)
             self._json({"ok": True})
             return
 
         if path == "/api/oversight/watchdog/check":
-            import watchdog
             url = body.get("url", "")
             res = watchdog.check_site(url)
             self._json({"ok": True, "result": res})
@@ -6465,7 +6304,7 @@ class Handler(BaseHTTPRequestHandler):
                     self.send_response(200)
                     self.send_header('Content-Type', 'text/event-stream')
                     self.send_header('Cache-Control', 'no-cache')
-                    self.send_header('Connection', 'keep-alive')
+                    self.send_header('Connection', 'close')
                     self.end_headers()
                     self.wfile.write(f"data: {json.dumps({'token': local_reply, 'done': True})}\n\n".encode())
                     self.wfile.flush()
@@ -6487,7 +6326,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header('Content-Type', 'text/event-stream')
                 self.send_header('Cache-Control', 'no-cache')
-                self.send_header('Connection', 'keep-alive')
+                self.send_header('Connection', 'close')
                 self.end_headers()
                 
                 full_reply = []
@@ -6508,14 +6347,7 @@ class Handler(BaseHTTPRequestHandler):
                     taskmod.add_reminder(rem_match.group(1).strip(), rem_match.group(2).strip())
 
                 # ── Real System Actions Execution Interceptor ──
-                if "[ACTION: lock]" in reply_str or "system_control" in reply_str or "LockWorkStation" in reply_str:
-                    if "lock" in reply_str.lower():
-                        try:
-                            import ctypes
-                            ctypes.windll.user32.LockWorkStation()
-                            log("[SystemControl] Executed lock workstation from AI response.")
-                        except Exception as _e_lock:
-                            log(f"[SystemControl] Lock failed: {_e_lock}")
+                # Lock workstation execution from LLM responses permanently removed for safety.
                 tc_match = _re_act.search(r"TOOL CALL:\s*system_control\((.+?)\)", reply_str)
                 if tc_match:
                     try:
@@ -6523,7 +6355,8 @@ class Handler(BaseHTTPRequestHandler):
                         args_json = json.loads(args_raw) if args_raw.startswith("{") else {}
                         if args_json.get("action") == "open_app" and args_json.get("target"):
                             target_app = args_json["target"]
-                            os.startfile(target_app) if os.path.exists(target_app) else subprocess.Popen(f'cmd.exe /c start "" "{target_app}"', shell=True)
+                            if ask_native_permission(f"open application '{target_app}'"):
+                                _open_app_by_name(target_app)
                     except Exception as _e_tc:
                         log(f"[SystemControl] Tool call execute error: {_e_tc}")
                 spoken_reply = _re_act.sub(r"\[(?:TASK|REMIND|NOTE|ACTION):.+?\]|(?:TOOL CALL:\s*.+)", "", reply_str).strip()
@@ -6610,18 +6443,36 @@ class Handler(BaseHTTPRequestHandler):
 
         # ── Sovereign Desktop System Operations ───────────
         if path == "/api/system/exec":
+            if not getattr(config, "ALLOW_HOST_CODE_EXECUTION", False):
+                self._json({
+                    "ok": False,
+                    "error": "Host command execution is disabled by policy. Enable ALLOW_HOST_CODE_EXECUTION in settings to permit shell execution."
+                }, status=403)
+                return
             cmd = (body.get("cmd") or "").strip()
-            cwd = body.get("cwd") or os.getcwd()
+            cwd = body.get("cwd") or WORKSPACE_DIR
             if not cmd:
                 self._json({"ok": False, "error": "command required"}, status=400)
                 return
+            lower_cmd = cmd.lower()
+            dangerous_patterns = [
+                "format ", "del /s", "del /f /s", "rmdir /s /q", "rd /s /q",
+                "rm -rf /", "mkfs", "diskpart", ":(){ :|:& };:", "powershell -enc"
+            ]
+            if any(p in lower_cmd for p in dangerous_patterns):
+                if not body.get("confirmed"):
+                    self._json({
+                        "ok": False,
+                        "error": "Destructive system command blocked by safety policy. Confirmation required."
+                    }, status=400)
+                    return
             try:
-                import subprocess, time
                 t0 = time.time()
+                safe_cwd = cwd if os.path.exists(cwd) else WORKSPACE_DIR
                 res = subprocess.run(
                     cmd,
                     shell=True,
-                    cwd=cwd if os.path.exists(cwd) else os.getcwd(),
+                    cwd=safe_cwd,
                     capture_output=True,
                     text=True,
                     timeout=30
@@ -6641,13 +6492,17 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/system/files/list":
-            target = os.path.abspath(body.get("path") or os.getcwd())
-            if not os.path.isdir(target):
-                self._json({"ok": False, "error": f"Directory not found: {target}"}, status=404)
+            req_path = body.get("path") or WORKSPACE_DIR
+            safe_target, err = _validate_safe_path(req_path)
+            if err:
+                self._json({"ok": False, "error": err}, status=403)
+                return
+            if not os.path.isdir(safe_target):
+                self._json({"ok": False, "error": f"Directory not found: {safe_target}"}, status=404)
                 return
             try:
                 items = []
-                for entry in os.scandir(target):
+                for entry in os.scandir(safe_target):
                     try:
                         stat = entry.stat()
                         items.append({
@@ -6660,52 +6515,63 @@ class Handler(BaseHTTPRequestHandler):
                     except Exception:
                         pass
                 items.sort(key=lambda x: (not x["is_dir"], x["name"].lower()))
-                self._json({"ok": True, "path": target, "items": items})
+                self._json({"ok": True, "path": safe_target, "items": items})
             except Exception as e:
                 self._json({"ok": False, "error": str(e)}, status=500)
             return
 
         if path == "/api/system/files/read":
-            file_path = os.path.abspath((body.get("path") or "").strip())
-            if not file_path or not os.path.isfile(file_path):
-                self._json({"ok": False, "error": f"File not found: {file_path}"}, status=404)
+            req_path = (body.get("path") or "").strip()
+            safe_target, err = _validate_safe_path(req_path)
+            if err:
+                self._json({"ok": False, "error": err}, status=403)
+                return
+            if not os.path.isfile(safe_target):
+                self._json({"ok": False, "error": f"File not found: {req_path}"}, status=404)
                 return
             try:
-                with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                with open(safe_target, "r", encoding="utf-8", errors="replace") as f:
                     file_content = f.read()
-                self._json({"ok": True, "path": file_path, "content": file_content})
+                self._json({"ok": True, "path": safe_target, "content": file_content})
             except Exception as e:
                 self._json({"ok": False, "error": str(e)}, status=500)
             return
 
         if path == "/api/system/files/write":
-            file_path = os.path.abspath((body.get("path") or "").strip())
+            req_path = (body.get("path") or "").strip()
             file_content = body.get("content")
-            if not file_path or file_content is None:
+            if not req_path or file_content is None:
                 self._json({"ok": False, "error": "path and content required"}, status=400)
                 return
+            safe_target, err = _validate_safe_path(req_path, write=True)
+            if err:
+                self._json({"ok": False, "error": err}, status=403)
+                return
             try:
-                os.makedirs(os.path.dirname(file_path), exist_ok=True)
-                with open(file_path, "w", encoding="utf-8") as f:
+                os.makedirs(os.path.dirname(safe_target), exist_ok=True)
+                with open(safe_target, "w", encoding="utf-8") as f:
                     f.write(file_content)
-                self._json({"ok": True, "path": file_path, "bytes": len(file_content)})
+                self._json({"ok": True, "path": safe_target, "bytes": len(file_content)})
             except Exception as e:
                 self._json({"ok": False, "error": str(e)}, status=500)
             return
 
         if path == "/api/system/files/reveal":
-            target = os.path.abspath((body.get("path") or "").strip())
-            if not target or not os.path.exists(target):
+            req_path = (body.get("path") or "").strip()
+            safe_target, err = _validate_safe_path(req_path)
+            if err:
+                self._json({"ok": False, "error": err}, status=403)
+                return
+            if not os.path.exists(safe_target):
                 self._json({"ok": False, "error": "Path not found"}, status=404)
                 return
             try:
-                import subprocess
                 if sys.platform == "win32":
-                    subprocess.Popen(f'explorer /select,"{target}"', shell=True)
+                    _reveal_in_explorer(safe_target)
                 elif sys.platform == "darwin":
-                    subprocess.Popen(["open", "-R", target])
+                    subprocess.Popen(["open", "-R", safe_target])
                 else:
-                    subprocess.Popen(["xdg-open", os.path.dirname(target)])
+                    subprocess.Popen(["xdg-open", os.path.dirname(safe_target)])
                 self._json({"ok": True})
             except Exception as e:
                 self._json({"ok": False, "error": str(e)}, status=500)
@@ -6713,21 +6579,52 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/system/process/kill":
             pid = body.get("pid")
+            confirmed = body.get("confirmed", False)
             if not pid:
                 self._json({"ok": False, "error": "pid required"}, status=400)
                 return
             try:
-                import psutil
-                proc = psutil.Process(int(pid))
+                target_pid = int(pid)
+                if target_pid <= 4 or target_pid == os.getpid():
+                    self._json({"ok": False, "error": "Cannot terminate critical system process or self."}, status=403)
+                    return
+                proc = psutil.Process(target_pid)
+                proc_name = proc.name().lower()
+                protected_names = {
+                    "csrss.exe", "lsass.exe", "services.exe", "smss.exe", "wininit.exe",
+                    "explorer.exe", "msmpeng.exe", "securityhealthservice.exe", "antigravity.exe"
+                }
+                if proc_name in protected_names:
+                    self._json({"ok": False, "error": f"Process '{proc_name}' is protected and cannot be terminated."}, status=403)
+                    return
+                if not confirmed:
+                    self._json({
+                        "ok": False,
+                        "requires_confirmation": True,
+                        "prompt": f"Terminate process '{proc_name}' (PID {target_pid})?"
+                    }, status=200)
+                    return
                 proc.kill()
-                self._json({"ok": True, "message": f"Killed process {pid}"})
+                self._json({"ok": True, "message": f"Killed process {target_pid} ({proc_name})"})
             except Exception as e:
                 self._json({"ok": False, "error": str(e)}, status=500)
             return
 
+        if path.startswith("/api/wifi/"):
+            self._handle_wifi(path.rsplit("/", 1)[-1], body)
+            return
+
+        if path == "/api/update/install":
+            self._handle_update_install()
+            return
+
+        if path == "/api/auth/logout":
+            runtime_security.rotate_auth_token()
+            self._json({"ok": True, "message": "Logged out and token rotated."})
+            return
+
         if path == "/api/pet/toggle":
             try:
-                import subprocess
                 env = os.environ.copy()
                 base = os.path.dirname(os.path.abspath(__file__))
                 pet_script = os.path.join(base, "desktop_pet.py")
@@ -6808,7 +6705,6 @@ class Handler(BaseHTTPRequestHandler):
             if not name or not data_b64:
                 self._json({"ok": False, "error": "name and data required"}, status=400); return
             try:
-                import base64
                 from core import file_intelligence
                 file_bytes = base64.b64decode(data_b64)
                 text = file_intelligence.parse_binary_document(name, file_bytes)
@@ -6832,90 +6728,11 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": str(e)})
             return
 
-        if path == "/api/pet/overlay":
-            import psutil
-            running = False
-            for p in psutil.process_iter(['name', 'cmdline']):
-                try:
-                    cmd = ' '.join(p.info.get('cmdline') or [])
-                    if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
-                        running = True
-                        break
-                except Exception:
-                    pass
 
-            if self.command == 'POST':
-                action_enable = body.get('enabled')
-                toggle = body.get('toggle', False)
-                if toggle:
-                    action_enable = not running
-
-                if action_enable is False:
-                    # Kill running pet processes
-                    for p in psutil.process_iter(['name', 'cmdline']):
-                        try:
-                            cmd = ' '.join(p.info.get('cmdline') or [])
-                            if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
-                                p.kill()
-                        except Exception: pass
-                    self._json({"ok": True, "running": False})
-                    return
-                elif action_enable is True and not running:
-                    # Launch desktop pet
-                    try:
-                        base = os.path.dirname(os.path.abspath(__file__))
-                        pet_script = os.path.join(base, "desktop_pet.py")
-                        pet_exe = os.path.join(base, "KALKI_Pet.exe")
-                        if os.path.exists(pet_exe):
-                            subprocess.Popen([pet_exe], cwd=base)
-                        elif os.path.exists(pet_script):
-                            subprocess.Popen([sys.executable, pet_script], cwd=base)
-                        running = True
-                    except Exception as e:
-                        self._json({"ok": False, "error": str(e)})
-                        return
-                    self._json({"ok": True, "running": True})
-                    return
-            self._json({"ok": True, "running": running})
-            return
-
-        if path == "/api/pet":
-            pet_file = os.path.join(DATA_DIR, "pet_state.json")
-            pet_data = {
-                "species": "gobi",
-                "name": "Gobi",
-                "color": "#ffb833",
-                "sound": True,
-                "enabled": True,
-                "level": 1,
-                "xp": 0
-            }
-            if os.path.exists(pet_file):
-                try:
-                    with open(pet_file, "r", encoding="utf-8") as f:
-                        saved = json.load(f)
-                        if isinstance(saved, dict):
-                            pet_data.update(saved)
-                except Exception:
-                    pass
-            pet_data.update({k: v for k, v in body.items() if k in ("species", "name", "color", "sound", "enabled", "level", "xp")})
-            try:
-                os.makedirs(DATA_DIR, exist_ok=True)
-                with open(pet_file, "w", encoding="utf-8") as f:
-                    json.dump(pet_data, f, indent=2)
-                # Also mirror to root user_data_dir so standalone desktop_pet.py always shares state
-                root_pet = os.path.join(os.path.dirname(DATA_DIR), "pet_state.json")
-                with open(root_pet, "w", encoding="utf-8") as f:
-                    json.dump(pet_data, f, indent=2)
-            except Exception:
-                pass
-            self._json({"ok": True, "pet": pet_data})
-            return
 
         if path == "/api/backup/create":
             try:
                 import zipfile
-                from datetime import datetime
                 backups_dir = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "backups")
                 os.makedirs(backups_dir, exist_ok=True)
                 ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -7217,7 +7034,6 @@ class Handler(BaseHTTPRequestHandler):
                     setup_script = os.path.join(BASE_DIR, "setup_google.py")
                     if os.path.exists(setup_script):
                         try:
-                            import subprocess
                             subprocess.Popen([sys.executable, setup_script])
                         except Exception:
                             pass
@@ -7312,11 +7128,10 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": True, **cybertools.subdomain_enum(
                 body.get("domain") or "", limit=int(body.get("limit") or 50))}); return
         if path == "/api/cyber/revshell":
-            self._json({"ok": True, **cybertools.reverse_shell(
-                body.get("type") or "list",
-                body.get("lhost") or "",
-                body.get("lport") or 0,
-            )}); return
+            self._json({
+                "ok": False,
+                "error": "Reverse shell payload generation is disabled in KALKI v1.5.0."
+            }, status=403); return
         if path == "/api/cyber/dorks":
             self._json({"ok": True, "dorks": cybertools.github_dorks(
                 body.get("target") or "")}); return
@@ -7377,7 +7192,6 @@ def main():
     print(f"KALKI server online -> http://localhost:{config.PORT}")
 
     try:
-        import re
         tmpl_path = os.path.join(APP_ROOT, "config.example.py")
         if os.path.exists(tmpl_path):
             with open(tmpl_path, "r", encoding="utf-8") as f:
@@ -7393,7 +7207,7 @@ def main():
     try:
         import core.updater as updater
         def _on_update(version):
-            speak(f"A background update for version {version} is now downloading.")
+            log(f"Update available: {version}")
         updater.start_update_daemon(APP_ROOT, _on_update)
     except Exception as e:
         print(f"Failed to start auto-updater: {e}")
@@ -7406,6 +7220,8 @@ def main():
             # Removed automatic browser open on startup per user request
             speak(build_greeting())
         threading.Thread(target=_greet, daemon=True).start()
+
+    shield_monitors.start()
 
     # Reminder firing loop
     def _reminder_loop():
@@ -7470,7 +7286,6 @@ def main():
                         STATE["wake_pending"] = False # Disengage UI mic
 
                 # Clipboard Monitor
-                import clipboard_mod
                 clip_text = clipboard_mod.read_text()
                 if clip_text and clip_text != last_clipboard:
                     last_clipboard = clip_text
@@ -7563,7 +7378,6 @@ def main():
                     cpu_high_streak = 0
 
                 # Proactive Email Alert
-                import mail as mailmod
                 res = mailmod.check_inbox(limit=10, only_unread=True)
                 if isinstance(res, dict) and "emails" in res:
                     important_emails = [e for e in res["emails"] if e.get("important")]
@@ -7580,11 +7394,9 @@ def main():
                     last_email_count = important_count
                     
                 # Proactive GitHub Alert
-                import github_mod
                 if github_mod.is_configured():
                     notes = github_mod.check_notifications(limit=10)
                     if isinstance(notes, str) and "unread GitHub notification" in notes:
-                        import re
                         parts = notes.split("unread")
                         if len(parts) > 0:
                             nums = re.findall(r'\d+', parts[0])
