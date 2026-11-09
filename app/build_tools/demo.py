@@ -46,7 +46,7 @@ def http(method, path, body=None, timeout=60):
 
 def status():
     try: return http("GET", "/api/status", timeout=4)
-    except: return {}
+    except Exception: return {}
 
 
 def chat(text):

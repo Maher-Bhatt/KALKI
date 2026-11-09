@@ -29,6 +29,7 @@ except ImportError:
     psutil = None
 
 import oversight
+import safe_json
 
 _lock = threading.RLock()
 
@@ -99,27 +100,22 @@ def _get_shield_settings_path() -> str:
 
 def get_shield_settings() -> Dict[str, bool]:
     with _lock:
-        path = _get_shield_settings_path()
-        defaults = dict(DEFAULT_SHIELDS)
-        if os.path.exists(path):
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    saved = json.load(f)
-                    defaults.update({k: bool(v) for k, v in saved.items() if k in DEFAULT_SHIELDS})
-            except Exception:
-                pass
-        return defaults
+        settings = dict(DEFAULT_SHIELDS)
+        try:
+            saved = safe_json.read_json(_get_shield_settings_path(), {})
+            settings.update({k: bool(v) for k, v in saved.items() if k in DEFAULT_SHIELDS})
+        except OSError as e:
+            oversight.record_alert("antivirus", f"Couldn't read monitor settings, so defaults are in use: {e}", "warning")
+        return settings
 
 
 def update_shield_settings(updates: Dict[str, bool]) -> Dict[str, bool]:
     with _lock:
         current = get_shield_settings()
         current.update({k: bool(v) for k, v in (updates or {}).items() if k in DEFAULT_SHIELDS})
-        path = _get_shield_settings_path()
         try:
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(current, f, indent=2)
-        except Exception as e:
+            safe_json.write_json(_get_shield_settings_path(), current)
+        except OSError as e:
             oversight.record_alert("antivirus", f"Failed saving shield settings: {e}", "warning")
         return current
 
@@ -270,6 +266,8 @@ def scan_file(file_path: str) -> Dict[str, Any]:
     # 6. Windows Defender native scan fallback/confirmation
     defender_path = _find_mpcmdrun()
     defender_output = ""
+    defender_checked = False
+    defender_error = "Windows Defender isn't available on this PC."
     if defender_path:
         try:
             res = subprocess.run(
@@ -277,13 +275,16 @@ def scan_file(file_path: str) -> Dict[str, Any]:
                 capture_output=True, text=True, timeout=60
             )
             defender_output = res.stdout or ""
+            # 0 is clean and 2 is a detection. Anything else means it didn't finish.
+            defender_checked = res.returncode in (0, 2)
+            defender_error = "" if defender_checked else f"Windows Defender couldn't check this file (code {res.returncode})."
             # MpCmdRun reports e.g. "found 1 threats" and returns 2 for a detection.
             if res.returncode == 2 or re.search(r"found\s+[1-9]\d*\s+threat", defender_output, re.IGNORECASE):
                 threat_level = "Critical"
                 findings.append("Windows Defender flagged this file as malicious")
                 threat_name = threat_name or "Win32.Malware.Generic"
-        except Exception:
-            pass
+        except (OSError, subprocess.SubprocessError) as e:
+            defender_error = f"Windows Defender couldn't check this file ({type(e).__name__})."
 
     is_clean = (threat_level == "Clean")
 
@@ -291,6 +292,8 @@ def scan_file(file_path: str) -> Dict[str, Any]:
         "ok": True,
         "clean": is_clean,
         "scan_status": "scanned",
+        "defender_checked": defender_checked,
+        **({} if defender_checked else {"defender_error": defender_error}),
         "threat_level": threat_level,
         "threat_name": threat_name or ("None" if is_clean else "Suspicious.File"),
         "findings": findings,
@@ -337,6 +340,8 @@ def scan_quick() -> Dict[str, Any]:
 
     scanned_files = 0
     unreadable_files = 0
+    defender_unchecked = 0
+    skipped_folders = 0
     threats_found: List[Dict[str, Any]] = []
 
     for folder in targets:
@@ -352,16 +357,19 @@ def scan_quick() -> Dict[str, Any]:
                             res = scan_file(full_p)
                             if res.get("scan_status") == "not_scanned":
                                 unreadable_files += 1
-                            elif not res.get("clean"):
-                                threats_found.append(res)
+                            else:
+                                if not res.get("defender_checked"):
+                                    defender_unchecked += 1
+                                if not res.get("clean"):
+                                    threats_found.append(res)
                             if scanned_files >= 250:
                                 break
                         except Exception:
-                            pass
+                            unreadable_files += 1
                 if scanned_files >= 250:
                     break
-        except Exception:
-            pass
+        except OSError:
+            skipped_folders += 1
 
     # 4. Process scan
     proc_res = scan_processes()
@@ -389,6 +397,8 @@ def scan_quick() -> Dict[str, Any]:
         "ok": True,
         "scanned_files": scanned_files,
         "unreadable_files": unreadable_files,
+        "defender_unchecked": defender_unchecked,
+        "skipped_folders": skipped_folders,
         "limit_reached": scanned_files >= 250,
         "threats_count": len(threats_found),
         "threats": threats_found,
@@ -574,31 +584,19 @@ def secrets_token(length: int = 6) -> str:
 def _add_quarantine_entry(entry: Dict[str, Any]) -> None:
     with _lock:
         path = os.path.join(_get_data_dir(), "quarantine_index.json")
-        entries = []
-        if os.path.exists(path):
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    entries = json.load(f)
-            except Exception:
-                pass
+        entries = safe_json.read_json(path, [])
         entries.append(entry)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(entries, f, indent=2)
+        safe_json.write_json(path, entries)
 
 
 def get_quarantined_files() -> List[Dict[str, Any]]:
     with _lock:
-        path = os.path.join(_get_data_dir(), "quarantine_index.json")
-        if not os.path.exists(path):
-            return []
         try:
-            with open(path, "r", encoding="utf-8") as f:
-                entries = json.load(f)
-            # Verify file still on disk
-            valid = [e for e in entries if os.path.exists(e.get("quarantine_path", ""))]
-            return valid
-        except Exception:
+            entries = safe_json.read_json(os.path.join(_get_data_dir(), "quarantine_index.json"), [])
+        except OSError:
             return []
+        # Only list files that are still on disk.
+        return [e for e in entries if os.path.exists(e.get("quarantine_path", ""))]
 
 
 def resolve_quarantine(threat_id: str, action: str) -> Dict[str, Any]:
@@ -608,9 +606,8 @@ def resolve_quarantine(threat_id: str, action: str) -> Dict[str, Any]:
         if not os.path.exists(path):
             return {"ok": False, "error": "No quarantine records found"}
         try:
-            with open(path, "r", encoding="utf-8") as f:
-                entries = json.load(f)
-        except Exception as e:
+            entries = safe_json.read_json(path, [])
+        except OSError as e:
             return {"ok": False, "error": str(e)}
 
         target = next((e for e in entries if e.get("id") == threat_id), None)
@@ -625,8 +622,7 @@ def resolve_quarantine(threat_id: str, action: str) -> Dict[str, Any]:
                 if os.path.exists(qpath):
                     os.unlink(qpath)
                 entries = [e for e in entries if e.get("id") != threat_id]
-                with open(path, "w", encoding="utf-8") as f:
-                    json.dump(entries, f, indent=2)
+                safe_json.write_json(path, entries)
                 return {"ok": True, "action": "deleted"}
             except Exception as e:
                 return {"ok": False, "error": str(e)}
@@ -637,8 +633,7 @@ def resolve_quarantine(threat_id: str, action: str) -> Dict[str, Any]:
                     os.makedirs(os.path.dirname(orig), exist_ok=True)
                     shutil.move(qpath, orig)
                 entries = [e for e in entries if e.get("id") != threat_id]
-                with open(path, "w", encoding="utf-8") as f:
-                    json.dump(entries, f, indent=2)
+                safe_json.write_json(path, entries)
                 return {"ok": True, "action": "restored", "path": orig}
             except Exception as e:
                 return {"ok": False, "error": str(e)}
@@ -649,20 +644,12 @@ def resolve_quarantine(threat_id: str, action: str) -> Dict[str, Any]:
 def _record_scan_event(scan_result: Dict[str, Any]) -> None:
     with _lock:
         path = _get_threat_log_path()
-        logs = []
-        if os.path.exists(path):
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    logs = json.load(f)
-            except Exception:
-                pass
-        logs.append(scan_result)
-        logs = logs[-30:]
         try:
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(logs, f, indent=2)
-        except Exception:
-            pass
+            logs = safe_json.read_json(path, [])
+            logs.append(scan_result)
+            safe_json.write_json(path, logs[-30:])
+        except OSError as e:
+            oversight.record_alert("antivirus", f"Couldn't save scan history: {e}", "warning")
 
 
 def get_antivirus_status() -> Dict[str, Any]:
@@ -671,16 +658,11 @@ def get_antivirus_status() -> Dict[str, Any]:
     shields = get_shield_settings()
     quarantined = get_quarantined_files()
 
-    last_scan = None
-    log_path = _get_threat_log_path()
-    if os.path.exists(log_path):
-        try:
-            with open(log_path, "r", encoding="utf-8") as f:
-                history = json.load(f)
-                if history:
-                    last_scan = history[-1]
-        except Exception:
-            pass
+    try:
+        history = safe_json.read_json(_get_threat_log_path(), [])
+    except OSError:
+        history = []
+    last_scan = history[-1] if history else None
 
     try:
         import shield_monitors

@@ -160,8 +160,8 @@ class PetApi:
             try:
                 os.makedirs(folder, exist_ok=True)
                 pf = os.path.join(folder, "pet_state.json")
-                with open(pf, "w", encoding="utf-8") as f:
-                    json.dump(state_dict, f, indent=2)
+                import safe_json
+                safe_json.write_json(pf, state_dict)
                 success = True
             except Exception as e:
                 print(f"[DesktopPet] Failed saving state to {folder}: {e}")

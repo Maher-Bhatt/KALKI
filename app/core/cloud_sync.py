@@ -73,14 +73,12 @@ def init_cloud_sync(config):
             print(f"[CLOUD SYNC] Failed to init Firebase: {e}")
 
 
-def sync_memory_to_cloud(user_id, local_memory_path, passphrase):
+def sync_memory_to_cloud(user_id, data, passphrase):
     if not _db or not passphrase:
         return
 
     def _sync():
         try:
-            with open(local_memory_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
             payload = _encrypt(json.dumps(data), passphrase)
             doc_ref = _db.collection("users").document(user_id).collection("data").document("memory")
             doc_ref.set({"facts": payload})
@@ -90,14 +88,12 @@ def sync_memory_to_cloud(user_id, local_memory_path, passphrase):
     threading.Thread(target=_sync, daemon=True).start()
 
 
-def sync_history_to_cloud(user_id, local_history_path, passphrase):
+def sync_history_to_cloud(user_id, data, passphrase):
     if not _db or not passphrase:
         return
 
     def _sync():
         try:
-            with open(local_history_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
             payload = _encrypt(json.dumps(data[-50:]), passphrase)
             doc_ref = _db.collection("users").document(user_id).collection("data").document("history")
             doc_ref.set({"messages": payload})

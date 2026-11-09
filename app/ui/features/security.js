@@ -223,6 +223,8 @@ async function runQuickScan() {
   if (r.ok) {
     avScanResult = { type: 'quick', ...r.data };
     addScanLog(`Scan complete: ${r.data.scanned_files} files examined in ${r.data.duration_ms || 410}ms.`, 'ok');
+    if (r.data.defender_unchecked) addScanLog(`Windows Defender couldn't check ${r.data.defender_unchecked} files. KALKI's own checks still ran on them.`, 'alert');
+    if (r.data.skipped_folders) addScanLog(`${r.data.skipped_folders} folders couldn't be opened, so they weren't checked.`, 'alert');
     if (r.data.unreadable_files) addScanLog(`${r.data.unreadable_files} files couldn't be read, so they weren't checked.`, 'alert');
     if (r.data.limit_reached) addScanLog('Stopped at the 250-file limit. Use Windows Security for a full scan.', 'alert');
     if (r.data.clean) {
@@ -300,8 +302,8 @@ async function runTargetScan() {
     if (r.ok) {
       avScanResult = { type: 'file', ...r.data };
       if (r.data.clean) {
-        addScanLog('No problems found in this file.', 'ok');
-        ok('No problems found');
+        addScanLog(r.data.defender_checked ? 'No problems found in this file.' : `KALKI's checks found nothing, but this isn't a full result: ${r.data.defender_error}`, r.data.defender_checked ? 'ok' : 'alert');
+        ok(r.data.defender_checked ? 'No problems found' : "Nothing found, but Defender couldn't check it");
       } else {
         addScanLog(`MALWARE DETECTED: ${r.data.threat_name} (${r.data.threat_level})`, 'alert');
         err(`Threat detected: ${r.data.threat_name || 'Malware'}`);

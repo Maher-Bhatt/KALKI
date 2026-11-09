@@ -1,0 +1,4 @@
+# Tools for testing and checking KALKI. Not needed to run the app.
+pytest==9.2.0
+ruff==0.17.4
+bandit==1.9.4

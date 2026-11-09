@@ -58,7 +58,7 @@ def check_for_updates():
                     curr_parts = [int(x) for x in CURRENT_VERSION.lstrip('v').split('.')]
                     latest_parts = [int(x) for x in latest.lstrip('v').split('.')]
                     is_newer = latest_parts > curr_parts
-                except:
+                except Exception:
                     is_newer = latest != CURRENT_VERSION
                 
                 if is_newer:

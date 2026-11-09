@@ -13,6 +13,7 @@ import time
 import glob
 import socket
 import threading
+import traceback
 import ssl
 import re
 
@@ -28,7 +29,7 @@ import tempfile
 import shutil
 import asyncio
 import ctypes
-from datetime import datetime
+from datetime import datetime, timezone
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 
@@ -91,6 +92,10 @@ import deepscan
 import runtime_log
 import runtime_security
 import semantic_memory
+import settings_schema
+import routes_productivity
+import routes_memory
+import db
 import wifi_security
 import shield_monitors
 from core import api_vault
@@ -102,6 +107,8 @@ try:
             setattr(config, _vk, _vv)
 except Exception:
     pass
+
+SETTINGS_PROBLEMS = settings_schema.apply_user_config(config, getattr(config, "_USER_CONFIG_PATH", ""))
 
 # ─────────────────────────────────────────────────────────────
 # Optional dependencies — degrade gracefully if missing
@@ -206,8 +213,6 @@ def _validate_safe_path(target_path, write=False):
         return None, f"Access denied: Path '{target_path}' is outside the sandboxed workspace."
     return real_path, None
 
-MEMORY_PATH  = os.path.join(DATA_DIR, os.path.basename(config.MEMORY_FILE))
-HISTORY_PATH = os.path.join(DATA_DIR, os.path.basename(config.HISTORY_FILE))
 VAULT_PATH   = os.path.join(DATA_DIR, "vault.json")
 SCRIPTS_DIR  = os.path.join(DATA_DIR, "scripts")
 TASKS_PATH   = os.path.join(DATA_DIR, "tasks.json")
@@ -218,13 +223,10 @@ USER_CONFIG_PATH = getattr(config, "_USER_CONFIG_PATH", os.path.join(os.path.dir
 os.makedirs(SCRIPTS_DIR, exist_ok=True)
 vault.VAULT_PATH = VAULT_PATH
 coder.SCRIPTS_DIR = SCRIPTS_DIR
-taskmod.TASKS_PATH = TASKS_PATH
-taskmod.REMINDERS_PATH = REMINDERS_PATH
 gcal.CRED_PATH  = os.path.join(DATA_DIR, "google_credentials.json")
 gcal.TOKEN_PATH = os.path.join(DATA_DIR, "google_token.pickle")
 spotify_mod.CACHE_PATH = os.path.join(DATA_DIR, "spotify_token.json")
 whatsapp_mod.CONTACTS_PATH = os.path.join(DATA_DIR, "contacts.json")
-notesmod.NOTES_PATH = os.path.join(DATA_DIR, "notes.json")
 webscan.SCANS_DIR = os.path.join(DATA_DIR, "scans")
 watchdog.WATCHLIST_PATH = os.path.join(DATA_DIR, "watchlist.json")
 deepscan.SCANS_DIR = os.path.join(DATA_DIR, "scans")
@@ -232,6 +234,40 @@ deepscan.SCANS_DIR = os.path.join(DATA_DIR, "scans")
 # directory in both source and Store builds.
 runtime_security.TOKEN_PATH = os.path.join(DATA_DIR, "api_token.txt")
 API_TOKEN = runtime_security.get_api_token()
+runtime_log.register_secret(API_TOKEN)
+if not runtime_security.token_file_is_private():
+    runtime_log.log_event(LOG_PATH, "warning", "token_file_not_private",
+                          detail="Couldn't limit the local API token file to this user.")
+
+for _problem in SETTINGS_PROBLEMS:
+    runtime_log.log_event(LOG_PATH, "warning", "settings_problem", detail=_problem)
+    oversight.record_alert("settings", _problem, "warning")
+
+# Tasks, reminders and notes live in SQLite. A failure here must not stop the app
+# starting: those features report the error, and everything else keeps working.
+db.configure(os.path.join(DATA_DIR, "kalki.db"))
+STORE_ERROR = ""
+try:
+    _store_report = db.open_store(DATA_DIR)
+    for _name, _count in _store_report["imported"].items():
+        runtime_log.log_event(LOG_PATH, "info", "legacy_import", name=_name, imported=_count,
+                              skipped=_store_report["skipped"].get(_name, 0))
+    for _name, _why in _store_report["failed"].items():
+        runtime_log.log_event(LOG_PATH, "error", "legacy_import_failed", name=_name, detail=_why)
+        oversight.record_alert("data", f"Couldn't import your old {_name}: the file is unreadable, and it was kept.", "warning")
+    _memory_report = semantic_memory.memory.import_legacy()
+    if _memory_report and _memory_report.get("failed"):
+        runtime_log.log_event(LOG_PATH, "error", "legacy_import_failed", name="semantic_memory", detail=_memory_report["failed"])
+        oversight.record_alert("data", "Couldn't read your old memories on this PC. The file was kept, and KALKI will try again next start.", "warning")
+    if semantic_memory.memory.unreadable_count():
+        oversight.record_alert("data", f"{semantic_memory.memory.unreadable_count()} memories can't be decrypted on this PC or account. They're kept, not deleted.", "warning")
+    _unreadable_secrets = api_vault.unreadable_keys()
+    if _unreadable_secrets:
+        oversight.record_alert("data", f"{len(_unreadable_secrets)} saved API keys can't be decrypted here, so enter them again in Settings.", "warning")
+except Exception as _store_exc:
+    STORE_ERROR = str(_store_exc)
+    runtime_log.log_event(LOG_PATH, "critical", "store_open_failed", detail=STORE_ERROR)
+    oversight.record_alert("data", f"KALKI's data store has a problem: {STORE_ERROR}", "critical")
 workflows.CUSTOM_ROUTINES_PATH = os.path.join(DATA_DIR, "custom_routines.json")
 workflows.load_custom_routines()
 
@@ -422,14 +458,25 @@ def add_activity(action, source, reversible=False, undo_fn=None, kind="info"):
     `undo_fn` is kept server-side only; /api/activity/list never serialises
     it. An activity can be undone once, after which it is marked undone."""
     global _activity_id_seq
-    with _activity_lock:
+    now = time.time()
+    try:
+        with db.connect() as conn:
+            cursor = conn.execute("INSERT INTO activity (action, source, kind, time) VALUES (?, ?, ?, ?)",
+                                  (action, source, kind, now))
+            activity_id = str(cursor.lastrowid)
+            conn.execute("DELETE FROM activity WHERE id NOT IN (SELECT id FROM activity ORDER BY id DESC LIMIT 2000)")
+    except Exception as e:
+        # Recording must never stop the action itself.
+        log(f"couldn't save activity: {e}")
         _activity_id_seq += 1
+        activity_id = f"unsaved-{_activity_id_seq}"
+    with _activity_lock:
         act = {
-            "id": str(_activity_id_seq),
+            "id": activity_id,
             "action": action,
             "source": source,
             "kind": kind,
-            "time": time.time(),
+            "time": now,
             "reversible": bool(reversible and undo_fn),
             "undone": False,
             "undo_fn": undo_fn,
@@ -563,7 +610,7 @@ def _get_recent_logs():
         with open(LOG_PATH, "r", encoding="utf-8") as f:
             lines = f.readlines()
             return [l.strip() for l in lines[-12:] if l.strip()]
-    except:
+    except Exception:
         return []
 
 UI_ALIVE_GRACE = 8.0  # seconds — if no /api/status in this long, UI is "dead"
@@ -695,31 +742,26 @@ def _atomic_write_json(path, obj):
 
 
 def load_memory():
-    try:
-        with open(MEMORY_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return []
+    with db.connect() as conn:
+        return [{"fact": row["fact"], "date": row["date"]}
+                for row in conn.execute("SELECT fact, date FROM simple_memories ORDER BY id").fetchall()]
 
-def save_memory(mems):
-    with _persist_lock:
-        _atomic_write_json(MEMORY_PATH, mems)
+
+def _cloud_sync_passphrase():
+    return getattr(config, "CLOUD_SYNC_PASSPHRASE", "")
+
 
 def add_memory(fact):
-    with _persist_lock:
-        try:
-            with open(MEMORY_PATH, "r", encoding="utf-8") as f:
-                mems = json.load(f)
-        except Exception:
-            mems = []
-        mems.append({"fact": fact, "date": datetime.now().strftime("%Y-%m-%d")})
-        _atomic_write_json(MEMORY_PATH, mems)
-        try:
-            from core import cloud_sync
-            cloud_sync.sync_memory_to_cloud(getattr(config, "OWNER_NAME", "default_user"), MEMORY_PATH, getattr(config, "CLOUD_SYNC_PASSPHRASE", ""))
-        except Exception as e:
-            log(f"cloud memory sync failed: {e}")
-        return len(mems)
+    with db.connect() as conn:
+        conn.execute("INSERT INTO simple_memories (fact, date) VALUES (?, ?)", (fact, datetime.now().strftime("%Y-%m-%d")))
+    memories = load_memory()
+    try:
+        from core import cloud_sync
+        cloud_sync.sync_memory_to_cloud(getattr(config, "OWNER_NAME", "default_user"), memories, _cloud_sync_passphrase())
+    except Exception as e:
+        log(f"cloud memory sync failed: {e}")
+    return len(memories)
+
 
 def get_memory_prompt(query=""):
     try:
@@ -735,33 +777,25 @@ def get_memory_prompt(query=""):
         return ""
 
 def load_history():
-    try:
-        with open(HISTORY_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return []
-
-def save_history(hist):
-    with _persist_lock:
-        _atomic_write_json(HISTORY_PATH, hist[-config.MAX_HISTORY:])
+    """The recent exchanges the model sees, oldest first."""
+    with db.connect() as conn:
+        rows = conn.execute("SELECT role, content FROM history ORDER BY id DESC LIMIT ?", (int(config.MAX_HISTORY),)).fetchall()
+    return [{"role": row["role"], "content": row["content"]} for row in reversed(rows)]
 
 
 def append_history(user_text, assistant_text):
-    """Atomic read-modify-write append of one exchange."""
-    with _persist_lock:
-        try:
-            with open(HISTORY_PATH, "r", encoding="utf-8") as f:
-                hist = json.load(f)
-        except Exception:
-            hist = []
-        hist.append({"role": "user", "content": user_text})
-        hist.append({"role": "assistant", "content": assistant_text})
-        _atomic_write_json(HISTORY_PATH, hist[-config.MAX_HISTORY:])
-        try:
-            from core import cloud_sync
-            cloud_sync.sync_history_to_cloud(getattr(config, "OWNER_NAME", "default_user"), HISTORY_PATH, getattr(config, "CLOUD_SYNC_PASSPHRASE", ""))
-        except Exception as e:
-            log(f"cloud history sync failed: {e}")
+    """Save one exchange and trim to MAX_HISTORY, the same limit as before."""
+    stamp = datetime.now().isoformat(timespec="seconds")
+    with db.connect() as conn:
+        conn.executemany("INSERT INTO history (role, content, ts) VALUES (?, ?, ?)",
+                         [("user", user_text, stamp), ("assistant", assistant_text, stamp)])
+        conn.execute("DELETE FROM history WHERE id NOT IN (SELECT id FROM history ORDER BY id DESC LIMIT ?)",
+                     (int(config.MAX_HISTORY),))
+    try:
+        from core import cloud_sync
+        cloud_sync.sync_history_to_cloud(getattr(config, "OWNER_NAME", "default_user"), load_history(), _cloud_sync_passphrase())
+    except Exception as e:
+        log(f"cloud history sync failed: {e}")
 
 
 def _auto_extract_topic_memory(user_text, reply_text=""):
@@ -1404,7 +1438,7 @@ def is_urgent(text):
             reply = ans["choices"][0]["message"]["content"].strip().upper()
             if "URGENT" in reply:
                 return True
-    except:
+    except Exception:
         pass
     return False
 
@@ -2408,9 +2442,9 @@ def handle_local(text):
         STATE["pending_note_capture"] = False
         notesmod.add_note(text)
         try:
-            semantic_memory.add_memory(text, category="Personal", importance=4)
-        except Exception:
-            pass
+            semantic_memory.memory.add_memory(text, tags=["Personal"], importance=4)
+        except Exception as e:
+            log(f"couldn't save note to memory: {e}")
         return True, f"Saved to your notes, {config.OWNER_TITLE}: '{text}'"
 
     # 2. Direct note syntax: "remember that ...", "remember this: ...", "save note: ..."
@@ -2423,9 +2457,9 @@ def handle_local(text):
         if note_content and len(note_content) > 1 and note_content.lower() not in ("this", "that", "it", ""):
             notesmod.add_note(note_content)
             try:
-                semantic_memory.add_memory(note_content, category="Personal", importance=4)
-            except Exception:
-                pass
+                semantic_memory.memory.add_memory(note_content, tags=["Personal"], importance=4)
+            except Exception as e:
+                log(f"couldn't save note to memory: {e}")
             return True, f"Saved to your notes, {config.OWNER_TITLE}: '{note_content}'"
 
     # 3. Bare capture command ("remember this", "save this")
@@ -2529,7 +2563,7 @@ def handle_local(text):
         done = taskmod.complete_task(target)
         if done:
             return True, f"Task done: {done['text']}."
-        return True, f"No matching task for {target}, Sir."
+        return True, taskmod.explain_no_match(target, include_done=False)
 
     # Clear all tasks variations (singular/plural, with or without "all")
     if t in (
@@ -2555,7 +2589,7 @@ def handle_local(text):
             taskmod.clear_all_tasks()
             return True, "All tasks cleared, Sir."
         ok = taskmod.delete_task(target)
-        return True, "Task removed." if ok else "No matching task, Sir."
+        return True, "Task removed." if ok else taskmod.explain_no_match(target)
     # ════════════════════════════════════════════════════
     # REMINDERS  ("remind me to X in 10 minutes" / "at 5pm")
     # ════════════════════════════════════════════════════
@@ -2881,7 +2915,7 @@ def handle_local(text):
         fmt, payload = m.group(1), raw.split(None, 1)[1].split(None, 1)
         if len(payload) > 1:
             try: return True, f"{fmt}: {cybertools.encode(payload[1], fmt)}"
-            except: pass
+            except Exception: pass
 
     m = _re_local.search(r"^decode\s+(\S+)\s+(.+)$", t, flags=_re_local.IGNORECASE)
     if m:
@@ -3673,7 +3707,7 @@ def pick_model(text):
 def execute_tool_call(tool_name, tool_args):
     try:
         args = json.loads(tool_args)
-    except:
+    except Exception:
         args = {}
     try:
         skill_map = {
@@ -3853,10 +3887,10 @@ def execute_tool_call(tool_name, tool_args):
                 return f"Task added with ID {tid}."
             elif action == "complete":
                 done = taskmod.complete_task(text)
-                return f"Task completed: {done['text']}" if done else "Task not found."
+                return f"Task completed: {done['text']}" if done else taskmod.explain_no_match(text, include_done=False)
             elif action == "delete":
                 ok = taskmod.delete_task(text)
-                return "Task deleted." if ok else "Task not found."
+                return "Task deleted." if ok else taskmod.explain_no_match(text)
             elif action == "clear_all":
                 taskmod.clear_all_tasks()
                 return "All tasks cleared."
@@ -4670,7 +4704,7 @@ def ask_ai(user_messages, force_search=False):
             return ask_groq(msgs, model=g_model)
         except urllib.error.HTTPError as e:
             try: body = e.read().decode("utf-8", "replace")[:300]
-            except: body = ""
+            except Exception: body = ""
             if e.code in (400, 404) and chosen != "llama-3.1-8b-instant":
                 log(f"Groq {e.code} on {STATE['model']}: {body}")
                 old = STATE["model"]
@@ -4814,7 +4848,7 @@ def get_hardware_stats():
                 _hw_cache["cpu"] = psutil.cpu_percent(interval=None)
                 _hw_cache["ts"] = now
             return _hw_cache["cpu"], psutil.virtual_memory().percent, psutil.disk_usage(os.path.abspath(os.sep)).percent
-        except: pass
+        except Exception: pass
     
     # WMI Fallback
     if now - _hw_cache["ts"] < 2.5:
@@ -4829,7 +4863,7 @@ def get_hardware_stats():
             for line in out.splitlines():
                 if "LoadPercentage=" in line:
                     cpu = float(line.split("=")[1].strip())
-        except: pass
+        except Exception: pass
         
         # RAM
         try:
@@ -4839,7 +4873,7 @@ def get_hardware_stats():
                 if "FreePhysicalMemory=" in line: free = float(line.split("=")[1].strip())
                 if "TotalVisibleMemorySize=" in line: total = float(line.split("=")[1].strip())
             if total > 0: ram = ((total - free) / total) * 100
-        except: pass
+        except Exception: pass
 
         # Disk
         try:
@@ -4849,11 +4883,11 @@ def get_hardware_stats():
                 if "FreeSpace=" in line: free = float(line.split("=")[1].strip())
                 if "Size=" in line: total = float(line.split("=")[1].strip())
             if total > 0: disk = ((total - free) / total) * 100
-        except: pass
+        except Exception: pass
 
         _hw_cache["cpu"], _hw_cache["ram"], _hw_cache["disk"], _hw_cache["ts"] = cpu, ram, disk, now
         return cpu, ram, disk
-    except:
+    except Exception:
         return _hw_cache["cpu"], _hw_cache["ram"], _hw_cache["disk"]
 
 
@@ -4966,7 +5000,7 @@ class Handler(BaseHTTPRequestHandler):
         return False
 
     def _own_authorities(self):
-        port = config.PORT
+        port = self.server.server_address[1]
         return {f"127.0.0.1:{port}", f"localhost:{port}", f"[::1]:{port}"}
 
     def _host_allowed(self):
@@ -5122,7 +5156,8 @@ class Handler(BaseHTTPRequestHandler):
             # WinError 10053 = browser closed the connection mid-poll (normal, not an error)
             if "10053" in str(e) or "10054" in str(e):
                 return
-            log(f"handler error on {self.path}: {e}")
+            runtime_log.log_event(LOG_PATH, "error", "handler_error", path=self.path.split("?")[0],
+                                  detail=str(e), trace=traceback.format_exc(limit=8))
             try:
                 self._json({"ok": False, "error": str(e)}, status=500)
             except Exception:
@@ -5219,7 +5254,7 @@ class Handler(BaseHTTPRequestHandler):
                         return
                     else:
                         try: os.remove(lock_path)
-                        except: pass
+                        except Exception: pass
 
                 with open(os.path.join(APP_ROOT, "index.html"), "rb") as f:
                     html = f.read()
@@ -5487,6 +5522,7 @@ class Handler(BaseHTTPRequestHandler):
                 },
                 "pendingApprovals": pending_count,
                 "hostExecution": bool(getattr(config, "ALLOW_HOST_CODE_EXECUTION", False)),
+                "storeError": STORE_ERROR,
                 "listenerOnline": time.time() - STATE.get("listener_last_seen", 0) < 30,
                 "mailConfigured": bool(getattr(config, "EMAIL_ADDRESS", "") and getattr(config, "EMAIL_APP_PASSWORD", "")),
                 "memorySearchMode": "semantic" if semantic_memory.embeddings_configured() else "keyword",
@@ -5638,11 +5674,8 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/memory/list":
-            try:
-                mems = semantic_memory.memory.list_all()
-                self._json({"ok": True, "memories": mems})
-            except Exception as e:
-                self._json({"ok": False, "error": str(e)}, status=500)
+            payload, status = routes_memory.list_memories({})
+            self._json(payload, status=status)
             return
 
         if path == "/api/media/now" or path == "/api/media/now_json":
@@ -5765,6 +5798,12 @@ class Handler(BaseHTTPRequestHandler):
         if body.get("__not_object__"):
             self._json({"ok": False, "error": "request body must be a JSON object"}, status=400)
             return
+
+        route = routes_productivity.POST_ROUTES.get(path) or routes_memory.POST_ROUTES.get(path)
+        if route:
+            payload, status = route(body)
+            self._json(payload, status=status)
+            return
         if body.get("__too_large__"):
             self._json({"ok": False, "error": "request too large"}, status=413)
             return
@@ -5777,8 +5816,18 @@ class Handler(BaseHTTPRequestHandler):
         
         if path == "/api/activity/list":
             with _activity_lock:
-                # filter out undo_fn
-                filtered = [{"id": a["id"], "action": a["action"], "source": a["source"], "time": a["time"], "reversible": a["reversible"]} for a in _activity_log]
+                live = {a["id"]: a for a in _activity_log}
+            with db.connect() as conn:
+                rows = conn.execute("SELECT * FROM activity ORDER BY id DESC LIMIT 500").fetchall()
+            filtered = []
+            for row in reversed(rows):
+                act = live.get(str(row["id"]))
+                filtered.append({
+                    "id": str(row["id"]), "action": row["action"], "source": row["source"], "time": row["time"],
+                    "undone": bool(row["undone"]),
+                    # Undo only exists while the app that did it is still running.
+                    "reversible": bool(act and act["reversible"] and not row["undone"]),
+                })
             self._json({"ok": True, "activities": filtered})
             return
 
@@ -5786,11 +5835,14 @@ class Handler(BaseHTTPRequestHandler):
             act_id = body.get("id")
             with _activity_lock:
                 act = next((a for a in _activity_log if a["id"] == act_id), None)
-            if not act or not act["reversible"] or not act["undo_fn"]:
+            if not act or not act["reversible"] or not act["undo_fn"] or act.get("undone"):
                 self._json({"ok": False, "error": "Cannot undo this activity"}, status=400)
                 return
             try:
                 act["undo_fn"]()
+                act["undone"] = True
+                with db.connect() as conn:
+                    conn.execute("UPDATE activity SET undone = 1 WHERE id = ?", (act["id"],))
                 self._json({"ok": True})
             except Exception as e:
                 self._json({"ok": False, "error": str(e)}, status=500)
@@ -5884,7 +5936,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/recovery/clear":
             try:
                 os.remove(os.path.join(DATA_DIR, "crash.log"))
-            except:
+            except Exception:
                 pass
             self._json({"ok": True})
             return
@@ -5999,13 +6051,27 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 raw_updates = body.get("updates") if (isinstance(body, dict) and "updates" in body and isinstance(body.get("updates"), dict)) else body
                 updates = _sanitize_theme_updates(raw_updates) if isinstance(raw_updates, dict) else {}
-                new_conf = {}
+                updates, invalid = settings_schema.validate_updates(updates)
+                if invalid:
+                    # All or nothing, so a form never half-saves.
+                    summary = "; ".join(f"{k} {why}" for k, why in invalid.items())
+                    self._json({"ok": False, "error": f"Not saved: {summary}", "fields": invalid}, status=400)
+                    return
+                # A token isn't enough to weaken safety: the prompt comes from the server.
+                if updates.get("ALLOW_HOST_CODE_EXECUTION") is True and not config.ALLOW_HOST_CODE_EXECUTION:
+                    if not ask_native_permission("let apps and tools run code directly on this PC", always=True):
+                        self._json({"ok": False, "kind": "denied", "error": "You declined the change."}, status=403)
+                        return
+                if updates.get("REQUIRE_DANGEROUS_CONFIRMATION") is False and config.REQUIRE_DANGEROUS_CONFIRMATION:
+                    if not ask_native_permission("stop asking before risky actions", always=True):
+                        self._json({"ok": False, "kind": "denied", "error": "You declined the change."}, status=403)
+                        return
                 cfg_path = USER_CONFIG_PATH
                 effective_updates = {}
                 with _persist_lock:
-                    if os.path.exists(cfg_path):
-                        with open(cfg_path, "r", encoding="utf-8-sig") as f:
-                            new_conf = json.load(f)
+                    new_conf, _load_problems = settings_schema.read_raw_user_config(cfg_path)
+                    for _problem in _load_problems:
+                        runtime_log.log_event(LOG_PATH, "warning", "settings_problem", detail=_problem)
                     os.makedirs(os.path.dirname(cfg_path), exist_ok=True)
 
                     for k, v in updates.items():
@@ -6097,7 +6163,9 @@ class Handler(BaseHTTPRequestHandler):
                 m1 = cloud_sync.restore_memory_from_cloud(uid, os.path.join(DATA_DIR, "memory.json"), passphrase)
                 m2 = cloud_sync.restore_history_from_cloud(uid, os.path.join(DATA_DIR, "history.json"), passphrase)
                 
-                if m1 or m2:
+                restored = (["memory"] if m1 else []) + (["history"] if m2 else [])
+                if restored:
+                    db.reimport_legacy(restored, DATA_DIR)
                     self._json({"ok": True, "message": "Restore successful."})
                 else:
                     self._json({"ok": False, "error": "No cloud backups found or restore failed."})
@@ -6425,7 +6493,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             report = {
                 "id": f"report-{int(time.time() * 1000)}",
-                "createdAt": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+                "createdAt": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds") + "Z",
                 "reason": reason,
                 "details": details[:1200],
                 "prompt": prompt[:4000],
@@ -6742,23 +6810,24 @@ class Handler(BaseHTTPRequestHandler):
                     os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "user_config.json"),
                     os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "secure_api_vault.enc"),
                     os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "vault_integrity.sha256"),
-                    os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "semantic_memory.json"),
                     os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "ai_usage.json"),
-                    os.path.join(DATA_DIR, "memory.json"),
-                    os.path.join(DATA_DIR, "history.json"),
                     os.path.join(DATA_DIR, "productivity.json")
                 ]
-                with zipfile.ZipFile(backup_zip, "w") as z:
-                    for fp in files_to_backup:
-                        if os.path.exists(fp):
-                            z.write(fp, os.path.basename(fp))
+                with tempfile.TemporaryDirectory() as snapshot_dir:
+                    snapshot = os.path.join(snapshot_dir, "kalki.db")
+                    db.backup_to(snapshot)
+                    with zipfile.ZipFile(backup_zip, "w", zipfile.ZIP_DEFLATED) as z:
+                        for fp in files_to_backup:
+                            if os.path.exists(fp):
+                                z.write(fp, os.path.basename(fp))
+                        z.write(snapshot, "kalki.db")
                 self._json({"ok": True, "file": backup_zip})
             except Exception as e:
                 self._json({"ok": False, "error": str(e)})
             return
 
         if path == "/api/backup/restore":
-            file_path = (body.get("filepath") or body.get("filePath") or "").strip()
+            file_path = (body.get("path") or body.get("filepath") or body.get("filePath") or "").strip()
             if not file_path or not os.path.exists(file_path):
                 self._json({"ok": False, "error": "Invalid file path"}, status=400); return
             try:
@@ -6771,6 +6840,11 @@ class Handler(BaseHTTPRequestHandler):
                     "productivity.json"
                 }
                 with zipfile.ZipFile(file_path, "r") as z:
+                    # Check the data store first: if it's bad, nothing gets restored.
+                    if "kalki.db" in z.namelist():
+                        with tempfile.TemporaryDirectory() as restore_dir:
+                            restored = z.extract("kalki.db", restore_dir)
+                            db.restore_from(restored)
                     for member in z.infolist():
                         filename = os.path.basename(member.filename)
                         if not filename or filename not in allowed or member.file_size > 20 * 1024 * 1024:
@@ -6781,58 +6855,17 @@ class Handler(BaseHTTPRequestHandler):
                             target = os.path.join(dest_dir, filename)
                         with open(target, "wb") as f_out, z.open(member) as f_in:
                             f_out.write(f_in.read())
+                    if "kalki.db" not in z.namelist():
+                        names = {os.path.basename(n) for n in z.namelist()}
+                        db.reimport_legacy([k for k, f in (("memory", "memory.json"), ("history", "history.json")) if f in names], DATA_DIR)
+                        if "semantic_memory.json" in names:
+                            semantic_memory.memory.reimport_legacy()
+                semantic_memory.memory.reload()
                 self._json({"ok": True, "message": "Restore successful."})
+            except db.StoreError as e:
+                self._json({"ok": False, "error": str(e)}, status=400)
             except Exception as e:
                 self._json({"ok": False, "error": str(e)}, status=500)
-            return
-
-        if path == "/api/memory/add":
-            text = (body.get("text") or body.get("fact") or "").strip()
-            if not text:
-                self._json({"ok": False, "error": "text required"}, status=400); return
-            try:
-                doc_id = semantic_memory.memory.add_memory(
-                    text,
-                    tags=body.get("tags") or [],
-                    importance=body.get("importance", 5),
-                    memory_type=body.get("type", "fact"),
-                )
-                self._json({"ok": True, "id": doc_id})
-            except Exception as e:
-                self._json({"ok": False, "error": str(e)}, status=500)
-            return
-
-        if path == "/api/memory/list":
-            try:
-                mems = semantic_memory.memory.list_all()
-                self._json({"ok": True, "memories": mems})
-            except Exception as e:
-                self._json({"ok": False, "error": str(e)})
-            return
-
-        if path == "/api/memory/update":
-            doc_id = body.get("id")
-            text = (body.get("text") or "").strip()
-            importance = body.get("importance")
-            mem_type = body.get("type")
-            if doc_id in (None, "") or not text:
-                self._json({"ok": False, "error": "id and text required"}, status=400); return
-            try:
-                ok = semantic_memory.memory.update_memory(doc_id, text, tags=body.get("tags"), importance=importance, memory_type=mem_type)
-                self._json({"ok": ok})
-            except Exception as e:
-                self._json({"ok": False, "error": str(e)})
-            return
-
-        if path == "/api/memory/delete":
-            doc_id = body.get("id") if "id" in body else body.get("doc_id")
-            if doc_id in (None, ""):
-                self._json({"ok": False, "error": "id required"}, status=400); return
-            try:
-                ok = semantic_memory.memory.delete_memory(doc_id)
-                self._json({"ok": ok})
-            except Exception as e:
-                self._json({"ok": False, "error": str(e)})
             return
 
         # ── Vision: uploaded image ─────────────────────
@@ -6935,28 +6968,6 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         # ── Tasks ──────────────────────────────────────
-        if path == "/api/tasks/list":
-            self._json({"ok": True, "tasks": taskmod.list_tasks(include_done=bool(body.get("all")))}); return
-        if path == "/api/tasks/add":
-            text_in = (body.get("text") or "").strip()
-            if not text_in:
-                self._json({"ok": False, "error": "text required"}, status=400); return
-            self._json({"ok": True, "id": taskmod.add_task(text_in)}); return
-        if path == "/api/tasks/complete":
-            r = taskmod.complete_task(body.get("id") or body.get("text") or "")
-            self._json({"ok": bool(r), "task": r}); return
-        if path == "/api/tasks/delete":
-            self._json({"ok": taskmod.delete_task(body.get("id") or body.get("text") or "")}); return
-
-        if path == "/api/reminders/list":
-            self._json({"ok": True, "reminders": taskmod.list_reminders()}); return
-        if path == "/api/reminders/add":
-            text_in = (body.get("text") or "").strip()
-            due = body.get("due") or ""
-            if not (text_in and due):
-                self._json({"ok": False, "error": "text and due required"}, status=400); return
-            self._json({"ok": True, "id": taskmod.add_reminder(text_in, due)}); return
-
         # ── Listener pause/resume ──────────────────────
         if path == "/api/listener/pause":
             STATE["listener_paused"] = True
@@ -7073,18 +7084,6 @@ class Handler(BaseHTTPRequestHandler):
             self._json(r); return
 
         # ── Notes ──────────────────────────────────────
-        if path == "/api/notes/add":
-            text_in = (body.get("text") or "").strip()
-            if not text_in:
-                self._json({"ok": False, "error": "text required"}, status=400); return
-            self._json({"ok": True, "id": notesmod.add_note(text_in)}); return
-        if path == "/api/notes/list":
-            self._json({"ok": True, "notes": notesmod.list_recent(
-                int(body.get("n") or 10))}); return
-        if path == "/api/notes/search":
-            self._json({"ok": True, "notes": notesmod.search(
-                body.get("q") or "")}); return
-
         # ── YouTube DL ─────────────────────────────────
         if path == "/api/ytdl":
             self._json(ytdl.download(

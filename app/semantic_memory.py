@@ -6,8 +6,10 @@ import urllib.parse
 from collections import Counter
 import re
 import threading
-import base64
 from datetime import datetime
+
+import db
+import secure_store
 
 _lock = threading.RLock()
 
@@ -78,94 +80,106 @@ def cosine_similarity(v1, v2):
 
 
 class SemanticMemory:
+    """Long-term facts. Each memory is its own encrypted row, so one that can't be
+    decrypted (say, after moving to another PC) simply stays stored, untouched,
+    while everything else keeps working. Nothing rewrites the whole collection."""
+
     def __init__(self, path=None):
+        # Only the old JSON file to import from. The data itself lives in SQLite.
         if path is None:
-            # Place memory in APPDATA path
             path = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "semantic_memory.json")
         self.path = path
-        self.documents = []
-        self._load()
+        self._documents = None
+        self._unreadable = 0
 
-    def _encrypt_payload(self, text: str) -> str:
-        data = text.encode("utf-8")
+    @property
+    def documents(self):
+        with _lock:
+            if self._documents is None:
+                self.reload()
+            return self._documents
+
+    @documents.setter
+    def documents(self, value):
+        self._documents = value
+
+    def reload(self):
+        """Read everything from the store again, for example after a restore."""
+        documents, unreadable = [], 0
+        with db.connect() as conn:
+            rows = conn.execute("SELECT id, payload FROM memories ORDER BY id").fetchall()
+        for row in rows:
+            try:
+                doc = json.loads(secure_store.unprotect(row["payload"]))
+                doc["id"] = row["id"]
+                documents.append(doc)
+            except (secure_store.UnprotectError, ValueError):
+                unreadable += 1
+        with _lock:
+            self._documents = documents
+            self._unreadable = unreadable
+
+    def unreadable_count(self):
+        self.documents  # make sure the store has been read
+        return self._unreadable
+
+    @staticmethod
+    def _payload(doc):
+        return secure_store.protect(json.dumps({k: v for k, v in doc.items() if k != "id"}))
+
+    def _insert(self, doc, doc_id=None):
+        with db.connect() as conn:
+            cursor = conn.execute("INSERT INTO memories (id, payload) VALUES (?, ?)", (doc_id, self._payload(doc)))
+            return int(cursor.lastrowid)
+
+    def _persist(self, doc):
+        with db.connect() as conn:
+            conn.execute("UPDATE memories SET payload = ? WHERE id = ?", (self._payload(doc), doc["id"]))
+
+    def _read_legacy(self):
+        with open(self.path, "r", encoding="utf-8") as handle:
+            content = handle.read().strip()
+        if secure_store.is_protected(content):
+            content = secure_store.unprotect(content)
+        docs = json.loads(content) if content else []
+        if not isinstance(docs, list):
+            raise ValueError("expected a list")
+        return docs
+
+    def reimport_legacy(self):
+        """Replace memories from the old file, after an old-format backup restore.
+        Reads the file first: if it can't be read, this raises and nothing changes."""
+        self._read_legacy()
+        with _lock:
+            with db.connect() as conn:
+                conn.execute("DELETE FROM memories")
+                conn.execute("DELETE FROM legacy_imports WHERE name = 'semantic_memory'")
+            self.reload()
+            return self.import_legacy()
+
+    def import_legacy(self):
+        """Import the old JSON file once. Returns None if there's nothing to do.
+        The file is left unchanged, and an unreadable one is retried next start."""
+        marker = "semantic_memory"
+        if db.was_imported(marker) or not os.path.exists(self.path):
+            return None
         try:
-            import win32crypt
-            blob = win32crypt.CryptProtectData(data, "kalki-memory-vault", None, None, None, 0)
-            return "DPAPI:" + base64.b64encode(blob).decode("ascii")
-        except Exception:
-            pass
-        try:
-            from cryptography.fernet import Fernet
-            import hashlib
-            import socket
-            machine_id = os.environ.get("COMPUTERNAME", socket.gethostname()) + "_" + os.environ.get("USERNAME", "kalki")
-            key = base64.urlsafe_b64encode(hashlib.sha256(machine_id.encode("utf-8")).digest())
-            f = Fernet(key)
-            return "FERNET:" + f.encrypt(data).decode("ascii")
-        except Exception:
-            return "B64:" + base64.b64encode(data).decode("ascii")
-
-    def _decrypt_payload(self, raw: str) -> str:
-        if raw.startswith("DPAPI:"):
-            try:
-                import win32crypt
-                blob = base64.b64decode(raw[6:])
-                return win32crypt.CryptUnprotectData(blob, None, None, None, 0)[1].decode("utf-8")
-            except Exception as e:
-                print(f"[SemanticMemory] DPAPI decrypt failed: {e}")
-                return ""
-        elif raw.startswith("FERNET:"):
-            try:
-                from cryptography.fernet import Fernet
-                import hashlib
-                import socket
-                machine_id = os.environ.get("COMPUTERNAME", socket.gethostname()) + "_" + os.environ.get("USERNAME", "kalki")
-                key = base64.urlsafe_b64encode(hashlib.sha256(machine_id.encode("utf-8")).digest())
-                f = Fernet(key)
-                return f.decrypt(raw[7:].encode("ascii")).decode("utf-8")
-            except Exception as e:
-                print(f"[SemanticMemory] Fernet decrypt failed: {e}")
-                return ""
-        elif raw.startswith("B64:"):
-            try:
-                return base64.b64decode(raw[4:]).decode("utf-8")
-            except Exception:
-                return ""
-        return raw
-
-    def _load(self):
-        if os.path.exists(self.path):
-            try:
-                with open(self.path, "r", encoding="utf-8") as f:
-                    content = f.read().strip()
-                if not content:
-                    self.documents = []
-                    return
-                if content.startswith(("DPAPI:", "FERNET:", "B64:")):
-                    decrypted = self._decrypt_payload(content)
-                    self.documents = json.loads(decrypted) if decrypted else []
-                else:
-                    self.documents = json.loads(content)
-                    self._save()
-            except Exception as e:
-                print(f"[SemanticMemory] Load error: {e}")
-                self.documents = []
-
-    def _save(self):
-        try:
-            dir_name = os.path.dirname(self.path)
-            if dir_name:
-                os.makedirs(dir_name, exist_ok=True)
-            raw = json.dumps(self.documents, indent=2)
-            encrypted = self._encrypt_payload(raw)
-            tmp = self.path + ".tmp"
-            with open(tmp, "w", encoding="utf-8") as f:
-                f.write(encrypted)
-                f.flush()
-                os.fsync(f.fileno())
-            os.replace(tmp, self.path)
-        except Exception as e:
-            print(f"[SemanticMemory] Save error: {e}")
+            docs = self._read_legacy()
+        except (OSError, ValueError, secure_store.UnprotectError) as exc:
+            return {"failed": str(exc)}
+        imported = skipped = 0
+        with _lock:
+            known = {d["id"] for d in self.documents}
+            for doc in docs:
+                if not isinstance(doc, dict) or not doc.get("text"):
+                    skipped += 1
+                    continue
+                wanted = doc.get("id") if isinstance(doc.get("id"), int) and doc.get("id") not in known else None
+                known.add(self._insert(doc, wanted))
+                imported += 1
+            db.mark_imported(marker, imported, skipped)
+            self.reload()
+        return {"imported": imported}
 
     def add_memory(self, text, tags=None, importance=5, memory_type="fact", topic=None, metadata=None, **kwargs):
         """
@@ -174,12 +188,6 @@ class SemanticMemory:
         """
         vector = get_embedding(text)
         with _lock:
-            doc_id = len(self.documents)
-            # Find a unique ID
-            ids = [d.get("id", 0) for d in self.documents]
-            if ids:
-                doc_id = max(ids) + 1
-
             resolved_topic = topic or (tags[0] if tags and len(tags) > 0 else "General")
             resolved_tags = list(tags) if tags else ([resolved_topic] if resolved_topic else [])
             meta = dict(metadata) if isinstance(metadata, dict) else {}
@@ -187,7 +195,6 @@ class SemanticMemory:
                 meta["topic"] = resolved_topic
                 
             doc = {
-                "id": doc_id,
                 "text": text.strip(),
                 "tags": resolved_tags,
                 "importance": importance,  # scale 1-10
@@ -199,8 +206,8 @@ class SemanticMemory:
                 "vector": vector,
                 **kwargs
             }
+            doc["id"] = self._insert(doc)
             self.documents.append(doc)
-            self._save()
             return doc["id"]
 
     def update_memory(self, doc_id, text, tags=None, importance=None, memory_type=None, topic=None, metadata=None):
@@ -209,6 +216,7 @@ class SemanticMemory:
             target_id = int(doc_id)
         except (ValueError, TypeError):
             target_id = doc_id
+        vector = get_embedding(text)
         with _lock:
             for doc in self.documents:
                 if doc.get("id") == target_id:
@@ -224,8 +232,8 @@ class SemanticMemory:
                     if metadata is not None:
                         doc["metadata"] = metadata
                     # Re-vectorize if content changed
-                    doc["vector"] = get_embedding(text)
-                    self._save()
+                    doc["vector"] = vector
+                    self._persist(doc)
                     return True
             return False
 
@@ -236,12 +244,13 @@ class SemanticMemory:
         except (ValueError, TypeError):
             target_id = doc_id
         with _lock:
-            initial_len = len(self.documents)
-            self.documents = [d for d in self.documents if d.get("id") != target_id]
-            if len(self.documents) < initial_len:
-                self._save()
-                return True
-            return False
+            remaining = [d for d in self.documents if d.get("id") != target_id]
+            if len(remaining) == len(self.documents):
+                return False
+            with db.connect() as conn:
+                conn.execute("DELETE FROM memories WHERE id = ?", (target_id,))
+            self.documents = remaining
+            return True
 
     def list_all(self):
         """Return all memories without vectors (for web serialization)."""
@@ -265,6 +274,7 @@ class SemanticMemory:
 
     def search(self, query, top_k=5, memory_type=None):
         """Semantic search with type filtering and importance weighting."""
+        q_vec = get_embedding(query)  # a network call: don't hold the lock for it
         with _lock:
             docs = self.documents
             if memory_type:
@@ -279,7 +289,6 @@ class SemanticMemory:
             # Update last accessed for matches
             now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-            q_vec = get_embedding(query)
             scores = []
             
             if q_vec:
@@ -298,11 +307,11 @@ class SemanticMemory:
                 for score, doc in scores[:top_k]:
                     if score > 0.4:
                         doc["last_accessed"] = now_str
+                        self._persist(doc)
                         results.append(doc)
                 
                 # Merge pinned & semantic results
                 merged = {d["id"]: d for d in pinned + results}.values()
-                self._save()
                 return list(merged)
 
             # BM25 text fallback
@@ -346,7 +355,7 @@ class SemanticMemory:
             
             for r in results:
                 r["last_accessed"] = now_str
-            self._save()
+                self._persist(r)
             
             merged = {d["id"]: d for d in pinned + results}.values()
             return list(merged)

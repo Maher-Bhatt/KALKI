@@ -35,7 +35,8 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r app/requirements.txt pyinstaller
+          python -m pip install -r app/requirements.txt -c app/requirements.lock.txt pyinstaller
+          python -m pip install -r requirements-dev.txt
 
       - name: Version consistency
         run: python tests/version_check.py
@@ -44,13 +45,10 @@ jobs:
         run: python -m compileall -q app
 
       - name: Static checks (undefined and shadowed names)
-        shell: pwsh
-        run: |
-          python -m pip install ruff
-          python -m ruff check app tests --isolated --select F821,F823
+        run: python -m ruff check
 
-      - name: Regression tests (crashes, auth, shell access, Wi-Fi, monitors)
-        run: python -m unittest tests.test_phase0
+      - name: Automated tests
+        run: python -m pytest
 
       - name: Validate frontend modules
         shell: bash

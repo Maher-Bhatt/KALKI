@@ -26,6 +26,10 @@ import runtime_security
 
 runtime_security.TOKEN_PATH = os.path.join(_runtime.user_data_dir, "data", "api_token.txt")
 
+import settings_schema
+
+settings_schema.repair_config(config)
+
 DATA_DIR = os.path.join(_runtime.user_data_dir, "data")
 WORKSPACE_DIR = os.path.join(DATA_DIR, "workspace")
 os.makedirs(WORKSPACE_DIR, exist_ok=True)
