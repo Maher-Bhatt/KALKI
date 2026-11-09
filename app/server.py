@@ -99,6 +99,7 @@ import routes_threads
 import threads
 import tool_policy
 import command_intent
+import commands_productivity
 import db
 import wifi_security
 import shield_monitors
@@ -2209,39 +2210,9 @@ def handle_local(text):
     # ════════════════════════════════════════════════════
     # NOTES
     # ════════════════════════════════════════════════════
-    m = _re_local.match(
-        r"^(?:take\s+(?:a\s+)?note|note\s+(?:that|this)|add\s+note|"
-        r"jot\s+(?:this\s+)?down)\s*[:\-]?\s+(.+)$",
-        t, _re_local.IGNORECASE,
-    )
-    if m:
-        note_lower = m.group(1).strip()
-        idx = t.find(note_lower)
-        body_txt = raw[idx:idx + len(note_lower)] if idx >= 0 else note_lower
-        nid = notesmod.add_note(body_txt)
-        return True, _rnd.choice([
-            "Noted.", "Got it.", "Stored, Sir.", "Down in the book.",
-            "Filed away.", f"Logged that, Sir.",
-        ])
-
-    if t in ("show my notes", "list my notes", "recent notes",
-             "what did i note", "show notes"):
-        n = notesmod.list_recent(5)
-        return True, notesmod.summarize_for_speech(n)
-
-    if t in ("what did i note yesterday", "yesterday's notes",
-             "notes from yesterday"):
-        return True, notesmod.summarize_for_speech(notesmod.notes_yesterday())
-
-    if t in ("notes this week", "this week's notes",
-             "summarize this week's notes", "summarize my week"):
-        return True, notesmod.summarize_for_speech(notesmod.notes_this_week())
-
-    m = _re_local.match(r"^search\s+notes?\s+(?:for\s+)?(.+)$",
-                          t, _re_local.IGNORECASE)
-    if m:
-        results = notesmod.search(m.group(1).strip())
-        return True, notesmod.summarize_for_speech(results)
+    reply = commands_productivity.notes_command(t, raw)
+    if reply is not None:
+        return True, reply
 
     # ════════════════════════════════════════════════════
     # YOUTUBE DOWNLOAD
@@ -2544,93 +2515,15 @@ def handle_local(text):
     # ════════════════════════════════════════════════════
     # TASKS
     # ════════════════════════════════════════════════════
-    m = _re_local.match(
-        r"^(?:add\s+(?:a\s+)?task|new\s+task|task)[:\-]?\s+(.+)$",
-        t, _re_local.IGNORECASE,
-    )
-    if m:
-        body_txt = raw.split(None, 2)[-1] if raw.lower().startswith(("add task", "new task")) else raw.split(None, 1)[-1]
-        # better: use captured group
-        body_txt = m.group(1).strip()
-        # recover original casing from raw
-        idx = t.find(body_txt.lower())
-        if idx >= 0:
-            body_txt = raw[idx:idx + len(body_txt)]
-        tid = taskmod.add_task(body_txt)
-        return True, f"Task {tid} logged: {body_txt}."
-
-    if t in ("show my tasks", "show tasks", "list tasks", "list my tasks",
-             "what are my tasks", "what's on my list", "what's on my todo",
-             "my tasks", "show todo", "todo list"):
-        tasks = taskmod.list_tasks()
-        if not tasks:
-            return True, "Your task list is clear, Sir."
-        lines = [f"{tt['id']}: {tt['text']}" for tt in tasks[:8]]
-        more = "" if len(tasks) <= 8 else f" Plus {len(tasks)-8} more."
-        return True, f"You have {len(tasks)} open. " + ". ".join(lines) + "." + more
-
-    m = _re_local.match(
-        r"^(?:complete|done(?:\s+with)?|finish|mark)\s+task\s*(.+)$",
-        t, _re_local.IGNORECASE,
-    )
-    if m:
-        target = m.group(1).strip()
-        done = taskmod.complete_task(target)
-        if done:
-            return True, f"Task done: {done['text']}."
-        return True, taskmod.explain_no_match(target, include_done=False)
-
-    # Clear all tasks variations (singular/plural, with or without "all")
-    if t in (
-        "clear all tasks", "clear all task", "clear tasks", "clear task",
-        "delete all tasks", "delete all task", "delete tasks", "delete task",
-        "remove all tasks", "remove all task", "remove tasks", "remove task",
-        "clear my tasks", "clear my task", "clear the tasks", "clear the task",
-        "wipe all tasks", "wipe all task", "wipe tasks", "wipe task",
-        "clear pending tasks", "clear pending task"
-    ):
-        taskmod.clear_all_tasks()
-        return True, "All tasks cleared, Sir."
-
-    if t in ("clear completed tasks", "clear done tasks", "clear my completed tasks", "clear completed task", "clear done task"):
-        n = taskmod.clear_completed()
-        return True, f"Cleared. {n} tasks remain."
-
-    m = _re_local.match(
-        r"^(?:delete|remove|clear)\s+task\s*(.+)$", t, _re_local.IGNORECASE)
-    if m:
-        target = m.group(1).strip()
-        if target in ("all", "every", "everything", "pending", "my", "the"):
-            taskmod.clear_all_tasks()
-            return True, "All tasks cleared, Sir."
-        ok = taskmod.delete_task(target)
-        return True, "Task removed." if ok else taskmod.explain_no_match(target)
+    reply = commands_productivity.tasks_command(t, raw)
+    if reply is not None:
+        return True, reply
     # ════════════════════════════════════════════════════
     # REMINDERS  ("remind me to X in 10 minutes" / "at 5pm")
     # ════════════════════════════════════════════════════
-    m = _re_local.match(
-        r"^remind\s+(?:me\s+)?(?:to\s+)?(.+)$", t, _re_local.IGNORECASE)
-    if m:
-        body_txt = raw.split(None, 2)[-1] if raw.lower().startswith("remind me") else raw[m.start(1):m.end(1)]
-        body_txt = m.group(1).strip()
-        idx = t.find(body_txt.lower())
-        if idx >= 0:
-            body_txt = raw[idx:idx + len(body_txt)]
-        when, leftover = taskmod.parse_when(body_txt)
-        if when is None:
-            # No time → treat as task
-            tid = taskmod.add_task(body_txt)
-            return True, f"No time given — logged as task {tid}: {body_txt}."
-        rid = taskmod.add_reminder(leftover or body_txt, when)
-        when_str = when.strftime("%I:%M %p on %A")
-        return True, f"Reminder {rid} set for {when_str}: {leftover or body_txt}."
-
-    if t in ("list reminders", "my reminders", "show reminders"):
-        rems = taskmod.list_reminders()
-        if not rems:
-            return True, "No active reminders, Sir."
-        lines = [f"{r['id']} at {r['due'][11:16]}: {r['text']}" for r in rems[:6]]
-        return True, f"{len(rems)} reminder{'s' if len(rems)!=1 else ''}. " + ". ".join(lines)
+    reply = commands_productivity.reminders_command(t, raw)
+    if reply is not None:
+        return True, reply
 
     # ════════════════════════════════════════════════════
     # MAIL
@@ -3542,14 +3435,27 @@ def _safe_public_url(url):
         return False
 
 
+class _PublicRedirectsOnly(urllib.request.HTTPRedirectHandler):
+    """Check every redirect. Otherwise a public page could point the fetch at a private
+    address, such as a router or this PC, after the first check had passed."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not _safe_public_url(newurl):
+            raise ValueError("redirected to a non-public address")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _open_public_url(request, timeout):
+    return urllib.request.build_opener(_PublicRedirectsOnly).open(request, timeout=timeout)
+
+
 def _http_get(url, timeout=8):
     if not _safe_public_url(url):
         raise ValueError("blocked non-public URL")
-    import urllib.request
     req = urllib.request.Request(url, headers={
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
     })
-    return urllib.request.urlopen(req, timeout=timeout).read().decode('utf-8', 'ignore')
+    return _open_public_url(req, timeout).read().decode('utf-8', 'ignore')
 
 def needs_web(text):
     if not text:
@@ -4011,7 +3917,7 @@ def _run_tool_call(tool_name, args):
                 if not _safe_public_url(target_url):
                     return "Blocked: URL must be a public HTTP(S) destination."
                 req = urllib.request.Request(target_url, headers={'User-Agent': 'Mozilla/5.0'})
-                html = urllib.request.urlopen(req, timeout=10).read().decode('utf-8', 'ignore')
+                html = _open_public_url(req, 10).read().decode('utf-8', 'ignore')
                 text = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.IGNORECASE | re.DOTALL)
                 text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.IGNORECASE | re.DOTALL)
                 text = re.sub(r'<[^>]+>', ' ', text)
