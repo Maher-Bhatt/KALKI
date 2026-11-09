@@ -42,6 +42,12 @@
 | F3 FastAPI move | Started without FastAPI: tasks, reminders, notes and memory moved to `routes_productivity.py` and `routes_memory.py`, written to work with any framework. The move itself should wait until CI is green |
 | Real-account testing to confirm ratings | Not started: needs your accounts and hardware |
 
+**Phase 3: in progress on `feat/phase-3-core-assistant`.** `g4f` removed. F6 approval system built for AI tools (`tool_policy.py`): every tool has a risk level, consequential actions always wait and show exact content, and untrusted content blocks later automatic actions in that request. `[TASK:]`, `[REMIND:]` and `TOOL CALL:` text in replies goes through the same gate, and approvals can be answered from any screen. Quick commands: `command_intent.py` now sends conversational sentences to the AI before the 1,648-line matcher sees them, with a two-way phrase test. Replacing the matcher itself is still to do. Chat threads moved to SQLite (`threads.py`), shared by the app, voice and Telegram, with older browser chats moved across on load. Message text is stored unencrypted, as before; encrypting it is still open.
+
+**Found by gstack's review checklist, not fixed yet:** `read_url` checks the first address but follows redirects, so a public page could redirect it to a local or internal address. Untrusted content only counts within one request, so a later message can still act on what an earlier one read.
+
+**Parked for later (9 Nov 2026):** Windows CI failed once at "Automated tests" with code that also passed, so one test is flaky. Re-run usually clears it. Suspected cause, unconfirmed: background threads from the server tests overlapping tests that swap the data store path.
+
 ## How to read the ratings
 
 | Rating | Meaning |

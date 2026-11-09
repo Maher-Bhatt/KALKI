@@ -302,6 +302,7 @@ async function send(text, attachments = []) {
     let acc = '';
     await streamChat(wire, {
       signal: ctl.signal,
+      threadId: conv.active()?.id,
       onToken: (t) => {
         acc += t;
         patchStreaming(assistant.id, acc);

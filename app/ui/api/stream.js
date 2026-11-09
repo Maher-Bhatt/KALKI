@@ -14,7 +14,7 @@ import { post } from './client.js';
  *          signal?:AbortSignal, clientSpeech?:boolean}} handlers
  */
 export async function streamChat(messages, handlers) {
-  const { onToken, onDone, onError, signal, clientSpeech } = handlers;
+  const { onToken, onDone, onError, signal, clientSpeech, threadId } = handlers;
   let stopped = false;
 
   const onAbort = () => { stopped = true; post('/api/stop', {}).catch(() => {}); };
@@ -25,7 +25,7 @@ export async function streamChat(messages, handlers) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
-      body: JSON.stringify({ messages, stream: true, clientSpeech: !!clientSpeech }),
+      body: JSON.stringify({ messages, stream: true, clientSpeech: !!clientSpeech, threadId }),
       signal,
     });
 

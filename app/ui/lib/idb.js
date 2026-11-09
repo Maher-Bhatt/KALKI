@@ -1,5 +1,4 @@
-/** Minimal IndexedDB wrapper. The frontend owns conversation organisation;
- *  the backend keeps owning the model's rolling context window. */
+/** Minimal IndexedDB wrapper. Only used now to move older chats to the server. */
 
 const DB = 'kalki';
 const VERSION = 1;
