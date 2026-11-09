@@ -8,6 +8,8 @@ import json
 import subprocess
 import webbrowser
 
+import safe_json
+
 ACTIVE_STATE = None
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -162,16 +164,13 @@ MODE_ALIASES = {
 }
 
 def load_custom_routines():
-    if os.path.exists(CUSTOM_ROUTINES_PATH):
-        try:
-            with open(CUSTOM_ROUTINES_PATH, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                for mode, details in data.items():
-                    # details contains "actions" and "aliases"
-                    MODES[mode] = [tuple(action) for action in details.get("actions", [])]
-                    MODE_ALIASES[mode] = details.get("aliases", [])
-        except Exception as e:
-            print(f"Error loading custom routines: {e}")
+    try:
+        for mode, details in safe_json.read_json(CUSTOM_ROUTINES_PATH, {}).items():
+            # details contains "actions" and "aliases"
+            MODES[mode] = [tuple(action) for action in details.get("actions", [])]
+            MODE_ALIASES[mode] = details.get("aliases", [])
+    except (OSError, AttributeError, TypeError) as e:
+        print(f"Error loading custom routines: {e}")
 
 load_custom_routines()
 
@@ -181,22 +180,13 @@ def add_custom_routine(name, actions, aliases=None):
     if not aliases:
         aliases = []
     
-    data = {}
-    if os.path.exists(CUSTOM_ROUTINES_PATH):
-        try:
-            with open(CUSTOM_ROUTINES_PATH, "r", encoding="utf-8") as f:
-                data = json.load(f)
-        except Exception:
-            pass
-            
+    # A locked file raises here, so saving can't overwrite routines it never read.
+    data = safe_json.read_json(CUSTOM_ROUTINES_PATH, {})
     data[name] = {
         "actions": actions,
         "aliases": aliases
     }
-    
-    os.makedirs(os.path.dirname(CUSTOM_ROUTINES_PATH), exist_ok=True)
-    with open(CUSTOM_ROUTINES_PATH, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4)
+    safe_json.write_json(CUSTOM_ROUTINES_PATH, data)
         
     MODES[name] = [tuple(action) for action in actions]
     MODE_ALIASES[name] = aliases

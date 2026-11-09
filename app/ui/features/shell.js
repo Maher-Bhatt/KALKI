@@ -144,6 +144,12 @@ export function buildShell(root) {
       mount(banner, h('span', null, `Updating KALKI — ${up.pct || 0}%`));
       return;
     }
+    if (store.status?.storeError) {
+      banner.hidden = false;
+      banner.className = 'card dng';
+      mount(banner, h('span', null, `Your tasks, notes and memories can't be opened: ${store.status.storeError}`));
+      return;
+    }
     const version = store.status?.updateAvailable;
     if (version) {
       banner.hidden = false;

@@ -28,6 +28,20 @@
 - Test a real Defender detection with the harmless EICAR file. It raises a real Defender alert, so it needs your OK.
 - Features 31–34: cancel and progress, scan consent, and safer process killing.
 
+**Phase 1: in progress on `feat/phase-1-foundations`, not yet committed.**
+
+| Item | Status |
+|---|---|
+| F2 pytest, Ruff config, dev requirements, dependency lock file | Done. The lock was made on Python 3.13, while CI uses 3.12, so the first CI run must confirm it |
+| F4 SQLite store with versioned migrations | Tasks, reminders, notes, chat history, memories and activity moved, with a one-time import that leaves the JSON files untouched. Memories stay encrypted row by row. Settings still to move |
+| F7 logging | Started: secret scrubbing and structured error records with tracebacks. Removing broad `except` handlers still to do |
+| Backups | Tasks, reminders and notes now included; restore validates first and keeps a safety copy |
+| Bugs fixed along the way | Deleting item 1 also deleted items with "1" in their text. UI restore requests were rejected. Host check rejected servers on other ports. A failed memory decrypt overwrote all memories with nothing. "remember ..." called a missing function and hid the error. Vault save failures were silent |
+| F5 one vault and typed settings | Encryption is now one module (`secure_store.py`) used by both vaults, with base64 and machine-derived keys removed for new data. Secrets move out of plain-text settings. The two vault files stay separate because they hold different things. Settings are validated by `settings_schema.py`: bad values fall back to defaults, a corrupt file is kept aside, and weakening safety settings needs a Windows prompt |
+| F7 exceptions | Bare `except:` removed and blocked by Ruff. Handlers hiding data or security failures fixed through `safe_json.py`. The rest of the silent `except: pass` handlers were triaged as mostly best-effort cleanup, and a test stops the number rising |
+| F3 FastAPI move | Started without FastAPI: tasks, reminders, notes and memory moved to `routes_productivity.py` and `routes_memory.py`, written to work with any framework. The move itself should wait until CI is green |
+| Real-account testing to confirm ratings | Not started: needs your accounts and hardware |
+
 ## How to read the ratings
 
 | Rating | Meaning |
@@ -427,7 +441,6 @@ Each needs: **Connect → Test → Use → Disconnect**, with a clear state if n
 | Deep focus: blocks sites | Sets volume, closes Discord |
 | Gaming: raises performance, pauses sync | Opens apps, force-kills Chrome and VS Code, which can lose unsaved work |
 
-  Custom routines save beside the app (`workflows.py:14`), which isn't writable in Store-style installs.
 - **Build:** A real engine: typed steps with parameters, preview, per-step results, stop on failure. Triggers: voice, hotkey, schedule, event. Close apps gracefully and ask about unsaved work. Generated text describes actual steps, so it can't drift. Ship 4–5 templates users can edit.
 - **Done when:** The preview matches what runs, each step reports success or failure, and a failed step is clear.
 

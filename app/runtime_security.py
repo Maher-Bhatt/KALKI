@@ -16,18 +16,18 @@ TOKEN_COOKIE = "kalki_session"
 
 
 def _restrict_file(path):
-    """Best-effort ACL: current Windows user and SYSTEM only."""
+    """Limit a file to this user and SYSTEM. Returns whether that worked."""
     if os.name != "nt":
         try:
             os.chmod(path, 0o600)
+            return True
         except OSError:
-            pass
-        return
+            return False
     user = os.environ.get("USERNAME")
     if not user:
-        return
+        return False
     try:
-        subprocess.run(
+        result = subprocess.run(
             [
                 "icacls",
                 path,
@@ -41,8 +41,15 @@ def _restrict_file(path):
             timeout=10,
             check=False,
         )
-    except Exception:
-        pass
+        return result.returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def token_file_is_private():
+    """Lock the token file down again. Returns whether that worked."""
+    get_api_token()
+    return _restrict_file(TOKEN_PATH)
 
 
 def get_api_token():

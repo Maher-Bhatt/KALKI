@@ -3,6 +3,7 @@ import json
 import time
 import threading
 from runtime_paths import prepare_runtime
+import safe_json
 
 _runtime = prepare_runtime()
 from datetime import datetime, date
@@ -89,18 +90,10 @@ def _categorize(exe_name, title):
     return "Other", display
 
 def _load_data():
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except:
-            pass
-    return {}
+    return safe_json.read_json(DATA_FILE, {})
 
 def _save_data(data):
-    os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4)
+    safe_json.write_json(DATA_FILE, data)
 
 def _tracker_loop():
     global _running

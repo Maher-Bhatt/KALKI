@@ -2,101 +2,73 @@
 KALKI Notes & Journal — quick capture, tagged, full-text search.
 """
 
-import os
 import json
 import re
-import threading
 from datetime import datetime, timedelta
 
-NOTES_PATH = None  # set by server
-_lock = threading.RLock()
+import db
+from tasks import _select_target
 
 
-def _load():
-    try:
-        with open(NOTES_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return []
-
-
-def _save(d):
-    os.makedirs(os.path.dirname(NOTES_PATH), exist_ok=True)
-    tmp = NOTES_PATH + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(d, f, indent=2, ensure_ascii=False)
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(tmp, NOTES_PATH)
+def _note(row):
+    return {"id": row["id"], "text": row["text"], "tags": json.loads(row["tags"]),
+            "ts": row["ts"], "date": row["date"]}
 
 
 def _extract_tags(text):
     return [t.lower() for t in re.findall(r"#(\w+)", text)]
 
 
+def _query(where="", params=()):
+    with db.connect() as conn:
+        rows = conn.execute(f"SELECT * FROM notes {where}", params).fetchall()
+    return [_note(row) for row in rows]
+
+
 def add_note(text):
     text = str(text).strip()
     if not text:
         return None
-    with _lock:
-        notes = _load()
-        nid = (max((n["id"] for n in notes), default=0)) + 1
-        notes.append({
-            "id": nid,
-            "text": text,
-            "tags": _extract_tags(text),
-            "ts": datetime.now().isoformat(timespec="seconds"),
-            "date": datetime.now().strftime("%Y-%m-%d"),
-        })
-        _save(notes)
-        return nid
+    now = datetime.now()
+    with db.connect() as conn:
+        cursor = conn.execute(
+            "INSERT INTO notes (text, tags, ts, date) VALUES (?, ?, ?, ?)",
+            (text, json.dumps(_extract_tags(text)), now.isoformat(timespec="seconds"), now.strftime("%Y-%m-%d")),
+        )
+        return int(cursor.lastrowid)
 
 
 def list_recent(n=5):
-    return sorted(_load(), key=lambda x: x["ts"], reverse=True)[:n]
+    return _query("ORDER BY ts DESC, id DESC LIMIT ?", (int(n),))
 
 
 def notes_on(date_str):
-    return [n for n in _load() if n.get("date") == date_str]
+    return _query("WHERE date = ? ORDER BY ts, id", (date_str,))
 
 
 def notes_yesterday():
-    yest = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-    return notes_on(yest)
+    return notes_on((datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d"))
 
 
 def notes_this_week():
     today = datetime.now().date()
     start = today - timedelta(days=today.weekday())
-    out = []
-    for n in _load():
-        try:
-            d = datetime.strptime(n["date"], "%Y-%m-%d").date()
-            if d >= start:
-                out.append(n)
-        except Exception:
-            pass
-    return out
+    return _query("WHERE date >= ? ORDER BY ts, id", (start.strftime("%Y-%m-%d"),))
 
 
 def search(query):
-    q = query.lower()
-    return [n for n in _load()
-            if q in n["text"].lower() or q in " ".join(n.get("tags", []))]
+    q = str(query).lower()
+    return [note for note in _query("ORDER BY ts DESC, id DESC")
+            if q in note["text"].lower() or q in " ".join(note["tags"])]
 
 
 def delete_note(nid_or_text):
-    needle = str(nid_or_text).strip().lower()
-    if not needle:
-        return False
-    with _lock:
-        notes = _load()
-        keep = [note for note in notes if not (
-            str(note["id"]) == needle or needle in note["text"].lower())]
-        if len(keep) != len(notes):
-            _save(keep)
-            return True
-    return False
+    with db.connect() as conn:
+        matches = _select_target(conn.execute("SELECT * FROM notes ORDER BY id").fetchall(), nid_or_text)
+        if not matches:
+            return False
+        conn.execute("DELETE FROM notes WHERE id = ?", (matches[0]["id"],))
+        return True
 
 
 def summarize_for_speech(notes_list, max_items=4):

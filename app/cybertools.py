@@ -620,7 +620,7 @@ def attack_surface_brief(target: str, include_subdomains: bool = False, ports: O
     try:
         import socket
         dns = {"A": [socket.gethostbyname(host)]}
-    except:
+    except Exception:
         dns = {"A": []}
     open_ports = port_scan(host, ports=ports, timeout=timeout)
     probe = http_probe(url)
