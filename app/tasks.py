@@ -3,274 +3,162 @@ KALKI Tasks & Reminders
 Tasks: persistent TODO list. Reminders: time-bound; fired by background thread.
 """
 
-import os
-import json
 import re
-import threading
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any, Union, Tuple
 
-TASKS_PATH: Optional[str] = None
-REMINDERS_PATH: Optional[str] = None
-
-_lock = threading.RLock()
+import db
 
 
-def _atomic_write(path: str, data: Any) -> None:
-    """Safely write JSON data to disk via an atomic rename operation."""
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(tmp, path)
+def _now() -> str:
+    return datetime.now().isoformat(timespec="seconds")
+
+
+def _select_target(rows: List[Any], id_or_text: Union[str, int]) -> List[Any]:
+    """Find what a request means. A number is only ever an id, so deleting item 1
+    can't also hit "Call at 1pm". Text must be an exact match or a single partial
+    match: anything ambiguous matches nothing rather than changing several items."""
+    needle = str(id_or_text).strip().lower()
+    if not needle:
+        return []
+    if needle.isdigit():
+        return [row for row in rows if row["id"] == int(needle)]
+    exact = [row for row in rows if row["text"].lower() == needle]
+    if exact:
+        return exact[:1]
+    partial = [row for row in rows if needle in row["text"].lower()]
+    return partial if len(partial) == 1 else []
+
+
+def explain_no_match(id_or_text: Union[str, int], include_done: bool = True) -> str:
+    """Why a task request changed nothing, in words the user can act on."""
+    needle = str(id_or_text).strip().lower()
+    if needle.isdigit():
+        return f"No task has the number {needle}."
+    rows = list_tasks(include_done=include_done)
+    matches = [task["text"] for task in rows if needle and needle in task["text"].lower()]
+    if len(matches) > 1:
+        shown = "; ".join(matches[:5])
+        return f'{len(matches)} tasks match "{needle}": {shown}. Say which one.'
+    return f'No task matches "{needle}".'
 
 
 # ─── Tasks ──────────────────────────────────────────────
-def _load_tasks() -> List[Dict[str, Any]]:
-    """Load the JSON tasks file from disk."""
-    if TASKS_PATH is None:
-        return []
-    try:
-        with open(TASKS_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return []
-
-
-def _save_tasks(data: List[Dict[str, Any]]) -> None:
-    """Save the JSON tasks payload to disk."""
-    if TASKS_PATH is None:
-        return
-    with _lock:
-        _atomic_write(TASKS_PATH, data)
+def _task(row: Any) -> Dict[str, Any]:
+    task = {"id": row["id"], "text": row["text"], "added": row["added"], "done": bool(row["done"])}
+    if row["completed"]:
+        task["completed"] = row["completed"]
+    return task
 
 
 def add_task(text: str) -> int:
-    """
-    Add a new uncompleted task.
-    
-    Args:
-        text (str): The task description.
-        
-    Returns:
-        int: The assigned task ID.
-    """
-    with _lock:
-        tasks = _load_tasks()
-        nid = (max((t["id"] for t in tasks), default=0)) + 1
-        tasks.append({
-            "id": nid, "text": text.strip(),
-            "added": datetime.now().isoformat(timespec="seconds"),
-            "done": False,
-        })
-        _save_tasks(tasks)
-        return nid
+    """Add a new uncompleted task and return its id."""
+    with db.connect() as conn:
+        cursor = conn.execute("INSERT INTO tasks (text, added) VALUES (?, ?)", (text.strip(), _now()))
+        return int(cursor.lastrowid)
 
 
 def list_tasks(include_done: bool = False) -> List[Dict[str, Any]]:
-    """
-    Retrieve current tasks.
-    
-    Args:
-        include_done (bool): Whether to include tasks that are completed.
-        
-    Returns:
-        List[Dict[str, Any]]: A list of task dictionaries.
-    """
-    return [t for t in _load_tasks() if include_done or not t["done"]]
+    """Return tasks, oldest first."""
+    query = "SELECT * FROM tasks" + ("" if include_done else " WHERE done = 0") + " ORDER BY id"
+    with db.connect() as conn:
+        return [_task(row) for row in conn.execute(query).fetchall()]
 
 
 def complete_task(id_or_text: Union[str, int]) -> Optional[Dict[str, Any]]:
-    """
-    Mark a task as completed by matching its ID or partial text string.
-    
-    Args:
-        id_or_text (Union[str, int]): The task ID or text search query.
-        
-    Returns:
-        Optional[Dict[str, Any]]: The completed task dictionary, or None if not found/already completed.
-    """
-    needle = str(id_or_text).strip().lower()
-    if not needle:
-        return None
-    with _lock:
-        tasks = _load_tasks()
-        for task in tasks:
-            if str(task["id"]) == needle or needle in task["text"].lower():
-                if task["done"]:
-                    return None
-                task["done"] = True
-                task["completed"] = datetime.now().isoformat(timespec="seconds")
-                _save_tasks(tasks)
-                return task
-    return None
+    """Mark one open task done. Returns it, or None if nothing clearly matched."""
+    with db.connect() as conn:
+        rows = conn.execute("SELECT * FROM tasks WHERE done = 0 ORDER BY id").fetchall()
+        matches = _select_target(rows, id_or_text)
+        if not matches:
+            return None
+        stamp = _now()
+        conn.execute("UPDATE tasks SET done = 1, completed = ? WHERE id = ?", (stamp, matches[0]["id"]))
+        return {**_task(matches[0]), "done": True, "completed": stamp}
 
 
 def delete_task(id_or_text: Union[str, int]) -> bool:
-    """
-    Permanently remove a task from the list.
-    
-    Args:
-        id_or_text (Union[str, int]): The task ID or text search query.
-        
-    Returns:
-        bool: True if a task was successfully deleted, False otherwise.
-    """
-    needle = str(id_or_text).strip().lower()
-    if not needle:
-        return False
-    with _lock:
-        tasks = _load_tasks()
-        keep = [task for task in tasks if not (
-            str(task["id"]) == needle or needle in task["text"].lower())]
-        if len(keep) != len(tasks):
-            _save_tasks(keep)
-            return True
-    return False
+    """Permanently remove one task. Returns False if nothing clearly matched."""
+    with db.connect() as conn:
+        matches = _select_target(conn.execute("SELECT * FROM tasks ORDER BY id").fetchall(), id_or_text)
+        if not matches:
+            return False
+        conn.execute("DELETE FROM tasks WHERE id = ?", (matches[0]["id"],))
+        return True
 
 
 def clear_completed() -> int:
-    """
-    Remove all completed tasks.
-    
-    Returns:
-        int: The number of uncompleted tasks remaining.
-    """
-    with _lock:
-        tasks = [task for task in _load_tasks() if not task["done"]]
-        _save_tasks(tasks)
-        return len(tasks)
+    """Remove completed tasks. Returns how many tasks remain."""
+    with db.connect() as conn:
+        conn.execute("DELETE FROM tasks WHERE done = 1")
+        return int(conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0])
 
 
 def clear_all_tasks() -> bool:
-    """Remove all tasks from the persistent list."""
-    _save_tasks([])
+    """Remove every task."""
+    with db.connect() as conn:
+        conn.execute("DELETE FROM tasks")
     return True
 
 
 # ─── Reminders ──────────────────────────────────────────
-def _load_reminders() -> List[Dict[str, Any]]:
-    """Load the JSON reminders file from disk."""
-    if REMINDERS_PATH is None:
-        return []
-    try:
-        with open(REMINDERS_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return []
-
-
-def _save_reminders(data: List[Dict[str, Any]]) -> None:
-    """Save the JSON reminders payload to disk."""
-    if REMINDERS_PATH is None:
-        return
-    with _lock:
-        _atomic_write(REMINDERS_PATH, data)
+def _reminder(row: Any) -> Dict[str, Any]:
+    return {"id": row["id"], "text": row["text"], "due": row["due"], "fired": bool(row["fired"])}
 
 
 def add_reminder(text: str, due: Union[datetime, str]) -> int:
-    """
-    Schedule a reminder.
-    
-    Args:
-        text (str): The reminder text.
-        due (Union[datetime, str]): The due date/time as a datetime object or ISO string.
-        
-    Returns:
-        int: The assigned reminder ID.
-    """
+    """Schedule a reminder. `due` is a datetime, an ISO string, or natural language."""
     if isinstance(due, datetime):
         due = due.isoformat(timespec="seconds")
     elif isinstance(due, str):
-        # Validate or parse natural language due strings
-        parsed = False
         try:
             datetime.fromisoformat(due)
-            parsed = True
         except (ValueError, TypeError):
-            parsed = False
-        if not parsed:
-            dt, _ = parse_when(due)
-            if not dt:
-                dt, _ = parse_when(f"at {due}")
-            if not dt:
-                dt, _ = parse_when(f"in {due}")
-            if dt:
-                due = dt.isoformat(timespec="seconds")
+            parsed, _ = parse_when(due)
+            if not parsed:
+                parsed, _ = parse_when(f"at {due}")
+            if not parsed:
+                parsed, _ = parse_when(f"in {due}")
+            if parsed:
+                due = parsed.isoformat(timespec="seconds")
             else:
                 due = (datetime.now() + timedelta(hours=1)).isoformat(timespec="seconds")
-    with _lock:
-        rems = _load_reminders()
-        nid = (max((r["id"] for r in rems), default=0)) + 1
-        rems.append({"id": nid, "text": text, "due": due, "fired": False})
-        _save_reminders(rems)
-        return nid
+    with db.connect() as conn:
+        cursor = conn.execute("INSERT INTO reminders (text, due) VALUES (?, ?)", (text, due))
+        return int(cursor.lastrowid)
 
 
 def list_reminders(include_fired: bool = False) -> List[Dict[str, Any]]:
-    """
-    Retrieve scheduled reminders.
-    
-    Args:
-        include_fired (bool): Whether to include reminders that have already passed.
-        
-    Returns:
-        List[Dict[str, Any]]: A list of reminder dictionaries.
-    """
-    return [r for r in _load_reminders() if include_fired or not r["fired"]]
+    """Return reminders, oldest first."""
+    query = "SELECT * FROM reminders" + ("" if include_fired else " WHERE fired = 0") + " ORDER BY id"
+    with db.connect() as conn:
+        return [_reminder(row) for row in conn.execute(query).fetchall()]
 
 
 def pop_due_reminders() -> List[Dict[str, Any]]:
-    """
-    Returns a list of reminders whose due-time has passed, marking them fired.
-    
-    Returns:
-        List[Dict[str, Any]]: The reminders that just fired.
-    """
-    with _lock:
-        rems = _load_reminders()
-        now = datetime.now()
-        due_rems = []
-        changed = False
-        for reminder in rems:
-            if reminder["fired"]:
-                continue
+    """Return reminders whose time has passed, and mark them fired so they fire once."""
+    now = datetime.now()
+    with db.connect() as conn:
+        due_now = []
+        for row in conn.execute("SELECT * FROM reminders WHERE fired = 0 ORDER BY id").fetchall():
             try:
-                due_at = datetime.fromisoformat(reminder["due"])
+                if datetime.fromisoformat(row["due"]) <= now:
+                    due_now.append(row)
             except (TypeError, ValueError):
                 continue
-            if due_at <= now:
-                reminder["fired"] = True
-                due_rems.append(reminder)
-                changed = True
-        if changed:
-            _save_reminders(rems)
-        return due_rems
+        for row in due_now:
+            conn.execute("UPDATE reminders SET fired = 1 WHERE id = ?", (row["id"],))
+        return [{**_reminder(row), "fired": True} for row in due_now]
 
 
 def delete_reminder(id_or_text: Union[str, int]) -> bool:
-    """
-    Permanently remove a reminder.
-    
-    Args:
-        id_or_text (Union[str, int]): The reminder ID or text search query.
-        
-    Returns:
-        bool: True if deleted, False otherwise.
-    """
-    needle = str(id_or_text).strip().lower()
-    if not needle:
-        return False
-    with _lock:
-        rems = _load_reminders()
-        keep = [reminder for reminder in rems if not (
-            str(reminder["id"]) == needle or needle in reminder["text"].lower())]
-        if len(keep) != len(rems):
-            _save_reminders(keep)
-            return True
-    return False
+    """Permanently remove one reminder. Returns False if nothing clearly matched."""
+    with db.connect() as conn:
+        matches = _select_target(conn.execute("SELECT * FROM reminders ORDER BY id").fetchall(), id_or_text)
+        if not matches:
+            return False
+        conn.execute("DELETE FROM reminders WHERE id = ?", (matches[0]["id"],))
+        return True
 
 
 # ─── Natural-language time parsing ──────────────────────

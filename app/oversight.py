@@ -1,7 +1,9 @@
-import json
 import os
+import sys
 import time
 import threading
+
+import safe_json
 
 _lock = threading.RLock()
 
@@ -15,44 +17,25 @@ def get_alerts_file():
 def record_alert(kind: str, message: str, severity: str = "info"):
     with _lock:
         file_path = get_alerts_file()
-        entries = []
-        if os.path.exists(file_path):
-            try:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    entries = json.load(f)
-            except Exception:
-                pass
-                
-        entries.append({
-            "ts": time.time(),
-            "kind": kind,
-            "message": message,
-            "severity": severity
-        })
-        
-        entries = entries[-50:]
-        
         try:
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            tmp = file_path + ".tmp"
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump(entries, f, indent=2)
-                f.flush()
-                os.fsync(f.fileno())
-            os.replace(tmp, file_path)
-        except Exception:
-            pass
+            entries = safe_json.read_json(file_path, [])
+            entries.append({
+                "ts": time.time(),
+                "kind": kind,
+                "message": message,
+                "severity": severity
+            })
+            safe_json.write_json(file_path, entries[-50:])
+        except OSError as exc:
+            # An alert that can't be saved must still show up somewhere.
+            sys.stderr.write(f"[KALKI] couldn't save alert ({exc}): [{severity}] {kind}: {message}\n")
+
 
 def recent_alerts(limit: int = 20):
     with _lock:
-        file_path = get_alerts_file()
-        if not os.path.exists(file_path):
-            return []
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                entries = json.load(f)
-            return entries[::-1][:limit]
-        except Exception:
+            return safe_json.read_json(get_alerts_file(), [])[::-1][:limit]
+        except OSError:
             return []
 
 def get_status():

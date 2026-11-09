@@ -1,21 +1,16 @@
 """
-KALKI Vault — DPAPI-encrypted local password store.
-Per-Windows-user, machine-locked. No master password.
-Falls back to base64 (clearly marked) if pywin32 is missing.
+KALKI Vault: an encrypted local store for labelled logins.
+Encryption comes from secure_store, which fails loudly and never falls back to
+reversible encoding.
 """
 
 import os
 import json
-import base64
 import threading
 from datetime import datetime
 from typing import Optional, Dict, Any, List, Union
 
-try:
-    import win32crypt
-    HAS_DPAPI = True
-except ImportError:
-    HAS_DPAPI = False
+import secure_store
 
 _lock = threading.RLock()
 
@@ -23,32 +18,18 @@ VAULT_PATH: Optional[str] = None  # set by server.py before first use
 
 
 def _enc(plain: Union[str, bytes, None]) -> str:
-    """Encrypt a plaintext string or bytes using Windows DPAPI."""
     if plain is None or plain == "":
         return ""
-    data = plain.encode("utf-8") if isinstance(plain, str) else plain
-    if HAS_DPAPI:
-        blob = win32crypt.CryptProtectData(data, "kalki-vault", None, None, None, 0)
-        return "DPAPI:" + base64.b64encode(blob).decode()
-    return "B64:" + base64.b64encode(data).decode()
+    return secure_store.protect(plain.decode("utf-8") if isinstance(plain, bytes) else plain)
 
 
 def _dec(blob: str) -> str:
-    """Decrypt a DPAPI or Base64 encoded blob."""
+    """Decrypt a stored field. Raises UnprotectError if it can't be read."""
     if not blob:
         return ""
-    if blob.startswith("DPAPI:") and HAS_DPAPI:
-        raw = base64.b64decode(blob[6:])
-        try:
-            return win32crypt.CryptUnprotectData(raw, None, None, None, 0)[1].decode("utf-8")
-        except Exception:
-            return ""
-    if blob.startswith("B64:"):
-        try:
-            return base64.b64decode(blob[4:]).decode("utf-8")
-        except Exception:
-            return ""
-    return blob
+    if not secure_store.is_protected(blob):
+        return blob
+    return secure_store.unprotect(blob)
 
 
 def _load() -> Dict[str, Any]:
@@ -75,6 +56,18 @@ def _save(d: Dict[str, Any]) -> None:
     os.replace(tmp, VAULT_PATH)
 
 
+def _single_match(data: Dict[str, Any], query: str) -> Optional[str]:
+    """An exact label, or a partial match only if exactly one entry fits. A
+    credential store must never guess which login was meant."""
+    needle = str(query or "").lower().strip()
+    if not needle:
+        return None
+    if needle in data:
+        return needle
+    matches = [key for key in data if needle in key]
+    return matches[0] if len(matches) == 1 else None
+
+
 def save_entry(label: str, username: str = "", password: str = "", url: str = "", notes: str = "") -> Union[bool, Dict[str, str]]:
     """
     Save a new entry to the encrypted vault.
@@ -91,18 +84,17 @@ def save_entry(label: str, username: str = "", password: str = "", url: str = ""
     """
     if not label:
         return False
-    # Refuse to "encrypt" with reversible base64. Without DPAPI (pywin32),
-    # storing a secret would be no better than plaintext — fail loudly instead.
-    if (password or username) and not HAS_DPAPI:
-        return {"error": "DPAPI unavailable (install pywin32) — refusing to "
-                         "store credentials without real encryption."}
+    try:
+        username_blob, password_blob = _enc(username), _enc(password)
+    except Exception as exc:
+        return {"error": f"Secure storage isn't available, so nothing was saved: {exc}"}
     with _lock:
         d = _load()
         key = label.lower().strip()
         d[key] = {
             "label": label,
-            "username": _enc(username),
-            "password": _enc(password),
+            "username": username_blob,
+            "password": password_blob,
             "url": url or "",
             "notes": notes or "",
             "saved": datetime.now().isoformat(timespec="seconds"),
@@ -141,10 +133,18 @@ def get_entry(label: str) -> Optional[Dict[str, str]]:
     e = d.get(label.lower().strip())
     if not e:
         return None
+    fields, unreadable = {}, False
+    for field in ("username", "password"):
+        try:
+            fields[field] = _dec(e.get(field, ""))
+        except secure_store.UnprotectError:
+            fields[field] = ""
+            unreadable = True
     return {
         "label": e["label"],
-        "username": _dec(e.get("username", "")),
-        "password": _dec(e.get("password", "")),
+        "username": fields["username"],
+        "password": fields["password"],
+        "unreadable": unreadable,
         "url": e.get("url", ""),
         "notes": e.get("notes", ""),
         "saved": e.get("saved", ""),
@@ -163,14 +163,8 @@ def find_entry(query: str) -> Optional[Dict[str, str]]:
     """
     if not query:
         return None
-    q = query.lower().strip()
-    d = _load()
-    if q in d:
-        return get_entry(q)
-    for k in d.keys():
-        if q in k or k in q:
-            return get_entry(k)
-    return None
+    key = _single_match(_load(), query)
+    return get_entry(key) if key else None
 
 
 def delete_entry(label: str) -> bool:
@@ -183,18 +177,11 @@ def delete_entry(label: str) -> bool:
     Returns:
         bool: True if an entry was deleted, False otherwise.
     """
-    query = str(label).strip().lower()
-    if not query:
-        return False
     with _lock:
         data = _load()
-        if query in data:
-            del data[query]
-            _save(data)
-            return True
-        for key in list(data):
-            if query in key:
-                del data[key]
-                _save(data)
-                return True
-    return False
+        key = _single_match(data, label)
+        if not key:
+            return False
+        del data[key]
+        _save(data)
+        return True

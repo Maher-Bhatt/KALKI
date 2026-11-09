@@ -1,0 +1,12 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-q"
+
+[tool.ruff]
+include = ["app/**/*.py", "tests/**/*.py", "tools/**/*.py"]
+extend-exclude = ["app/dist", "app/build", "build", "dist"]
+
+[tool.ruff.lint]
+# Start with the rules that catch crashes. Widen as the codebase gets cleaned up.
+select = ["F821", "F823", "E722"]

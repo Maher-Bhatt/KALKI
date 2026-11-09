@@ -6,6 +6,7 @@ import urllib.request
 from typing import Dict, Any, List, Optional
 
 import config
+import safe_json
 
 _has_gemini = bool(getattr(config, "GEMINI_API_KEY", "") and not getattr(config, "GEMINI_API_KEY", "").startswith("PASTE_"))
 
@@ -98,13 +99,10 @@ def track_usage(model_name: str, prompt_tokens: int, completion_tokens: int, lat
     cost = ((prompt_tokens / 1000.0) * prices[0]) + ((completion_tokens / 1000.0) * prices[1])
 
     with _metrics_lock:
-        data = {}
-        if os.path.exists(USAGE_LOG_PATH):
-            try:
-                with open(USAGE_LOG_PATH, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-            except Exception:
-                pass
+        try:
+            data = safe_json.read_json(USAGE_LOG_PATH, {})
+        except OSError:
+            return  # usage numbers aren't worth overwriting a locked file for
         
         # Increment total metrics
         data["total_prompt_tokens"] = data.get("total_prompt_tokens", 0) + prompt_tokens
@@ -126,11 +124,9 @@ def track_usage(model_name: str, prompt_tokens: int, completion_tokens: int, lat
         day_data["avg_latency"] = ((day_data["avg_latency"] * (day_data["calls"] - 1)) + latency_ms) / day_data["calls"]
         
         try:
-            os.makedirs(os.path.dirname(USAGE_LOG_PATH), exist_ok=True)
-            with open(USAGE_LOG_PATH, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=4)
-        except Exception:
-            pass
+            safe_json.write_json(USAGE_LOG_PATH, data)
+        except OSError as exc:
+            print(f"[model_manager] couldn't save usage: {exc}")
 
 
 def get_usage_metrics() -> Dict[str, Any]:
