@@ -96,6 +96,7 @@ import settings_schema
 import routes_productivity
 import routes_memory
 import tool_policy
+import command_intent
 import db
 import wifi_security
 import shield_monitors
@@ -302,14 +303,15 @@ def update_location_from_ip():
 if getattr(config, "AUTO_IP_LOCATION", False) and not os.environ.get("KALKI_SANDBOX"):
     threading.Thread(target=update_location_from_ip, daemon=True).start()
 
-def fetch_weather_line(timeout=5):
-    """Short weather string using wttr.in (live IP geolocation)"""
+def fetch_weather_line(timeout=5, location=""):
+    """Short weather string from wttr.in, for a place or else by IP location."""
     try:
-        # Fetch live location weather using IP auto-routing from wttr.in
-        req = urllib.request.Request("https://wttr.in/?format=3", headers={'User-Agent': 'Mozilla/5.0'})
+        place = urllib.parse.quote(location.strip()) if location else ""
+        req = urllib.request.Request(f"https://wttr.in/{place}?format=3", headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=timeout) as r:
             w = r.read().decode('utf-8').strip()
-            return w
+            # Errors come back as a whole web page, which isn't a weather report.
+            return w if w and len(w) < 200 and "<" not in w else None
     except Exception:
         return None
 
@@ -586,12 +588,16 @@ def _consume_confirmation(command):
     with _pending_lock:
         if not _pending_approvals:
             return True, "There is no active action to confirm."
-        # Confirm the most recent one
-        aid = max(_pending_approvals.keys(), key=lambda k: int(k))
-        pending = _pending_approvals.pop(aid)
-        
-    if pending["expires"] < time.time():
-        return True, "There is no active action to confirm."
+        now = time.time()
+        for aid in [a for a, p in _pending_approvals.items() if p["expires"] < now]:
+            del _pending_approvals[aid]
+        if not _pending_approvals:
+            return True, "There is no active action to confirm."
+        if len(_pending_approvals) > 1:
+            # Saying "confirm" can't show which one it means, so never guess.
+            return True, (f"{len(_pending_approvals)} actions are waiting, so I won't guess which you mean. "
+                          "Approve or deny each one on screen.")
+        pending = _pending_approvals.pop(next(iter(_pending_approvals)))
     return pending["action"]()
 
 
@@ -1821,6 +1827,9 @@ def handle_local(text):
     import notes as notesmod
     t = text.lower().strip()
     raw = text.strip()
+    # Ordinary sentences go to the AI. A pending "what should I note?" answer can be anything.
+    if not STATE.get("pending_note_capture") and command_intent.is_conversation(raw):
+        return False, ""
     # ════════════════════════════════════════════════════
     # REAL SOVEREIGN DESKTOP SYSTEM ACTIONS (Instant Local Execution)
     # ════════════════════════════════════════════════════
@@ -2961,8 +2970,8 @@ def handle_local(text):
         srv = r["headers"].get("Server", "?")
         return True, f"{r['url']} → {r['status']}. Server: {srv}. {len(r['headers'])} headers."
 
-    m = _re_local.search(r"^ping\s+(\S+)", t, flags=_re_local.IGNORECASE)
-    if m:
+    m = _re_local.search(r"^ping\s+(\S+)$", t, flags=_re_local.IGNORECASE)
+    if m and command_intent.looks_like_host(m.group(1)):
         r = cybertools.ping(m.group(1))
         if "error" in r: return True, f"Ping failed: {r['error']}"
         lines = [l for l in r["output"].splitlines() if "time" in l.lower() or "loss" in l.lower()]
@@ -3253,8 +3262,9 @@ def handle_local(text):
         return True, f"CPU at {cpu} percent. Memory at {ram} percent. Disk at {disk} percent.{batt}"
 
     # ── Weather (free wttr.in) ─────────────────────────
-    if "weather" in t:
-        w = fetch_weather_line()
+    weather = _re_local.fullmatch(r"(?:what(?:'s| is) the )?weather(?: (?:today|now|like|outside))?(?: in (.+?))?\??", t)
+    if weather:
+        w = fetch_weather_line(location=weather.group(1) or "")
         if w:
             return True, f"{w}, {config.OWNER_TITLE}."
         return True, "I couldn't reach the weather service."
@@ -3711,6 +3721,13 @@ def pick_model(text):
 AI_APPROVAL_SECONDS = 180
 
 
+def _remember_from_turn(user_text, reply_text):
+    """Learn from a turn in the background. A reply built on untrusted content is left
+    out: the extractor saves straight to memory, which would skip the approval gate."""
+    reply = "" if tool_policy.is_tainted() else reply_text
+    threading.Thread(target=_auto_extract_topic_memory, args=(user_text, reply), daemon=True).start()
+
+
 def _apply_reply_actions(reply):
     """Act on [TASK: ...], [REMIND: ... @ ...] and TOOL CALL text in a model's reply, and
     return the reply without it. Page text can put these in a reply, so they go through
@@ -3746,7 +3763,7 @@ def execute_tool_call(tool_name, tool_args):
 
         def _approved():
             result = _run_tool_call(tool_name, args)
-            add_activity(description.splitlines()[0][:200], "ai", kind="ai_action")
+            add_activity(f"{description.splitlines()[0][:120]}: {str(result)[:120]}", "ai", kind="ai_action")
             return True, str(result)
 
         _queue_confirmation(description, _approved, source="ai", always=True, ttl=AI_APPROVAL_SECONDS)
@@ -3804,24 +3821,25 @@ def _run_tool_call(tool_name, args):
                     "Lock your PC",
                     lambda: (ctypes.windll.user32.LockWorkStation()
                              and (True, "Locking your PC.")),
+                    source="ai", always=True, ttl=AI_APPROVAL_SECONDS,
                 )[1]
             elif action == "sleep":
                 def _sleep_pc():
                     subprocess.Popen(["rundll32.exe", "powrprof.dll,SetSuspendState", "0,1,0"])
                     return True, "Going to sleep."
-                return _queue_confirmation("Put your PC to sleep", _sleep_pc)[1]
+                return _queue_confirmation("Put your PC to sleep", _sleep_pc, source="ai", always=True, ttl=AI_APPROVAL_SECONDS)[1]
             elif action == "restart":
                 def _restart_pc():
                     subprocess.Popen(["shutdown.exe", "/r", "/t", "10"])
                     return True, "Restarting in ten seconds, Sir."
-                return _queue_confirmation("Restart your PC", _restart_pc)[1]
+                return _queue_confirmation("Restart your PC", _restart_pc, source="ai", always=True, ttl=AI_APPROVAL_SECONDS)[1]
             elif action == "shutdown":
                 def _shutdown_pc():
                     subprocess.Popen(["shutdown.exe", "/s", "/t", "30"])
                     return True, "Shutting down in thirty seconds, Sir."
-                return _queue_confirmation("Shut down your PC", _shutdown_pc)[1]
+                return _queue_confirmation("Shut down your PC", _shutdown_pc, source="ai", always=True, ttl=AI_APPROVAL_SECONDS)[1]
             elif action == "open_app":
-                if not ask_native_permission(f"open application '{target}'", always=tool_policy.is_tainted()):
+                if not ask_native_permission(f"open application '{target}'", always=True):
                     return f"Security Sandbox: Blocked opening '{target}'."
                 try:
                     os.startfile(target)
@@ -3891,7 +3909,7 @@ def _run_tool_call(tool_name, args):
                 proc_name = str(target).strip()
                 if not proc_name:
                     return "Process name required."
-                if not ask_native_permission(f"terminate process '{proc_name}'"):
+                if not ask_native_permission(f"terminate process '{proc_name}'", always=True):
                     return f"Security Sandbox: Blocked terminating '{proc_name}'."
                 if not psutil:
                     return "psutil library is required to kill processes natively. Please install it."
@@ -6371,7 +6389,7 @@ class Handler(BaseHTTPRequestHandler):
                     speak(local_reply)
                 append_history(user_text, local_reply)
                 _record_exchange(local_reply)
-                threading.Thread(target=_auto_extract_topic_memory, args=(user_text, local_reply), daemon=True).start()
+                _remember_from_turn(user_text, local_reply)
                 if stream_req:
                     self.send_response(200)
                     self.send_header('Content-Type', 'text/event-stream')
@@ -6417,7 +6435,7 @@ class Handler(BaseHTTPRequestHandler):
                     speak(extract_conversational_lead(spoken_reply or reply_str))
                 append_history(user_text, spoken_reply or reply_str)
                 _record_exchange(spoken_reply or reply_str)
-                threading.Thread(target=_auto_extract_topic_memory, args=(user_text, reply_str), daemon=True).start()
+                _remember_from_turn(user_text, reply_str)
                 
                 # Track usage metrics
                 latency = (time.time() - start_time) * 1000
@@ -6446,7 +6464,7 @@ class Handler(BaseHTTPRequestHandler):
                     speak(reply)
                 append_history(user_text, reply)
                 _record_exchange(reply)
-                threading.Thread(target=_auto_extract_topic_memory, args=(user_text, reply), daemon=True).start()
+                _remember_from_turn(user_text, reply)
                 
                 # Track usage metrics
                 latency = (time.time() - start_time) * 1000
@@ -6689,7 +6707,7 @@ class Handler(BaseHTTPRequestHandler):
             if handled:
                 reply = maybe_add_joke_offer(cmd, reply)
                 speak(reply)
-            threading.Thread(target=_auto_extract_topic_memory, args=(cmd, reply), daemon=True).start()
+            _remember_from_turn(cmd, reply)
             self._json({"handled": handled, "reply": reply})
             return
 

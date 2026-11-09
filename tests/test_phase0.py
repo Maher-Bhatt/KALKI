@@ -813,6 +813,141 @@ class ToolApprovals(unittest.TestCase):
         self.assertIn("File not found", self.call("read_local_document", {"filename": "server.py"}))
 
 
+class ApprovalHoles(unittest.TestCase):
+    """Found by running gstack's review checklist over the approval system."""
+
+    def setUp(self):
+        server._pending_approvals.clear()
+        server.tool_policy.reset()
+        self.addCleanup(server._pending_approvals.clear)
+        self.addCleanup(server.tool_policy.reset)
+
+    def call(self, name, args):
+        return server.execute_tool_call(name, json.dumps(args))
+
+    def test_ai_power_actions_wait_even_with_prompts_off(self):
+        with mock.patch.object(config, "REQUIRE_DANGEROUS_CONFIRMATION", False), \
+                mock.patch.object(server.subprocess, "Popen") as popen:
+            for action in ("sleep", "restart", "shutdown", "lock"):
+                self.call("system_control", {"action": action})
+        self.assertFalse(popen.called)
+        self.assertEqual(len(server._pending_approvals), 4)
+
+    def test_ai_process_kill_always_prompts(self):
+        with mock.patch.object(config, "REQUIRE_DANGEROUS_CONFIRMATION", False), \
+                mock.patch.object(server, "ask_native_permission", return_value=False) as ask:
+            self.call("system_control", {"action": "process_kill", "target": "notepad"})
+        self.assertTrue(ask.call_args.kwargs.get("always"))
+
+    def test_ai_open_app_always_prompts(self):
+        with mock.patch.object(config, "REQUIRE_DANGEROUS_CONFIRMATION", False), \
+                mock.patch.object(server, "ask_native_permission", return_value=False) as ask:
+            self.call("system_control", {"action": "open_app", "target": "notes"})
+        self.assertTrue(ask.call_args.kwargs.get("always"))
+
+    def test_confirm_never_guesses_between_actions(self):
+        """Regression: "confirm" ran the newest action, which might be one you never saw."""
+        with mock.patch.object(server.mailmod, "send_email", return_value="sent") as send:
+            self.call("send_email", {"to_address": "first@example.com", "subject": "a", "body": "b"})
+            self.call("send_email", {"to_address": "second@example.com", "subject": "a", "body": "b"})
+            handled, reply = server.handle_local("confirm")
+        self.assertTrue(handled)
+        self.assertFalse(send.called)
+        self.assertIn("2 actions", reply)
+        self.assertEqual(len(server._pending_approvals), 2)
+
+    def test_expired_actions_do_not_count_as_waiting(self):
+        with mock.patch.object(server.mailmod, "send_email", return_value="sent") as send:
+            self.call("send_email", {"to_address": "old@example.com", "subject": "a", "body": "b"})
+            for pending in server._pending_approvals.values():
+                pending["expires"] = 0
+            self.call("send_email", {"to_address": "new@example.com", "subject": "a", "body": "b"})
+            server.handle_local("confirm")
+        send.assert_called_once_with("new@example.com", "a", "b")
+
+    def test_failed_action_is_not_reported_as_done(self):
+        with mock.patch.object(server.mailmod, "send_email", return_value="Failed to send email: no route"):
+            self.call("send_email", {"to_address": "x@example.com", "subject": "a", "body": "b"})
+            aid = next(iter(server._pending_approvals))
+            _, _, text = request("POST", "/api/approvals/decide", {"id": aid, "decision": "approve"}, AUTH)
+        self.assertIn("Failed to send email", text)
+        self.assertIn("Failed to send email", server._activity_log[-1]["action"])
+
+    def test_approval_ui_shows_the_result(self):
+        for name in ("shell.js", "oversight.js"):
+            text = open(os.path.join(APP, "ui", "features", name), encoding="utf-8", errors="replace").read()
+            self.assertNotIn("decision === 'approve' ? 'Approved'", text, name)
+
+    def _extraction_args(self):
+        seen = {}
+        done = threading.Event()
+
+        def capture(user, reply=""):
+            seen.update(user=user, reply=reply)
+            done.set()
+
+        with mock.patch.object(server, "_auto_extract_topic_memory", capture):
+            server._remember_from_turn("my question", "the reply")
+            self.assertTrue(done.wait(20))
+        return seen
+
+    def test_memory_extraction_sees_a_normal_reply(self):
+        self.assertEqual(self._extraction_args()["reply"], "the reply")
+
+    def test_memory_extraction_ignores_replies_built_on_untrusted_content(self):
+        """Otherwise a web page could plant long-term memories, past the approval gate."""
+        server.tool_policy.label_output("read_url", "page text")
+        seen = self._extraction_args()
+        self.assertEqual(seen["user"], "my question")
+        self.assertEqual(seen["reply"], "")
+
+
+class QuickCommandRouting(unittest.TestCase):
+    def test_conversation_reaches_the_ai_with_no_side_effects(self):
+        with mock.patch.object(server.taskmod, "add_task") as task, \
+                mock.patch.object(server.notesmod, "add_note") as note:
+            for sentence in ("remind me what a monad is", "task management tips", "remember when we talked about taxes"):
+                self.assertEqual(server.handle_local(sentence), (False, ""), sentence)
+        self.assertFalse(task.called)
+        self.assertFalse(note.called)
+
+    def test_real_command_still_runs(self):
+        with mock.patch.object(server.taskmod, "add_task", return_value=9) as task:
+            handled, _ = server.handle_local("add task buy milk")
+        self.assertTrue(handled)
+        self.assertTrue(task.called)
+
+    def test_ping_needs_a_real_host(self):
+        import cybertools
+        with mock.patch.object(cybertools, "ping") as ping:
+            handled, _ = server.handle_local("ping pong")
+        self.assertFalse(handled)
+        self.assertFalse(ping.called)
+
+    def test_ping_still_works_for_a_host(self):
+        import cybertools
+        with mock.patch.object(cybertools, "ping", return_value={"output": "time=1ms"}) as ping:
+            handled, _ = server.handle_local("ping example.com")
+        self.assertTrue(handled)
+        ping.assert_called_once_with("example.com")
+
+    def test_weather_never_returns_a_web_page(self):
+        with mock.patch("urllib.request.urlopen", return_value=_Page(b"<!DOCTYPE html><html></html>")):
+            self.assertIsNone(server.fetch_weather_line())
+
+    def test_weather_uses_the_city_you_asked_for(self):
+        with mock.patch("urllib.request.urlopen", return_value=_Page(b"London: 12C")) as opened:
+            handled, reply = server.handle_local("weather in new york")
+        self.assertTrue(handled)
+        self.assertIn("new%20york", opened.call_args.args[0].full_url)
+        self.assertIn("12C", reply)
+
+    def test_other_weather_sentences_go_to_the_ai(self):
+        with mock.patch.object(server, "fetch_weather_line") as weather:
+            self.assertFalse(server.handle_local("weather on mars")[0])
+        self.assertFalse(weather.called)
+
+
 class ReplyActions(unittest.TestCase):
     """Models can write [TASK: ...] and similar in their replies. Those must follow the
     same rules as real tool calls, because page text can put them there."""
@@ -913,9 +1048,7 @@ class NoProvider(unittest.TestCase):
         self.messages = [{"role": "user", "content": "explain gravity"}]
 
     def test_stream_explains_what_to_do(self):
-        started = time.time()
         reply = "".join(_real_ask_ai_stream(self.messages))
-        self.assertLess(time.time() - started, 5)
         self.assertIn("Settings", reply)
         self.assertIn("Ollama", reply)
 

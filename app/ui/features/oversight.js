@@ -114,9 +114,16 @@ async function undoActivity(id) {
   if (r.ok) { ok('Action undone'); loadOversight(); } else err(r.message, r.detail);
 }
 
+/* What really happened. An approved email can still fail to send. */
+function approvalOutcome(decision, data) {
+  if (decision !== 'approve') return 'Denied';
+  const result = Array.isArray(data?.result) ? data.result[1] : data?.result;
+  return result ? String(result).slice(0, 160) : 'Approved';
+}
+
 async function decideApproval(id, decision) {
   const r = await approvals.decide(id, decision);
-  if (r.ok) { ok(decision === 'approve' ? 'Approved' : 'Denied'); loadOversight(); } else err(r.message, r.detail);
+  if (r.ok) { ok(approvalOutcome(decision, r.data)); loadOversight(); } else err(r.message, r.detail);
 }
 
 function formatTimeLeft(expiresAt) {

@@ -138,9 +138,15 @@ export function buildShell(root) {
     notify();
   }
 
+  function outcomeText(decision, data) {
+    if (decision !== 'approve') return 'Denied';
+    const result = Array.isArray(data?.result) ? data.result[1] : data?.result;
+    return result ? String(result).slice(0, 160) : 'Approved';
+  }
+
   async function decideApproval(id, decision) {
     const r = await approvals.decide(id, decision);
-    if (r.ok) ok(decision === 'approve' ? 'Approved' : 'Denied');
+    if (r.ok) ok(outcomeText(decision, r.data));
     else err(r.detail || r.message);
     await loadApprovals();
     refreshStatus();
