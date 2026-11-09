@@ -72,6 +72,28 @@ MIGRATIONS: List[Tuple[int, str]] = [
         undone INTEGER NOT NULL DEFAULT 0
     );
     """),
+    (3, """
+    CREATE TABLE threads (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        pinned INTEGER NOT NULL DEFAULT 0,
+        archived INTEGER NOT NULL DEFAULT 0,
+        model TEXT NOT NULL DEFAULT ''
+    );
+    CREATE INDEX threads_recent ON threads (updated_at);
+    CREATE TABLE thread_messages (
+        pos INTEGER PRIMARY KEY AUTOINCREMENT,
+        thread_id TEXT NOT NULL REFERENCES threads (id) ON DELETE CASCADE,
+        msg_id TEXT NOT NULL,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        ts INTEGER NOT NULL,
+        extra TEXT NOT NULL DEFAULT '{}',
+        UNIQUE (thread_id, msg_id)
+    );
+    """),
 ]
 SCHEMA_VERSION = MIGRATIONS[-1][0]
 

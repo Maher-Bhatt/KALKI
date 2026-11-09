@@ -813,6 +813,60 @@ class ToolApprovals(unittest.TestCase):
         self.assertIn("File not found", self.call("read_local_document", {"filename": "server.py"}))
 
 
+class SharedConversations(unittest.TestCase):
+    def setUp(self):
+        import threads
+        self.threads = threads
+        threads.clear_unpinned()
+        threads.set_active(None)
+        self.addCleanup(threads.set_active, None)
+
+    def chat(self, text, **fields):
+        body = {"messages": [{"role": "user", "content": text}], **fields}
+        status, _, raw = request("POST", "/api/chat", body, AUTH)
+        return status, raw
+
+    def test_voice_turn_is_saved_and_announced(self):
+        before = json.loads(request("GET", "/api/status", headers=AUTH)[2])["conversationSeq"]
+        self.assertEqual(self.chat("explain gravity", source="voice")[0], 200)
+        status = json.loads(request("GET", "/api/status", headers=AUTH)[2])
+        self.assertEqual(status["conversationSeq"], before + 1)
+        saved = self.threads.list_all()[0]
+        self.assertEqual(status["recentExchange"]["threadId"], saved["id"])
+        self.assertEqual([m["origin"] for m in saved["messages"]], ["voice", "voice"])
+
+    def test_telegram_shares_the_same_thread(self):
+        self.chat("explain gravity", source="voice")
+        self.chat("explain tides", source="telegram")
+        saved = self.threads.list_all()
+        self.assertEqual(len(saved), 1)
+        self.assertEqual(saved[0]["messages"][2]["origin"], "telegram")
+
+    def test_app_chat_is_not_saved_twice(self):
+        self.chat("explain gravity", threadId="app_thread")
+        self.assertEqual(self.threads.list_all(), [])
+
+    def test_voice_gets_the_shared_threads_context(self):
+        self.chat("explain gravity", source="voice")
+        with mock.patch.object(server, "ask_ai", return_value="ok") as ask:
+            self.chat("and tides?", source="voice")
+        sent = ask.call_args.args[0]
+        self.assertEqual(sent[0], {"role": "user", "content": "explain gravity"})
+        self.assertEqual(sent[-1], {"role": "user", "content": "and tides?"})
+
+    def test_a_store_failure_does_not_lose_the_reply(self):
+        with mock.patch.object(self.threads, "append_exchange", side_effect=OSError("disk full")):
+            status, raw = self.chat("explain gravity", source="voice")
+        self.assertEqual(status, 200)
+        self.assertIn("stub reply", raw)
+
+    def test_ui_uses_the_server_not_browser_storage(self):
+        text = open(os.path.join(APP, "ui", "state", "conversations.js"), encoding="utf-8", errors="replace").read()
+        self.assertNotIn("idb.put", text)
+        self.assertIn("threadsApi.save", text)
+        self.assertIn("threadId", open(os.path.join(APP, "ui", "api", "stream.js"), encoding="utf-8", errors="replace").read())
+
+
 class ApprovalHoles(unittest.TestCase):
     """Found by running gstack's review checklist over the approval system."""
 

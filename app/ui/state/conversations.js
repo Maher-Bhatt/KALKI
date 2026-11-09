@@ -1,15 +1,15 @@
-/** Conversation organisation lives in the frontend.
+/** Conversations live on the server, so the app, voice and Telegram share them.
  *
- *  The backend has no conversation database: history.json is a single flat
- *  list capped at MAX_HISTORY (20 entries = 10 exchanges) and listener.py
- *  appends to it out of process while the window is closed. So IndexedDB owns
- *  threads — title, pin, archive, search, timestamps — and history.json stays
- *  what it actually is: the model's rolling context window, shown honestly on
- *  the composer rather than hidden. */
+ *  Saves send only what changed. The server adds or updates messages and never
+ *  removes them on a save, so this window can't erase a voice reply it hasn't seen.
+ *  Older chats still in this browser's IndexedDB are moved across on load, and each
+ *  one is deleted locally only after the server confirms it was saved. */
 
 import { idb } from '../lib/idb.js';
 import { titleFrom } from '../lib/format.js';
 import { store, set, notify } from './store.js';
+import { threadsApi } from '../api/endpoints.js';
+import { toast } from './toasts.js';
 
 const newId = () => `t_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 
@@ -18,26 +18,43 @@ export function blank() {
   return { id: newId(), title: 'New conversation', createdAt: now, updatedAt: now, pinned: false, archived: false, messages: [], model: '' };
 }
 
-export async function loadThreads() {
+async function moveBrowserThreads() {
   if (!idb.available) return;
+  let failed = 0;
   try {
-    const all = await idb.all();
-    // Clean up empty ghost threads that have 0 messages and are not pinned
-    const ghosts = all.filter((t) => !t.pinned && (!t.messages || t.messages.length === 0));
-    for (const g of ghosts) {
-      idb.del(g.id).catch(() => {});
+    for (const t of await idb.all()) {
+      const empty = !t.messages || t.messages.length === 0;
+      if (empty && !t.pinned) { await idb.del(t.id); continue; }
+      const messages = (t.messages || []).map((m, i) => ({ ...m, id: m.id || `legacy_${i}` }));
+      const r = await threadsApi.save({ ...t, messages });
+      if (r.ok) await idb.del(t.id);
+      else failed += 1;
     }
-    const valid = all.filter((t) => t.pinned || (t.messages && t.messages.length > 0));
-    store.conv.threads = valid.sort((a, b) => (b.pinned - a.pinned) || (b.updatedAt - a.updatedAt));
-    notify();
-  } catch (e) { console.warn('[kalki] conversation store unavailable', e); }
+  } catch (e) { console.warn('[kalki] browser conversations unavailable', e); }
+  if (failed) toast({ kind: 'warning', text: `${failed} older conversations couldn't be moved yet. They're kept, and KALKI will try again.` });
+}
+
+/** A reply cut off by a crash is no longer streaming once the app restarts. */
+const settled = (t) => ({ ...t, messages: t.messages.map((m) => (m.streaming ? { ...m, streaming: false } : m)) });
+
+export async function loadThreads() {
+  await moveBrowserThreads();
+  const r = await threadsApi.list();
+  if (!r.ok) {
+    toast({ kind: 'error', text: "Your conversations couldn't be loaded.", detail: r.detail });
+    return;
+  }
+  store.conv.threads = r.data.threads.map(settled).filter((t) => t.pinned || t.messages.length > 0);
+  notify();
 }
 
 export function active() {
   return store.conv.threads.find((t) => t.id === store.conv.activeId) || null;
 }
 
-async function persist(thread) {
+let saveWarned = false;
+
+async function persist(thread, changed = []) {
   thread.updatedAt = Date.now();
   const i = store.conv.threads.findIndex((t) => t.id === thread.id);
   if (i === -1) store.conv.threads.unshift(thread);
@@ -45,7 +62,12 @@ async function persist(thread) {
   store.conv.threads.sort((a, b) => (b.pinned - a.pinned) || (b.updatedAt - a.updatedAt));
   recount();
   notify();
-  if (idb.available) { try { await idb.put({ ...thread }); } catch { /* memory-only session */ } }
+  const r = await threadsApi.save({ ...thread, messages: changed });
+  if (r.ok) saveWarned = false;
+  else if (!saveWarned) {
+    saveWarned = true;
+    toast({ kind: 'error', text: "This conversation isn't being saved.", detail: r.detail });
+  }
 }
 
 export async function ensureActive() {
@@ -90,7 +112,7 @@ export async function addMessage(msg) {
   const entry = { id: `m_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, ts: Date.now(), ...msg };
   t.messages.push(entry);
   if (t.messages.length <= 2 && msg.role === 'user') t.title = titleFrom(msg.content);
-  await persist(t);
+  await persist(t, [entry]);
   return entry;
 }
 
@@ -100,14 +122,18 @@ export async function updateMessage(id, patch) {
   const m = t.messages.find((x) => x.id === id);
   if (!m) return;
   Object.assign(m, patch);
-  await persist(t);
+  await persist(t, [m]);
 }
 
 export async function dropMessagesFrom(id) {
   const t = active();
   if (!t) return;
   const i = t.messages.findIndex((m) => m.id === id);
-  if (i >= 0) { t.messages.splice(i); await persist(t); }
+  if (i >= 0) {
+    t.messages.splice(i);
+    await threadsApi.truncate(t.id, id);
+    await persist(t);
+  }
 }
 
 export async function setThread(id, patch) {
@@ -127,14 +153,12 @@ export async function removeThread(id) {
   }
   recount();
   notify();
-  if (idb.available) {
-    try { await idb.del(id); } catch { /* non-fatal */ }
-  }
+  const r = await threadsApi.remove(id);
+  if (!r.ok) toast({ kind: 'error', text: "That conversation couldn't be deleted.", detail: r.detail });
 }
 
 export async function clearAllThreads() {
   const pinned = store.conv.threads.filter((t) => t.pinned);
-  const unpinned = store.conv.threads.filter((t) => !t.pinned);
   store.conv.threads = pinned;
   store.conv.activeId = pinned[0]?.id || null;
   if (typeof location !== 'undefined' && location.hash.startsWith('#/ask')) {
@@ -142,37 +166,41 @@ export async function clearAllThreads() {
   }
   recount();
   notify();
-  if (idb.available) {
-    for (const t of unpinned) {
-      try { await idb.del(t.id); } catch { /* non-fatal */ }
-    }
-  }
+  const r = await threadsApi.clear();
+  if (!r.ok) toast({ kind: 'error', text: "Your conversations couldn't be cleared.", detail: r.detail });
 }
 
-/** Voice turns arrive from listener.py via /api/status polling. Append them so
- *  a conversation held with the window closed does not silently disappear. */
+/** Voice and Telegram turns are saved by the server, and /api/status says when there's
+ *  a new one. Merge rather than replace: a reply may be streaming in this window. */
 export async function appendVoiceExchange(ex) {
-  const t = await ensureActive();
-  const seen = t.messages.some((m) => m.voiceSeq === ex.seq);
-  if (seen) return;
-  t.messages.push(
-    { id: `v${ex.seq}u`, role: 'user', content: ex.user || '', ts: (ex.ts || Date.now() / 1000) * 1000, origin: 'voice', voiceSeq: ex.seq },
-    { id: `v${ex.seq}a`, role: 'assistant', content: ex.reply || '', ts: (ex.ts || Date.now() / 1000) * 1000, origin: 'voice', voiceSeq: ex.seq, done: true },
-  );
-  if (t.messages.length <= 2) t.title = titleFrom(ex.user);
-  await persist(t);
+  const r = await threadsApi.list();
+  if (!r.ok) return;
+  for (const incoming of r.data.threads) {
+    const local = store.conv.threads.find((t) => t.id === incoming.id);
+    if (!local) {
+      store.conv.threads.push(settled(incoming));
+      continue;
+    }
+    const known = new Set(local.messages.map((m) => m.id));
+    local.messages.push(...incoming.messages.filter((m) => !known.has(m.id)));
+    local.updatedAt = Math.max(local.updatedAt, incoming.updatedAt);
+  }
+  store.conv.threads.sort((a, b) => (b.pinned - a.pinned) || (b.updatedAt - a.updatedAt));
+  // Nothing typed yet in this window, so show where the conversation is happening.
+  const cur = active();
+  if (ex?.threadId && (!cur || cur.messages.length === 0)) store.conv.activeId = ex.threadId;
+  recount();
+  notify();
 }
 
-/** How many turns of this thread the backend will actually carry.
- *  MAX_HISTORY is 20 entries, i.e. 10 exchanges. */
+/** How many turns of this thread get sent to the model. */
 export function recount() {
   const t = active();
   const exchanges = t ? Math.floor(t.messages.filter((m) => m.role === 'user' || m.role === 'assistant').length / 2) : 0;
   set('conv', { contextTurns: Math.min(exchanges, store.conv.maxTurns) });
 }
 
-/** Messages sent to /api/chat. The server prepends its own history, so we send
- *  only this thread's recent turns and let it truncate. */
+/** Messages sent to /api/chat: this thread's recent turns. */
 export function wireMessages() {
   const t = active();
   if (!t) return [];
