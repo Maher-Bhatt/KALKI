@@ -275,7 +275,7 @@ export function memoryView() {
     // MAIN
     const hd = h('div.hd', null,
       h('div', null,
-        h('h1', null, 'Memory'),
+        h('h1', { id: 'view-title', tabindex: '-1' }, 'Library'),
         h('div.sub', null, 'Knowledge & facts KALKI keeps about you. Stored locally.')
       ),
       h('button.btn.pri', { type: 'button', onClick: () => editor(null) }, h('i', { 'data-i': 'plus' }), 'Add memory')
@@ -445,7 +445,7 @@ export function memoryView() {
     const quickAddCard = h('div.card.in.col.g12', { style: { marginBottom: '18px' } },
       h('div.row.sb', null,
         h('h2', null, 'Quick add memory'),
-        h('span.xs.mut', null, 'Saved to semantic store')
+        h('span.xs.mut', null, 'Kept on this PC')
       ),
       h('div.field', { style: { minHeight: '56px', alignItems: 'flex-start' } },
         quickTa
@@ -535,8 +535,8 @@ export function memoryView() {
         h('div.sm.t2', null, 'Memories are categorized by topic: Preferences, Projects, Work, Personal, Music, and Tech. KALKI uses relevant topics when crafting answers.')
       ),
       h('div.card.col.g8', null,
-        h('h2', null, 'Pinned vs Semantic'),
-        h('div.sm.t2', null, 'Pinned memories are always injected into KALKI’s system context. Other memories are retrieved dynamically by similarity to your conversation.')
+        h('h2', null, 'Pinned memories'),
+        h('div.sm.t2', null, "KALKI always keeps pinned memories in mind. It finds the others when they relate to what you're talking about.")
       )
     );
   };

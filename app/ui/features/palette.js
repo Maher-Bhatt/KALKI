@@ -19,7 +19,7 @@ import { go } from './router.js';
 import { ok, err } from '../state/toasts.js';
 import { promptDialog } from '../components/dialog.js';
 import { openDiagnostics } from './diagnostics.js';
-import { openPetSettings, triggerPetReaction, getPetState } from './pet.js';
+import { openPetSettings } from './pet.js';
 import { exportChatMarkdown } from './ask.js';
 
 let dlg = null;
@@ -33,8 +33,8 @@ const navCommands = () => {
   const base = [
     { group: 'Go to', label: 'Ask', icon: 'ask', shortcut: 'mod+1', run: () => go('ask') },
     { group: 'Go to', label: 'Today', icon: 'today', shortcut: 'mod+2', run: () => go('today') },
-    { group: 'Go to', label: 'Memory', icon: 'memory', shortcut: 'mod+3', run: () => go('memory') },
-    { group: 'Go to', label: 'Workbench', icon: 'workbench', shortcut: 'mod+4', run: () => go('workbench') },
+    { group: 'Go to', label: 'Library', icon: 'memory', shortcut: 'mod+3', run: () => go('memory') },
+    { group: 'Go to', label: 'Studio', icon: 'workbench', shortcut: 'mod+4', run: () => go('workbench') },
   ];
   if (store.ui.securityEnabled) base.push({ group: 'Go to', label: 'Security', icon: 'security', run: () => go('security') });
   base.push({ group: 'Go to', label: 'Settings', icon: 'settings', shortcut: 'mod+,', run: () => go('settings') });
@@ -72,15 +72,7 @@ const actionCommands = () => [
   { group: 'Run', label: 'Wake KALKI', icon: 'spark', run: async () => { const r = await system.wake(''); r.ok ? refreshStatus() : err(r.message, r.detail); } },
   { group: 'Run', label: 'Stop speaking', icon: 'stop', run: async () => { await system.stop(); refreshStatus(); } },
   { group: 'Run', label: 'Export conversation as Markdown', icon: 'export', run: () => exportChatMarkdown(conv.active()) },
-  {
-    group: 'Companion Pet', label: 'Interact with AI Pet', icon: 'pet',
-    run: () => {
-      const p = getPetState();
-      triggerPetReaction('happy', 3000, `Hey from Palette! ✨`);
-      ok(`Interacted with ${p.name}`);
-    }
-  },
-  { group: 'Companion Pet', label: 'Pet settings & species selection', icon: 'sliders', run: () => openPetSettings() },
+  { group: 'Pet', label: 'Choose your pet', icon: 'sliders', run: () => openPetSettings() },
   { group: 'Run', label: 'Open diagnostics', icon: 'info', run: () => setTimeout(openDiagnostics, 60) },
   {
     group: 'Run', label: `Switch theme to ${store.ui.theme === 'dark' ? 'light' : 'dark'}`, icon: 'spark',

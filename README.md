@@ -38,10 +38,9 @@
 **KALKI** is a sovereign, local-first personal AI operating workspace for power users, developers, and security professionals. Built on the **Filament Design System**—cold machined graphite surfaces with warm presence light—KALKI operates directly on your workstation loopback (`127.0.0.1:8888`), binds to your native hardware, enforces zero third-party telemetry, and features real system access:
 
 - 🖥️ **100% Native Desktop Operating Architecture**: Seamless native PyWebView IPC bridge (`WebApi`) connecting the frontend directly to OS APIs—zero external browser popups, embedded PowerShell execution, direct directory tree exploration, in-place code editing with disk save, and native window titlebar controls.
-- 🐱 **Next-Gen 3D Mascot Companion Engine**: 6 distinct 3D companion species (Gobi, Kittu, Byte, Draco, Nova, Kitsu) rendered on a 60FPS isometric 3D canvas with volumetric filament lighting, real-time mouse-look perspective tracking, audio beat synchronization, and always-on-screen overlay.
 - 🛡️ **ShieldCore Live Process Defense & Antivirus**: Real-time hardware telemetry (CPU, RAM, loopback ports), live process scanner with PID inspection, 1-click suspicious process termination, Shannon entropy analysis, Windows Defender integration, and an interactive studio of 12 verified cybersecurity tools.
 - 💻 **Embedded System Terminal & Workspace Studio**: Dedicated terminal console executing real PowerShell and CMD commands with exit codes and execution timers, plus a built-in file explorer and code editor for seamless developer productivity.
-- 🐱 **Always-On-Screen Desktop Companion Pet**: A borderless, transparent floating companion mascot (inspired by Codex pets) that lives on your screen even when KALKI is closed or minimized, dances to system music (Apple Music / Spotify), and brings KALKI to the foreground on click.
+- 🐱 **Desktop pet**: A see-through pixel-art companion that floats over your other windows and shows when KALKI is working, needs your approval, or has finished.
 - 🛡️ **ShieldCore Native Antivirus & 12 Cyber Tools**: Dedicated visual cyber command center with real-time heuristic radar sweeps, Shannon entropy analysis, Windows Defender integration, cryptominer detection, clipboard anti-clipper protection, and an interactive studio of 12 defensive cybersecurity tools.
 - 🧠 **Dynamic Cognitive Auto-Router**: Real-time prompt complexity classification automatically routing casual queries to ultra-fast sub-200ms models (Gemini 2.5 Flash, GPT-4o Mini) and technical/reasoning tasks to Pro tiers (Gemini 2.5 Pro, LLaMA 3.3 70B, Claude 3.5 Sonnet).
 - ⚡ **Real System Execution & Attitude Enforcement**: Direct Win32 workstation lock (`LockWorkStation`), dynamic application launch (Apple Music `music:`, Brave, Valorant, DaVinci Resolve), and an unrestricted Savage Roast Mode that defends against abusive prompts.
@@ -77,33 +76,15 @@ KALKI v1.5.0 is fully built, tested, and validated for Windows, Linux, and macOS
 
 ---
 
-## 🐱 Standalone Desktop Companion Pet (Codex-Style)
+## 🐱 Desktop pet
 
-KALKI features an always-on-screen companion mascot engineered with transparent PyWebView and isolated WebView2 execution (`%APPDATA%\KALKI\pet_webview_profile`):
+A small pixel-art companion that floats over your other windows and shows what KALKI is doing, so you can see when it needs you without keeping the app open. The idea is inspired by Codex pets; the six characters and their art are KALKI's own.
 
-```
-┌─────────────────────────────────────────────────────────┐
-│ Windows Desktop (Any active app / game / code editor)   │
-│                                                         │
-│                                           ┌───────────┐ │
-│                                           │ 💬 "Hey!" │ │
-│                                           │  [🐱 Gobi]│ │
-│                                           │  ♪ ♫ ♬    │ │
-│                                           └───────────┘ │
-└─────────────────────────────────────────────────────────┘
-```
-
-- **Persistent Floating Overlay**: Stays pinned to the bottom-right corner of your screen across all virtual desktops. Completely independent of the main app window.
-- **Instant Unminimize & Foreground**: Clicking the pet triggers native Win32 `AttachThreadInput` and `SetForegroundWindow` to instantly restore KALKI from the system tray or taskbar.
-- **Active Music Detection & Jamming**: Continuously polls Windows Media Controls (SMTC), Apple Music, and Spotify. When audio is playing, the pet enters an energetic dance animation with floating musical note particles (`♪`, `♫`).
-- **6 Distinct Cyber Species**:
-  - 🐱 **Gobi**: Chibi sentient AI kitten with warm filament glow, blushing cheeks, and tempo-synced dancing.
-  - 🐕 **Kittu**: Cybernetic Shiba guard with heuristic alert barks and port sniffing.
-  - 👾 **Byte**: Holographic glitch sprite emitting pixel sparks as LLM tokens stream.
-  - 🐉 **Draco**: Mini cyber dragon breathing warm embers during local GPU inference.
-  - 🔮 **Nova**: Astral focus orb pulsating in 4-7-8 breathing cycles for Pomodoro study sprints.
-  - 🦊 **Kitsu**: Nine-tailed cyber kitsune guarding encrypted DPAPI & AES-256 memory vaults.
-- **Web Audio Synthesizer**: Native in-browser Web Audio synthesized sound effects (purrs, crunch sounds, cheerful chirps, level up chimes) without heavy external assets.
+- **Really see-through**: the pet has its own layered window. There's no box around it, and clicks on empty pixels reach whatever is behind it.
+- **Shows real status**: working, needs your approval, done, listening, enjoying the music, or resting. A request for approval always takes priority.
+- **Click it** to open a small card where you can ask something or open KALKI. **Drag it** to move it.
+- **Six characters**: Gobi (a rice ball), Kittu (a cat), Byte (a robot pup), Draco (a dragon), Kitsu (a two-tailed fox) and Nova (a hover drone).
+- **Respects your settings**: off by default on the desktop, and still images if your system asks for less motion.
 
 ---
 

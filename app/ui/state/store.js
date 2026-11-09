@@ -16,7 +16,7 @@ export const store = {
   today: { tasks: [], reminders: [], events: [], notes: [], mail: null, focus: null, loading: false },
   settings: { values: {}, secretStatus: {}, meta: {}, loading: false, saving: false },
   ui: {
-    railOpen: false, contextOpen: true, theme: 'dark', motion: 'auto',
+    railLabels: true, contextOpen: true, theme: 'dark', motion: 'auto',
     density: 'comfortable', securityEnabled: true, debug: false,
   },
   toasts: [],
@@ -37,7 +37,6 @@ export function applyUi() {
   r.dataset.theme = store.ui.theme || 'dark';
   r.dataset.density = store.ui.density || 'comfortable';
   if (store.ui.motion === 'off') r.dataset.motion = 'off'; else delete r.dataset.motion;
-  if (store.ui.enhancedVisuals) r.dataset.enhanced = 'on'; else r.dataset.enhanced = 'off';
   try { localStorage.setItem(UI_KEY, JSON.stringify(store.ui)); } catch { /* non-fatal */ }
 }
 

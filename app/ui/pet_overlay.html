@@ -3,629 +3,261 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KALKI Desktop Companion</title>
+<title>KALKI Pet</title>
 <style>
   :root {
-    --void: #070809;
-    --inset: #0a0c0e;
-    --base: #0d0f12;
-    --raised: #191d22;
-    --line: #333b44;
-    --text: #e6ebef;
-    --t2: #b3bcc6;
-    --mut: #8a95a1;
-    --fil: #fff4e2;
-    --fil-glow: rgba(255, 244, 226, 0.28);
-    --ok: #4cc061;
-    --aura-color: #fff4e2;
+    --panel: #15181c; --line: #333b44; --text: #e6ebef; --mut: #9aa5b1; --warm: #fff4e2; --warn: #ffb347;
+    --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; background: #15181c; overflow: hidden; font: 400 13px/18px var(--font); color: var(--text); user-select: none; }
+  button, input { font: inherit; color: inherit; }
+  #root { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; gap: 6px; padding: 4px; }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  #card { display: none; width: 100%; flex: 0 1 auto; min-height: 0; flex-direction: column; gap: 10px; padding: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+  body.open #card { display: flex; }
+  .head { display: flex; align-items: center; gap: 8px; }
+  .head strong { font-weight: 600; }
+  #status { color: var(--mut); font-size: 12px; }
+  .spacer { flex: 1; }
+  .icon { width: 26px; height: 26px; border: 0; border-radius: 6px; background: none; color: var(--mut); cursor: pointer; }
+  .icon:hover { background: #262c33; color: var(--text); }
+  #reply { flex: 1; min-height: 0; overflow-y: auto; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+  #reply:empty { display: none; }
+  .row { display: flex; gap: 6px; }
+  .btn { flex: 1; height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; background: #191d22; cursor: pointer; font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .btn:hover { border-color: #59636f; background: #262c33; }
+  .btn.main { background: var(--warm); border-color: var(--warm); color: #17191c; }
+  body[data-state="waiting"] #open { background: var(--warn); border-color: var(--warn); }
+  #ask { flex: 1; min-width: 0; height: 32px; padding: 0 10px; background: #0a0c0e; border: 1px solid var(--line); border-radius: 7px; outline: none; }
+  #ask:focus { border-color: var(--warm); }
+  #reply { max-height: 180px; }
+  /* Desktop app: this page is only the card, and fills its window. */
+  body.native-pet #root { padding: 0; display: block; }
+  body.native-pet #pet { position: absolute; left: -9999px; }
+  body.native-pet #card { display: flex; border: 0; border-radius: 0; }
+  :focus-visible { outline: 2px solid var(--warm); outline-offset: 1px; }
 
-  html, body {
-    width: 100vw;
-    height: 100vh;
-    background: transparent !important;
-    overflow: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", Roboto, sans-serif;
-  }
-
-  #pet-root {
-    position: absolute;
-    bottom: 12px;
-    right: 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 8px;
-    width: 240px;
-    background: transparent !important;
-  }
-
-  /* Speech Bubble */
-  .speech-bubble {
-    width: 236px;
-    background: rgba(13, 15, 18, 0.95);
-    border: 1px solid var(--line);
-    border-top: 2px solid var(--fil);
-    border-radius: 12px;
-    padding: 12px;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8), 0 0 16px rgba(255, 244, 226, 0.08);
-    backdrop-filter: blur(16px);
-    display: none;
-    flex-direction: column;
-    gap: 8px;
-    -webkit-app-region: no-drag;
-    animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  }
-  .speech-bubble.active { display: flex; }
-
-  @keyframes popIn {
-    from { opacity: 0; transform: translateY(8px) scale(0.96); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-  }
-
-  .bubble-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .bubble-title {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--fil);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-family: monospace;
-    letter-spacing: 0.04em;
-  }
-  .bubble-close-btn {
-    background: transparent;
-    border: none;
-    color: var(--mut);
-    cursor: pointer;
-    font-size: 12px;
-    line-height: 1;
-    padding: 2px 4px;
-    border-radius: 4px;
-    transition: all 0.15s;
-  }
-  .bubble-close-btn:hover { color: var(--fil); background: rgba(255, 255, 255, 0.1); }
-
-  .bubble-content {
-    font-size: 11.5px;
-    color: var(--t2);
-    line-height: 1.45;
-    max-height: 100px;
-    overflow-y: auto;
-    word-break: break-word;
-  }
-  .bubble-content strong { color: var(--fil); }
-
-  .quick-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-top: 2px;
-  }
-  .q-chip {
-    font-size: 9.5px;
-    padding: 3px 6px;
-    border-radius: 4px;
-    background: var(--raised);
-    color: var(--t2);
-    border: 1px solid var(--line);
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .q-chip:hover {
-    background: #262c33;
-    color: var(--fil);
-    border-color: #59636f;
-  }
-
-  .bubble-input-row {
-    display: flex;
-    gap: 6px;
-    margin-top: 4px;
-  }
-  .bubble-input {
-    flex: 1;
-    height: 26px;
-    border-radius: 5px;
-    border: 1px solid var(--line);
-    background: var(--void);
-    color: var(--text);
-    font-size: 11px;
-    padding: 0 8px;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-  .bubble-input:focus { border-color: var(--fil); }
-  .bubble-send-btn {
-    height: 26px;
-    padding: 0 8px;
-    background: var(--fil);
-    color: #070809;
-    border: none;
-    border-radius: 5px;
-    font-size: 10.5px;
-    font-weight: 800;
-    cursor: pointer;
-    display: grid;
-    place-items: center;
-    transition: all 0.15s;
-  }
-  .bubble-send-btn:hover { box-shadow: 0 0 8px var(--fil-glow); }
-
-  /* Draggable Character Wrap */
-  .pet-character-wrap {
-    position: relative;
-    width: 120px;
-    height: 120px;
-    display: grid;
-    place-items: center;
-    cursor: grab;
-    -webkit-app-region: drag;
-    background: transparent !important;
-  }
-  .pet-character-wrap:active { cursor: grabbing; }
-
-  /* Aura Ring */
-  .pet-aura {
-    position: absolute;
-    width: 90px;
-    height: 90px;
-    border-radius: 50%;
-    background: radial-gradient(circle, var(--fil-glow) 0%, rgba(255, 244, 226, 0.04) 55%, transparent 75%);
-    opacity: 0.45;
-    animation: auraPulse 3.5s ease-in-out infinite;
-    pointer-events: none;
-    transition: background 0.3s ease;
-  }
-
-  @keyframes auraPulse {
-    0%, 100% { transform: scale(0.92); opacity: 0.3; }
-    50%      { transform: scale(1.12); opacity: 0.6; }
-  }
-
-  /* Pixel Pet Mascot Sprite */
-  .pet-pixel-img {
-    position: relative;
-    z-index: 2;
-    width: 92px;
-    height: 92px;
-    object-fit: contain;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.8));
-    animation: floatBounce 3s ease-in-out infinite;
-    transition: transform 0.2s ease, filter 0.2s ease;
-    pointer-events: auto;
-  }
-  .pet-pixel-img:hover {
-    filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 10px var(--fil-glow));
-  }
-
-  @keyframes floatBounce {
-    0%, 100% { transform: translateY(0px) scale(1); }
-    50%      { transform: translateY(-7px) scale(1.02); }
-  }
-
-  /* Music Dancing State */
-  .is-dancing .pet-pixel-img {
-    animation: petDanceBob 0.45s cubic-bezier(0.2, 0.8, 0.4, 1) infinite alternate !important;
-  }
-  .is-dancing .pet-aura {
-    animation: auraPulse 0.45s ease-in-out infinite alternate !important;
-    opacity: 0.75;
-  }
-
-  @keyframes petDanceBob {
-    0%   { transform: translateY(0px) rotate(-6deg); }
-    100% { transform: translateY(-12px) rotate(6deg); }
-  }
-
-  .floating-note {
-    position: absolute;
-    font-size: 16px;
-    color: var(--fil);
-    pointer-events: none;
-    z-index: 50;
-    text-shadow: 0 0 8px var(--fil-glow);
-    animation: floatNote 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-  }
-
-  @keyframes floatNote {
-    0%   { opacity: 1; transform: translateY(0) scale(0.8) rotate(0deg); }
-    100% { opacity: 0; transform: translateY(-38px) scale(1.3) rotate(20deg); }
-  }
-
-  /* Control Pill Bar under pet */
-  .pet-pill {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(13, 15, 18, 0.92);
-    border: 1px solid var(--line);
-    padding: 3px 8px;
-    border-radius: 12px;
-    backdrop-filter: blur(12px);
-    -webkit-app-region: no-drag;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.5);
-  }
-  .pet-name-label {
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--fil);
-  }
-  .pet-mood-tag {
-    font-size: 8.5px;
-    padding: 1px 5px;
-    border-radius: 3px;
-    background: rgba(76, 192, 97, 0.14);
-    color: var(--ok);
-    border: 1px solid rgba(76, 192, 97, 0.3);
-    font-family: monospace;
-  }
-  .btn-mini {
-    background: transparent;
-    border: none;
-    color: var(--mut);
-    cursor: pointer;
-    font-size: 11px;
-    padding: 1px 3px;
-    border-radius: 3px;
-    transition: all 0.15s;
-  }
-  .btn-mini:hover { color: var(--fil); background: rgba(255, 255, 255, 0.1); }
+  #pet { position: relative; width: 96px; height: 96px; flex: none; border: 0; background: none; cursor: pointer; }
+  #sprite { width: 96px; height: 96px; image-rendering: pixelated; display: block; }
 </style>
 </head>
-<body>
-
-<div id="pet-root">
-  <!-- Interactive speech bubble -->
-  <div class="speech-bubble" id="speech-bubble">
-    <div class="bubble-header">
-      <span class="bubble-title">
-        <span id="bubble-species-icon">🍙</span>
-        <span id="bubble-species-name">GOBI // COMPANION</span>
-      </span>
-      <button class="bubble-close-btn" id="bubble-close">✕</button>
+<body data-state="idle">
+<div id="root">
+  <section id="card" aria-label="KALKI pet">
+    <div class="head">
+      <div><strong id="name">Gobi</strong><br><span id="status" role="status">Ready</span></div>
+      <span class="spacer"></span>
+      <button class="icon" id="next" type="button" title="Change pet" aria-label="Change pet">&#8635;</button>
+      <button class="icon" id="sound" type="button" title="Sound" aria-label="Sound" aria-pressed="false">&#9834;</button>
+      <button class="icon" id="hide" type="button" title="Close the pet" aria-label="Close the pet">&#10005;</button>
     </div>
-    
-    <div class="bubble-content" id="bubble-text">
-      Hey! I'm Gobi, your sovereign AI desktop companion. Click me anytime to restore KALKI or type a command!
-    </div>
-
-    <div class="quick-chips">
-      <span class="q-chip" id="chip-open-kalki">⚡ Open KALKI</span>
-      <span class="q-chip" data-cmd="system status">Health Check</span>
-      <span class="q-chip" data-cmd="what is on my schedule today?">Today's Agenda</span>
-      <span class="q-chip" data-cmd="lock screen">Lock Screen</span>
-    </div>
-
-    <div class="bubble-input-row">
-      <input type="text" class="bubble-input" id="bubble-inp" placeholder="Ask KALKI or type command..." />
-      <button class="bubble-send-btn" id="bubble-send">Send</button>
-    </div>
-  </div>
-
-  <!-- Draggable Character Wrap -->
-  <div class="pet-character-wrap" id="pet-wrap" title="Click to interact · Drag to move">
-    <div class="pet-aura" id="pet-aura"></div>
-    <img id="pet-sprite" src="assets/pets/gobi.png" class="pet-pixel-img" alt="KALKI Companion Pet" />
-  </div>
-
-  <!-- Pill bar under pet -->
-  <div class="pet-pill">
-    <span class="pet-name-label" id="pill-name">Gobi</span>
-    <span class="pet-mood-tag" id="pill-mood">Ready</span>
-    <button class="btn-mini" id="btn-next-pet" title="Switch Mascot Companion">🔄</button>
-    <button class="btn-mini" id="btn-pet-sound" title="Toggle Sound FX">🔊</button>
-    <button class="btn-mini" id="btn-pet-wake" title="Restore KALKI Main Window">⚡</button>
-    <button class="btn-mini" id="btn-pet-close" title="Close Companion Overlay">✕</button>
-  </div>
+    <div id="reply"></div>
+    <div class="row"><button class="btn main" id="open" type="button">Open KALKI</button></div>
+    <form class="row" id="form"><input id="ask" type="text" placeholder="Ask KALKI" aria-label="Ask KALKI" autocomplete="off"></form>
+  </section>
+  <button id="pet" type="button" title="Click to open. Drag to move.">
+    <canvas id="sprite"></canvas>
+  </button>
 </div>
 
+<script src="pet_sprites.js" onerror="this.onerror=null;var s=document.createElement('script');s.src='/ui/pet_sprites.js';s.onload=function(){window.__petStart&&window.__petStart()};document.head.appendChild(s)"></script>
 <script>
-(function() {
+(function () {
   'use strict';
+  const POLL_MS = 1500;
+  const DONE_MS = 4000;
+  const SIZE_CLOSED = [104, 104];
+  const SIZE_OPEN = [280, 330];
+  const $ = (id) => document.getElementById(id);
 
-  const SPECIES_LIST = ['gobi', 'kittu', 'byte', 'draco', 'kitsu', 'nova'];
-  const SPECIES_INFO = {
-    gobi: { title: 'Gobi', icon: '🍙', aura: '#fff4e2', soundTone: 520, quote: "Gobi is standing guard! Screen protected, Sir." },
-    kittu: { title: 'Kittu', icon: '🐱', aura: '#ff76a5', soundTone: 680, quote: "*purrrrr* Kittu is purring happily on your desktop!" },
-    byte: { title: 'Byte', icon: '🐶', aura: '#00e5ff', soundTone: 440, quote: "*woof woof!* Byte is ready to fetch your commands!" },
-    draco: { title: 'Draco', icon: '🐲', aura: '#e08c33', soundTone: 380, quote: "Draco is breathing warm embers. Core systems nominal!" },
-    kitsu: { title: 'Kitsu', icon: '🦊', aura: '#c084fc', soundTone: 600, quote: "Kitsu's twin tails swish gracefully in the desktop breeze." },
-    nova: { title: 'Nova', icon: '🤖', aura: '#4cc061', soundTone: 760, quote: "Nova thrusters steady at 100%. Optic sensor locked on." }
-  };
+  function start() {
+    const Pets = window.KalkiPets;
+    if (!Pets || start.done) return;
+    start.done = true;
 
-  // State
-  let petState = {
-    species: 'gobi',
-    name: 'Gobi',
-    sound: true,
-    enabled: true
-  };
+    const pet = { species: 'gobi', name: 'Gobi', sound: false };
+    const player = Pets.createPlayer($('sprite'), { species: pet.species, fps: 5, keepRunning: true });
+    let view = { pending: 0, working: false, listening: false, music: false };
+    let lastActive = Date.now();
+    let doneUntil = 0;
+    let wasWorking = false;
+    let reachable = true;
+    let shown = null;
+    let audio = null;
 
-  let isDancing = false;
-  let audioCtx = null;
+    const native = () => window.pywebview && window.pywebview.api;
 
-  // DOM Elements
-  const petWrap = document.getElementById('pet-wrap');
-  const petSprite = document.getElementById('pet-sprite');
-  const petAura = document.getElementById('pet-aura');
-  const speechBubble = document.getElementById('speech-bubble');
-  const bubbleText = document.getElementById('bubble-text');
-  const bubbleSpeciesName = document.getElementById('bubble-species-name');
-  const bubbleSpeciesIcon = document.getElementById('bubble-species-icon');
-  const bubbleInp = document.getElementById('bubble-inp');
-  const bubbleSend = document.getElementById('bubble-send');
-  const bubbleClose = document.getElementById('bubble-close');
-  const pillName = document.getElementById('pill-name');
-  const pillMood = document.getElementById('pill-mood');
-  const btnNext = document.getElementById('btn-next-pet');
-  const btnSound = document.getElementById('btn-pet-sound');
-  const btnWake = document.getElementById('btn-pet-wake');
-  const btnClose = document.getElementById('btn-pet-close');
-  const chipOpen = document.getElementById('chip-open-kalki');
+    function chirp(freq) {
+      if (!pet.sound) return;
+      try {
+        audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audio.createOscillator();
+        const gain = audio.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.06, audio.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.14);
+        osc.connect(gain);
+        gain.connect(audio.destination);
+        osc.start();
+        osc.stop(audio.currentTime + 0.14);
+      } catch (e) { /* Sound is a nicety. */ }
+    }
 
-  // Sound Synth
-  function playBeep(freq = 520, duration = 0.12) {
-    if (!petState.sound) return;
-    try {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + duration);
-    } catch (e) {}
-  }
-
-  // Update UI appearance
-  function applySpecies(speciesId, customName) {
-    let cleanId = (speciesId || 'gobi').toLowerCase();
-    // Support legacy names
-    if (cleanId === 'cat') cleanId = 'kittu';
-    if (cleanId === 'chibi') cleanId = 'gobi';
-    if (cleanId === 'dog') cleanId = 'byte';
-    if (cleanId === 'dragon') cleanId = 'draco';
-    if (cleanId === 'drone') cleanId = 'nova';
-    if (cleanId === 'fox') cleanId = 'kitsu';
-
-    if (!SPECIES_INFO[cleanId]) cleanId = 'gobi';
-
-    const info = SPECIES_INFO[cleanId];
-    petState.species = cleanId;
-    if (customName) petState.name = customName;
-
-    // Resolve sprite path
-    const src1 = `assets/pets/${cleanId}.png`;
-    petSprite.src = src1;
-    petSprite.onerror = () => {
-      petSprite.src = `/ui/assets/pets/${cleanId}.png`;
-    };
-
-    // Update labels and aura
-    const displayName = customName || info.title;
-    pillName.textContent = displayName;
-    bubbleSpeciesName.textContent = `${displayName.toUpperCase()} // COMPANION`;
-    bubbleSpeciesIcon.textContent = info.icon;
-    document.documentElement.style.setProperty('--fil-glow', `${info.aura}44`);
-    petAura.style.background = `radial-gradient(circle, ${info.aura}66 0%, ${info.aura}0a 55%, transparent 75%)`;
-  }
-
-  // Sync state from server or native Python API
-  async function syncState() {
-    try {
-      let state = null;
-      if (window.pywebview?.api?.get_pet_state) {
-        state = await window.pywebview.api.get_pet_state();
-      } else {
-        const res = await fetch('/api/pet');
-        if (res.ok) state = await res.json();
-      }
-      if (state && state.species) {
-        if (state.species !== petState.species || (state.name && state.name !== petState.name)) {
-          applySpecies(state.species, state.name);
-        }
-        if (typeof state.sound === 'boolean') {
-          petState.sound = state.sound;
-          btnSound.textContent = state.sound ? '🔊' : '🔇';
-        }
-      }
-    } catch (e) {}
-  }
-
-  // Persist state
-  async function persistState() {
-    try {
-      if (window.pywebview?.api?.save_pet_state) {
-        await window.pywebview.api.save_pet_state(petState);
-      }
-    } catch (e) {}
-    try {
-      await fetch('/api/pet', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(petState)
+    function paint() {
+      const state = Pets.resolveState({
+        pending: view.pending,
+        working: view.working,
+        listening: view.listening,
+        doneRecently: Date.now() < doneUntil,
+        music: view.music,
+        idleMs: Date.now() - lastActive,
       });
-    } catch (e) {}
-  }
-
-  // Cycle species
-  async function cycleNextSpecies() {
-    const curIdx = SPECIES_LIST.indexOf(petState.species);
-    const nextIdx = (curIdx + 1) % SPECIES_LIST.length;
-    const nextSpecies = SPECIES_LIST[nextIdx];
-    petState.name = SPECIES_INFO[nextSpecies].title;
-    applySpecies(nextSpecies, petState.name);
-    playBeep(SPECIES_INFO[nextSpecies].soundTone, 0.15);
-    bubbleText.textContent = SPECIES_INFO[nextSpecies].quote;
-    speechBubble.classList.add('active');
-    await persistState();
-  }
-
-  // Floating note particles
-  function spawnNote() {
-    const notes = ['♪', '♫', '♬', '♩'];
-    const el = document.createElement('div');
-    el.className = 'floating-note';
-    el.textContent = notes[Math.floor(Math.random() * notes.length)];
-    const rx = Math.random() * 40 - 20;
-    el.style.left = `calc(50% + ${rx}px)`;
-    el.style.top = '10px';
-    petWrap.appendChild(el);
-    setTimeout(() => el.remove(), 1200);
-  }
-
-  // Music Poller
-  async function checkMusic() {
-    try {
-      let state = null;
-      if (window.pywebview?.api?.get_music_state) {
-        state = await window.pywebview.api.get_music_state();
-      } else {
-        const res = await fetch('/api/media/now');
-        if (res.ok) state = await res.json();
+      const label = reachable ? Pets.LABELS[state] : "KALKI isn't running";
+      if (state !== shown) {
+        if (state === 'waiting') chirp(660);
+        if (state === 'done') chirp(880);
+        shown = state;
       }
+      document.body.dataset.state = state;
+      player.set({ species: pet.species, state });
+      $('name').textContent = pet.name;
+      $('status').textContent = label;
+      $('pet').setAttribute('aria-label', pet.name + ': ' + label);
+      $('open').textContent = state === 'waiting' ? 'Review in KALKI' : 'Open KALKI';
+      $('sound').setAttribute('aria-pressed', String(!!pet.sound));
+      $('sound').style.color = pet.sound ? 'var(--warm)' : '';
+    }
 
-      const playing = state && (state.status === 'playing' || state.state === 'playing');
-      if (playing !== isDancing) {
-        isDancing = playing;
-        petWrap.classList.toggle('is-dancing', isDancing);
-        pillMood.textContent = isDancing ? 'Jamming' : 'Ready';
-        pillMood.style.color = isDancing ? '#fff4e2' : 'var(--ok)';
+    async function readStatus() {
+      if (native() && native().get_status) return native().get_status();
+      const res = await fetch('/api/pet/status');
+      if (!res.ok) throw new Error('status ' + res.status);
+      return res.json();
+    }
+
+    async function poll() {
+      try {
+        const data = await readStatus();
+        if (!data || data.ok === false) throw new Error('unreachable');
+        reachable = true;
+        view = { pending: data.pending || 0, working: !!data.working, listening: !!data.listening, music: !!data.music };
+        if (wasWorking && !view.working) doneUntil = Date.now() + DONE_MS;
+        if (view.working) lastActive = Date.now();
+        wasWorking = view.working;
+        if (data.pet) {
+          pet.species = Pets.normalize(data.pet.species);
+          pet.name = data.pet.name || Pets.SPECIES[pet.species].name;
+          if (typeof data.pet.sound === 'boolean') pet.sound = data.pet.sound;
+        }
+      } catch (e) {
+        reachable = false;
+        view = { pending: 0, working: false, listening: false, music: false };
       }
-      if (isDancing && Math.random() > 0.4) {
-        spawnNote();
+      paint();
+    }
+
+    async function persist() {
+      const body = { species: pet.species, name: pet.name, sound: pet.sound };
+      if (native() && native().save_pet) { await native().save_pet(body); return; }
+      await fetch('/api/pet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    }
+
+    /* In the desktop app the pet lives in its own see-through window, and this page is
+       only the card. Each frame is sent across as it's drawn. */
+    let lastFrame = '';
+    let sending = false;
+    async function sendFrame() {
+      if (!native() || !native().show_frame || sending) return;
+      const canvas = $('sprite');
+      const pixels = canvas.getContext('2d').getImageData(0, 0, Pets.SIZE, Pets.SIZE).data;
+      let text = '';
+      for (let i = 0; i < pixels.length; i += 1) text += String.fromCharCode(pixels[i]);
+      const frame = btoa(text);
+      if (frame === lastFrame) return;
+      lastFrame = frame;
+      sending = true;
+      try { await native().show_frame(frame); } finally { sending = false; }
+    }
+
+    let isOpen = false;
+    function cardHeight() { return Math.ceil($('card').scrollHeight); }
+
+    async function setOpen(open) {
+      isOpen = open;
+      document.body.classList.toggle('open', open);
+      if (native() && native().place_card) await native().place_card(open, cardHeight());
+      if (open) setTimeout(() => $('ask').focus(), 60);
+    }
+    window.__petClicked = () => { lastActive = Date.now(); setOpen(!isOpen); paint(); };
+
+    async function connectNative() {
+      if (native() && native().has_native_pet && await native().has_native_pet()) {
+        document.body.classList.add('native-pet');
+        new ResizeObserver(() => { if (isOpen) native().place_card(true, cardHeight()); }).observe($('card'));
       }
-    } catch (e) {}
-  }
+      lastFrame = '';
+      sendFrame();
+      poll();
+    }
 
-  // Execute quick command or query
-  async function sendCommand(cmd) {
-    if (!cmd) return;
-    bubbleText.textContent = `Working on: "${cmd}"...`;
-    speechBubble.classList.add('active');
-    playBeep(520, 0.1);
-    try {
-      let data;
-      if (window.pywebview?.api?.send_command) {
-        data = await window.pywebview.api.send_command(cmd);
-      } else {
-        const res = await fetch('/api/command', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cmd })
-        });
-        data = await res.json();
+    async function openKalki() {
+      if (native() && native().open_main_app) native().open_main_app();
+      else window.open('/', '_blank');
+      setOpen(false);
+    }
+
+    async function ask(text) {
+      $('reply').textContent = 'Working on it…';
+      try {
+        let data;
+        if (native() && native().send_command) {
+          data = await native().send_command(text);
+        } else {
+          const res = await fetch('/api/command', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cmd: text }) });
+          data = await res.json();
+        }
+        $('reply').textContent = data.reply || data.output || data.message || 'Done.';
+      } catch (e) {
+        $('reply').textContent = "KALKI isn't responding. Open it and try again.";
       }
-      bubbleText.textContent = data.reply || data.output || data.message || "Command executed, Sir.";
-      playBeep(640, 0.15);
-    } catch (e) {
-      bubbleText.textContent = `Offline or busy. Click ⚡ to restore KALKI.`;
     }
-  }
 
-  // Event Listeners
-  petWrap.addEventListener('click', (e) => {
-    // Avoid double trigger if clicking child
-    playBeep(SPECIES_INFO[petState.species]?.soundTone || 520, 0.1);
-    speechBubble.classList.toggle('active');
-    if (speechBubble.classList.contains('active')) {
-      bubbleText.textContent = SPECIES_INFO[petState.species]?.quote || "Standing guard, Sir.";
-    }
-  });
-
-  bubbleClose.addEventListener('click', () => {
-    speechBubble.classList.remove('active');
-  });
-
-  btnNext.addEventListener('click', (e) => {
-    e.stopPropagation();
-    cycleNextSpecies();
-  });
-
-  btnSound.addEventListener('click', (e) => {
-    e.stopPropagation();
-    petState.sound = !petState.sound;
-    btnSound.textContent = petState.sound ? '🔊' : '🔇';
-    playBeep(480, 0.1);
-    persistState();
-  });
-
-  btnWake.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (window.pywebview?.api?.open_main_app) {
-      window.pywebview.api.open_main_app();
-    } else {
-      fetch('/api/wake', { method: 'POST', body: '{}' }).catch(() => {});
-    }
-    speechBubble.classList.remove('active');
-  });
-
-  chipOpen.addEventListener('click', () => {
-    if (window.pywebview?.api?.open_main_app) {
-      window.pywebview.api.open_main_app();
-    } else {
-      fetch('/api/wake', { method: 'POST', body: '{}' }).catch(() => {});
-    }
-  });
-
-  btnClose.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (window.pywebview?.api?.quit_pet) {
-      window.pywebview.api.quit_pet();
-    } else {
-      window.close();
-    }
-  });
-
-  // Quick Chips
-  document.querySelectorAll('.q-chip[data-cmd]').forEach(chip => {
-    chip.addEventListener('click', () => {
-      const cmd = chip.getAttribute('data-cmd');
-      sendCommand(cmd);
+    $('pet').addEventListener('click', () => window.__petClicked());
+    $('open').addEventListener('click', openKalki);
+    $('next').addEventListener('click', () => {
+      const wasDefaultName = pet.name === Pets.SPECIES[pet.species].name;
+      pet.species = Pets.IDS[(Pets.IDS.indexOf(pet.species) + 1) % Pets.IDS.length];
+      if (wasDefaultName) pet.name = Pets.SPECIES[pet.species].name;
+      chirp(Pets.SPECIES[pet.species].tone);
+      paint();
+      persist().catch(() => {});
     });
-  });
+    $('sound').addEventListener('click', () => { pet.sound = !pet.sound; paint(); chirp(520); persist().catch(() => {}); });
+    $('hide').addEventListener('click', () => {
+      if (native() && native().quit_pet) native().quit_pet();
+      else window.close();
+    });
+    $('form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = $('ask').value.trim();
+      if (!text) return;
+      $('ask').value = '';
+      ask(text);
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
 
-  // Input Send
-  bubbleSend.addEventListener('click', () => {
-    const val = bubbleInp.value.trim();
-    if (val) {
-      sendCommand(val);
-      bubbleInp.value = '';
-    }
-  });
-  bubbleInp.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      const val = bubbleInp.value.trim();
-      if (val) {
-        sendCommand(val);
-        bubbleInp.value = '';
-      }
-    }
-  });
+    player.onFrame(sendFrame);
+    window.addEventListener('pywebviewready', connectNative);
+    if (native()) connectNative();
+    paint();
+    poll();
+    setInterval(poll, POLL_MS);
+  }
 
-  // Initial Setup
-  applySpecies('gobi', 'Gobi');
-  syncState();
-
-  // Polling Intervals
-  setInterval(syncState, 1000);
-  setInterval(checkMusic, 800);
-
+  window.__petStart = start;
+  start();
 })();
 </script>
 </body>

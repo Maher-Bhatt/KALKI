@@ -137,7 +137,7 @@ function formatTime(ts) {
 }
 
 export function oversightView() {
-  const main = h('div.pad', { 'aria-label': 'Oversight' });
+  const main = h('div.pad', { 'aria-label': 'Activity' });
   const aside = h('div', { style: { display: 'contents' } });
 
   main.addEventListener('kalki:view-enter', startPolling);
@@ -150,7 +150,7 @@ export function oversightView() {
       return;
     }
     if (data.error && !data.alerts.length && !data.activityList.length && !data.approvalsList.length) {
-      mount(main, errorState({ title: "Oversight didn't load", message: data.error.message, detail: data.error.detail, onRetry: loadOversight }));
+      mount(main, errorState({ title: "Activity didn't load", message: data.error.message, detail: data.error.detail, onRetry: loadOversight }));
       mount(aside);
       return;
     }
@@ -158,7 +158,7 @@ export function oversightView() {
     mount(main,
       h('div.hd', null,
         h('div', null,
-          h('h1', null, 'Oversight'),
+          h('h1', { id: 'view-title', tabindex: '-1' }, 'Activity'),
           h('div.sub', null, 'KALKI watches in the background and tells you when something needs you.')
         ),
         h('button.btn.pri', { onClick: addSite }, h('i', { 'data-i': 'plus' }), 'Watch a site')

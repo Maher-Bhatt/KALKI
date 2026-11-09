@@ -1,10 +1,9 @@
-/** The application shell: title strip, navigation rail, work area, context
- *  panel, toasts and the voice overlay.
+/** The application shell: top bar, navigation rail, work area, context panel, toasts
+ *  and the voice overlay.
  *
- *  The rail holds at most five destinations. Depth lives in the command
- *  palette, not in a wall of icons. The presence mark sits at the top of the
- *  rail and is both the KALKI logotype and the state indicator — it never
- *  occupies the centre of the screen. */
+ *  The rail names every place in words and can be collapsed. The top bar holds only
+ *  search and one status button, and everything else that used to sit there is in that
+ *  button's menu. */
 
 import { h, mount } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
@@ -18,14 +17,16 @@ import { system, desktop, approvals } from '../api/endpoints.js';
 import { refreshStatus } from '../state/status.js';
 import { openDiagnostics } from './diagnostics.js';
 import { openPalette } from './palette.js';
+import { openMenu } from '../components/menu.js';
+import { go } from './router.js';
 
 const DESTINATIONS = [
   { id: 'ask', label: 'Ask', icon: 'ask' },
   { id: 'today', label: 'Today', icon: 'today' },
-  { id: 'memory', label: 'Memory', icon: 'memory' },
-  { id: 'workbench', label: 'Workbench', icon: 'workbench' },
-  { id: 'security', label: 'Antivirus & Cyber', icon: 'security' },
-  { id: 'oversight', label: 'Oversight', icon: 'alert' },
+  { id: 'memory', label: 'Library', icon: 'memory' },
+  { id: 'workbench', label: 'Studio', icon: 'workbench' },
+  { id: 'security', label: 'Security', icon: 'security' },
+  { id: 'oversight', label: 'Activity', icon: 'alert' },
 ];
 
 let railPresence = null;
@@ -34,6 +35,7 @@ let voiceDialog = null;
 
 export function buildShell(root) {
   railPresence = createPresence();
+  let shellApi = null;
 
   const railNav = h('nav.rail', { 'aria-label': 'Destinations' });
   const viewSlot = h('main', { class: 'on' });
@@ -46,28 +48,27 @@ export function buildShell(root) {
   const palBtn = h('button.pal', { type: 'button', onClick: () => openPalette() }, 
     icon('search', 14), 'Search or run a command', h('kbd', null, keyLabel('mod+k')));
 
-  const micChip = h('span.chip', { id: 'mic' }, 'Voice status unknown');
-  const modeBadge = h('span.chip.desktop-badge', null, 'Browser');
+  const statusDot = h('span.status-dot');
+  const statusText = h('span');
+  const statusBtn = h('button.status-btn', {
+    type: 'button',
+    'aria-haspopup': 'menu',
+    'aria-expanded': 'false',
+    onClick: () => openStatusMenu(),
+  }, statusDot, statusText, icon('chevronD', 12));
+
+  const railBtn = h('button.ib', {
+    type: 'button',
+    'aria-label': 'Show or hide navigation',
+    title: `Show or hide navigation (${keyLabel('mod+b')})`,
+    onClick: () => shellApi.toggleRail(),
+  }, icon('panel', 16));
+
   const titlebar = h('div.title.pywebview-drag-region', null,
-    h('div.title-brand', null,
-      h('span.dot.active', { title: 'Desktop Sovereign Engine Linked' }),
-      h('span.badge-core', null, 'DESKTOP OS CORE')
-    ),
+    railBtn,
+    h('div.title-brand', null, 'KALKI'),
     palBtn,
-    h('div.title-actions', null,
-      micChip,
-      modeBadge,
-      h('button.win-btn.pet-btn', {
-        type: 'button',
-        title: 'Toggle Desktop Companion Pet Mascot',
-        onClick: () => desktop.togglePet().then(() => ok('Desktop Companion Pet toggled'))
-      }, icon('pet', 13), 'Pet'),
-      h('button.win-btn', {
-        type: 'button',
-        title: 'Pin Always-on-Top',
-        onClick: () => desktop.togglePin().then(r => ok(r?.pinned ? 'Window Pinned on Top' : 'Window Unpinned'))
-      }, icon('pin', 13))
-    )
+    statusBtn,
   );
 
   const bodyEl = h('div.body', null, railNav, viewSlot, contextEl);
@@ -81,51 +82,79 @@ export function buildShell(root) {
   function paintRail(force = false) {
     const routeName = store.route?.name || '';
     const listenerState = store.status?.listenerState || 'idle';
-    const security = !!store.ui?.securityEnabled;
-    const railSig = `${routeName}|${listenerState}|${security}`;
+    const open = store.ui.railLabels !== false;
+    const waiting = store.status?.pendingApprovals || 0;
+    const railSig = `${routeName}|${listenerState}|${open}|${waiting}`;
 
     if (!force && railSig === lastRailSig) return;
     lastRailSig = railSig;
 
     const active = document.activeElement;
-    const hadFocusInRail = !!(active && railNav.contains(active));
-    const activeTitle = hadFocusInRail ? active.getAttribute('title') : null;
-    const activeAriaCurrent = hadFocusInRail ? active.getAttribute('aria-current') : null;
-    const activeIndex = hadFocusInRail ? Array.from(railNav.querySelectorAll('button, .mark')).indexOf(active) : -1;
+    const focusedPlace = active && railNav.contains(active) ? active.dataset.place : null;
+    railNav.dataset.open = String(open);
 
-    const dests = [...DESTINATIONS];
-
-    // In filament, the icon function isn't used directly for the mark, but we use the DOM we parsed.
-    const markEl = h('div.mark', { title: 'KALKI — ready', dataset: { s: listenerState } }, h('b', null));
+    const place = (id, label, iconName, count = 0) => h('button.nav', {
+      type: 'button',
+      dataset: { place: id },
+      title: open ? null : label,
+      'aria-label': count ? `${label}, ${count} waiting` : label,
+      'aria-current': routeName === id ? 'page' : null,
+      onClick: () => go(id),
+    }, icon(iconName, 17), h('span.nav-label', null, label), count ? h('span.nav-count', null, String(count)) : null);
 
     mount(railNav,
-      markEl,
-      ...dests.map((d) => h('button.nav', {
-        type: 'button',
-        'aria-current': store.route.name === d.id ? 'page' : null,
-        title: d.label,
-        onClick: () => location.hash = `#/${d.id}`
-      }, icon(d.icon, 16))),
+      ...DESTINATIONS.map((d) => place(d.id, d.label, d.icon, d.id === 'oversight' ? waiting : 0)),
       h('div.sp', null),
-      h('button.nav', {
-        type: 'button', title: 'Settings',
-        'aria-current': store.route.name === 'settings' ? 'page' : null,
-        onClick: () => location.hash = `#/settings`
-      }, icon('settings', 16))
+      place('settings', 'Settings', 'settings'),
     );
 
-    if (hadFocusInRail) {
-      if (activeTitle) {
-        const btn = railNav.querySelector(`button[title="${activeTitle}"]`);
-        if (btn) btn.focus();
-      } else if (activeAriaCurrent) {
-        const btn = railNav.querySelector(`button[aria-current="${activeAriaCurrent}"]`);
-        if (btn) btn.focus();
-      } else if (activeIndex >= 0) {
-        const items = railNav.querySelectorAll('button, .mark');
-        if (items[activeIndex]) items[activeIndex].focus();
-      }
-    }
+    if (focusedPlace) railNav.querySelector(`[data-place="${focusedPlace}"]`)?.focus();
+  }
+
+  /* ── The status button ────────────────────────────────────────────── */
+  function overallStatus() {
+    const st = store.status;
+    if (!store.online) return { tone: 'dng', text: 'Offline', detail: "KALKI's local service isn't responding." };
+    if (st?.storeError) return { tone: 'dng', text: 'Problem', detail: "Your tasks, notes and memories can't be opened." };
+    const waiting = st?.pendingApprovals || 0;
+    if (waiting) return { tone: 'warn', text: waiting === 1 ? '1 approval' : `${waiting} approvals`, detail: 'KALKI is waiting for your decision.' };
+    if (store.conv?.streaming || st?.listenerState === 'thinking') return { tone: 'ok', text: 'Working', detail: 'KALKI is working on your request.' };
+    return { tone: 'ok', text: 'Ready', detail: 'Everything is running.' };
+  }
+
+  function voiceLine() {
+    const st = store.status;
+    if (!st?.listenerOnline) return 'Voice is off';
+    if (st.listenerPaused || st.listenerMicMuted || st.listenerState === 'asleep') return 'Microphone is off';
+    if (st.listenerState === 'listening') return 'Microphone is listening';
+    return 'Microphone is ready';
+  }
+
+  async function togglePet() {
+    const r = await desktop.togglePet();
+    if (r && r.ok === false) err(r.error || "The desktop pet couldn't be changed");
+    else ok((r?.data?.running ?? r?.running) === false ? 'The desktop pet is closed' : 'The pet is on your desktop');
+  }
+
+  async function togglePin() {
+    const r = await desktop.togglePin();
+    ok(r?.pinned ? 'KALKI stays on top' : 'KALKI no longer stays on top');
+  }
+
+  function openStatusMenu() {
+    const now = overallStatus();
+    const isDesktop = !!window.pywebview;
+    openMenu(statusBtn, [
+      { info: now.text, detail: now.detail },
+      (store.status?.pendingApprovals || 0) > 0 ? { label: 'Review approvals', icon: 'alert', run: () => go('oversight') } : null,
+      'rule',
+      { label: voiceLine(), icon: 'mic', hint: keyLabel('mod+shift+v'), run: () => window.dispatchEvent(new CustomEvent('kalki:voice-toggle')) },
+      { label: 'Show or hide the desktop pet', icon: 'pet', run: togglePet },
+      isDesktop ? { label: 'Keep KALKI on top', icon: 'pin', run: togglePin } : null,
+      'rule',
+      { label: 'Diagnostics', icon: 'info', hint: keyLabel('mod+shift+d'), run: () => openDiagnostics() },
+      { label: 'Settings', icon: 'settings', run: () => go('settings') },
+    ]);
   }
 
   /* ── Approvals, available from every screen ───────────────────────── */
@@ -157,19 +186,19 @@ export function buildShell(root) {
     const up = store.status?.updateProgress;
     if (!store.online) {
       banner.hidden = false;
-      banner.className = 'card dng';
+      banner.className = 'notice'; banner.dataset.tone = 'dng';
       mount(banner, h('span', null, "KALKI's local service isn't responding."));
       return;
     }
     if (up?.active) {
       banner.hidden = false;
-      banner.className = 'card warn';
+      banner.className = 'notice'; banner.dataset.tone = 'warn';
       mount(banner, h('span', null, `Updating KALKI — ${up.pct || 0}%`));
       return;
     }
     if (store.status?.storeError) {
       banner.hidden = false;
-      banner.className = 'card dng';
+      banner.className = 'notice'; banner.dataset.tone = 'dng';
       mount(banner, h('span', null, `Your tasks, notes and memories can't be opened: ${store.status.storeError}`));
       return;
     }
@@ -181,11 +210,11 @@ export function buildShell(root) {
     const a = waitingApprovals[0];
     if (waiting && a && !location.hash.startsWith('#/oversight')) {
       banner.hidden = false;
-      banner.className = 'card warn';
-      mount(banner, h('div.row.sb', { style: { gap: '12px', alignItems: 'flex-start' } },
-        h('div', { style: { flex: '1', minWidth: 0 } },
+      banner.className = 'notice'; banner.dataset.tone = 'warn';
+      mount(banner, h('div.row.sb', { style: { gap: '12px', alignItems: 'flex-start', flex: '1', minWidth: 0 } },
+        h('div.notice-body', null,
           h('strong', null, waiting === 1 ? 'KALKI needs your approval' : `KALKI needs your approval (1 of ${waiting})`),
-          h('div.sm', { style: { whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: '160px', overflowY: 'auto' } }, a.description)),
+          h('div.sm.notice-detail', null, a.description)),
         h('div.row.g8', null,
           h('button.btn.btn-sm.btn-ghost', { type: 'button', onClick: () => decideApproval(a.id, 'deny') }, 'Deny'),
           h('button.btn.btn-sm.btn-primary', { type: 'button', onClick: () => decideApproval(a.id, 'approve') }, 'Approve'))));
@@ -194,7 +223,7 @@ export function buildShell(root) {
     const version = store.status?.updateAvailable;
     if (version) {
       banner.hidden = false;
-      banner.className = 'card';
+      banner.className = 'notice'; delete banner.dataset.tone;
       mount(banner, h('div.row.sb', null,
         h('span', null, `KALKI ${version} is available.`),
         h('button.btn.btn-sm.btn-primary', { type: 'button', onClick: () => system.installUpdate() }, 'Install update')));
@@ -253,30 +282,17 @@ export function buildShell(root) {
     paintRail();
     paintBanner();
     paintToasts();
-    modeBadge.textContent = window.pywebview ? 'Desktop app' : 'Browser';
-    const st = store.status;
-    if (st) {
-      if (!st.listenerOnline) {
-        micChip.className = 'chip';
-        micChip.textContent = 'Voice off';
-      } else if (st.listenerPaused || st.listenerMicMuted || st.listenerState === 'asleep') {
-        micChip.className = 'chip';
-        micChip.textContent = 'Mic off';
-      } else if (st.listenerState === 'listening') {
-        micChip.className = 'chip warn';
-        micChip.textContent = 'Mic live';
-      } else {
-        micChip.className = 'chip ok';
-        micChip.textContent = 'Mic ready';
-      }
-    }
+    const now = overallStatus();
+    statusDot.dataset.tone = now.tone;
+    statusText.textContent = now.text;
+    statusBtn.title = now.detail;
     overlayPresence?.update?.(store.voice.state, { ttsTrouble: store.voice.ttsTrouble });
     if (voiceDialog) voiceDialog.caption.textContent = presenceLabel(store.voice.state);
   }
 
   render();
 
-  return {
+  shellApi = {
     railNav,
     banner,
     viewSlot,
@@ -287,6 +303,7 @@ export function buildShell(root) {
     paintRail,
     render,
     openVoiceOverlay,
-    toggleRail() { store.ui.railOpen = !store.ui.railOpen; applyUi(); paintRail(true); },
+    toggleRail() { store.ui.railLabels = store.ui.railLabels === false; applyUi(); paintRail(true); },
   };
+  return shellApi;
 }
