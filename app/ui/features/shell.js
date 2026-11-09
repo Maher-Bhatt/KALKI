@@ -47,7 +47,8 @@ export function buildShell(root) {
   const palBtn = h('button.pal', { type: 'button', onClick: () => openPalette() }, 
     icon('search', 14), 'Search or run a command', h('kbd', null, keyLabel('mod+k')));
 
-  const micChip = h('span.chip.ok', { id: 'mic' }, 'Mic ready');
+  const micChip = h('span.chip', { id: 'mic' }, 'Voice status unknown');
+  const modeBadge = h('span.chip.desktop-badge', null, 'Browser');
   const titlebar = h('div.title.pywebview-drag-region', null,
     h('div.title-brand', null,
       h('span.dot.active', { title: 'Desktop Sovereign Engine Linked' }),
@@ -56,7 +57,7 @@ export function buildShell(root) {
     palBtn,
     h('div.title-actions', null,
       micChip,
-      h('span.chip.desktop-badge', null, 'Local IPC'),
+      modeBadge,
       h('button.win-btn.pet-btn', {
         type: 'button',
         title: 'Toggle Desktop Companion Pet Mascot',
@@ -143,6 +144,15 @@ export function buildShell(root) {
       mount(banner, h('span', null, `Updating KALKI — ${up.pct || 0}%`));
       return;
     }
+    const version = store.status?.updateAvailable;
+    if (version) {
+      banner.hidden = false;
+      banner.className = 'card';
+      mount(banner, h('div.row.sb', null,
+        h('span', null, `KALKI ${version} is available.`),
+        h('button.btn.btn-sm.btn-primary', { type: 'button', onClick: () => system.installUpdate() }, 'Install update')));
+      return;
+    }
     banner.hidden = true;
   }
 
@@ -196,14 +206,18 @@ export function buildShell(root) {
     paintRail();
     paintBanner();
     paintToasts();
-    if (store.status?.listenerState) {
-      const s = store.status.listenerState;
-      if (s === 'listening') {
-        micChip.className = 'chip warn';
-        micChip.textContent = 'Mic live';
-      } else if (s === 'asleep') {
+    modeBadge.textContent = window.pywebview ? 'Desktop app' : 'Browser';
+    const st = store.status;
+    if (st) {
+      if (!st.listenerOnline) {
+        micChip.className = 'chip';
+        micChip.textContent = 'Voice off';
+      } else if (st.listenerPaused || st.listenerMicMuted || st.listenerState === 'asleep') {
         micChip.className = 'chip';
         micChip.textContent = 'Mic off';
+      } else if (st.listenerState === 'listening') {
+        micChip.className = 'chip warn';
+        micChip.textContent = 'Mic live';
       } else {
         micChip.className = 'chip ok';
         micChip.textContent = 'Mic ready';

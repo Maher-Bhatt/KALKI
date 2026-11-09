@@ -30,6 +30,10 @@ from runtime_paths import prepare_runtime
 _runtime = prepare_runtime()
 BASE_DIR = _runtime.app_root
 
+import runtime_security
+
+runtime_security.TOKEN_PATH = os.path.join(_runtime.user_data_dir, "data", "api_token.txt")
+
 # Isolate WebView2 profile so pet never collides with main KALKI instance
 pet_profile_dir = os.path.join(_runtime.user_data_dir, "pet_webview_profile")
 os.makedirs(pet_profile_dir, exist_ok=True)
@@ -39,6 +43,26 @@ import config
 import webview
 
 class PetApi:
+    def send_command(self, cmd):
+        """Send a typed quick command to KALKI with the local token."""
+        import json
+        import urllib.request
+        port = getattr(config, "PORT", 8888)
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/api/command",
+            data=json.dumps({"cmd": str(cmd or "")}).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                runtime_security.TOKEN_HEADER: runtime_security.get_api_token(),
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=20) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except Exception as exc:
+            return {"ok": False, "reply": f"KALKI isn't responding: {exc}"}
+
     def open_main_app(self):
         """Brings the main KALKI window to foreground or launches it."""
         # 1. Trigger local server wake endpoint
@@ -48,7 +72,10 @@ class PetApi:
             req = urllib.request.Request(
                 f"http://127.0.0.1:{port}/api/wake",
                 data=b'{"cmd":""}',
-                headers={"Content-Type": "application/json"},
+                headers={
+                    "Content-Type": "application/json",
+                    runtime_security.TOKEN_HEADER: runtime_security.get_api_token(),
+                },
                 method="POST"
             )
             urllib.request.urlopen(req, timeout=1.5)

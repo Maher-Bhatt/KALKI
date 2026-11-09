@@ -909,15 +909,21 @@ export function askView() {
 
     // Inbox
     const unread = st?.unreadImportant ?? 0;
-    asideInboxTxt.textContent = `${unread} unread important`;
-    mount(asideInboxChip, unread === 0 ? 'All clear' : `${unread} to read`);
-    asideInboxChip.className = 'chip ' + (unread === 0 ? 'ok' : 'warn');
+    if (st && !st.mailConfigured) {
+      asideInboxTxt.textContent = 'Mail isn\'t connected';
+      mount(asideInboxChip, 'Not connected');
+      asideInboxChip.className = 'chip';
+    } else {
+      asideInboxTxt.textContent = `${unread} unread important`;
+      mount(asideInboxChip, unread === 0 ? 'All clear' : `${unread} to read`);
+      asideInboxChip.className = 'chip ' + (unread === 0 ? 'ok' : 'warn');
+    }
 
     // Voice
     asideVoiceWake.textContent = st?.wakeWords || 'hey kalki';
     asideVoiceTTS.textContent  = st?.ttsVoice  || '—';
-    const micReady = store.voice?.state === 'attending' || store.voice?.state === 'idle';
-    mount(asideVoiceChip, micReady ? 'Mic ready' : (store.voice?.state || '—'));
+    const micReady = !!st?.listenerOnline && (store.voice?.state === 'attending' || store.voice?.state === 'idle');
+    mount(asideVoiceChip, micReady ? 'Mic ready' : (st && !st.listenerOnline ? 'Voice off' : (store.voice?.state || '—')));
     asideVoiceChip.className = 'chip ' + (micReady ? 'ok' : '');
 
     // System
@@ -995,7 +1001,7 @@ export function askView() {
         : `${store.conv.maxTurns} turns of context`;
 
     const meter1 = main.querySelector('#context-meter-header');
-    if (meter1) meter1.textContent = `Updated 14:02 · ${ctx}`;
+    if (meter1) meter1.textContent = ctx;
 
     const meter2 = main.querySelector('#context-meter-comp');
     if (meter2) meter2.textContent = ctx;

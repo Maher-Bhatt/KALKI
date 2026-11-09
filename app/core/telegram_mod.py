@@ -6,8 +6,17 @@ import urllib.request
 import urllib.parse
 
 import config
+import runtime_security
 
 _running = False
+
+
+def _kalki_headers():
+    return {
+        "Content-Type": "application/json",
+        runtime_security.TOKEN_HEADER: runtime_security.get_api_token(),
+    }
+
 _thread = None
 
 def _telegram_loop():
@@ -61,7 +70,7 @@ def _telegram_loop():
                     kalki_req = urllib.request.Request(
                         f"http://localhost:{config.PORT}/api/chat",
                         data=json.dumps(payload).encode("utf-8"),
-                        headers={"Content-Type": "application/json"},
+                        headers=_kalki_headers(),
                         method="POST"
                     )
                     with urllib.request.urlopen(kalki_req, timeout=30) as k_res:

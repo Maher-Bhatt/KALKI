@@ -28,6 +28,7 @@ export const system = {
   report: (payload) => post('/api/report', payload),
   history: () => get('/api/history'),
   briefing: () => get('/api/briefing/get'),
+  installUpdate: () => post('/api/update/install', {}, { timeout: 120000 }),
 };
 
 /* ── Listener / voice ─────────────────────────────────────────────── */
@@ -208,6 +209,17 @@ export const antivirus = {
   resolveQuarantine: (id, action) => post('/api/antivirus/threats/resolve', { id, action }),
   updateSettings: (updates) => post('/api/antivirus/settings', { updates }),
   checkClipboard: (text) => post('/api/antivirus/clipboard', { text }),
+};
+
+/* ── Wi-Fi security. Approval-gated calls wait on a native prompt, so they
+      get long timeouts. Keys come back only from reveal. ─────────────── */
+export const wifi = {
+  overview: () => post('/api/wifi/overview', {}, { timeout: 45000 }),
+  nearby: () => post('/api/wifi/nearby', {}, { timeout: 45000 }),
+  reveal: (ssid) => post('/api/wifi/reveal', { ssid }, { timeout: 120000 }),
+  audit: () => post('/api/wifi/audit', {}, { timeout: 180000 }),
+  forget: (ssid) => post('/api/wifi/forget', { ssid }, { timeout: 120000 }),
+  setAutoConnect: (ssid, enabled) => post('/api/wifi/autoconnect', { ssid, enabled }, { timeout: 30000 }),
 };
 
 /* ── Sovereign Desktop Host Bridge (Native & Local IPC) ───────────────── */

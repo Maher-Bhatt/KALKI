@@ -14,6 +14,7 @@ customtkinter>=5.2.0
 cryptography>=42.0.0
 pywebview>=4.4.1
 pystray>=0.19.3
+plyer>=2.1.0
 groq>=0.4.2
 darkdetect>=0.8.0
 

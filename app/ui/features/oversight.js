@@ -218,7 +218,7 @@ export function oversightView() {
       ),
       h('div.card.col.g8', null,
         h('h2', null, 'Diagnostics'),
-        h('pre', { style: { fontSize: '11px', lineHeight: '16px' } }, store.diagnosticsText || '14:02 status ok\n14:01 watch: finmate down\n13:58 clipboard prompt\n13:40 tts ok 212 ms')
+        h('pre', { style: { fontSize: '11px', lineHeight: '16px' } }, store.diagnosticsText || 'Nothing recorded yet.')
       )
     );
   }

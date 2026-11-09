@@ -26,18 +26,82 @@ import runtime_security
 
 runtime_security.TOKEN_PATH = os.path.join(_runtime.user_data_dir, "data", "api_token.txt")
 
+DATA_DIR = os.path.join(_runtime.user_data_dir, "data")
+WORKSPACE_DIR = os.path.join(DATA_DIR, "workspace")
+os.makedirs(WORKSPACE_DIR, exist_ok=True)
+
+def _validate_safe_path(target_path, write=False):
+    """
+    Validates that a path is safe and strictly confined to allowed data/workspace directories.
+    Rejects path traversal, symlinks pointing outside, and sensitive files.
+    """
+    if not target_path or not isinstance(target_path, str):
+        return None, "Target path is required."
+    
+    if "\0" in target_path:
+        return None, "Invalid path."
+
+    abs_path = os.path.abspath(target_path)
+    real_path = os.path.realpath(abs_path)
+
+    basename = os.path.basename(real_path).lower()
+    blocked_filenames = {
+        "api_token.txt", "vault.json", "credentials.json", "token.json",
+        "google_credentials.json", "google_token.pickle", "spotify_token.json",
+        "user_config.json", "id_rsa", "id_ed25519", "known_hosts", ".env",
+        "config.py", "secure_api_vault.json", "semantic_memory.json",
+    }
+    if basename in blocked_filenames:
+        return None, f"Access to sensitive file '{basename}' is blocked for security."
+
+    win_dir = os.environ.get("WINDIR", "C:\\Windows").lower()
+    if real_path.lower().startswith(win_dir) or real_path.lower() == "c:\\":
+        return None, "Access to system directories is forbidden."
+
+    user_home = os.path.expanduser("~")
+    ssh_dir = os.path.join(user_home, ".ssh").lower()
+    if real_path.lower().startswith(ssh_dir):
+        return None, "Access to SSH credentials is forbidden."
+
+    allowed_roots = [
+        os.path.realpath(DATA_DIR),
+        os.path.realpath(WORKSPACE_DIR),
+    ]
+    inside_sandbox = any(
+        real_path == root or real_path.startswith(root + os.sep)
+        for root in allowed_roots
+    )
+
+    if not inside_sandbox:
+        return None, f"Access denied: Path '{target_path}' is outside the sandboxed workspace."
+
+    return real_path, None
 
 
 
+
+
+def remove_from_startup():
+    if sys.platform != 'win32':
+        return
+    try:
+        import winreg
+        key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
+        winreg.DeleteValue(key, "KALKI")
+        winreg.CloseKey(key)
+    except Exception:
+        pass
 
 def add_to_startup():
+    if not getattr(config, "AUTO_START", False):
+        remove_from_startup()
+        return
 
     if sys.platform != 'win32':
-
         return
 
     import winreg
-
     key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
 
     if getattr(sys, 'frozen', False):
@@ -460,7 +524,7 @@ def quit_app(icon=None, item=None):
 
         try:
 
-            subprocess.run(f"taskkill /F /T /PID {server_process.pid}", shell=True, capture_output=True)
+            subprocess.run(["taskkill", "/F", "/T", "/PID", str(server_process.pid)], capture_output=True)
 
         except Exception:
 
@@ -470,7 +534,7 @@ def quit_app(icon=None, item=None):
 
         try:
 
-            subprocess.run(f"taskkill /F /T /PID {listener_process.pid}", shell=True, capture_output=True)
+            subprocess.run(["taskkill", "/F", "/T", "/PID", str(listener_process.pid)], capture_output=True)
 
         except Exception:
 
@@ -478,7 +542,7 @@ def quit_app(icon=None, item=None):
 
     print("Cleanup complete. Exiting.")
 
-    os._exit(0)
+    sys.exit(0)
 
 
 
@@ -570,33 +634,38 @@ def on_closing():
 
     
 
+    def _terminate_gracefully(proc, timeout=2.0):
+        if not proc:
+            return
+        try:
+            if hasattr(proc, "poll") and proc.poll() is None:
+                proc.terminate()
+                try:
+                    proc.wait(timeout=timeout)
+                except Exception:
+                    proc.kill()
+            elif hasattr(proc, "pid"):
+                p = psutil.Process(proc.pid)
+                p.terminate()
+                try:
+                    p.wait(timeout=timeout)
+                except Exception:
+                    p.kill()
+        except Exception:
+            try:
+                if hasattr(proc, "pid"):
+                    psutil.Process(proc.pid).kill()
+            except Exception:
+                pass
+
     def do_cleanup():
-
-        print("Window closing. Cleaning up background services...")
-
+        print("Window closing. Cleaning up background services gracefully...")
         if server_process:
-
-            try:
-
-                subprocess.run(f"taskkill /F /T /PID {server_process.pid}", shell=True, capture_output=True)
-
-            except Exception:
-
-                pass
-
+            _terminate_gracefully(server_process)
         if listener_process:
-
-            try:
-
-                subprocess.run(f"taskkill /F /T /PID {listener_process.pid}", shell=True, capture_output=True)
-
-            except Exception:
-
-                pass
-
+            _terminate_gracefully(listener_process)
         print("Cleanup complete.")
-
-        os._exit(0)
+        sys.exit(0)
 
     
 
@@ -841,7 +910,7 @@ if __name__ == '__main__':
                     try:
                         window.destroy()
                     except Exception:
-                        os._exit(0)
+                        sys.exit(0)
 
         def toggle_pin(self):
             """Toggle stay on top (pin)."""
@@ -885,15 +954,30 @@ if __name__ == '__main__':
                 return {"ok": False, "error": str(e)}
 
         def exec_command(self, cmd, cwd=None):
-            """Execute a real system terminal command on the host OS."""
+            """Execute a terminal command on the host OS only if explicitly permitted by policy."""
+            if not getattr(config, "ALLOW_HOST_CODE_EXECUTION", False):
+                return {
+                    "ok": False,
+                    "error": "Host command execution is disabled by policy. Enable ALLOW_HOST_CODE_EXECUTION in settings to permit shell execution."
+                }
+            cmd_str = (cmd or "").strip()
+            if not cmd_str:
+                return {"ok": False, "error": "command required"}
+            lower_cmd = cmd_str.lower()
+            dangerous_patterns = [
+                "format ", "del /s", "del /f /s", "rmdir /s /q", "rd /s /q",
+                "rm -rf /", "mkfs", "diskpart", ":(){ :|:& };:", "powershell -enc"
+            ]
+            if any(p in lower_cmd for p in dangerous_patterns):
+                return {"ok": False, "error": "Destructive system commands are blocked by endpoint safety policy."}
             try:
                 import subprocess, time
                 t0 = time.time()
-                work_dir = cwd if cwd and os.path.exists(cwd) else BASE_DIR
+                safe_cwd = cwd if cwd and os.path.exists(cwd) else WORKSPACE_DIR
                 res = subprocess.run(
-                    cmd,
+                    cmd_str,
                     shell=True,
-                    cwd=work_dir,
+                    cwd=safe_cwd,
                     capture_output=True,
                     text=True,
                     timeout=30
@@ -912,36 +996,43 @@ if __name__ == '__main__':
                 return {"ok": False, "error": str(e)}
 
         def read_file(self, file_path):
-            """Read content of a local file."""
+            """Read content of a sandboxed local file."""
+            safe_path, err = _validate_safe_path(file_path)
+            if err:
+                return {"ok": False, "error": err}
             try:
-                p = os.path.abspath(file_path)
-                if not os.path.isfile(p):
+                if not os.path.isfile(safe_path):
                     return {"ok": False, "error": f"File not found: {file_path}"}
-                with open(p, "r", encoding="utf-8", errors="replace") as f:
+                with open(safe_path, "r", encoding="utf-8", errors="replace") as f:
                     content = f.read()
-                return {"ok": True, "path": p, "content": content}
+                return {"ok": True, "path": safe_path, "content": content}
             except Exception as e:
                 return {"ok": False, "error": str(e)}
 
         def write_file(self, file_path, content):
-            """Write content to a local file."""
+            """Write content to a sandboxed local file."""
+            safe_path, err = _validate_safe_path(file_path, write=True)
+            if err:
+                return {"ok": False, "error": err}
             try:
-                p = os.path.abspath(file_path)
-                os.makedirs(os.path.dirname(p), exist_ok=True)
-                with open(p, "w", encoding="utf-8") as f:
+                os.makedirs(os.path.dirname(safe_path), exist_ok=True)
+                with open(safe_path, "w", encoding="utf-8") as f:
                     f.write(content)
-                return {"ok": True, "path": p, "bytes": len(content)}
+                return {"ok": True, "path": safe_path, "bytes": len(content)}
             except Exception as e:
                 return {"ok": False, "error": str(e)}
 
         def list_directory(self, dir_path=None):
-            """List files and folders in a local directory."""
+            """List files and folders in a sandboxed local directory."""
+            target_path = dir_path or WORKSPACE_DIR
+            safe_path, err = _validate_safe_path(target_path)
+            if err:
+                return {"ok": False, "error": err}
             try:
-                target = os.path.abspath(dir_path or os.getcwd())
-                if not os.path.isdir(target):
-                    return {"ok": False, "error": f"Directory not found: {target}"}
+                if not os.path.isdir(safe_path):
+                    return {"ok": False, "error": f"Directory not found: {target_path}"}
                 items = []
-                for entry in os.scandir(target):
+                for entry in os.scandir(safe_path):
                     try:
                         stat = entry.stat()
                         items.append({
@@ -954,7 +1045,7 @@ if __name__ == '__main__':
                     except Exception:
                         pass
                 items.sort(key=lambda x: (not x["is_dir"], x["name"].lower()))
-                return {"ok": True, "path": target, "items": items}
+                return {"ok": True, "path": safe_path, "items": items}
             except Exception as e:
                 return {"ok": False, "error": str(e)}
 
@@ -985,7 +1076,7 @@ if __name__ == '__main__':
             try:
                 p = os.path.abspath(target_path)
                 if sys.platform == "win32":
-                    subprocess.Popen(f'explorer /select,"{p}"', shell=True)
+                    subprocess.Popen(["explorer", f"/select,{p}"])
                 elif sys.platform == "darwin":
                     subprocess.Popen(["open", "-R", p])
                 else:

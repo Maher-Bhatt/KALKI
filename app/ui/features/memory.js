@@ -1,4 +1,4 @@
-﻿/** Memory â€” built entirely on the semantic store.
+﻿/** Memory — built entirely on the semantic store.
  *
  *  Organizes memories by topic (Preferences, Projects, Work, Personal, Music, Tech),
  *  with instant keyword & topic search, topic filter chips, importance rating,
@@ -150,7 +150,7 @@ function editor(existing) {
       h('div.field', null,
         h('label', { for: 'mem-type' }, 'Type'),
         h('select.select', { id: 'mem-type', ref: (el) => { typeEl = el; } },
-          ...TYPES.map((t) => h('option', { value: t, selected: (existing?.type || 'fact') === t }, t === 'pinned' ? 'pinned â€” always retrieved' : t))),
+          ...TYPES.map((t) => h('option', { value: t, selected: (existing?.type || 'fact') === t }, t === 'pinned' ? 'pinned — always retrieved' : t))),
       ),
       h('div.field', null,
         h('label', { for: 'mem-imp' }, 'Importance'),
@@ -173,12 +173,12 @@ function editor(existing) {
 async function togglePin(m) {
   const next = m.type === 'pinned' ? 'fact' : 'pinned';
   const r = await memory.update({ id: m.id, text: m.text, tags: m.tags, importance: m.importance, type: next });
-  if (r.ok) { ok(next === 'pinned' ? 'Pinned â€” KALKI will always retrieve this' : 'Unpinned'); loadMemory(); }
+  if (r.ok) { ok(next === 'pinned' ? 'Pinned — KALKI will always retrieve this' : 'Unpinned'); loadMemory(); }
   else err(r.message, r.detail);
 }
 
 async function remove(m) {
-  const preview = m.text.length > 70 ? m.text.slice(0, 70) + 'â€¦' : m.text;
+  const preview = m.text.length > 70 ? m.text.slice(0, 70) + '…' : m.text;
   if (!(await confirmDialog({
     title: 'Delete memory?',
     description: `Are you sure you want KALKI to forget: "${preview}"?`,
@@ -222,7 +222,7 @@ export function memoryView() {
 
   const searchInput = h('input', {
     type: 'search',
-    placeholder: 'Filter memories instantly by keyword or topicâ€¦',
+    placeholder: 'Filter memories instantly by keyword or topic…',
     style: { border: 'none', background: 'transparent', outline: 'none', flex: '1', color: 'inherit', fontSize: '13px' },
     onInput: debounce((e) => {
       set('memory', { query: e.target.value });
@@ -419,7 +419,7 @@ export function memoryView() {
             h('div.row.g4', { style: { flexShrink: '0' } },
               h('button.ib', {
                 type: 'button',
-                title: pinned ? 'Unpin from prompt' : 'Pin â€” always included in prompt',
+                title: pinned ? 'Unpin from prompt' : 'Pin — always included in prompt',
                 onClick: () => togglePin(x)
               }, h('i', { 'data-i': 'pin', style: pinned ? { color: 'var(--okt, #4cc061)' } : undefined })),
               h('button.ib', {
@@ -528,7 +528,7 @@ export function memoryView() {
         h('div.row.sb', null, h('span.xs.mut', null, 'Total memories'), h('span.mono', null, String(totalMem))),
         h('div.row.sb', null, h('span.xs.mut', null, 'Pinned items'), h('span.mono', null, String(pinnedCount))),
         h('div.row.sb', null, h('span.xs.mut', null, 'Active topic'), h('span.chip', null, activeTopic)),
-        h('div.row.sb', null, h('span.xs.mut', null, 'Search mode'), h('span.chip.ok', null, m.error?.kind === 'unavailable' ? 'Text fallback' : 'Semantic'))
+        h('div.row.sb', null, h('span.xs.mut', null, 'Search mode'), h('span.chip', null, store.status?.memorySearchMode === 'semantic' ? 'Semantic (uses your AI provider)' : 'Keyword'))
       ),
       h('div.card.col.g8', null,
         h('h2', null, 'Topic Organization'),
@@ -536,7 +536,7 @@ export function memoryView() {
       ),
       h('div.card.col.g8', null,
         h('h2', null, 'Pinned vs Semantic'),
-        h('div.sm.t2', null, 'Pinned memories are always injected into KALKIâ€™s system context. Other memories are retrieved dynamically by similarity to your conversation.')
+        h('div.sm.t2', null, 'Pinned memories are always injected into KALKI’s system context. Other memories are retrieved dynamically by similarity to your conversation.')
       )
     );
   };

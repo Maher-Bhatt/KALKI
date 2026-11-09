@@ -7,13 +7,6 @@ from typing import Dict, Optional
 
 import config
 
-# Fallback values
-DEFAULT_LOCATION = {
-    "city": "Ahmedabad",
-    "state": "Gujarat",
-    "country": "India"
-}
-
 
 def _query_gps_coordinates() -> Optional[tuple[float, float]]:
     """Query the native Windows Geolocation API via PowerShell WinRT bridge."""
@@ -70,14 +63,14 @@ def _reverse_geocode(lat: float, lon: float) -> Optional[Dict[str, str]]:
 def _query_ip_location() -> Optional[Dict[str, str]]:
     """Query location using IP Geolocation."""
     try:
-        req = urllib.request.Request("http://ip-api.com/json/", headers={"User-Agent": "Mozilla/5.0"})
+        req = urllib.request.Request("https://ipapi.co/json/", headers={"User-Agent": "KALKI-Assistant/1.5"})
         with urllib.request.urlopen(req, timeout=4) as r:
             data = json.loads(r.read())
-            if data.get("status") == "success":
+            if not data.get("error"):
                 return {
                     "city": data.get("city", ""),
-                    "state": data.get("regionName", ""),
-                    "country": data.get("country", "")
+                    "state": data.get("region", ""),
+                    "country": data.get("country_name", "")
                 }
     except Exception:
         pass
@@ -88,9 +81,8 @@ def get_resolved_location() -> Dict[str, str]:
     """
     Resolve location using prioritized providers:
     1. Manual Override (Config)
-    2. Native GPS Coordinates (Windows Geolocation API)
-    3. IP Geolocation API
-    4. Default Fallback
+    2. Only with AUTO_IP_LOCATION on: Windows location, then IP lookup
+    3. Otherwise keep whatever is configured. Nothing leaves this PC.
     """
     # 1. Check manual config override (make sure they aren't placeholder strings)
     cfg_city = getattr(config, "OWNER_CITY", "").strip()
@@ -105,6 +97,10 @@ def get_resolved_location() -> Dict[str, str]:
             "country": cfg_country
         }
 
+    configured = {"city": cfg_city, "state": cfg_state, "country": cfg_country}
+    if not getattr(config, "AUTO_IP_LOCATION", False):
+        return configured
+
     # 2. Try native GPS
     coords = _query_gps_coordinates()
     if coords:
@@ -113,9 +109,4 @@ def get_resolved_location() -> Dict[str, str]:
             return gps_loc
 
     # 3. Try IP geolocation
-    ip_loc = _query_ip_location()
-    if ip_loc:
-        return ip_loc
-
-    # 4. Final default
-    return DEFAULT_LOCATION
+    return _query_ip_location() or configured

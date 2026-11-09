@@ -43,6 +43,15 @@ jobs:
       - name: Compile Python sources
         run: python -m compileall -q app
 
+      - name: Static checks (undefined and shadowed names)
+        shell: pwsh
+        run: |
+          python -m pip install ruff
+          python -m ruff check app tests --isolated --select F821,F823
+
+      - name: Regression tests (crashes, auth, shell access, Wi-Fi, monitors)
+        run: python -m unittest tests.test_phase0
+
       - name: Validate frontend modules
         shell: bash
         run: |
