@@ -38,6 +38,10 @@ jobs:
           python -m pip install -r app/requirements.txt -c app/requirements.lock.txt pyinstaller
           python -m pip install -r requirements-dev.txt
 
+      - name: Create config from template
+        shell: pwsh
+        run: Copy-Item app/config.example.py app/config.py
+
       - name: Version consistency
         run: python tests/version_check.py
 
