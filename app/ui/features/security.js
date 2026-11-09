@@ -11,7 +11,7 @@
 import { h, mount } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { bytes, relative, dateTime } from '../lib/format.js';
-import { cyber, antivirus, desktop } from '../api/endpoints.js';
+import { cyber, antivirus, desktop, wifi } from '../api/endpoints.js';
 import { emptyState, loadingRow } from '../components/states.js';
 import { ok, err } from '../state/toasts.js';
 
@@ -151,7 +151,25 @@ const CYBER_CATALOG = [
   }
 ];
 
-let activeTab = 'antivirus'; // 'antivirus' | 'catalog' | 'studio' | 'processes'
+let activeTab = 'antivirus'; // 'antivirus' | 'wifi' | 'catalog' | 'studio' | 'processes'
+
+/* Each entry is a monitor in app/shield_monitors.py that really runs. */
+const SHIELD_MONITORS = [
+  { key: 'download_watcher', label: 'Downloads watcher', desc: 'Scans each new file in Downloads with Windows Defender and KALKI\'s checks.' },
+  { key: 'process_monitor', label: 'Process monitor', desc: 'Checks running programs every minute for miners and programs run from Temp.' },
+  { key: 'clipboard_guard', label: 'Clipboard guard', desc: 'Warns about pasted commands that run downloads, and swapped crypto addresses.' },
+  { key: 'phishing_shield', label: 'Link guard', desc: 'Checks the active browser tab\'s address for look-alike sites. Off by default because it reads the address.' },
+];
+
+function monitorState(key) {
+  const m = avStatus?.monitors?.[key];
+  if (!m) return { on: !!avStatus?.shields?.[key], text: 'Status unknown' };
+  if (!m.enabled) return { on: false, text: 'Off' };
+  if (!m.available) return { on: true, text: 'Not available on this PC' };
+  if (m.last_error) return { on: true, text: 'Problem: ' + m.last_error };
+  if (!m.running) return { on: true, text: 'Not running' };
+  return { on: true, text: `Running, checks every ${m.interval_seconds} seconds` };
+}
 let catalogFilter = 'All';
 let currentTool = CYBER_CATALOG[0];
 let toolInputVal = '';
@@ -195,41 +213,29 @@ async function runQuickScan() {
   addScanLog('Bridging with Windows Defender MpCmdRun definitions...', 'info');
   renderFn();
 
-  // Simulated live progress logs for visual transparency
-  const ticker = setInterval(() => {
-    if (avScanProgress < 85) {
-      avScanProgress += 15;
-      const paths = [
-        'C:\\Users\\' + (navigator.userAgent.includes('Windows') ? 'User' : 'Root') + '\\Downloads\\*.exe',
-        'C:\\Users\\AppData\\Local\\Temp\\setup_temp.tmp',
-        'C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Startup',
-        'Active Memory: Auditing thread parentage & cryptominer signatures'
-      ];
-      const p = paths[Math.floor(Math.random() * paths.length)];
-      addScanLog(`Scanning: ${p} ... [VERIFIED CLEAN]`, 'ok');
-      renderFn();
-    }
-  }, 180);
+  addScanLog('Checking Downloads, Temp, Startup and running programs. This can take a minute.', 'info');
+  renderFn();
 
   const r = await antivirus.scanQuick();
-  clearInterval(ticker);
   avScanProgress = 100;
   avScanning = false;
 
   if (r.ok) {
     avScanResult = { type: 'quick', ...r.data };
     addScanLog(`Scan complete: ${r.data.scanned_files} files examined in ${r.data.duration_ms || 410}ms.`, 'ok');
+    if (r.data.unreadable_files) addScanLog(`${r.data.unreadable_files} files couldn't be read, so they weren't checked.`, 'alert');
+    if (r.data.limit_reached) addScanLog('Stopped at the 250-file limit. Use Windows Security for a full scan.', 'alert');
     if (r.data.clean) {
-      addScanLog('System Shield Status: Zero malware signatures or cryptominers found.', 'ok');
-      ok(`Quick scan clean: ${r.data.scanned_files} files checked`);
+      addScanLog('No problems found in the files that were checked.', 'ok');
+      ok(`Scan finished: ${r.data.scanned_files} files checked, nothing flagged`);
     } else {
       addScanLog(`THREAT ALERT: ${r.data.threats_count} suspicious items flagged!`, 'alert');
       err(`Threats detected: ${r.data.threats_count} items flagged!`);
     }
     fetchAvStatus();
   } else {
-    addScanLog(`Scan error: ${r.error || r.message}`, 'alert');
-    err('Quick scan failed', r.error || r.message);
+    addScanLog(`Scan error: ${r.detail || r.message}`, 'alert');
+    err('Quick scan failed', r.detail || r.message);
   }
   renderFn();
 }
@@ -259,8 +265,8 @@ async function runProcessScan() {
       err(`Suspicious processes found: ${r.data.suspicious_count}`);
     }
   } else {
-    addScanLog(`Process audit failed: ${r.error || r.message}`, 'alert');
-    err('Process scan failed', r.error || r.message);
+    addScanLog(`Process audit failed: ${r.detail || r.message}`, 'alert');
+    err('Process scan failed', r.detail || r.message);
   }
   renderFn();
 }
@@ -282,8 +288,8 @@ async function runTargetScan() {
     if (r.ok) {
       avScanResult = { type: 'url', ...r.data };
       if (r.data.clean) {
-        addScanLog(`URL verified clean. No phishing, typosquatting, or payload droppers detected.`, 'ok');
-        ok('URL verified clean');
+        addScanLog('No known warning signs in this address. That doesn\'t prove the site is safe.', 'ok');
+        ok('No warning signs found');
       } else {
         addScanLog(`URL flagged: ${r.data.threat_level} threat level!`, 'alert');
         err('Suspicious link flagged', r.data.threat_level);
@@ -294,8 +300,8 @@ async function runTargetScan() {
     if (r.ok) {
       avScanResult = { type: 'file', ...r.data };
       if (r.data.clean) {
-        addScanLog(`File verified clean. Entropy: ${r.data.entropy || 'Normal'}. Zero dropper heuristics.`, 'ok');
-        ok('Target file clean');
+        addScanLog('No problems found in this file.', 'ok');
+        ok('No problems found');
       } else {
         addScanLog(`MALWARE DETECTED: ${r.data.threat_name} (${r.data.threat_level})`, 'alert');
         err(`Threat detected: ${r.data.threat_name || 'Malware'}`);
@@ -307,8 +313,8 @@ async function runTargetScan() {
   avScanProgress = 100;
   avScanning = false;
   if (!r || !r.ok) {
-    addScanLog(`Target analysis error: ${r ? (r.error || r.message) : 'Unknown'}`, 'alert');
-    err('Scan failed', r ? (r.error || r.message) : 'Unknown error');
+    addScanLog(`Target analysis error: ${r ? (r.detail || r.message) : 'Unknown'}`, 'alert');
+    err('Scan failed', r ? (r.detail || r.message) : 'Unknown error');
   }
   renderFn();
 }
@@ -322,8 +328,8 @@ async function toggleShield(key, currentVal) {
   if (r.ok && r.data?.shields) {
     if (!avStatus) avStatus = {};
     avStatus.shields = r.data.shields;
-    avStatus.shield_active = r.data.shields.realtime_shield ?? true;
-    ok(`Shield ${key.replace('_', ' ')} ${nextVal ? 'enabled' : 'disabled'}`);
+    fetchAvStatus();
+    ok(`${SHIELD_MONITORS.find((m) => m.key === key)?.label || key} turned ${nextVal ? 'on' : 'off'}`);
   } else {
     err('Failed to update shield settings');
   }
@@ -339,7 +345,7 @@ async function quarantineThreat(filePath, threatName) {
     ok('File safely isolated in Quarantine Vault');
     fetchAvStatus();
   } else {
-    err('Failed to quarantine file', r.error || r.message);
+    err('Failed to quarantine file', r.detail || r.message);
   }
   renderFn();
 }
@@ -353,7 +359,7 @@ async function resolveQuarantineItem(threatId, action) {
     ok(`Threat ${action === 'delete' ? 'permanently eliminated' : 'restored'}`);
     fetchAvStatus();
   } else {
-    err(`Action failed: ${action}`, r.error || r.message);
+    err(`Action failed: ${action}`, r.detail || r.message);
   }
   renderFn();
 }
@@ -401,14 +407,7 @@ function resultView(data) {
 
 /* ── Sub-View 1: Antivirus & Shield Center ────────────────────────── */
 function renderAntivirus() {
-  const isProtected = avStatus?.system_protected ?? true;
-  const shields = avStatus?.shields || {
-    realtime_shield: true,
-    download_watcher: true,
-    process_monitor: true,
-    clipboard_guard: true,
-    phishing_shield: true
-  };
+  const isProtected = !!avStatus?.system_protected;
   const defender = avStatus?.defender || {};
   const quarantined = avStatus?.quarantined_items || [];
   const lastScan = avStatus?.last_scan;
@@ -420,16 +419,16 @@ function renderAntivirus() {
       h('div.stack', { style: { gap: '4px' } },
         h('div.inline', { style: { gap: '10px', alignItems: 'center' } },
           h('h2', { style: { margin: 0, fontSize: '18px', fontWeight: 600 } },
-            isProtected ? 'Endpoint Shield: Protected' : 'Endpoint Attention Required'),
+            isProtected ? 'Windows Defender is protecting this PC' : (defender.available ? 'Windows Defender needs attention' : "Can't confirm Windows Defender")),
           h('span.chip', { class: isProtected ? 'chip-ok' : 'chip-warning' },
-            isProtected ? 'Shields Active' : 'Threat Warning'),
+            isProtected ? 'Real-time protection on' : 'Not confirmed'),
         ),
         h('span.t-meta.muted', null,
-          'KALKI ShieldCore v1.5.0 Engine • Multi-Layer Heuristic Protection'),
+          'Defender does the real-time protection. KALKI adds download, process, clipboard and link checks.'),
         h('span.t-meta', { style: { color: defender.available && defender.realtime_enabled ? '#34d399' : 'var(--mut)' } },
           defender.available
-            ? `Microsoft Windows Defender: Synced • Definitions ${defender.signature_age_days === 0 ? 'up to date (today)' : defender.signature_age_days + 'd ago'}`
-            : 'Native Windows Defender integration ready'),
+            ? `Windows Defender definitions: ${defender.signature_age_days === 0 ? 'updated today' : defender.signature_age_days + ' days old'}`
+            : (defender.reason || defender.error || "KALKI couldn't read Windows Defender's status.")),
         lastScan ? h('span.t-meta.muted', null,
           `Last scan: ${relative(lastScan.timestamp)} • ${lastScan.scanned_files || 0} files examined • ${lastScan.threats_count || 0} threats`) : null,
       )
@@ -565,23 +564,18 @@ function renderAntivirus() {
     )
   );
 
-  // Active Shields Matrix
-  const toggles = [
-    { key: 'realtime_shield', label: 'Real-Time Endpoint Shield', desc: 'Continuous heuristic guard & Windows Defender active monitoring' },
-    { key: 'download_watcher', label: 'Download Folder Watcher', desc: 'Auto-scans downloaded files immediately upon landing in Downloads' },
-    { key: 'process_monitor', label: 'Process & Cryptominer Guard', desc: 'Surveillance for mining pools and hidden shell subprocesses' },
-    { key: 'clipboard_guard', label: 'Clipboard & Clipper Protection', desc: 'Detects pipe-to-shell attacks and crypto address hijacking' },
-    { key: 'phishing_shield', label: 'Anti-Phishing & Link Shield', desc: 'Pre-screens outbound links for spoofing and malware droppers' },
-  ];
+  // Monitors
 
   const togglesCard = h('section.shield-toggles-card.stagger-3', { style: { marginTop: '20px' } },
-    h('h3', { style: { margin: '0 0 12px 0', fontSize: '15px' } }, 'Active Real-Time Shields'),
-    ...toggles.map((t) => {
-      const isOn = !!shields[t.key];
+    h('h3', { style: { margin: '0 0 12px 0', fontSize: '15px' } }, 'KALKI monitors'),
+    ...SHIELD_MONITORS.map((t) => {
+      const state = monitorState(t.key);
+      const isOn = state.on;
       return h('div.shield-toggle-item', null,
         h('div.stack', { style: { gap: '2px' } },
           h('strong', { style: { fontSize: '13px' } }, t.label),
-          h('span.t-meta.muted', null, t.desc)
+          h('span.t-meta.muted', null, t.desc),
+          h('span.t-meta', null, state.text)
         ),
         h('div.shield-switch', {
           class: isOn ? 'shield-switch on' : 'shield-switch',
@@ -806,34 +800,20 @@ function runLiveScan(type) {
 }
 /* ── Aside Context Panel: Defense Telemetry & Shield Controls ───── */
 function renderSecurityAside() {
-  const isHealthy = avStatus && avStatus.available && (!avStatus.defender || avStatus.defender.antivirus_enabled);
-  const shields = (avStatus && avStatus.shields) || {
-    realtime_shield: true,
-    download_watcher: true,
-    process_monitor: true,
-    clipboard_guard: true,
-    phishing_shield: true
-  };
+  const isHealthy = !!avStatus?.system_protected;
   const quarantined = (avStatus && avStatus.quarantined_items) || (avStatus && avStatus.quarantined) || [];
 
-  const toggles = [
-    { key: 'realtime_shield', label: 'Real-Time Endpoint Shield', desc: 'Defender heuristic core' },
-    { key: 'download_watcher', label: 'Download Folder Watcher', desc: 'Auto-scan downloads on write' },
-    { key: 'process_monitor', label: 'Process Threat Guard', desc: 'Active cryptominer probe' },
-    { key: 'clipboard_guard', label: 'Clipboard Protection', desc: 'Detect pipe-to-shell exploits' },
-    { key: 'phishing_shield', label: 'Anti-Phishing & Link Shield', desc: 'Spoofing & dropper barrier' },
-  ];
 
   return h('div.stack', { style: { gap: '16px', width: '100%' } },
     h('div.stack', { style: { gap: '8px' } },
       h('div.row.sb', null,
         h('h2', { style: { fontSize: '13px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--mut)', margin: 0 } }, 'Defense Telemetry'),
-        h('span.chip' + (isHealthy ? '.ok' : ''), null, isHealthy ? 'Live' : 'Standby')
+        h('span.chip' + (isHealthy ? '.ok' : ''), null, isHealthy ? 'On' : 'Not confirmed')
       ),
       h('div.card.col.g8', { style: { padding: '12px' } },
         h('div.row.sb', null,
-          h('span.sm', null, 'ShieldCore'),
-          h('span.chip' + (isHealthy ? '.ok' : '.warn'), null, isHealthy ? 'ARMED' : 'CAUTION')
+          h('span.sm', null, 'Real-time protection'),
+          h('span.chip' + (isHealthy ? '.ok' : '.warn'), null, isHealthy ? 'Defender on' : 'Check Defender')
         ),
         h('div.row.sb', null,
           h('span.sm', null, 'Windows Defender'),
@@ -845,20 +825,21 @@ function renderSecurityAside() {
         ),
         h('div.row.sb', null,
           h('span.sm', null, 'Signatures'),
-          h('span.mono.xs.mut', null, avStatus?.defender?.signature_age_days === 0 ? 'Today (Clean)' : `${avStatus?.defender?.signature_age_days ?? 0}d old`)
+          h('span.mono.xs.mut', null, avStatus?.defender?.signature_age_days === 0 ? 'Today' : (avStatus?.defender?.signature_age_days == null ? 'Unknown' : `${avStatus.defender.signature_age_days}d old`))
         )
       )
     ),
 
     h('div.stack', { style: { gap: '8px' } },
-      h('h2', { style: { fontSize: '13px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--mut)', margin: 0 } }, 'Active Shields'),
+      h('h2', { style: { fontSize: '13px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--mut)', margin: 0 } }, 'Monitors'),
       h('div.card.col.g12', { style: { padding: '12px' } },
-        ...toggles.map((t) => {
-          const isOn = shields[t.key] !== false;
+        ...SHIELD_MONITORS.map((t) => {
+          const state = monitorState(t.key);
+          const isOn = state.on;
           return h('div.row.sb', { style: { alignItems: 'center', gap: '8px' } },
             h('div.col', { style: { flex: 1, minWidth: 0 } },
               h('div.sm', { style: { fontWeight: '600', fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, t.label),
-              h('div.xs.mut', { style: { fontSize: '10.5px' } }, t.desc)
+              h('div.xs.mut', { style: { fontSize: '10.5px' } }, state.text)
             ),
             h('i.tg' + (isOn ? '.on' : ''), {
               style: { cursor: 'pointer', flexShrink: 0 },
@@ -1012,6 +993,214 @@ function renderProcessDefense() {
   );
 }
 
+/* ── Wi-Fi ────────────────────────────────────────────────────────────── */
+let wifiData = null;
+let wifiLoading = false;
+let wifiError = '';
+let wifiNearby = null;
+let wifiNearbyBusy = false;
+let wifiNearbyError = '';
+let wifiAudit = null;
+let wifiAuditBusy = false;
+let wifiActionBusy = '';
+const wifiKeys = {};   // ssid -> key, only in memory and only for 30 seconds
+const WIFI_HIDE_AFTER_MS = 30000;
+const WIFI_NEEDS_ATTENTION = ['critical', 'high', 'medium'];
+
+function riskChip(risk, label) {
+  const cls = risk === 'critical' || risk === 'high' ? 'chip dng' : risk === 'medium' ? 'chip warn' : risk === 'ok' || risk === 'good' ? 'chip ok' : 'chip';
+  return h('span', { class: cls }, label || risk);
+}
+
+async function loadWifi() {
+  wifiLoading = true;
+  wifiError = '';
+  renderFn();
+  const r = await wifi.overview();
+  wifiLoading = false;
+  if (r.ok) wifiData = r.data;
+  else wifiError = r.detail || r.message;
+  renderFn();
+}
+
+async function scanNearbyWifi() {
+  wifiNearbyBusy = true;
+  wifiNearbyError = '';
+  renderFn();
+  const r = await wifi.nearby();
+  wifiNearbyBusy = false;
+  if (r.ok) wifiNearby = r.data;
+  else wifiNearbyError = r.detail || r.message;
+  renderFn();
+}
+
+async function auditWifiPasswords() {
+  wifiAuditBusy = true;
+  renderFn();
+  const r = await wifi.audit();
+  wifiAuditBusy = false;
+  if (r.ok) wifiAudit = r.data;
+  else err(r.detail || r.message);
+  renderFn();
+}
+
+async function revealWifiKey(ssid) {
+  if (wifiKeys[ssid]) { hideWifiKey(ssid); return; }
+  wifiActionBusy = ssid;
+  renderFn();
+  const r = await wifi.reveal(ssid);
+  wifiActionBusy = '';
+  if (r.ok && r.data.password) {
+    wifiKeys[ssid] = { value: r.data.password, timer: setTimeout(() => hideWifiKey(ssid), WIFI_HIDE_AFTER_MS) };
+  } else if (!r.ok) {
+    err(r.detail || r.message);
+  }
+  renderFn();
+}
+
+function hideWifiKey(ssid) {
+  if (wifiKeys[ssid]) clearTimeout(wifiKeys[ssid].timer);
+  delete wifiKeys[ssid];
+  renderFn();
+}
+
+async function copyWifiKey(ssid) {
+  try {
+    await navigator.clipboard.writeText(wifiKeys[ssid].value);
+    ok('Password copied. It stays on your clipboard until you copy something else.');
+  } catch {
+    err("Couldn't reach the clipboard.");
+  }
+}
+
+async function setWifiAuto(ssid, enabled) {
+  wifiActionBusy = ssid;
+  renderFn();
+  const r = await wifi.setAutoConnect(ssid, enabled);
+  wifiActionBusy = '';
+  if (r.ok) { ok(r.data.message); await loadWifi(); }
+  else { err(r.detail || r.message); renderFn(); }
+}
+
+async function forgetWifi(ssid) {
+  wifiActionBusy = ssid;
+  renderFn();
+  const r = await wifi.forget(ssid);
+  wifiActionBusy = '';
+  if (r.ok) { ok(r.data.message); hideWifiKey(ssid); await loadWifi(); }
+  else { err(r.detail || r.message); renderFn(); }
+}
+
+function renderWifiConnection(conn) {
+  if (!conn) return null;
+  if (conn.available === false) {
+    return h('section.card.col.g8', null, h('h2', null, 'Current connection'), h('div.sm.t2', null, conn.message));
+  }
+  if (!conn.connected) {
+    return h('section.card.col.g8', null, h('h2', null, 'Current connection'), h('div.sm.t2', null, 'Not connected to Wi-Fi right now.'));
+  }
+  return h('section.card.col.g8', null,
+    h('div.row.sb', null, h('h2', null, conn.ssid || 'Current connection'), riskChip(conn.risk, conn.label)),
+    h('div.sm.t2', null, [
+      conn.signal != null ? `Signal ${conn.signal}%` : null,
+      conn.radio || null,
+      conn.channel ? `Channel ${conn.channel}` : null,
+      conn.speed_mbps ? `${conn.speed_mbps} Mbps` : null,
+    ].filter(Boolean).join(' · ')),
+    ...(conn.findings || []).map((f) => h('div.sm', null, f)),
+    conn.fix ? h('div.sm.t2', null, conn.fix) : null,
+  );
+}
+
+function renderWifiProfile(p) {
+  const busy = wifiActionBusy === p.ssid;
+  const key = wifiKeys[p.ssid];
+  return h('div.card.col.g8', { style: { padding: '12px' } },
+    h('div.row.sb', null,
+      h('strong', { style: { overflowWrap: 'anywhere' } }, p.ssid),
+      riskChip(p.risk, p.label)),
+    ...(p.findings || []).map((f) => h('div.sm.t2', null, f)),
+    p.fix ? h('div.sm', null, p.fix) : null,
+    key ? h('div.row.sb', { style: { gap: '8px' } },
+      h('code.mono', { style: { overflowWrap: 'anywhere', userSelect: 'all' } }, key.value),
+      h('button.btn.btn-sm.btn-secondary', { type: 'button', onClick: () => copyWifiKey(p.ssid) }, 'Copy')) : null,
+    h('div.inline', { style: { gap: '8px', flexWrap: 'wrap' } },
+      p.authentication === 'open' ? null : h('button.btn.btn-sm.btn-secondary', { type: 'button', disabled: busy, onClick: () => revealWifiKey(p.ssid) }, key ? 'Hide password' : 'Show password'),
+      h('button.btn.btn-sm.btn-ghost', { type: 'button', disabled: busy, onClick: () => setWifiAuto(p.ssid, !p.auto_connect) },
+        p.auto_connect ? 'Turn off auto-connect' : 'Turn on auto-connect'),
+      h('button.btn.btn-sm.btn-ghost', { type: 'button', disabled: busy, onClick: () => forgetWifi(p.ssid) }, 'Forget network'),
+    ),
+  );
+}
+
+function renderWifiAudit() {
+  return h('section.card.col.g8', null,
+    h('div.row.sb', null,
+      h('h2', null, 'Password strength'),
+      h('button.btn.btn-sm.btn-secondary', { type: 'button', disabled: wifiAuditBusy, onClick: auditWifiPasswords },
+        wifiAuditBusy ? 'Checking...' : (wifiAudit ? 'Check again' : 'Check passwords'))),
+    h('div.sm.t2', null, 'Rates each saved password on this PC. Results stay here, and the passwords are never shown or sent anywhere.'),
+    wifiAudit?.needs_admin ? h('div.sm', null, 'Some passwords need administrator rights to check. Run KALKI as administrator to include them.') : null,
+    wifiAudit && !wifiAudit.results.length ? h('div.sm.t2', null, 'No saved passwords to check.') : null,
+    ...(wifiAudit?.results || []).map((r) => h('div.col.g4', null,
+      h('div.row.sb', null,
+        h('span', { style: { overflowWrap: 'anywhere' } }, r.ssid),
+        riskChip(r.strength === 'weak' ? 'high' : r.strength === 'fair' ? 'medium' : r.strength === 'strong' ? 'good' : 'unknown', r.strength)),
+      ...(r.reasons || []).map((reason) => h('div.xs.mut', null, reason)))),
+  );
+}
+
+function renderWifiNearby() {
+  return h('section.card.col.g8', null,
+    h('div.row.sb', null,
+      h('h2', null, 'Networks nearby'),
+      h('button.btn.btn-sm.btn-secondary', { type: 'button', disabled: wifiNearbyBusy, onClick: scanNearbyWifi },
+        wifiNearbyBusy ? 'Scanning...' : (wifiNearby ? 'Scan again' : 'Scan'))),
+    h('div.sm.t2', null, 'Reads what your Wi-Fi adapter already hears. It warns if a network copies a saved name with weaker security, a common sign of a fake access point.'),
+    wifiNearbyError ? h('div.sm', { role: 'alert' }, wifiNearbyError) : null,
+    ...(wifiNearby?.impostors || []).map((item) => h('div.card', { style: { padding: '10px', borderLeft: '3px solid var(--dng)' }, role: 'alert' },
+      h('strong', null, 'Possible fake network'), h('div.sm', null, item.message))),
+    wifiNearby && !wifiNearby.networks.length ? h('div.sm.t2', null, 'No networks found. Check that Wi-Fi is on.') : null,
+    ...(wifiNearby?.networks || []).map((n) => h('div.row.sb', { style: { gap: '8px' } },
+      h('span', { style: { overflowWrap: 'anywhere' } }, n.ssid || '(hidden network)',
+        h('span.xs.mut', null, ` · ${n.best_signal != null ? n.best_signal + '%' : 'signal unknown'} · ${n.bssids.length} access point${n.bssids.length === 1 ? '' : 's'}`)),
+      riskChip(n.risk, n.label))),
+  );
+}
+
+function renderWifi() {
+  if (!wifiData && !wifiLoading && !wifiError) {
+    loadWifi();
+  }
+  if (wifiError && !wifiData) {
+    return h('section.card.col.g8', { role: 'alert' },
+      h('h2', null, "Couldn't check Wi-Fi"),
+      h('div.sm.t2', null, wifiError),
+      h('div', null, h('button.btn.btn-sm.btn-secondary', { type: 'button', onClick: loadWifi }, 'Try again')));
+  }
+  if (!wifiData) return loadingRow('Checking Wi-Fi...');
+
+  const profiles = wifiData.profiles || [];
+  const attention = profiles.filter((p) => WIFI_NEEDS_ATTENTION.includes(p.risk));
+  const others = profiles.filter((p) => !WIFI_NEEDS_ATTENTION.includes(p.risk));
+
+  return h('div.col.g12', null,
+    h('div.row.sb', null,
+      h('div.sm.t2', null, attention.length
+        ? `${attention.length} of ${profiles.length} saved networks need attention.`
+        : `${profiles.length} saved network${profiles.length === 1 ? '' : 's'}, none with a security problem.`),
+      h('button.btn.btn-sm.btn-ghost', { type: 'button', disabled: wifiLoading, onClick: loadWifi }, wifiLoading ? 'Refreshing...' : 'Refresh')),
+    renderWifiConnection(wifiData.connection),
+    attention.length ? h('h2', null, 'Needs attention') : null,
+    ...attention.map(renderWifiProfile),
+    others.length ? h('h2', null, attention.length ? 'Other saved networks' : 'Saved networks') : null,
+    ...others.map(renderWifiProfile),
+    !profiles.length ? h('section.card', null, h('div.sm.t2', null, 'There are no saved Wi-Fi networks on this PC.')) : null,
+    renderWifiAudit(),
+    renderWifiNearby(),
+  );
+}
+
 export function securityView() {
   const main = h('div.view-body.scroll');
   const aside = h('div', { style: { display: 'contents' } });
@@ -1039,9 +1228,9 @@ export function securityView() {
           }, icon('term', 14), ' Interactive Studio'),
           h('button.btn.btn-sm', {
             type: 'button',
-            class: activeTab === 'processes' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost',
-            onClick: () => { activeTab = 'processes'; renderFn(); }
-          }, icon('cpu', 14), ' Process Defense'),
+            class: activeTab === 'wifi' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost',
+            onClick: () => { activeTab = 'wifi'; renderFn(); }
+          }, icon('security', 14), ' Wi-Fi'),
           h('button.btn.btn-sm', {
             type: 'button',
             class: activeTab === 'processes' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost',
@@ -1050,12 +1239,13 @@ export function securityView() {
         )
       ),
       h('span.spacer'),
-      h('span.chip.chip-ok', null, 'ShieldCore v1.5.0'),
     );
 
     let contentNode;
     if (activeTab === 'antivirus') {
       contentNode = renderAntivirus();
+    } else if (activeTab === 'wifi') {
+      contentNode = renderWifi();
     } else if (activeTab === 'catalog') {
       contentNode = renderCyberCatalog();
     } else if (activeTab === 'processes') {

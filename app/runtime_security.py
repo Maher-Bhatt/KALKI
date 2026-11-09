@@ -66,6 +66,15 @@ def get_api_token():
     return token
 
 
+def rotate_auth_token():
+    """Invalidate the current token. Sessions must reload to get the new one."""
+    try:
+        os.remove(TOKEN_PATH)
+    except OSError:
+        pass
+    return get_api_token()
+
+
 def token_matches(candidate):
     return isinstance(candidate, str) and hmac.compare_digest(
         candidate, get_api_token()

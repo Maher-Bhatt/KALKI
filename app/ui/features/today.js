@@ -565,13 +565,16 @@ export function todayView() {
     );
 
     // Inbox
+    const liveStatus = store.status;
     const inboxCard = h('div.card.col.g12', null,
-      h('div.row.sb', null, h('h2', null, 'Inbox and code'), h('span.chip.ok', null, 'Synced just now')),
-      h('div.row.sb', null, h('span', null, 'Important mail'), h('span.mono', null, '0 unread')),
+      h('h2', null, 'Inbox and code'),
+      h('div.row.sb', null, h('span', null, 'Important mail'), liveStatus?.mailConfigured
+        ? h('span.mono', null, `${liveStatus.unreadImportant ?? 0} unread`)
+        : h('span.chip', null, 'Not connected')),
       h('div.rule', null),
-      h('div.row.sb', null, h('span', null, 'GitHub notifications'), h('span.mono', null, '0 new')),
-      h('div.xs.mut', null, 'Checked every 60 s · uses the server\'s poll hint'),
-      h('div.row.sb', null, h('span.t2', null, 'WhatsApp'), h('span.chip', null, 'Connect in Settings'))
+      h('div.row.sb', null, h('span', null, 'GitHub'), liveStatus?.githubConfigured
+        ? h('span.chip.ok', null, 'Connected')
+        : h('span.chip', null, 'Not connected'))
     );
 
     const wasTaskFocused = document.activeElement === taskInput;

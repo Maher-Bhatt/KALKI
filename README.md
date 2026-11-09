@@ -35,14 +35,14 @@
 
 ## 🌟 What is KALKI?
 
-**KALKI** is a sovereign, local-first personal AI operating workspace for power users, developers, and security professionals. Built on the **Filament Design System**—cold machined graphite surfaces with warm presence light—KALKI operates directly on your workstation loopback (`127.0.0.1:8765`), binds to your native hardware, enforces zero third-party telemetry, and features real system access:
+**KALKI** is a sovereign, local-first personal AI operating workspace for power users, developers, and security professionals. Built on the **Filament Design System**—cold machined graphite surfaces with warm presence light—KALKI operates directly on your workstation loopback (`127.0.0.1:8888`), binds to your native hardware, enforces zero third-party telemetry, and features real system access:
 
 - 🖥️ **100% Native Desktop Operating Architecture**: Seamless native PyWebView IPC bridge (`WebApi`) connecting the frontend directly to OS APIs—zero external browser popups, embedded PowerShell execution, direct directory tree exploration, in-place code editing with disk save, and native window titlebar controls.
 - 🐱 **Next-Gen 3D Mascot Companion Engine**: 6 distinct 3D companion species (Gobi, Kittu, Byte, Draco, Nova, Kitsu) rendered on a 60FPS isometric 3D canvas with volumetric filament lighting, real-time mouse-look perspective tracking, audio beat synchronization, and always-on-screen overlay.
 - 🛡️ **ShieldCore Live Process Defense & Antivirus**: Real-time hardware telemetry (CPU, RAM, loopback ports), live process scanner with PID inspection, 1-click suspicious process termination, Shannon entropy analysis, Windows Defender integration, and an interactive studio of 12 verified cybersecurity tools.
 - 💻 **Embedded System Terminal & Workspace Studio**: Dedicated terminal console executing real PowerShell and CMD commands with exit codes and execution timers, plus a built-in file explorer and code editor for seamless developer productivity.
 - 🐱 **Always-On-Screen Desktop Companion Pet**: A borderless, transparent floating companion mascot (inspired by Codex pets) that lives on your screen even when KALKI is closed or minimized, dances to system music (Apple Music / Spotify), and brings KALKI to the foreground on click.
-- 🛡️ **ShieldCore Native Antivirus & 12 Cyber Tools**: Dedicated visual cyber command center with real-time heuristic radar sweeps, Shannon entropy analysis, Windows Defender integration, cryptominer detection, clipboard anti-clipper protection, and an interactive studio of 12 offensive/defensive cybersecurity tools.
+- 🛡️ **ShieldCore Native Antivirus & 12 Cyber Tools**: Dedicated visual cyber command center with real-time heuristic radar sweeps, Shannon entropy analysis, Windows Defender integration, cryptominer detection, clipboard anti-clipper protection, and an interactive studio of 12 defensive cybersecurity tools.
 - 🧠 **Dynamic Cognitive Auto-Router**: Real-time prompt complexity classification automatically routing casual queries to ultra-fast sub-200ms models (Gemini 2.5 Flash, GPT-4o Mini) and technical/reasoning tasks to Pro tiers (Gemini 2.5 Pro, LLaMA 3.3 70B, Claude 3.5 Sonnet).
 - ⚡ **Real System Execution & Attitude Enforcement**: Direct Win32 workstation lock (`LockWorkStation`), dynamic application launch (Apple Music `music:`, Brave, Valorant, DaVinci Resolve), and an unrestricted Savage Roast Mode that defends against abusive prompts.
 - 🎨 **Filament 5-Destination Workspace**: 30-module, zero-build-step modern frontend (Ask, Today, Memory, Workbench, Settings) powered by pure native ES modules, GPU spring animations, and encrypted local semantic memory.
@@ -174,7 +174,7 @@ KALKI never forces you to manually switch models. The built-in heuristic classif
 flowchart TD
     User["Workstation User"]
     
-    subgraph UI ["Filament Presentation Layer (Port 8765)"]
+    subgraph UI ["Filament Presentation Layer (Port 8888)"]
         DeskPet["🐱 Standalone Desktop Pet (PyWebView / Win32)"]
         Shell["Desktop Shell (Edge WebView2)"]
         Nav["5-Destination Rail (Ask, Today, Memory, Workbench, Security)"]

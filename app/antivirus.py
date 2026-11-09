@@ -57,13 +57,24 @@ SUSPICIOUS_PATTERNS = [
 
 # Mining pool keywords and ports
 MINING_KEYWORDS = ["xmrig", "minerd", "stratum+tcp", "stratum+ssl", "nicehash", "nanopool", "supportxmr", "moneroocean"]
-MINING_PORTS = {3333, 4444, 5555, 7777, 8888, 9999, 14444, 14433, 45700}
+# 8888 is deliberately absent: it's KALKI's own default port.
+MINING_PORTS = {3333, 4444, 5555, 7777, 9999, 14444, 14433, 45700}
 
 # Cryptocurrency address regexes for clipboard protection
 CRYPTO_PATTERNS = {
     "Bitcoin": re.compile(r"\b(bc1[a-zA-HJ-NP-Z0-9]{25,39}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})\b"),
     "Ethereum": re.compile(r"\b(0x[a-fA-F0-9]{40})\b"),
     "Monero": re.compile(r"\b(4[0-9AB][1-9A-HJ-NP-Za-km-z]{93})\b"),
+}
+
+
+# Each key is a monitor in shield_monitors.py. The link guard reads the active
+# browser address, so it stays off until the user turns it on.
+DEFAULT_SHIELDS = {
+    "download_watcher": True,
+    "process_monitor": True,
+    "clipboard_guard": True,
+    "phishing_shield": False,
 }
 
 
@@ -89,18 +100,12 @@ def _get_shield_settings_path() -> str:
 def get_shield_settings() -> Dict[str, bool]:
     with _lock:
         path = _get_shield_settings_path()
-        defaults = {
-            "realtime_shield": True,
-            "download_watcher": True,
-            "process_monitor": True,
-            "clipboard_guard": True,
-            "phishing_shield": True,
-        }
+        defaults = dict(DEFAULT_SHIELDS)
         if os.path.exists(path):
             try:
                 with open(path, "r", encoding="utf-8") as f:
                     saved = json.load(f)
-                    defaults.update(saved)
+                    defaults.update({k: bool(v) for k, v in saved.items() if k in DEFAULT_SHIELDS})
             except Exception:
                 pass
         return defaults
@@ -109,7 +114,7 @@ def get_shield_settings() -> Dict[str, bool]:
 def update_shield_settings(updates: Dict[str, bool]) -> Dict[str, bool]:
     with _lock:
         current = get_shield_settings()
-        current.update(updates)
+        current.update({k: bool(v) for k, v in (updates or {}).items() if k in DEFAULT_SHIELDS})
         path = _get_shield_settings_path()
         try:
             with open(path, "w", encoding="utf-8") as f:
@@ -182,12 +187,12 @@ def scan_file(file_path: str) -> Dict[str, Any]:
     Runs Defender CLI if available on Windows, supplemented with Python heuristics.
     """
     if not os.path.exists(file_path):
-        return {"ok": False, "clean": True, "error": "File does not exist", "path": file_path}
+        return {"ok": False, "clean": False, "scan_status": "not_scanned", "error": "File does not exist", "path": file_path}
 
     try:
         file_size = os.path.getsize(file_path)
     except OSError as e:
-        return {"ok": False, "clean": True, "error": str(e), "path": file_path}
+        return {"ok": False, "clean": False, "scan_status": "not_scanned", "error": str(e), "path": file_path}
 
     filename = os.path.basename(file_path)
     base_name, ext = os.path.splitext(filename)
@@ -222,6 +227,7 @@ def scan_file(file_path: str) -> Dict[str, Any]:
             return {
                 "ok": True,
                 "clean": False,
+                "scan_status": "scanned",
                 "threat_level": "Critical",
                 "threat_name": "Win32.Malware.BlockedByOS",
                 "findings": ["File access was immediately blocked by Windows Defender / Antivirus protection."],
@@ -232,7 +238,7 @@ def scan_file(file_path: str) -> Dict[str, Any]:
                 "md5": "blocked_by_os_shield",
                 "timestamp": time.time(),
             }
-        return {"ok": False, "clean": True, "error": f"Failed reading file: {e}", "path": file_path}
+        return {"ok": False, "clean": False, "scan_status": "not_scanned", "error": f"Failed reading file: {e}", "path": file_path}
 
     sha256_hex = sha256_hash.hexdigest().lower()
     md5_hex = md5_hash.hexdigest().lower()
@@ -268,10 +274,11 @@ def scan_file(file_path: str) -> Dict[str, Any]:
         try:
             res = subprocess.run(
                 [defender_path, "-Scan", "-ScanType", "3", "-File", file_path, "-DisableRemediation"],
-                capture_output=True, text=True, timeout=20
+                capture_output=True, text=True, timeout=60
             )
-            defender_output = res.stdout
-            if "Threat detected" in defender_output or "found threats" in defender_output.lower():
+            defender_output = res.stdout or ""
+            # MpCmdRun reports e.g. "found 1 threats" and returns 2 for a detection.
+            if res.returncode == 2 or re.search(r"found\s+[1-9]\d*\s+threat", defender_output, re.IGNORECASE):
                 threat_level = "Critical"
                 findings.append("Windows Defender flagged this file as malicious")
                 threat_name = threat_name or "Win32.Malware.Generic"
@@ -283,6 +290,7 @@ def scan_file(file_path: str) -> Dict[str, Any]:
     result = {
         "ok": True,
         "clean": is_clean,
+        "scan_status": "scanned",
         "threat_level": threat_level,
         "threat_name": threat_name or ("None" if is_clean else "Suspicious.File"),
         "findings": findings,
@@ -295,7 +303,8 @@ def scan_file(file_path: str) -> Dict[str, Any]:
     }
 
     if not is_clean:
-        oversight.record_alert("antivirus", f"Threat detected in {filename}: {threat_name} ({threat_level})", "critical")
+        severity = "critical" if threat_level in ("Critical", "High") else "warning"
+        oversight.record_alert("antivirus", f"Flagged {filename}: {threat_name} ({threat_level})", severity)
 
     return result
 
@@ -327,6 +336,7 @@ def scan_quick() -> Dict[str, Any]:
         targets.append(startup)
 
     scanned_files = 0
+    unreadable_files = 0
     threats_found: List[Dict[str, Any]] = []
 
     for folder in targets:
@@ -340,7 +350,9 @@ def scan_quick() -> Dict[str, Any]:
                         try:
                             scanned_files += 1
                             res = scan_file(full_p)
-                            if not res.get("clean"):
+                            if res.get("scan_status") == "not_scanned":
+                                unreadable_files += 1
+                            elif not res.get("clean"):
                                 threats_found.append(res)
                             if scanned_files >= 250:
                                 break
@@ -376,6 +388,8 @@ def scan_quick() -> Dict[str, Any]:
     summary = {
         "ok": True,
         "scanned_files": scanned_files,
+        "unreadable_files": unreadable_files,
+        "limit_reached": scanned_files >= 250,
         "threats_count": len(threats_found),
         "threats": threats_found,
         "duration_ms": duration_ms,
@@ -668,14 +682,23 @@ def get_antivirus_status() -> Dict[str, Any]:
         except Exception:
             pass
 
+    try:
+        import shield_monitors
+        monitors = shield_monitors.status()
+    except Exception:
+        monitors = {}
+    # Real-time protection is Windows Defender's job. KALKI reports it, and never
+    # says "protected" unless Defender itself confirms it.
+    system_protected = bool(defender.get("available") and defender.get("antivirus_enabled")
+                            and defender.get("realtime_enabled"))
     return {
         "ok": True,
-        "shield_active": shields.get("realtime_shield", True),
         "shields": shields,
+        "monitors": monitors,
         "defender": defender,
         "quarantined_count": len(quarantined),
         "quarantined_items": quarantined,
         "last_scan": last_scan,
         "engine_version": "1.5.0-ShieldCore",
-        "system_protected": bool(shields.get("realtime_shield", True) and (defender.get("antivirus_enabled", True) if defender.get("available") else True)),
+        "system_protected": system_protected,
     }

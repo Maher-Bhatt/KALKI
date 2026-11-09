@@ -56,6 +56,16 @@ def get_embedding(text):
     return None
 
 
+def embeddings_configured():
+    """True when vector search can really run. Otherwise search is keyword-only."""
+    import config
+    for name in ("OPENAI_API_KEY", "GEMINI_API_KEY"):
+        key = getattr(config, name, "")
+        if key and not key.startswith("PASTE_"):
+            return True
+    return False
+
+
 def cosine_similarity(v1, v2):
     if not v1 or not v2: 
         return 0.0

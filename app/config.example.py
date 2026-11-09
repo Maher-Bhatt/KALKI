@@ -32,6 +32,7 @@ OWNER_TITLE   = "Sir"          # or whatever KALKI should call you
 OWNER_CITY    = "YourCity"
 OWNER_STATE   = "YourState"
 OWNER_COUNTRY = "YourCountry"
+AUTO_IP_LOCATION = False  # Explicit opt-in only; never sends IP to 3rd party by default
 
 # ── VOICE (edge-tts) ────────────────────────────────────────
 # Edge neural TTS is the single supported voice path in the desktop build so
@@ -63,7 +64,8 @@ ALLOW_HOST_CODE_EXECUTION = False
 LOG_TRANSCRIPTS = False
 
 # Personality seasoning. Keep these low so KALKI feels personal, not noisy.
-PERSONALITY_SPICE = True
+PERSONALITY_SPICE = False
+ROAST_MODE = False  # Opt-in humorous roast mode; never locks workstation
 SPICY_REPLY_CHANCE = 0.08
 JOKE_OFFERS_ENABLED = True
 JOKE_OFFER_CHANCE = 0.06
@@ -71,13 +73,11 @@ JOKE_MIN_INTERVAL_MINUTES = 45
 
 # Hardware-aware limits. Tune these to your machine so KALKI stays dramatic
 # without pinning CPU/GPU.
-HARDWARE_PROFILE = {
-    "gpu": "RTX 5060",
-    "cpu": "Ryzen 7",
-    "cpu_power_w": 250,
-    "ram_gb": 32,
-    "display": "2K",
-}
+try:
+    from hardware_detect import detect_hardware
+    HARDWARE_PROFILE = detect_hardware()
+except Exception:
+    HARDWARE_PROFILE = {"gpu": "Integrated Graphics", "cpu": "System CPU", "ram_gb": 8, "display": "standard"}
 LOCAL_AI_MAX_MODEL_B = 9
 CYBER_SCAN_TIMEOUT_SEC = 0.45
 CYBER_SCAN_PORT_LIMIT = 64
@@ -101,7 +101,7 @@ WAKE_WORDS = ["hey kalki", "kalki", "hey sir", "ok kalki"]
 # "always" = hands-free always-on wake word (continuous mic).
 # "push"   = push-to-talk (mic off until you tap the HUD mic button). Use this
 #            if you share a Bluetooth headset with a phone (no audio cuts).
-LISTEN_MODE = "always"
+LISTEN_MODE = "push"
 
 # ── MIC / STT INPUT ─────────────────────────────────────────
 # Keep Bluetooth headphones in high-quality A2DP: the listener avoids the
@@ -113,7 +113,7 @@ STT_LANGUAGE        = "en-IN"         # Google STT language. Default en-IN for I
 VOSK_MODEL_PATH     = "data/vosk-model"
 
 # ── STARTUP ─────────────────────────────────────────────────
-AUTO_START           = True
+AUTO_START = False
 GREET_ON_START       = True
 OPEN_BROWSER_ON_WAKE = True
 
@@ -166,26 +166,49 @@ SUPPORT_URL = "https://buymeacoffee.com/maherbhatt"
 CPU_ALERTS_ENABLED = False
 SCREENSAVER_ENABLED = True
 SCREENSAVER_IDLE_MINS = 5
-TELEMETRY_ENABLED = True
+TELEMETRY_ENABLED = False
 
 # -- Dynamic User Config and Secure Vault Loading --
 try:
     import json
-    # 1. Load from plaintext user_config.json first
+    ALLOWED_CONFIG_KEYS = {
+        "GROQ_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY", "ELEVENLABS_API_KEY",
+        "OWNER_NAME", "OWNER_TITLE", "OWNER_CITY", "OWNER_STATE", "OWNER_COUNTRY",
+        "LATITUDE", "LONGITUDE", "AUTO_IP_LOCATION",
+        "TTS_PROVIDER", "TTS_VOICE", "TTS_RATE", "TTS_PITCH", "TTS_VOLUME", "TTS_OUTPUT_DEVICE",
+        "PORT", "BROWSER", "DEFAULT_MODEL", "GROQ_MODEL", "OLLAMA_URL", "MAX_HISTORY",
+        "REQUIRE_DANGEROUS_CONFIRMATION", "ALLOW_HOST_CODE_EXECUTION", "LOG_TRANSCRIPTS",
+        "PERSONALITY_SPICE", "SPICY_REPLY_CHANCE", "JOKE_OFFERS_ENABLED", "JOKE_OFFER_CHANCE",
+        "JOKE_MIN_INTERVAL_MINUTES", "ROAST_MODE",
+        "THEME_PRESET", "THEME_MODE", "THEME_PRIMARY", "THEME_PEACOCK", "THEME_INDIGO",
+        "THEME_SAFFRON", "THEME_MOTION", "THEME_GLOW",
+        "WAKE_WORDS", "LISTEN_MODE", "STT_AVOID_BLUETOOTH", "STT_INPUT_DEVICE", "STT_ENGINE",
+        "STT_LANGUAGE", "VOSK_MODEL_PATH", "AUTO_START", "GREET_ON_START", "OPEN_BROWSER_ON_WAKE",
+        "MEMORY_FILE", "HISTORY_FILE", "VISION_RECALL_ENABLED", "VISION_RETENTION_DAYS",
+        "CLOUD_SYNC_PASSPHRASE", "EMAIL_ADDRESS", "EMAIL_APP_PASSWORD", "IMAP_SERVER", "IMAP_PORT",
+        "SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_SECRET", "SPOTIFY_REDIRECT_URI",
+        "ALERTS_ENABLED", "BATTERY_LOW_PCT", "BATTERY_CRITICAL_PCT", "RAM_HIGH_PCT", "CPU_HIGH_PCT",
+        "GITHUB_TOKEN", "SHODAN_API_KEY", "SUPPORT_URL", "CPU_ALERTS_ENABLED",
+        "SCREENSAVER_ENABLED", "SCREENSAVER_IDLE_MINS", "TELEMETRY_ENABLED",
+        "ENABLE_DESKTOP_PET", "PET_SPECIES", "PET_NAME"
+    }
+
+    # 1. Load from plaintext user_config.json first with strict key validation
     if os.path.exists(_USER_CONFIG_PATH):
         with open(_USER_CONFIG_PATH, "r", encoding="utf-8-sig") as _f:
             _user_conf = json.load(_f)
-        for _k, _v in _user_conf.items():
-            globals()[_k] = _v
+        if isinstance(_user_conf, dict):
+            for _k, _v in _user_conf.items():
+                if _k in ALLOWED_CONFIG_KEYS and not _k.startswith("_"):
+                    globals()[_k] = _v
 
     # 2. Load from secure API Vault (dpapi / keyring / aes) if present
     try:
         from core import api_vault
-        # Auto migrate plaintext settings on first launch of new version
         api_vault.migrate_settings_to_vault(_USER_CONFIG_PATH)
-        # Load all decrypted secrets into configuration variables
         for _k, _v in api_vault.list_secrets().items():
-            globals()[_k] = _v
+            if _k in ALLOWED_CONFIG_KEYS and not _k.startswith("_"):
+                globals()[_k] = _v
     except Exception as _vault_err:
         pass
 except Exception as _e:
