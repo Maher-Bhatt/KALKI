@@ -95,6 +95,7 @@ import semantic_memory
 import settings_schema
 import routes_productivity
 import routes_memory
+import tool_policy
 import db
 import wifi_security
 import shield_monitors
@@ -491,9 +492,12 @@ def _public_activity(a):
     return {k: a[k] for k in ("id", "action", "source", "kind", "time", "reversible", "undone")}
 
 
-def _queue_confirmation(description, action, source="chat"):
+def _queue_confirmation(description, action, source="chat", always=False, ttl=None):
+    """Hold an action until the user approves it. `always` is for AI-requested actions,
+    which the "ask before risky actions" setting can't switch off."""
     global _approval_id_seq
-    if not getattr(config, "REQUIRE_DANGEROUS_CONFIRMATION", True):
+    ttl = ttl or _PENDING_TTL
+    if not always and not getattr(config, "REQUIRE_DANGEROUS_CONFIRMATION", True):
         return action()
     with _pending_lock:
         _approval_id_seq += 1
@@ -505,9 +509,9 @@ def _queue_confirmation(description, action, source="chat"):
             "source": source,
             "action": action,
             "created": now,
-            "expires": now + _PENDING_TTL,
+            "expires": now + ttl,
         }
-    return True, f"{description}. Say confirm within {_PENDING_TTL} seconds, or approve it in Oversight."
+    return True, f"{description}. Say confirm within {ttl} seconds, or approve it in Oversight."
 
 
 def ask_native_permission(description, always=False):
@@ -3704,11 +3708,56 @@ def pick_model(text):
     return fast_model              # short + casual → instant
 
 
+AI_APPROVAL_SECONDS = 180
+
+
+def _apply_reply_actions(reply):
+    """Act on [TASK: ...], [REMIND: ... @ ...] and TOOL CALL text in a model's reply, and
+    return the reply without it. Page text can put these in a reply, so they go through
+    the same gate as real tool calls."""
+    text = str(reply or "")
+    for match in re.finditer(r"\[TASK:\s*(.+?)\]", text):
+        execute_tool_call("manage_tasks", json.dumps({"action": "add", "text": match.group(1).strip()}))
+    for match in re.finditer(r"\[REMIND:\s*(.+?)\s*@\s*(.+?)\]", text):
+        execute_tool_call("add_reminder", json.dumps({"text": match.group(1).strip(), "due": match.group(2).strip()}))
+    call = re.search(r"TOOL CALL:\s*system_control\((\{.*?\})\)", text)
+    if call:
+        try:
+            json.loads(call.group(1))
+            execute_tool_call("system_control", call.group(1))
+        except ValueError:
+            log("ignored a malformed TOOL CALL in a reply")
+    return re.sub(r"\[(?:TASK|REMIND|NOTE|ACTION):.+?\]|TOOL CALL:\s*.+", "", text).strip()
+
+
 def execute_tool_call(tool_name, tool_args):
+    """Every tool the AI calls comes through here, past the same policy check."""
     try:
         args = json.loads(tool_args)
-    except Exception:
+        if not isinstance(args, dict):
+            args = {}
+    except (TypeError, ValueError):
         args = {}
+    refused = tool_policy.refusal(tool_name, args)
+    if refused:
+        return refused
+    if tool_policy.needs_approval(tool_name, args):
+        description = tool_policy.describe(tool_name, args)
+
+        def _approved():
+            result = _run_tool_call(tool_name, args)
+            add_activity(description.splitlines()[0][:200], "ai", kind="ai_action")
+            return True, str(result)
+
+        _queue_confirmation(description, _approved, source="ai", always=True, ttl=AI_APPROVAL_SECONDS)
+        log(f"[tool approval] waiting: {tool_name}")
+        return (f"Not done yet: this needs the user's approval. Waiting on: {description}\n"
+                f"Tell the user what you want to do and that they can say confirm, or approve it in "
+                f"Oversight, within {AI_APPROVAL_SECONDS} seconds. Don't say it has been done.")
+    return tool_policy.label_output(tool_name, _run_tool_call(tool_name, args))
+
+
+def _run_tool_call(tool_name, args):
     try:
         skill_map = {
             "search_web": "search",
@@ -3772,7 +3821,7 @@ def execute_tool_call(tool_name, tool_args):
                     return True, "Shutting down in thirty seconds, Sir."
                 return _queue_confirmation("Shut down your PC", _shutdown_pc)[1]
             elif action == "open_app":
-                if not ask_native_permission(f"open application '{target}'"):
+                if not ask_native_permission(f"open application '{target}'", always=tool_policy.is_tainted()):
                     return f"Security Sandbox: Blocked opening '{target}'."
                 try:
                     os.startfile(target)
@@ -3871,12 +3920,20 @@ def execute_tool_call(tool_name, tool_args):
                     return f"Battery status lookup failed: {e}"
             return "Unknown system action."
         elif tool_name == "read_local_document":
+            name = str(args.get("filename") or "").strip()
+            if not name or os.path.basename(name) != name or ".." in name or glob.has_magic(name) or "/" in name or "\\" in name:
+                return "Give just a file name, with no folders or wildcards."
+            if tool_policy.is_sensitive_filename(name):
+                return f"I won't read {name}: it looks like it holds passwords or keys."
             docs = os.path.expanduser("~/Documents")
-            matches = glob.glob(f"{docs}/**/{args.get('filename')}", recursive=True)
-            if not matches: matches = glob.glob(f"**/{args.get('filename')}", recursive=True)
-            if not matches: return "File not found."
+            matches = glob.glob(os.path.join(glob.escape(docs), "**", glob.escape(name)), recursive=True)
+            if not matches:
+                return "File not found in Documents."
             with open(matches[0], "r", encoding="utf-8", errors="ignore") as f:
                 return f.read()[:50000]
+        elif tool_name == "add_reminder":
+            taskmod.add_reminder(str(args.get("text") or ""), str(args.get("due") or ""))
+            return "Reminder added."
         elif tool_name == "manage_tasks":
             action = args.get("action")
             text = args.get("text", "")
@@ -3902,8 +3959,6 @@ def execute_tool_call(tool_name, tool_args):
             aliases = args.get("aliases", [])
             if not name or not actions:
                 return "Failed: name and actions are required."
-            if "run_cmd" in json.dumps(actions):
-                return "Failed: raw commands are not allowed in routines the AI creates."
             workflows.add_custom_routine(name, actions, aliases)
             return f"Custom routine '{name}' saved with {len(actions)} actions."
         elif tool_name == "read_url":
@@ -5741,6 +5796,7 @@ class Handler(BaseHTTPRequestHandler):
         self._json({"ok": True})
 
     def _do_post_inner(self):
+        tool_policy.reset()
         path = urllib.parse.urlparse(self.path).path
 
         if not self._authorized():
@@ -6180,13 +6236,8 @@ class Handler(BaseHTTPRequestHandler):
                     except Exception as e:
                         reply = f"My link hiccuped, Sir — say that again? ({str(e)[:80]})"
                 
-                # Parse [TASK: ...] and [REMIND: ... @ ...]
-                for task_match in re.finditer(r"\[TASK:\s*(.+?)\]", reply):
-                    taskmod.add_task(task_match.group(1).strip())
-                for rem_match in re.finditer(r"\[REMIND:\s*(.+?)\s*@\s*(.+?)\]", reply):
-                    taskmod.add_reminder(rem_match.group(1).strip(), rem_match.group(2).strip())
-                # Remove the tags from spoken text
-                reply = re.sub(r"\[(?:TASK|REMIND):.+?\]", "", reply).strip()
+                # Act on any [TASK: ...] style text, then remove it from what gets spoken.
+                reply = _apply_reply_actions(reply)
 
                 # Record exchange so UI can render it
                 reply = maybe_add_joke_offer(cmd, reply)
@@ -6361,26 +6412,7 @@ class Handler(BaseHTTPRequestHandler):
                     self.wfile.flush()
                 
                 reply_str = "".join(full_reply)
-                import re as _re_act
-                for task_match in _re_act.finditer(r"\[TASK:\s*(.+?)\]", reply_str):
-                    taskmod.add_task(task_match.group(1).strip())
-                for rem_match in _re_act.finditer(r"\[REMIND:\s*(.+?)\s*@\s*(.+?)\]", reply_str):
-                    taskmod.add_reminder(rem_match.group(1).strip(), rem_match.group(2).strip())
-
-                # ── Real System Actions Execution Interceptor ──
-                # Lock workstation execution from LLM responses permanently removed for safety.
-                tc_match = _re_act.search(r"TOOL CALL:\s*system_control\((.+?)\)", reply_str)
-                if tc_match:
-                    try:
-                        args_raw = tc_match.group(1).strip()
-                        args_json = json.loads(args_raw) if args_raw.startswith("{") else {}
-                        if args_json.get("action") == "open_app" and args_json.get("target"):
-                            target_app = args_json["target"]
-                            if ask_native_permission(f"open application '{target_app}'"):
-                                _open_app_by_name(target_app)
-                    except Exception as _e_tc:
-                        log(f"[SystemControl] Tool call execute error: {_e_tc}")
-                spoken_reply = _re_act.sub(r"\[(?:TASK|REMIND|NOTE|ACTION):.+?\]|(?:TOOL CALL:\s*.+)", "", reply_str).strip()
+                spoken_reply = _apply_reply_actions(reply_str)
                 if not client_speech:
                     speak(extract_conversational_lead(spoken_reply or reply_str))
                 append_history(user_text, spoken_reply or reply_str)
@@ -6409,12 +6441,7 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 
                 reply = maybe_add_joke_offer(user_text, reply)
-                import re as _re_act
-                for task_match in _re_act.finditer(r"\[TASK:\s*(.+?)\]", reply):
-                    taskmod.add_task(task_match.group(1).strip())
-                for rem_match in _re_act.finditer(r"\[REMIND:\s*(.+?)\s*@\s*(.+?)\]", reply):
-                    taskmod.add_reminder(rem_match.group(1).strip(), rem_match.group(2).strip())
-                reply = _re_act.sub(r"\[(?:TASK|REMIND|NOTE):.+?\]", "", reply).strip()
+                reply = _apply_reply_actions(reply)
                 if not client_speech:
                     speak(reply)
                 append_history(user_text, reply)

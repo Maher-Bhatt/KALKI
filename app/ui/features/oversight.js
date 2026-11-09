@@ -11,9 +11,11 @@ let timer;
 let countdownTimer;
 let renderFn = () => {};
 
-export async function loadOversight() {
-  data.loading = true;
-  renderFn();
+export async function loadOversight(silent = false) {
+  if (!silent) {
+    data.loading = true;
+    renderFn();
+  }
   const [r, actR, appR] = await Promise.all([
     oversight.status().catch(e => ({ok: false, message: e.message})),
     activity.list().catch(e => ({ok: false, message: e.message})),
@@ -30,10 +32,28 @@ export async function loadOversight() {
     data.alerts = []; data.watchedSites = []; data.thresholds = {};
   }
   
-  data.activityList = actR.ok ? (actR.data?.activity || actR.data?.items || actR.data?.log || (Array.isArray(actR.data) ? actR.data : [])) : [];
+  data.activityList = actR.ok ? (actR.data?.activities || actR.data?.activity || actR.data?.items || actR.data?.log || (Array.isArray(actR.data) ? actR.data : [])) : [];
   data.approvalsList = appR.ok ? (appR.data?.approvals || appR.data?.items || (Array.isArray(appR.data) ? appR.data : [])) : [];
   
   renderFn();
+  keepLive();
+}
+
+/* Approvals expire within minutes, so this page has to stay current while open. */
+let liveTimer = null;
+let liveTicks = 0;
+function keepLive() {
+  if (liveTimer) return;
+  liveTimer = setInterval(() => {
+    if (!location.hash.startsWith('#/oversight')) {
+      clearInterval(liveTimer);
+      liveTimer = null;
+      return;
+    }
+    updateCountdowns();
+    liveTicks += 1;
+    if (liveTicks % 5 === 0) loadOversight(true);
+  }, 1000);
 }
 
 function updateCountdowns() {
@@ -168,9 +188,10 @@ export function oversightView() {
           ...data.approvalsList.map(a => 
             h('div.li.new', { style: { paddingLeft: '10px' } },
               h('div', { style: { flex: '1' } },
-                h('div.nm', null, a.action || a.title),
-                h('div.xs.mut.approval-countdown', { 'data-expires-at': a.expiresAt }, a.description ? `${a.description} ╖ expires in ${formatTimeLeft(a.expiresAt)}` : `expires in ${formatTimeLeft(a.expiresAt)}`),
-                h('div.meter', { style: { marginTop: '6px' } }, h('i', { style: { width: '80%' } }))
+                // Show exactly what will happen. The countdown has its own element
+                // because updateCountdowns() rewrites that element's text every second.
+                h('div.nm', { class: 'nm approval-description', style: { whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' } }, a.description),
+                h('div.xs.mut.approval-countdown', { 'data-expires-at': a.expires }, `expires in ${formatTimeLeft(a.expires)}`)
               ),
               h('button.btn.gh', { onClick: () => decideApproval(a.id, 'deny') }, 'Deny'),
               h('button.btn.pri', { onClick: () => decideApproval(a.id, 'approve') }, 'Approve')
@@ -181,7 +202,7 @@ export function oversightView() {
           h('div.row.sb', null, h('h2', null, 'What KALKI did'), h('span.row.g4', null, h('span.chip', null, 'All'), h('span.chip', null, 'Reversible'))),
           ...data.activityList.map(act => 
             h('div.li.tl' + (act.reversible ? '.u' : ''), null,
-              h('span.mono.xs.mut', { style: { width: '38px' } }, formatTime(act.ts)),
+              h('span.mono.xs.mut', { style: { width: '38px' } }, formatTime(act.time)),
               h('span.sm', { style: { flex: '1' } }, act.action || act.title || act.description),
               act.reversible ? h('button.btn.gh', { style: { height: '22px' }, onClick: () => undoActivity(act.id) }, 'Undo') : null
             )

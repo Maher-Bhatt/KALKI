@@ -11,11 +11,10 @@ import { icon } from '../lib/icons.js';
 import { duration, modelLabel } from '../lib/format.js';
 import { label as keyLabel } from '../lib/keys.js';
 import { store, applyUi, notify, subscribe } from '../state/store.js';
-import { dismiss } from '../state/toasts.js';
+import { ok, err, dismiss } from '../state/toasts.js';
 import { createPresence, presenceLabel } from '../components/presence.js';
 import { openDialog } from '../components/dialog.js';
-import { system, desktop } from '../api/endpoints.js';
-import { ok } from '../state/toasts.js';
+import { system, desktop, approvals } from '../api/endpoints.js';
 import { refreshStatus } from '../state/status.js';
 import { openDiagnostics } from './diagnostics.js';
 import { openPalette } from './palette.js';
@@ -129,6 +128,24 @@ export function buildShell(root) {
     }
   }
 
+  /* ── Approvals, available from every screen ───────────────────────── */
+  let knownWaiting = 0;
+  let waitingApprovals = [];
+
+  async function loadApprovals() {
+    const r = await approvals.list();
+    waitingApprovals = r.ok ? (r.data.approvals || []) : [];
+    notify();
+  }
+
+  async function decideApproval(id, decision) {
+    const r = await approvals.decide(id, decision);
+    if (r.ok) ok(decision === 'approve' ? 'Approved' : 'Denied');
+    else err(r.detail || r.message);
+    await loadApprovals();
+    refreshStatus();
+  }
+
   /* ── Offline / update banner ──────────────────────────────────────── */
   function paintBanner() {
     const up = store.status?.updateProgress;
@@ -148,6 +165,24 @@ export function buildShell(root) {
       banner.hidden = false;
       banner.className = 'card dng';
       mount(banner, h('span', null, `Your tasks, notes and memories can't be opened: ${store.status.storeError}`));
+      return;
+    }
+    const waiting = store.status?.pendingApprovals || 0;
+    if (waiting !== knownWaiting) {
+      knownWaiting = waiting;
+      loadApprovals();
+    }
+    const a = waitingApprovals[0];
+    if (waiting && a && !location.hash.startsWith('#/oversight')) {
+      banner.hidden = false;
+      banner.className = 'card warn';
+      mount(banner, h('div.row.sb', { style: { gap: '12px', alignItems: 'flex-start' } },
+        h('div', { style: { flex: '1', minWidth: 0 } },
+          h('strong', null, waiting === 1 ? 'KALKI needs your approval' : `KALKI needs your approval (1 of ${waiting})`),
+          h('div.sm', { style: { whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: '160px', overflowY: 'auto' } }, a.description)),
+        h('div.row.g8', null,
+          h('button.btn.btn-sm.btn-ghost', { type: 'button', onClick: () => decideApproval(a.id, 'deny') }, 'Deny'),
+          h('button.btn.btn-sm.btn-primary', { type: 'button', onClick: () => decideApproval(a.id, 'approve') }, 'Approve'))));
       return;
     }
     const version = store.status?.updateAvailable;
