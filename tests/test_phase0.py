@@ -40,6 +40,7 @@ import config  # noqa: E402
 
 config.PORT = PORT
 config.GREET_ON_START = False
+config.REMINDER_POLL_SEC = 3600  # keep the background loop out of other tests' way
 config.AUTO_IP_LOCATION = False
 config.TELEGRAM_BOT_TOKEN = ""
 config.VISION_RECALL_ENABLED = False
@@ -155,6 +156,19 @@ class Auth(unittest.TestCase):
             status = request("POST", "/api/tasks/list", {}, {**AUTH, "Origin": origin})[0]
             self.assertEqual(status, 403, origin)
             self.assertEqual(request("GET", "/api/status", headers={**AUTH, "Origin": origin})[0], 403, origin)
+
+    def test_host_check_uses_the_port_actually_bound(self):
+        """Regression: checking config.PORT rejected a server on any other port."""
+        extra = server.ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
+        threading.Thread(target=extra.serve_forever, daemon=True).start()
+        self.addCleanup(extra.server_close)
+        self.addCleanup(extra.shutdown)
+        conn = http.client.HTTPConnection("127.0.0.1", extra.server_address[1], timeout=10)
+        conn.request("GET", "/api/health")
+        response = conn.getresponse()
+        response.read()
+        conn.close()
+        self.assertEqual(response.status, 200)
 
     def test_own_origin_allowed(self):
         for origin in (OK_ORIGIN, f"http://localhost:{PORT}"):
@@ -597,6 +611,236 @@ class HonestUi(unittest.TestCase):
         self.assertIn("renderWifi", text)
 
 
+class SettingsApi(unittest.TestCase):
+    def save(self, updates):
+        return request("POST", "/api/settings/save", {"updates": updates}, AUTH)
+
+    def test_valid_value_is_saved_and_applied(self):
+        self.assertEqual(self.save({"RAM_HIGH_PCT": "77"})[0], 200)
+        self.assertEqual(config.RAM_HIGH_PCT, 77)
+
+    def test_bad_values_save_nothing(self):
+        before = config.RAM_HIGH_PCT
+        status, _, text = self.save({"RAM_HIGH_PCT": 60, "PORT": "abc"})
+        self.assertEqual(status, 400)
+        self.assertIn("PORT", json.loads(text)["fields"])
+        self.assertEqual(config.RAM_HIGH_PCT, before)
+
+    def test_internal_names_cannot_be_overwritten(self):
+        before = config._USER_CONFIG_PATH
+        self.assertEqual(self.save({"_USER_CONFIG_PATH": "x"})[0], 400)
+        self.assertEqual(config._USER_CONFIG_PATH, before)
+
+    def test_turning_safety_off_needs_the_server_prompt(self):
+        for updates in ({"ALLOW_HOST_CODE_EXECUTION": True}, {"REQUIRE_DANGEROUS_CONFIRMATION": False}):
+            with mock.patch.object(server, "ask_native_permission", return_value=False) as ask:
+                self.assertEqual(self.save(updates)[0], 403, updates)
+            self.assertTrue(ask.called)
+        self.assertFalse(config.ALLOW_HOST_CODE_EXECUTION)
+        self.assertTrue(config.REQUIRE_DANGEROUS_CONFIRMATION)
+
+    def test_turning_safety_on_needs_no_prompt(self):
+        with mock.patch.object(server, "ask_native_permission", return_value=False) as ask:
+            self.assertEqual(self.save({"ALLOW_HOST_CODE_EXECUTION": False})[0], 200)
+        self.assertFalse(ask.called)
+
+    def test_saving_keeps_keys_other_tools_wrote(self):
+        """Regression: saving would have deleted keys the schema doesn't know."""
+        with open(server.USER_CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump({"TELEGRAM_USER_ID": "12345", "HARDWARE_PROFILE": {"gpu": "x"}}, f)
+        self.assertEqual(self.save({"RAM_HIGH_PCT": 65})[0], 200)
+        with open(server.USER_CONFIG_PATH, encoding="utf-8") as f:
+            saved = json.load(f)
+        self.assertEqual(saved["TELEGRAM_USER_ID"], "12345")
+        self.assertEqual(saved["HARDWARE_PROFILE"], {"gpu": "x"})
+        self.assertEqual(saved["RAM_HIGH_PCT"], 65)
+
+    def test_corrupt_settings_file_does_not_block_saving(self):
+        with open(server.USER_CONFIG_PATH, "w", encoding="utf-8") as f:
+            f.write("{broken")
+        self.assertEqual(self.save({"RAM_HIGH_PCT": 66})[0], 200)
+        with open(server.USER_CONFIG_PATH, encoding="utf-8") as f:
+            self.assertEqual(json.load(f)["RAM_HIGH_PCT"], 66)
+
+
+class MemoryRoutes(unittest.TestCase):
+    def post(self, path, body=None):
+        status, _, text = request("POST", path, body or {}, AUTH)
+        return status, json.loads(text)
+
+    def setUp(self):
+        patcher = mock.patch.object(server.semantic_memory, "get_embedding", return_value=None)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_memory_flow(self):
+        status, data = self.post("/api/memory/add", {"text": "route memory", "importance": "8", "tags": ["Work"]})
+        self.assertEqual(status, 200)
+        doc_id = data["id"]
+        listed = {m["id"]: m for m in self.post("/api/memory/list")[1]["memories"]}
+        self.assertEqual(listed[doc_id]["importance"], 8)
+        get_status, _, get_text = request("GET", "/api/memory/list", headers=AUTH)
+        self.assertEqual(get_status, 200)
+        self.assertIn("route memory", get_text)
+        self.assertTrue(self.post("/api/memory/update", {"id": doc_id, "text": "changed"})[1]["ok"])
+        self.assertTrue(self.post("/api/memory/delete", {"id": doc_id})[1]["ok"])
+
+    def test_bad_input_is_a_400(self):
+        for body in ({"text": ""}, {"text": "x", "importance": 99}, {"text": "x", "importance": "high"},
+                     {"text": "x", "tags": "not-a-list"}, {"text": "x", "type": 5}):
+            self.assertEqual(self.post("/api/memory/add", body)[0], 400, body)
+        self.assertEqual(self.post("/api/memory/update", {"text": "no id"})[0], 400)
+        self.assertEqual(self.post("/api/memory/delete", {})[0], 400)
+
+
+class ClearReplies(unittest.TestCase):
+    def setUp(self):
+        server.taskmod.clear_all_tasks()
+        self.addCleanup(server.taskmod.clear_all_tasks)
+
+    def test_ambiguous_request_names_the_matches(self):
+        server.taskmod.add_task("buy milk")
+        server.taskmod.add_task("buy eggs")
+        for command in ("delete task buy", "complete task buy"):
+            _, reply = server.handle_local(command)
+            self.assertIn("buy milk", reply, command)
+            self.assertIn("buy eggs", reply, command)
+
+    def test_no_match_says_so(self):
+        _, reply = server.handle_local("delete task nothing like this")
+        self.assertIn("No task matches", reply)
+
+    def test_api_explains_why_nothing_happened(self):
+        server.taskmod.add_task("buy milk")
+        server.taskmod.add_task("buy eggs")
+        _, _, text = request("POST", "/api/tasks/delete", {"text": "buy"}, AUTH)
+        data = json.loads(text)
+        self.assertFalse(data["ok"])
+        self.assertIn("2 tasks match", data["error"])
+
+
+class StoreStatus(unittest.TestCase):
+    def test_status_reports_a_store_problem(self):
+        with mock.patch.object(server, "STORE_ERROR", "the store is damaged"):
+            data = json.loads(request("GET", "/api/status", headers=AUTH)[2])
+        self.assertEqual(data["storeError"], "the store is damaged")
+
+    def test_status_is_quiet_when_healthy(self):
+        self.assertEqual(json.loads(request("GET", "/api/status", headers=AUTH)[2])["storeError"], "")
+
+    def test_banner_shows_it(self):
+        text = open(os.path.join(APP, "ui", "features", "shell.js"), encoding="utf-8", errors="replace").read()
+        self.assertIn("storeError", text)
+
+
+class ProductivityRoutes(unittest.TestCase):
+    def post(self, path, body=None):
+        status, _, text = request("POST", path, body or {}, AUTH)
+        return status, json.loads(text)
+
+    def test_tasks_flow(self):
+        status, data = self.post("/api/tasks/add", {"text": "route task"})
+        self.assertEqual(status, 200)
+        task_id = data["id"]
+        self.assertIn("route task", [t["text"] for t in self.post("/api/tasks/list")[1]["tasks"]])
+        self.assertTrue(self.post("/api/tasks/complete", {"id": task_id})[1]["ok"])
+        self.assertTrue(self.post("/api/tasks/delete", {"id": task_id})[1]["ok"])
+        self.assertEqual(self.post("/api/tasks/add", {"text": "  "})[0], 400)
+
+    def test_reminder_can_be_deleted(self):
+        reminder = self.post("/api/reminders/add", {"text": "route reminder", "due": "2099-01-01T10:00:00"})[1]["id"]
+        self.assertEqual(self.post("/api/reminders/add", {"text": "no due"})[0], 400)
+        self.assertTrue(self.post("/api/reminders/delete", {"id": reminder})[1]["ok"])
+        self.assertNotIn(reminder, [r["id"] for r in self.post("/api/reminders/list")[1]["reminders"]])
+
+    def test_note_can_be_deleted_and_searched(self):
+        note = self.post("/api/notes/add", {"text": "route note #tagged"})[1]["id"]
+        self.assertIn(note, [n["id"] for n in self.post("/api/notes/search", {"q": "tagged"})[1]["notes"]])
+        self.assertTrue(self.post("/api/notes/delete", {"id": note})[1]["ok"])
+        self.assertFalse(self.post("/api/notes/delete", {"id": note})[1]["ok"])
+
+    def test_bad_note_count_is_a_400(self):
+        self.assertEqual(self.post("/api/notes/list", {"n": "many"})[0], 400)
+
+
+class HistoryAndActivity(unittest.TestCase):
+    def test_history_keeps_order_and_limit(self):
+        for number in range(config.MAX_HISTORY + 4):
+            server.append_history(f"question {number}", f"answer {number}")
+        history = server.load_history()
+        self.assertEqual(len(history), config.MAX_HISTORY)
+        self.assertEqual(history[-1], {"role": "assistant", "content": f"answer {config.MAX_HISTORY + 3}"})
+        self.assertEqual(history[-2]["role"], "user")
+
+    def test_simple_memory_counts(self):
+        before = len(server.load_memory())
+        self.assertEqual(server.add_memory("a simple fact"), before + 1)
+        self.assertEqual(server.load_memory()[-1]["fact"], "a simple fact")
+
+    def test_activity_survives_a_restart_without_fake_undo(self):
+        calls = []
+        act_id = server.add_activity("did a thing", "test", reversible=True, undo_fn=lambda: calls.append(1))
+        listed = {a["id"]: a for a in json.loads(request("POST", "/api/activity/list", {}, AUTH)[2])["activities"]}
+        self.assertTrue(listed[act_id]["reversible"])
+        with mock.patch.object(server, "_activity_log", []):  # what a restart looks like
+            listed = {a["id"]: a for a in json.loads(request("POST", "/api/activity/list", {}, AUTH)[2])["activities"]}
+            self.assertEqual(listed[act_id]["action"], "did a thing")
+            self.assertFalse(listed[act_id]["reversible"])
+            self.assertEqual(request("POST", "/api/activity/undo", {"id": act_id}, AUTH)[0], 400)
+
+    def test_undo_runs_once(self):
+        calls = []
+        act_id = server.add_activity("undo me", "test", reversible=True, undo_fn=lambda: calls.append(1))
+        self.assertEqual(request("POST", "/api/activity/undo", {"id": act_id}, AUTH)[0], 200)
+        self.assertEqual(request("POST", "/api/activity/undo", {"id": act_id}, AUTH)[0], 400)
+        self.assertEqual(calls, [1])
+
+    def test_remember_saves_to_memory(self):
+        """Regression: this called a function that doesn't exist, and hid the error."""
+        with mock.patch.object(server.semantic_memory, "get_embedding", return_value=None):
+            handled, _ = server.handle_local("remember that the spare key is in the blue box")
+        self.assertTrue(handled)
+        texts = [m["text"] for m in server.semantic_memory.memory.list_all()]
+        self.assertTrue(any("spare key" in text for text in texts))
+
+    def test_old_format_backup_restores_into_the_store(self):
+        import zipfile
+        archive = os.path.join(_home, "old_backup.zip")
+        with zipfile.ZipFile(archive, "w") as z:
+            z.writestr("history.json", json.dumps([{"role": "user", "content": "from old backup"}]))
+            z.writestr("memory.json", json.dumps([{"fact": "old fact", "date": "2026-01-01"}]))
+        self.assertEqual(request("POST", "/api/backup/restore", {"path": archive}, AUTH)[0], 200)
+        self.assertEqual(server.load_history()[-1]["content"], "from old backup")
+        self.assertEqual(server.load_memory()[-1]["fact"], "old fact")
+
+
+class BackupApi(unittest.TestCase):
+    def test_backup_and_restore_through_the_api(self):
+        import zipfile
+        tid = server.taskmod.add_task("saved in backup")
+        status, _, text = request("POST", "/api/backup/create", {}, AUTH)
+        self.assertEqual(status, 200, text[:200])
+        archive = json.loads(text)["file"]
+        with zipfile.ZipFile(archive) as z:
+            self.assertIn("kalki.db", z.namelist())
+        server.taskmod.delete_task(tid)
+        # The UI sends `path`: this was rejected before.
+        status, _, text = request("POST", "/api/backup/restore", {"path": archive}, AUTH)
+        self.assertEqual(status, 200, text[:200])
+        self.assertIn("saved in backup", [t["text"] for t in server.taskmod.list_tasks()])
+
+    def test_bad_backup_changes_nothing(self):
+        import zipfile
+        marker = server.taskmod.add_task("still here")
+        bad = os.path.join(_home, "bad_backup.zip")
+        with zipfile.ZipFile(bad, "w") as z:
+            z.writestr("kalki.db", "this is not a database")
+            z.writestr("memory.json", "[]")
+        status, _, _ = request("POST", "/api/backup/restore", {"path": bad}, AUTH)
+        self.assertEqual(status, 400)
+        self.assertIn(marker, [t["id"] for t in server.taskmod.list_tasks()])
+
+
 def _local_import_problems(path):
     """Names bound by a function-level import but used where that binding may not
     have run. Python treats them as local to the WHOLE function, so such a use
@@ -656,6 +900,17 @@ class StaticSafety(unittest.TestCase):
         for path in self._files():
             problems += _local_import_problems(path)
         self.assertEqual(problems, [])
+
+    def test_silent_except_count_can_only_go_down(self):
+        """`except: pass` hides real failures. Lower this number as they get fixed."""
+        budget = 165
+        count = 0
+        for path in self._files():
+            tree = ast.parse(open(path, encoding="utf-8", errors="replace").read())
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ExceptHandler) and len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
+                    count += 1
+        self.assertLessEqual(count, budget)
 
     def test_runtime_security_attributes_exist(self):
         import runtime_security

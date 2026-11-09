@@ -218,12 +218,9 @@ class KalkiSetupWizard(ctk.CTk):
             "ELEVENLABS_API_KEY": "",
         }
 
-        if os.path.exists(_USER_CONFIG_PATH):
-            try:
-                with open(_USER_CONFIG_PATH, "r", encoding="utf-8-sig") as f:
-                    self.config_data.update(json.load(f))
-            except:
-                pass
+        import settings_schema
+        saved_settings, _ = settings_schema.read_raw_user_config(_USER_CONFIG_PATH)
+        self.config_data.update(saved_settings)
 
         self.show_boot_sequence()
 

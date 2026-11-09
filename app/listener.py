@@ -19,10 +19,14 @@ from runtime_paths import prepare_runtime
 
 _runtime = prepare_runtime()
 runtime_security.TOKEN_PATH = os.path.join(_runtime.user_data_dir, "data", "api_token.txt")
+
 BASE_DIR = _runtime.app_root
 ENTRY_DIR = _runtime.entry_dir
 
 import config
+import settings_schema
+
+settings_schema.repair_config(config)
 
 is_store = os.path.exists(os.path.join(BASE_DIR, "store_build.txt"))
 _data_dir = os.path.join(_runtime.user_data_dir, "data") if (is_store or sys.platform != "win32") else os.path.join(BASE_DIR, "data")
