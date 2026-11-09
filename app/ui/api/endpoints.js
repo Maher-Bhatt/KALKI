@@ -56,6 +56,15 @@ export const memory = {
   },
 };
 
+/* ── Conversations ────────────────────────────────────────────────── */
+export const threadsApi = {
+  list: () => post('/api/threads/list', {}),
+  save: (thread) => post('/api/threads/save', { thread }),
+  truncate: (id, messageId) => post('/api/threads/truncate', { id, messageId }),
+  remove: (id) => post('/api/threads/delete', { id }),
+  clear: () => post('/api/threads/clear', {}),
+};
+
 /* ── Tasks & reminders ────────────────────────────────────────────── */
 export const tasks = {
   async list(all = false) {

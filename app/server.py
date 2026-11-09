@@ -95,6 +95,10 @@ import semantic_memory
 import settings_schema
 import routes_productivity
 import routes_memory
+import routes_threads
+import threads
+import tool_policy
+import command_intent
 import db
 import wifi_security
 import shield_monitors
@@ -301,14 +305,15 @@ def update_location_from_ip():
 if getattr(config, "AUTO_IP_LOCATION", False) and not os.environ.get("KALKI_SANDBOX"):
     threading.Thread(target=update_location_from_ip, daemon=True).start()
 
-def fetch_weather_line(timeout=5):
-    """Short weather string using wttr.in (live IP geolocation)"""
+def fetch_weather_line(timeout=5, location=""):
+    """Short weather string from wttr.in, for a place or else by IP location."""
     try:
-        # Fetch live location weather using IP auto-routing from wttr.in
-        req = urllib.request.Request("https://wttr.in/?format=3", headers={'User-Agent': 'Mozilla/5.0'})
+        place = urllib.parse.quote(location.strip()) if location else ""
+        req = urllib.request.Request(f"https://wttr.in/{place}?format=3", headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=timeout) as r:
             w = r.read().decode('utf-8').strip()
-            return w
+            # Errors come back as a whole web page, which isn't a weather report.
+            return w if w and len(w) < 200 and "<" not in w else None
     except Exception:
         return None
 
@@ -491,9 +496,12 @@ def _public_activity(a):
     return {k: a[k] for k in ("id", "action", "source", "kind", "time", "reversible", "undone")}
 
 
-def _queue_confirmation(description, action, source="chat"):
+def _queue_confirmation(description, action, source="chat", always=False, ttl=None):
+    """Hold an action until the user approves it. `always` is for AI-requested actions,
+    which the "ask before risky actions" setting can't switch off."""
     global _approval_id_seq
-    if not getattr(config, "REQUIRE_DANGEROUS_CONFIRMATION", True):
+    ttl = ttl or _PENDING_TTL
+    if not always and not getattr(config, "REQUIRE_DANGEROUS_CONFIRMATION", True):
         return action()
     with _pending_lock:
         _approval_id_seq += 1
@@ -505,9 +513,9 @@ def _queue_confirmation(description, action, source="chat"):
             "source": source,
             "action": action,
             "created": now,
-            "expires": now + _PENDING_TTL,
+            "expires": now + ttl,
         }
-    return True, f"{description}. Say confirm within {_PENDING_TTL} seconds, or approve it in Oversight."
+    return True, f"{description}. Say confirm within {ttl} seconds, or approve it in Oversight."
 
 
 def ask_native_permission(description, always=False):
@@ -582,12 +590,16 @@ def _consume_confirmation(command):
     with _pending_lock:
         if not _pending_approvals:
             return True, "There is no active action to confirm."
-        # Confirm the most recent one
-        aid = max(_pending_approvals.keys(), key=lambda k: int(k))
-        pending = _pending_approvals.pop(aid)
-        
-    if pending["expires"] < time.time():
-        return True, "There is no active action to confirm."
+        now = time.time()
+        for aid in [a for a, p in _pending_approvals.items() if p["expires"] < now]:
+            del _pending_approvals[aid]
+        if not _pending_approvals:
+            return True, "There is no active action to confirm."
+        if len(_pending_approvals) > 1:
+            # Saying "confirm" can't show which one it means, so never guess.
+            return True, (f"{len(_pending_approvals)} actions are waiting, so I won't guess which you mean. "
+                          "Approve or deny each one on screen.")
+        pending = _pending_approvals.pop(next(iter(_pending_approvals)))
     return pending["action"]()
 
 
@@ -1817,6 +1829,9 @@ def handle_local(text):
     import notes as notesmod
     t = text.lower().strip()
     raw = text.strip()
+    # Ordinary sentences go to the AI. A pending "what should I note?" answer can be anything.
+    if not STATE.get("pending_note_capture") and command_intent.is_conversation(raw):
+        return False, ""
     # ════════════════════════════════════════════════════
     # REAL SOVEREIGN DESKTOP SYSTEM ACTIONS (Instant Local Execution)
     # ════════════════════════════════════════════════════
@@ -2957,8 +2972,8 @@ def handle_local(text):
         srv = r["headers"].get("Server", "?")
         return True, f"{r['url']} → {r['status']}. Server: {srv}. {len(r['headers'])} headers."
 
-    m = _re_local.search(r"^ping\s+(\S+)", t, flags=_re_local.IGNORECASE)
-    if m:
+    m = _re_local.search(r"^ping\s+(\S+)$", t, flags=_re_local.IGNORECASE)
+    if m and command_intent.looks_like_host(m.group(1)):
         r = cybertools.ping(m.group(1))
         if "error" in r: return True, f"Ping failed: {r['error']}"
         lines = [l for l in r["output"].splitlines() if "time" in l.lower() or "loss" in l.lower()]
@@ -3249,8 +3264,9 @@ def handle_local(text):
         return True, f"CPU at {cpu} percent. Memory at {ram} percent. Disk at {disk} percent.{batt}"
 
     # ── Weather (free wttr.in) ─────────────────────────
-    if "weather" in t:
-        w = fetch_weather_line()
+    weather = _re_local.fullmatch(r"(?:what(?:'s| is) the )?weather(?: (?:today|now|like|outside))?(?: in (.+?))?\??", t)
+    if weather:
+        w = fetch_weather_line(location=weather.group(1) or "")
         if w:
             return True, f"{w}, {config.OWNER_TITLE}."
         return True, "I couldn't reach the weather service."
@@ -3704,11 +3720,87 @@ def pick_model(text):
     return fast_model              # short + casual → instant
 
 
+AI_APPROVAL_SECONDS = 180
+
+
+def _share_exchange(user_text, reply, source):
+    """Save a voice or Telegram turn into the shared conversation and tell the app.
+    If saving fails the turn still gets announced: the reply matters more."""
+    thread_id = None
+    try:
+        thread_id = threads.append_exchange(user_text, reply, source)
+    except Exception as e:
+        runtime_log.log_event(LOG_PATH, "error", "thread_save_failed", detail=str(e))
+    with _state_lock:
+        STATE["conversation_seq"] += 1
+        STATE["recent_exchange"] = {
+            "seq": STATE["conversation_seq"], "threadId": thread_id,
+            "user": user_text, "reply": reply, "ts": time.time(),
+        }
+
+
+def _shared_context(limit=8):
+    try:
+        return threads.recent_context(limit=limit)
+    except Exception as e:
+        runtime_log.log_event(LOG_PATH, "error", "thread_read_failed", detail=str(e))
+        return []
+
+
+def _remember_from_turn(user_text, reply_text):
+    """Learn from a turn in the background. A reply built on untrusted content is left
+    out: the extractor saves straight to memory, which would skip the approval gate."""
+    reply = "" if tool_policy.is_tainted() else reply_text
+    threading.Thread(target=_auto_extract_topic_memory, args=(user_text, reply), daemon=True).start()
+
+
+def _apply_reply_actions(reply):
+    """Act on [TASK: ...], [REMIND: ... @ ...] and TOOL CALL text in a model's reply, and
+    return the reply without it. Page text can put these in a reply, so they go through
+    the same gate as real tool calls."""
+    text = str(reply or "")
+    for match in re.finditer(r"\[TASK:\s*(.+?)\]", text):
+        execute_tool_call("manage_tasks", json.dumps({"action": "add", "text": match.group(1).strip()}))
+    for match in re.finditer(r"\[REMIND:\s*(.+?)\s*@\s*(.+?)\]", text):
+        execute_tool_call("add_reminder", json.dumps({"text": match.group(1).strip(), "due": match.group(2).strip()}))
+    call = re.search(r"TOOL CALL:\s*system_control\((\{.*?\})\)", text)
+    if call:
+        try:
+            json.loads(call.group(1))
+            execute_tool_call("system_control", call.group(1))
+        except ValueError:
+            log("ignored a malformed TOOL CALL in a reply")
+    return re.sub(r"\[(?:TASK|REMIND|NOTE|ACTION):.+?\]|TOOL CALL:\s*.+", "", text).strip()
+
+
 def execute_tool_call(tool_name, tool_args):
+    """Every tool the AI calls comes through here, past the same policy check."""
     try:
         args = json.loads(tool_args)
-    except Exception:
+        if not isinstance(args, dict):
+            args = {}
+    except (TypeError, ValueError):
         args = {}
+    refused = tool_policy.refusal(tool_name, args)
+    if refused:
+        return refused
+    if tool_policy.needs_approval(tool_name, args):
+        description = tool_policy.describe(tool_name, args)
+
+        def _approved():
+            result = _run_tool_call(tool_name, args)
+            add_activity(f"{description.splitlines()[0][:120]}: {str(result)[:120]}", "ai", kind="ai_action")
+            return True, str(result)
+
+        _queue_confirmation(description, _approved, source="ai", always=True, ttl=AI_APPROVAL_SECONDS)
+        log(f"[tool approval] waiting: {tool_name}")
+        return (f"Not done yet: this needs the user's approval. Waiting on: {description}\n"
+                f"Tell the user what you want to do and that they can say confirm, or approve it in "
+                f"Oversight, within {AI_APPROVAL_SECONDS} seconds. Don't say it has been done.")
+    return tool_policy.label_output(tool_name, _run_tool_call(tool_name, args))
+
+
+def _run_tool_call(tool_name, args):
     try:
         skill_map = {
             "search_web": "search",
@@ -3755,24 +3847,25 @@ def execute_tool_call(tool_name, tool_args):
                     "Lock your PC",
                     lambda: (ctypes.windll.user32.LockWorkStation()
                              and (True, "Locking your PC.")),
+                    source="ai", always=True, ttl=AI_APPROVAL_SECONDS,
                 )[1]
             elif action == "sleep":
                 def _sleep_pc():
                     subprocess.Popen(["rundll32.exe", "powrprof.dll,SetSuspendState", "0,1,0"])
                     return True, "Going to sleep."
-                return _queue_confirmation("Put your PC to sleep", _sleep_pc)[1]
+                return _queue_confirmation("Put your PC to sleep", _sleep_pc, source="ai", always=True, ttl=AI_APPROVAL_SECONDS)[1]
             elif action == "restart":
                 def _restart_pc():
                     subprocess.Popen(["shutdown.exe", "/r", "/t", "10"])
                     return True, "Restarting in ten seconds, Sir."
-                return _queue_confirmation("Restart your PC", _restart_pc)[1]
+                return _queue_confirmation("Restart your PC", _restart_pc, source="ai", always=True, ttl=AI_APPROVAL_SECONDS)[1]
             elif action == "shutdown":
                 def _shutdown_pc():
                     subprocess.Popen(["shutdown.exe", "/s", "/t", "30"])
                     return True, "Shutting down in thirty seconds, Sir."
-                return _queue_confirmation("Shut down your PC", _shutdown_pc)[1]
+                return _queue_confirmation("Shut down your PC", _shutdown_pc, source="ai", always=True, ttl=AI_APPROVAL_SECONDS)[1]
             elif action == "open_app":
-                if not ask_native_permission(f"open application '{target}'"):
+                if not ask_native_permission(f"open application '{target}'", always=True):
                     return f"Security Sandbox: Blocked opening '{target}'."
                 try:
                     os.startfile(target)
@@ -3842,7 +3935,7 @@ def execute_tool_call(tool_name, tool_args):
                 proc_name = str(target).strip()
                 if not proc_name:
                     return "Process name required."
-                if not ask_native_permission(f"terminate process '{proc_name}'"):
+                if not ask_native_permission(f"terminate process '{proc_name}'", always=True):
                     return f"Security Sandbox: Blocked terminating '{proc_name}'."
                 if not psutil:
                     return "psutil library is required to kill processes natively. Please install it."
@@ -3871,12 +3964,20 @@ def execute_tool_call(tool_name, tool_args):
                     return f"Battery status lookup failed: {e}"
             return "Unknown system action."
         elif tool_name == "read_local_document":
+            name = str(args.get("filename") or "").strip()
+            if not name or os.path.basename(name) != name or ".." in name or glob.has_magic(name) or "/" in name or "\\" in name:
+                return "Give just a file name, with no folders or wildcards."
+            if tool_policy.is_sensitive_filename(name):
+                return f"I won't read {name}: it looks like it holds passwords or keys."
             docs = os.path.expanduser("~/Documents")
-            matches = glob.glob(f"{docs}/**/{args.get('filename')}", recursive=True)
-            if not matches: matches = glob.glob(f"**/{args.get('filename')}", recursive=True)
-            if not matches: return "File not found."
+            matches = glob.glob(os.path.join(glob.escape(docs), "**", glob.escape(name)), recursive=True)
+            if not matches:
+                return "File not found in Documents."
             with open(matches[0], "r", encoding="utf-8", errors="ignore") as f:
                 return f.read()[:50000]
+        elif tool_name == "add_reminder":
+            taskmod.add_reminder(str(args.get("text") or ""), str(args.get("due") or ""))
+            return "Reminder added."
         elif tool_name == "manage_tasks":
             action = args.get("action")
             text = args.get("text", "")
@@ -3902,8 +4003,6 @@ def execute_tool_call(tool_name, tool_args):
             aliases = args.get("aliases", [])
             if not name or not actions:
                 return "Failed: name and actions are required."
-            if "run_cmd" in json.dumps(actions):
-                return "Failed: raw commands are not allowed in routines the AI creates."
             workflows.add_custom_routine(name, actions, aliases)
             return f"Custom routine '{name}' saved with {len(actions)} actions."
         elif tool_name == "read_url":
@@ -4279,26 +4378,10 @@ def ask_anthropic_stream(user_messages, model=None):
                 except Exception:
                     pass
 
-def ask_deepseek_free_stream(user_messages):
-    """Fallback to DeepSeek-R1 via g4f (Free LLM) if no API keys are provided."""
-    try:
-        from g4f.client import Client
-        import g4f
-        client = Client()
-        # g4f expects history to be passed directly
-        response = client.chat.completions.create(
-            model="deepseek-r1",
-            messages=user_messages,
-            stream=True
-        )
-        for chunk in response:
-            if chunk.choices and chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
-    except ImportError:
-        yield "Error: g4f missing. Run: pip install g4f curl_cffi"
-    except Exception as e:
-        log(f"DeepSeek-R1 fallback failed: {e}")
-        yield f"[Free DeepSeek-R1 Fallback Failed]: {e}"
+NO_PROVIDER_MESSAGE = (
+    "I need an AI provider before I can answer. Open Settings, choose AI Models, and add a "
+    "free Groq or Gemini API key, or install Ollama to run a model on this PC."
+)
 
 _PROVIDER_FAILURES = {}
 _CIRCUIT_BREAKER_SECONDS = 600
@@ -4322,7 +4405,7 @@ def resolve_auto_model(last_user):
     low_prompt = (last_user or "").lower()
     
     if not (has_gemini or has_openai or has_groq):
-        return "deepseek-r1"
+        return "ollama"  # the only option left, and it reports clearly if it isn't there
     
     # Preferred Groq fallback model from available models
     best_groq = "qwen/qwen3.8-27b" if "qwen/qwen3.8-27b" in AVAILABLE_GROQ_MODELS else (AVAILABLE_GROQ_MODELS[0] if AVAILABLE_GROQ_MODELS else "llama-3.1-8b-instant")
@@ -4410,16 +4493,11 @@ def ask_ai_stream(user_messages):
         is_offline = not model_manager.check_internet()
         if is_offline: chosen = "ollama"
     
-    if chosen == "deepseek-r1":
-        for token in ask_deepseek_free_stream(user_messages):
-            yield token
-        return
-    
     if chosen == "ollama" or is_offline:
         try:
             model = pick_ollama_model()
             if not model:
-                yield "No local Ollama model found, Sir."
+                yield NO_PROVIDER_MESSAGE
                 return
             payload = json.dumps({"model": model, "messages": msgs, "stream": True}).encode()
             req = urllib.request.Request(f"{config.OLLAMA_URL}/api/chat", data=payload, headers={"Content-Type": "application/json"}, method="POST")
@@ -4506,13 +4584,6 @@ def ask_ai_stream(user_messages):
                     yield token
                 return
             except Exception: pass
-        # Try DeepSeek free fallback
-        try:
-            log("Attempting DeepSeek free stream fallback...")
-            for token in ask_deepseek_free_stream(user_messages):
-                yield token
-            return
-        except Exception: pass
         yield f"I experienced a temporary interruption reaching the cloud models, {config.OWNER_TITLE}. Your system, memory, and desktop tools are fully operational. Please check your API quota or network connection."
         return
 
@@ -4563,12 +4634,6 @@ def ask_ai_stream(user_messages):
             finally:
                 ask_ai_stream._fallback_active = False
             return
-        try:
-            log("Attempting DeepSeek free stream fallback after general cloud stream failure...")
-            for token in ask_deepseek_free_stream(user_messages):
-                yield token
-            return
-        except Exception: pass
         yield f"Unable to reach the active AI provider, {config.OWNER_TITLE}. Your local desktop environment, memory, and cyber tools are ready."
         return
 
@@ -4729,21 +4794,8 @@ def ask_ai(user_messages, force_search=False):
     except Exception as e:
         log(f"[Ollama failed] {e}")
         
-        # Fallback to keyless DeepSeek via g4f
-        try:
-            from g4f.client import Client
-            client = Client()
-            response = client.chat.completions.create(
-                model="deepseek-r1",
-                messages=user_messages
-            )
-            if response and response.choices and response.choices[0].message.content:
-                return response.choices[0].message.content
-        except Exception as deepseek_e:
-            log(f"DeepSeek fallback failed: {deepseek_e}")
-
         if groq_err == "no API key set":
-            raise RuntimeError("I need an AI provider before I can answer. Open Settings, choose AI Models, and add your free Groq API key. Alternatively, check your network connection for the DeepSeek fallback.")
+            raise RuntimeError(NO_PROVIDER_MESSAGE)
         raise RuntimeError(f"I could not reach an AI provider ({groq_err[:140]}). Check the connection and API key in Settings, then try again.")
 
 
@@ -5788,6 +5840,7 @@ class Handler(BaseHTTPRequestHandler):
         self._json({"ok": True})
 
     def _do_post_inner(self):
+        tool_policy.reset()
         path = urllib.parse.urlparse(self.path).path
 
         if not self._authorized():
@@ -5799,7 +5852,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": False, "error": "request body must be a JSON object"}, status=400)
             return
 
-        route = routes_productivity.POST_ROUTES.get(path) or routes_memory.POST_ROUTES.get(path)
+        route = (routes_productivity.POST_ROUTES.get(path) or routes_memory.POST_ROUTES.get(path)
+                 or routes_threads.POST_ROUTES.get(path))
         if route:
             payload, status = route(body)
             self._json(payload, status=status)
@@ -6222,27 +6276,17 @@ class Handler(BaseHTTPRequestHandler):
                 handled, reply = handle_local(cmd)
                 if not handled:
                     try:
-                        convo = load_history()[-8:] + [{"role": "user", "content": cmd}]
+                        convo = _shared_context() + [{"role": "user", "content": cmd}]
                         reply = ask_ai(convo)
                     except Exception as e:
                         reply = f"My link hiccuped, Sir — say that again? ({str(e)[:80]})"
                 
-                # Parse [TASK: ...] and [REMIND: ... @ ...]
-                for task_match in re.finditer(r"\[TASK:\s*(.+?)\]", reply):
-                    taskmod.add_task(task_match.group(1).strip())
-                for rem_match in re.finditer(r"\[REMIND:\s*(.+?)\s*@\s*(.+?)\]", reply):
-                    taskmod.add_reminder(rem_match.group(1).strip(), rem_match.group(2).strip())
-                # Remove the tags from spoken text
-                reply = re.sub(r"\[(?:TASK|REMIND):.+?\]", "", reply).strip()
+                # Act on any [TASK: ...] style text, then remove it from what gets spoken.
+                reply = _apply_reply_actions(reply)
 
                 # Record exchange so UI can render it
                 reply = maybe_add_joke_offer(cmd, reply)
-                with _state_lock:
-                    STATE["conversation_seq"] += 1
-                    STATE["recent_exchange"] = {
-                        "seq": STATE["conversation_seq"],
-                        "user": cmd, "reply": reply, "ts": time.time(),
-                    }
+                _share_exchange(cmd, reply, "voice")
                 append_history(cmd, reply)
                 speak(reply)
                 self._json({"ok": True, "reply": reply, "handled": handled})
@@ -6337,6 +6381,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/chat":
             messages = body.get("messages") or []
             is_voice = (body.get("source") == "voice")
+            # Other sources have no window keeping their conversation, so the server does.
+            shared_source = body.get("source") if body.get("source") in ("voice", "telegram") else None
+            if body.get("threadId"):
+                threads.set_active(str(body["threadId"]))
             stream_req = body.get("stream", False)
             client_speech = bool(body.get("clientSpeech"))
             # Wake + command in one breath arrives here (not /api/wake), so
@@ -6352,13 +6400,8 @@ class Handler(BaseHTTPRequestHandler):
                     break
 
             def _record_exchange(reply):
-                if is_voice:
-                    with _state_lock:
-                        STATE["conversation_seq"] += 1
-                        STATE["recent_exchange"] = {
-                            "seq": STATE["conversation_seq"],
-                            "user": user_text, "reply": reply, "ts": time.time(),
-                        }
+                if shared_source:
+                    _share_exchange(user_text, reply, shared_source)
 
             handled, local_reply = handle_local(user_text)
             if handled:
@@ -6367,7 +6410,7 @@ class Handler(BaseHTTPRequestHandler):
                     speak(local_reply)
                 append_history(user_text, local_reply)
                 _record_exchange(local_reply)
-                threading.Thread(target=_auto_extract_topic_memory, args=(user_text, local_reply), daemon=True).start()
+                _remember_from_turn(user_text, local_reply)
                 if stream_req:
                     self.send_response(200)
                     self.send_header('Content-Type', 'text/event-stream')
@@ -6408,31 +6451,12 @@ class Handler(BaseHTTPRequestHandler):
                     self.wfile.flush()
                 
                 reply_str = "".join(full_reply)
-                import re as _re_act
-                for task_match in _re_act.finditer(r"\[TASK:\s*(.+?)\]", reply_str):
-                    taskmod.add_task(task_match.group(1).strip())
-                for rem_match in _re_act.finditer(r"\[REMIND:\s*(.+?)\s*@\s*(.+?)\]", reply_str):
-                    taskmod.add_reminder(rem_match.group(1).strip(), rem_match.group(2).strip())
-
-                # ── Real System Actions Execution Interceptor ──
-                # Lock workstation execution from LLM responses permanently removed for safety.
-                tc_match = _re_act.search(r"TOOL CALL:\s*system_control\((.+?)\)", reply_str)
-                if tc_match:
-                    try:
-                        args_raw = tc_match.group(1).strip()
-                        args_json = json.loads(args_raw) if args_raw.startswith("{") else {}
-                        if args_json.get("action") == "open_app" and args_json.get("target"):
-                            target_app = args_json["target"]
-                            if ask_native_permission(f"open application '{target_app}'"):
-                                _open_app_by_name(target_app)
-                    except Exception as _e_tc:
-                        log(f"[SystemControl] Tool call execute error: {_e_tc}")
-                spoken_reply = _re_act.sub(r"\[(?:TASK|REMIND|NOTE|ACTION):.+?\]|(?:TOOL CALL:\s*.+)", "", reply_str).strip()
+                spoken_reply = _apply_reply_actions(reply_str)
                 if not client_speech:
                     speak(extract_conversational_lead(spoken_reply or reply_str))
                 append_history(user_text, spoken_reply or reply_str)
                 _record_exchange(spoken_reply or reply_str)
-                threading.Thread(target=_auto_extract_topic_memory, args=(user_text, reply_str), daemon=True).start()
+                _remember_from_turn(user_text, reply_str)
                 
                 # Track usage metrics
                 latency = (time.time() - start_time) * 1000
@@ -6449,24 +6473,19 @@ class Handler(BaseHTTPRequestHandler):
                 start_time = time.time()
                 try:
                     # Prepend recent conversation so KALKI remembers context.
-                    convo = load_history()[-8:] + messages
+                    convo = (_shared_context() + messages) if shared_source else messages
                     reply = ask_ai(convo)
                 except Exception as e:
                     self._json({"ok": False, "error": str(e)})
                     return
                 
                 reply = maybe_add_joke_offer(user_text, reply)
-                import re as _re_act
-                for task_match in _re_act.finditer(r"\[TASK:\s*(.+?)\]", reply):
-                    taskmod.add_task(task_match.group(1).strip())
-                for rem_match in _re_act.finditer(r"\[REMIND:\s*(.+?)\s*@\s*(.+?)\]", reply):
-                    taskmod.add_reminder(rem_match.group(1).strip(), rem_match.group(2).strip())
-                reply = _re_act.sub(r"\[(?:TASK|REMIND|NOTE):.+?\]", "", reply).strip()
+                reply = _apply_reply_actions(reply)
                 if not client_speech:
                     speak(reply)
                 append_history(user_text, reply)
                 _record_exchange(reply)
-                threading.Thread(target=_auto_extract_topic_memory, args=(user_text, reply), daemon=True).start()
+                _remember_from_turn(user_text, reply)
                 
                 # Track usage metrics
                 latency = (time.time() - start_time) * 1000
@@ -6709,7 +6728,7 @@ class Handler(BaseHTTPRequestHandler):
             if handled:
                 reply = maybe_add_joke_offer(cmd, reply)
                 speak(reply)
-            threading.Thread(target=_auto_extract_topic_memory, args=(cmd, reply), daemon=True).start()
+            _remember_from_turn(cmd, reply)
             self._json({"handled": handled, "reply": reply})
             return
 
