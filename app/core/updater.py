@@ -6,6 +6,7 @@ import threading
 import tempfile
 import subprocess
 import hashlib
+from urllib.parse import urlparse
 
 REPO = "Maher-Bhatt/KALKI"
 try:
@@ -19,6 +20,23 @@ if getattr(sys, "frozen", False):
 else:
     _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 IS_STORE_BUILD = os.path.exists(os.path.join(_BASE, "store_build.txt"))
+# Only installed release builds look for updates. Source runs and tests never do.
+IS_RELEASE_BUILD = bool(getattr(sys, "frozen", False))
+
+# What the user can choose to install: {"version", "download"}. Empty if nothing.
+STATE_UPDATE_AVAILABLE = {}
+
+
+def is_trusted_download_url(url):
+    """Only this project's GitHub release assets, over HTTPS. Exact host, no substring."""
+    try:
+        parsed = urlparse(str(url or ""))
+    except ValueError:
+        return False
+    return (parsed.scheme == "https"
+            and parsed.hostname == "github.com"
+            and parsed.path.startswith(f"/{REPO}/releases/download/"))
+
 
 def check_for_updates():
     """
@@ -73,11 +91,10 @@ def download_and_run_update(download, version, base_dir):
             download = {"url": download, "digest": ""}
         download_url = download.get("url", "")
         digest = download.get("digest", "")
-        if not download_url.startswith("https://api.github.com/") and "github.com/" not in download_url:
+        if not is_trusted_download_url(download_url):
             raise ValueError("update URL is not an approved GitHub release URL")
         print(f"[UPDATER] Downloading update {version} from {download_url}...")
-        temp_dir = tempfile.gettempdir()
-        installer_path = os.path.join(temp_dir, f"KALKI_Setup_{version}.exe")
+        installer_path = os.path.join(tempfile.mkdtemp(prefix="kalki_update_"), f"KALKI_Setup_{version}.exe")
         
         STATE_UPDATE_PROGRESS["active"] = True
         STATE_UPDATE_PROGRESS["pct"] = 0
@@ -112,16 +129,25 @@ def download_and_run_update(download, version, base_dir):
         STATE_UPDATE_PROGRESS["active"] = False
         print(f"[UPDATER] Failed to apply update: {e}")
 
+def install_available_update(base_dir):
+    """Install the offered update. Only call this after the user has agreed."""
+    available = dict(STATE_UPDATE_AVAILABLE)
+    if available.get("version"):
+        download_and_run_update(available.get("download"), available["version"], base_dir)
+
+
 def start_update_daemon(base_dir, on_update_found=None):
-    """
-    Starts a background thread that checks for updates on boot.
-    """
+    """Check once at startup and remember the result. Never downloads anything:
+    the user chooses to install from the banner in the app."""
+    if not IS_RELEASE_BUILD:
+        return
+
     def daemon():
-        has_update, latest, url = check_for_updates()
-        if has_update and url:
-            print(f"[UPDATER] Found new version: {latest}. Initiating download...")
+        has_update, latest, download = check_for_updates()
+        if has_update and download:
+            print(f"[UPDATER] Update available: {latest}")
+            STATE_UPDATE_AVAILABLE.update({"version": latest, "download": download})
             if on_update_found:
                 on_update_found(latest)
-            download_and_run_update(url, latest, base_dir)
-            
+
     threading.Thread(target=daemon, daemon=True).start()
