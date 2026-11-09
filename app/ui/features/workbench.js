@@ -548,7 +548,7 @@ export function workbenchView() {
   /* ── Tab 1: Workflows Content ───────────────────────────────────────── */
   /* ── System Terminal Tab State & Renderer ────────────────────────── */
 let terminalHistory = [
-  'KALKI Sovereign Desktop Environment [PowerShell / Native Host]',
+  'KALKI terminal (PowerShell)',
   'Type any system command or click quick action presets below.'
 ];
 let terminalInputVal = '';
@@ -1395,7 +1395,7 @@ function renderWorkflowsTab() {
   view.render = () => {
     const hd = h('div.hd', null,
       h('div', null,
-        h('h1', null, 'Workbench'),
+        h('h1', { id: 'view-title', tabindex: '-1' }, 'Studio'),
         h('div.sub', null, 'Run routines, generate code, explore vision, and customize skills.')
       ),
       h('div.row.g8', null,
@@ -1477,7 +1477,7 @@ function renderWorkflowsTab() {
 
     /* ── Aside Panel: Status, Logs, and Last Runs ─────────────────────── */
     mount(aside,
-      h('h1', { style: { fontSize: '16px' } }, 'Workbench Status'),
+      h('h2', null, 'Studio status'),
 
       h('div.card.col.g8', null,
         h('div.row.sb', null,

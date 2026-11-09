@@ -3435,6 +3435,58 @@ def _safe_public_url(url):
         return False
 
 
+_replies_in_progress = 0
+_replies_lock = threading.Lock()
+
+
+class _ReplyInProgress:
+    """Counts typed replies being written, so the pet can say KALKI is working."""
+
+    def __enter__(self):
+        global _replies_in_progress
+        with _replies_lock:
+            _replies_in_progress += 1
+
+    def __exit__(self, *exc):
+        global _replies_in_progress
+        with _replies_lock:
+            _replies_in_progress -= 1
+
+
+def _counting_reply(tokens):
+    with _ReplyInProgress():
+        yield from tokens
+
+
+def _pet_settings():
+    pet = {"species": "gobi", "name": "Gobi", "sound": False}
+    try:
+        with open(os.path.join(DATA_DIR, "pet_state.json"), "r", encoding="utf-8") as f:
+            saved = json.load(f)
+        if isinstance(saved, dict):
+            pet.update({k: saved[k] for k in pet if k in saved})
+    except (OSError, ValueError):
+        pass
+    return pet
+
+
+def _pet_status():
+    """What the pet shows. Deliberately cheap: it reads state and never asks the system."""
+    with _pending_lock:
+        pending = sum(1 for p in _pending_approvals.values() if p["expires"] >= time.time())
+    listener = STATE.get("listener_state", "idle")
+    playing = STATE.get("cached_now_playing") or {}
+    status = str(playing.get("status", "")).lower() if isinstance(playing, dict) else ""
+    return {
+        "ok": True,
+        "pending": pending,
+        "working": _replies_in_progress > 0 or listener == "thinking",
+        "listening": listener == "listening",
+        "music": status == "playing",
+        "pet": _pet_settings(),
+    }
+
+
 class _PublicRedirectsOnly(urllib.request.HTTPRedirectHandler):
     """Check every redirect. Otherwise a public page could point the fetch at a private
     address, such as a router or this PC, after the first check had passed."""
@@ -5154,6 +5206,10 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": True, "running": running})
             return
 
+        if path == "/api/pet/status":
+            self._json(_pet_status())
+            return
+
         if path == "/api/pet":
             pet_file = os.path.join(DATA_DIR, "pet_state.json")
             pet_data = {
@@ -6183,7 +6239,8 @@ class Handler(BaseHTTPRequestHandler):
                 if not handled:
                     try:
                         convo = _shared_context() + [{"role": "user", "content": cmd}]
-                        reply = ask_ai(convo)
+                        with _ReplyInProgress():
+                            reply = ask_ai(convo)
                     except Exception as e:
                         reply = f"My link hiccuped, Sir — say that again? ({str(e)[:80]})"
                 
@@ -6331,7 +6388,7 @@ class Handler(BaseHTTPRequestHandler):
 
             if stream_req:
                 start_time = time.time()
-                generator = ask_ai_stream(messages)
+                generator = _counting_reply(ask_ai_stream(messages))
                 try:
                     first_token = next(generator)
                 except StopIteration:
@@ -6380,7 +6437,8 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     # Prepend recent conversation so KALKI remembers context.
                     convo = (_shared_context() + messages) if shared_source else messages
-                    reply = ask_ai(convo)
+                    with _ReplyInProgress():
+                        reply = ask_ai(convo)
                 except Exception as e:
                     self._json({"ok": False, "error": str(e)})
                     return

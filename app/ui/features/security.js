@@ -1,7 +1,7 @@
-/** Security & Antivirus Shield Center.
+/** Security: check-ups, Wi-Fi safety and security tools.
  *
  *  Unified safety & intelligence suite:
- *  1. KALKI ShieldCore Antivirus: Windows Defender integration, live scan terminal,
+ *  1. Security check-up: Windows Defender integration, live scan terminal,
  *     heuristic static analyzer, cryptominer detection, and quarantine vault.
  *  2. Cyber Tools Direct Viewer: Comprehensive visual directory of all 12 cybersecurity
  *     modules with category filters, plain-English security guides, and presets.
@@ -112,7 +112,7 @@ const CYBER_CATALOG = [
     scope: 'Offline transform',
     hint: 'Encode strings into Base64 format.',
     field: 'Text to encode',
-    preset: 'Hello from KALKI ShieldCore',
+    preset: 'Hello from KALKI',
     run: (v) => cyber.encode(v),
     desc: 'Encodes binary and text strings into standardized Base64 or Hexadecimal formats for safe network transmission.'
   },
@@ -209,7 +209,7 @@ async function runQuickScan() {
   avScanProgress = 10;
   avScanLogs = [];
   avScanResult = null;
-  addScanLog('Initializing KALKI ShieldCore endpoint scanner...', 'info');
+  addScanLog('Starting the check-up...', 'info');
   addScanLog('Bridging with Windows Defender MpCmdRun definitions...', 'info');
   renderFn();
 
@@ -1211,18 +1211,18 @@ export function securityView() {
   viewObj.render = () => {
     const header = h('header.view-head', { style: { margin: '0 0 16px 0' } },
       h('div.inline', { style: { gap: '12px', alignItems: 'center' } },
-        h('h1', { tabindex: '-1', id: 'view-title', style: { fontSize: '18px', margin: 0 } }, 'Security & Shields'),
+        h('h1', { tabindex: '-1', id: 'view-title', style: { margin: 0 } }, 'Security'),
         h('div.inline', { role: 'tablist', 'aria-label': 'Security sections' },
           h('button.btn.btn-sm', {
             type: 'button',
             class: activeTab === 'antivirus' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost',
             onClick: () => { activeTab = 'antivirus'; renderFn(); }
-          }, icon('security', 14), ' Antivirus & Shields'),
+          }, icon('security', 14), ' Check-up'),
           h('button.btn.btn-sm', {
             type: 'button',
             class: activeTab === 'catalog' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost',
             onClick: () => { activeTab = 'catalog'; renderFn(); }
-          }, icon('sparkles', 14), ' Cyber Tools Directory'),
+          }, icon('sparkles', 14), ' Tools'),
           h('button.btn.btn-sm', {
             type: 'button',
             class: activeTab === 'studio' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost',

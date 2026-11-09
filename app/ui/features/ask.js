@@ -14,7 +14,8 @@ import { refreshStatus, loadModels } from '../state/status.js';
 import * as conv from '../state/conversations.js';
 import { openDialog, promptDialog, confirmDialog } from '../components/dialog.js';
 import { toast, ok, err } from '../state/toasts.js';
-import { createPetCompanion, triggerPetReaction, openPetSettings } from './pet.js';
+import { createPetCompanion } from './pet.js';
+import { openMenu } from '../components/menu.js';
 
 const MAX_UPLOAD = 32 * 1024 * 1024; // server MAX_BODY
 
@@ -33,9 +34,9 @@ function announce(text) {
 
 function getGreeting() {
   const hr = new Date().getHours();
-  if (hr < 12) return 'Good morning, Sir';
-  if (hr < 18) return 'Good afternoon, Sir';
-  return 'Good evening, Sir';
+  const part = hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
+  const name = String(store.status?.owner || '').trim();
+  return name && name !== 'YourName' ? `${part}, ${name}` : part;
 }
 
 export function exportChatMarkdown(thread) {
@@ -500,7 +501,6 @@ function composer() {
           }, modelLabel(store.models.current) || 'auto', icon('chev', 16))
         ),
         h('div.row.g8', null,
-          h('span.xs.mut', { id: 'context-meter-comp' }, ''),
           sendBtn
         )
       )
@@ -575,9 +575,8 @@ export function askView() {
   const suggestionPills = [
     { text: "What's on my schedule today?", icon: 'calendar' },
     { text: 'Summarize recent notes', icon: 'note' },
-    { text: 'System health check', icon: 'cpu' },
-    { text: 'Start focus session', icon: 'clock' },
-    { text: 'Interact with AI companion', icon: 'pet', action: () => triggerPetReaction('happy', 3000, 'Ready to assist, Sir! ✨') },
+    { text: 'How is my PC doing?', icon: 'cpu' },
+    { text: 'Start a focus session', icon: 'clock' },
   ];
 
   const pillsContainer = h('div.welcome-pills', null,
@@ -603,12 +602,13 @@ export function askView() {
     composerSlot.appendChild(c.el);
   }
 
+  const welcomeTitle = h('h2.welcome-title', null, getGreeting());
+
   const welcomeWrap = h('div.welcome-stage', null,
     h('div.welcome-inner', null,
       h('div.welcome-head', null,
-        h('div.welcome-icon', null, icon('ask', 30)),
-        h('h2.welcome-title', null, `${getGreeting()} — Ask KALKI`),
-        h('p.welcome-desc', null, 'Type below, attach a file, or speak. KALKI answers with neural intelligence and pairs with your live AI desk companion.'),
+        welcomeTitle,
+        h('p.welcome-desc', null, 'Ask anything, attach a file, or speak.'),
       ),
       composerSlot,
       pillsContainer,
@@ -637,113 +637,98 @@ export function askView() {
     }
   }, 'Ask');
 
-  const headerExportBtn = h('button.ib', {
-    type: 'button',
-    title: 'Export conversation as Markdown',
-    'aria-label': 'Export Markdown',
-    onClick: () => {
-      const cur = conv.active();
-      exportChatMarkdown(cur);
-    }
-  }, icon('export', 15));
-
-  const headerClearBtn = h('button.ib', {
-    type: 'button',
-    title: 'Clear active conversation messages',
-    'aria-label': 'Clear messages',
-    onClick: async () => {
-      const cur = conv.active();
-      if (!cur || !cur.messages?.length) {
-        ok('Conversation is already empty');
-        return;
-      }
-      const confirmed = await confirmDialog({
-        title: 'Clear conversation messages?',
-        description: `Permanently clear all ${cur.messages.length} messages in "${cur.title || 'this conversation'}"? The conversation thread itself will remain.`,
-        confirmLabel: 'Clear messages',
-        danger: true,
-      });
-      if (confirmed) {
-        await conv.setThread(cur.id, { messages: [] });
-        ok('Messages cleared');
-        main.render();
-      }
-    }
-  }, icon('trash', 15));
-
-  const headerPetBtn = h('button.ib', {
-    type: 'button',
-    title: 'AI Companion Pet settings',
-    'aria-label': 'Companion Pet',
-    onClick: () => openPetSettings()
-  }, icon('pet', 15));
-
-  const headerPinBtn = h('button.ib', {
-    type: 'button',
-    title: 'Pin / unpin conversation',
-    'aria-label': 'Pin conversation',
-    onClick: async () => {
-      const cur = conv.active();
-      if (!cur) return;
-      await conv.setThread(cur.id, { pinned: !cur.pinned });
-      headerPinBtn.classList.toggle('is-active', !!cur.pinned);
+  const renameThread = async () => {
+    const cur = conv.active();
+    if (!cur) return;
+    const next = await promptDialog({
+      title: 'Rename conversation',
+      label: 'Conversation title',
+      defaultValue: cur.title || 'Conversation',
+      confirmLabel: 'Save title',
+    });
+    if (next && next.trim()) {
+      await conv.setThread(cur.id, { title: next.trim() });
+      ok('Renamed conversation');
       renderHist();
-      ok(cur.pinned ? 'Pinned conversation' : 'Unpinned conversation');
+      main.render();
     }
-  }, icon('pin', 15));
+  };
+
+  const clearThread = async () => {
+    const cur = conv.active();
+    if (!cur || !cur.messages?.length) {
+      ok('This conversation is already empty');
+      return;
+    }
+    const confirmed = await confirmDialog({
+      title: 'Clear this conversation?',
+      description: `This permanently removes all ${cur.messages.length} messages in "${cur.title || 'this conversation'}".`,
+      confirmLabel: 'Clear messages',
+      danger: true,
+    });
+    if (confirmed) {
+      await conv.setThread(cur.id, { messages: [] });
+      ok('Messages cleared');
+      main.render();
+    }
+  };
+
+  const deleteThread = async () => {
+    const cur = conv.active();
+    if (!cur) return;
+    const confirmed = await confirmDialog({
+      title: 'Delete this conversation?',
+      description: `"${cur.title || 'This conversation'}" will be permanently deleted.`,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (confirmed) {
+      await conv.removeThread(cur.id);
+      ok('Conversation deleted');
+      renderHist();
+      main.render();
+    }
+  };
+
+  const togglePinned = async () => {
+    const cur = conv.active();
+    if (!cur) return;
+    const pinned = !cur.pinned;
+    await conv.setThread(cur.id, { pinned });
+    renderHist();
+    ok(pinned ? 'Pinned conversation' : 'Unpinned conversation');
+  };
 
   const headerDotsBtn = h('button.ib', {
     type: 'button',
     title: 'Conversation options',
     'aria-label': 'Conversation options',
-    onClick: async () => {
+    'aria-haspopup': 'menu',
+    'aria-expanded': 'false',
+    onClick: () => {
       const cur = conv.active();
-      if (!cur) return;
-      const choice = await promptDialog({
-        title: 'Manage Conversation',
-        label: 'Enter new title, or type "export" / "delete":',
-        defaultValue: cur.title || 'New conversation',
-        confirmLabel: 'Apply',
-      });
-      if (!choice) return;
-      const trimmed = choice.trim();
-      if (trimmed.toLowerCase() === 'delete') {
-        await conv.removeThread(cur.id);
-        ok('Conversation deleted');
-        renderHist();
-        main.render();
-      } else if (trimmed.toLowerCase() === 'export') {
-        exportChatMarkdown(cur);
-      } else if (trimmed) {
-        await conv.setThread(cur.id, { title: trimmed });
-        ok('Renamed conversation');
-        renderHist();
-        main.render();
-      }
-    }
+      openMenu(headerDotsBtn, [
+        { label: 'Rename', icon: 'edit', run: renameThread },
+        { label: cur?.pinned ? 'Unpin' : 'Pin', icon: 'pin', run: togglePinned },
+        { label: 'Export as Markdown', icon: 'export', run: () => exportChatMarkdown(cur) },
+        'rule',
+        { label: 'Clear messages', icon: 'trash', run: clearThread },
+        { label: 'Delete conversation', icon: 'close', danger: true, run: deleteThread },
+      ]);
+    },
   }, icon('dots', 15));
 
   const threadEl = h('div.thread', null, 
     h('div.th-h', null, 
-      h('div', null, 
-        headerTitleEl, 
-        h('div.sub', { id: 'context-meter-header' }, '')
-      ), 
-      h('div.row.g4', null,
-        headerExportBtn,
-        headerClearBtn,
-        headerPetBtn,
-        headerPinBtn, 
-        headerDotsBtn
-      )
+      headerTitleEl,
+      headerDotsBtn
     ), 
     welcomeWrap,
     inner,
     c.el
   );
 
-  // Mount interactive Companion Pet in Ask thread
-  createPetCompanion(threadEl);
+  const removePet = createPetCompanion(threadEl);
 
   scroller = stickyScroll(inner);
 
@@ -871,12 +856,6 @@ export function askView() {
   const asideNextUp    = h('div.card.row', null, h('div.xs.mut', null, '—'));
   const asideTasksList = h('div.card');
   const asideTaskCount = h('span.xs.mut', null, '—');
-  const asideInboxTxt  = h('span.sm', null, '—');
-  const asideInboxChip = h('span.chip', null, '—');
-  const asideVoiceWake = h('span.mono.xs.t2', null, '—');
-  const asideVoiceTTS  = h('span.xs.t2', null, '—');
-  const asideVoiceChip = h('span.chip', null, '—');
-  const asideSys       = h('div.card.col.g8', { id: 'sys' });
 
   function renderAside() {
     const st = store.status;
@@ -908,56 +887,15 @@ export function askView() {
         : h('div.li', null, h('span.sm.mut', null, 'No open tasks'))
     );
 
-    // Inbox
-    const unread = st?.unreadImportant ?? 0;
-    if (st && !st.mailConfigured) {
-      asideInboxTxt.textContent = 'Mail isn\'t connected';
-      mount(asideInboxChip, 'Not connected');
-      asideInboxChip.className = 'chip';
-    } else {
-      asideInboxTxt.textContent = `${unread} unread important`;
-      mount(asideInboxChip, unread === 0 ? 'All clear' : `${unread} to read`);
-      asideInboxChip.className = 'chip ' + (unread === 0 ? 'ok' : 'warn');
-    }
-
-    // Voice
-    asideVoiceWake.textContent = st?.wakeWords || 'hey kalki';
-    asideVoiceTTS.textContent  = st?.ttsVoice  || '—';
-    const micReady = !!st?.listenerOnline && (store.voice?.state === 'attending' || store.voice?.state === 'idle');
-    mount(asideVoiceChip, micReady ? 'Mic ready' : (st && !st.listenerOnline ? 'Voice off' : (store.voice?.state || '—')));
-    asideVoiceChip.className = 'chip ' + (micReady ? 'ok' : '');
-
-    // System
-    if (st) {
-      const uh = Math.floor((st.uptimeSec || 0) / 3600);
-      const um = Math.floor(((st.uptimeSec || 0) % 3600) / 60);
-      mount(asideSys,
-        h('div.row.sb', null, h('span.xs.mut', null, 'CPU'),    h('span.mono.xs', null, `${st.cpu ?? '—'}%`)),
-        h('div.row.sb', null, h('span.xs.mut', null, 'RAM'),    h('span.mono.xs', null, `${st.ram ?? '—'}%`)),
-        h('div.row.sb', null, h('span.xs.mut', null, 'Model'),  h('span.mono.xs', null, st.model || '—')),
-        h('div.row.sb', null, h('span.xs.mut', null, 'Uptime'), h('span.mono.xs', null, uh ? `${uh} h ${um} m` : `${um} m`))
-      );
-    }
-
     renderHist();
   }
 
   const aside = frag(
-    h('div.row.sb', null, h('h1', { style: { fontSize: '16px' } }, 'Context'), icon('panel', 16)),
     h('div.col.g8', null, h('h2', null, 'Next up'), asideNextUp),
     h('div.col.g8', null, h('div.row.sb', null, h('h2', null, 'Tasks'), asideTaskCount), asideTasksList),
-    h('div.col.g8', null, h('h2', null, 'Inbox'), h('div.card.row.sb', null, asideInboxTxt, asideInboxChip)),
     h('div.col.g8', null, h('h2', null, 'Now playing'), h('div.card.col.g8', { id: 'music-panel' },
       h('div.xs.mut', { style: { textAlign: 'center', padding: '8px' } }, 'Loading…')
-    )),
-    h('div.col.g8', null, h('div.row.sb', null, h('h2', null, 'System'), h('span.xs.mut', null, 'Live')), asideSys),
-    h('div.col.g8', null, h('h2', null, 'Voice'),
-      h('div.card.col.g8', null,
-        h('div.row.sb', null, h('span.xs.mut', null, 'Wake words'), asideVoiceChip),
-        asideVoiceWake,
-        h('div.row.sb', null, h('span.xs.mut', null, 'Speech'), asideVoiceTTS)
-      )
-    )
+    ))
   );
 
   main.render = () => {
@@ -997,15 +935,7 @@ export function askView() {
       mount(chip, modelLabel(store.models.current) || 'auto', icon('chev', 16));
     }
 
-    const ctx = store.conv.contextTurns
-        ? `${store.conv.contextTurns} of ${store.conv.maxTurns} turns in context`
-        : `${store.conv.maxTurns} turns of context`;
-
-    const meter1 = main.querySelector('#context-meter-header');
-    if (meter1) meter1.textContent = ctx;
-
-    const meter2 = main.querySelector('#context-meter-comp');
-    if (meter2) meter2.textContent = ctx;
+    welcomeTitle.textContent = getGreeting();
 
     c.sendBtn.classList.toggle('is-stop', store.conv.streaming);
     c.sendBtn.setAttribute('aria-label', store.conv.streaming ? 'Stop generating' : 'Send message');
@@ -1255,6 +1185,7 @@ export function askView() {
   main.render = view.render;
 
   view.cleanup = () => {
+    removePet();
     clearTimeout(mediaTimer);
     mediaTimer = null;
     window.removeEventListener('pointerdown', onActivity);

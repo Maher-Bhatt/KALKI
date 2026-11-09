@@ -1,5 +1,5 @@
 :root{--void:#070809;--inset:#0a0c0e;--base:#0d0f12;--raised:#191d22;--overlay:#262c33;--float:#323941;--ls:#232930;--line:#333b44;--lst:#59636f;--text:#e6ebef;--t2:#b3bcc6;--mut:#8a95a1;--faint:#7e8894;--fil:#fff4e2;--ok:#4cc061;--okt:#7bd98a;--warn:#e08c33;--warnt:#efa95f;--dng:#f0565b;--dngt:#ff8a8e;
---ui:"Instrument Sans","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;--mono:"JetBrains Mono",Consolas,monospace}
+--ui:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;--display:"Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;--mono:"Cascadia Mono",Consolas,monospace}
 
 html[data-theme="light"], :root[data-theme="light"] {
   --void: #f1f5f9;
@@ -24,24 +24,51 @@ html[data-theme="light"], :root[data-theme="light"] {
   --dngt: #b91c1c;
 }
 
-html[data-enhanced="on"] .card,
-html[data-enhanced="on"] .view-head,
-html[data-enhanced="on"] .rail,
-html[data-enhanced="on"] .panel {
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  background-color: rgba(25, 29, 34, 0.72) !important;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+/* The rest of the design system. Colours are above; one scale for everything else. */
+:root {
+  /* Type: size / line height */
+  --type-xs: 11px; --type-xs-lh: 16px;
+  --type-sm: 12px; --type-sm-lh: 18px;
+  --type-md: 13px; --type-md-lh: 20px;
+  --type-base: 14px; --type-base-lh: 22px;
+  --type-lg: 16px; --type-lg-lh: 24px;
+  --type-xl: 20px; --type-xl-lh: 28px;
+  --type-2xl: 28px; --type-2xl-lh: 36px;
+
+  /* Spacing */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
+
+  /* Corners */
+  --radius-sm: 6px; --radius-md: 8px; --radius-lg: 12px; --radius-xl: 16px; --radius-full: 999px;
+
+  /* Elevation: flat by default, shadows only for what floats */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .24);
+  --shadow-2: 0 4px 16px rgba(0, 0, 0, .32);
+  --shadow-3: 0 16px 48px rgba(0, 0, 0, .48);
+
+  /* Motion */
+  --dur-fast: 120ms; --dur: 180ms; --dur-slow: 280ms;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+
+  /* Older names still used by some screens */
+  --warning: var(--warn);
+  --text-muted: var(--mut);
+  --surface-void: var(--void);
+
+  --rail-open: 208px;
+  --rail-closed: 56px;
+  --topbar: 44px;
 }
 
-html[data-theme="light"][data-enhanced="on"] .card,
-html[data-theme="light"][data-enhanced="on"] .view-head,
-html[data-theme="light"][data-enhanced="on"] .rail,
-html[data-theme="light"][data-enhanced="on"] .panel {
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  background-color: rgba(255, 255, 255, 0.78) !important;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+html[data-theme="light"], :root[data-theme="light"] {
+  --shadow-1: 0 1px 2px rgba(15, 23, 42, .08);
+  --shadow-2: 0 4px 16px rgba(15, 23, 42, .1);
+  --shadow-3: 0 16px 48px rgba(15, 23, 42, .16);
+}
+
+/* The motion setting in Settings, as well as the system's own. */
+html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="off"] *::after {
+  animation: none !important;
+  transition: none !important;
 }
