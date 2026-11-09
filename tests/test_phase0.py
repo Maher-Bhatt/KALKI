@@ -54,6 +54,8 @@ updater.start_update_daemon = lambda *a, **k: None
 import server  # noqa: E402
 
 server.speak = lambda *a, **k: None
+_real_ask_ai = server.ask_ai
+_real_ask_ai_stream = server.ask_ai_stream
 server.ask_ai = lambda *a, **k: "stub reply"
 server.ask_ai_stream = lambda *a, **k: iter(["stub ", "reply"])
 
@@ -661,6 +663,38 @@ class SettingsApi(unittest.TestCase):
         self.assertEqual(self.save({"RAM_HIGH_PCT": 66})[0], 200)
         with open(server.USER_CONFIG_PATH, encoding="utf-8") as f:
             self.assertEqual(json.load(f)["RAM_HIGH_PCT"], 66)
+
+
+class NoProvider(unittest.TestCase):
+    def setUp(self):
+        from core import model_manager
+        patches = [mock.patch.object(config, key, "", create=True)
+                   for key in ("GROQ_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "ANTHROPIC_API_KEY")]
+        patches += [mock.patch.object(server, "pick_ollama_model", return_value=None),
+                    mock.patch.object(model_manager, "check_internet", return_value=True),
+                    mock.patch.dict(server.STATE, {"model": "auto"})]
+        for patcher in patches:
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        self.messages = [{"role": "user", "content": "explain gravity"}]
+
+    def test_stream_explains_what_to_do(self):
+        started = time.time()
+        reply = "".join(_real_ask_ai_stream(self.messages))
+        self.assertLess(time.time() - started, 5)
+        self.assertIn("Settings", reply)
+        self.assertIn("Ollama", reply)
+
+    def test_plain_reply_explains_what_to_do(self):
+        with self.assertRaises(RuntimeError) as caught:
+            _real_ask_ai(self.messages)
+        self.assertIn("Settings", str(caught.exception))
+        self.assertNotIn("DeepSeek", str(caught.exception))
+
+    def test_g4f_is_gone(self):
+        for name in ("server.py", "requirements.txt", "requirements-linux.txt", "requirements-mac.txt", "requirements.lock.txt"):
+            with open(os.path.join(APP, name), encoding="utf-8", errors="replace") as f:
+                self.assertNotIn("g4f", f.read(), name)
 
 
 class MemoryRoutes(unittest.TestCase):

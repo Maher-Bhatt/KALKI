@@ -42,6 +42,8 @@
 | F3 FastAPI move | Started without FastAPI: tasks, reminders, notes and memory moved to `routes_productivity.py` and `routes_memory.py`, written to work with any framework. The move itself should wait until CI is green |
 | Real-account testing to confirm ratings | Not started: needs your accounts and hardware |
 
+**Parked for later (9 Nov 2026):** Windows CI failed once at "Automated tests" with code that also passed, so one test is flaky. Re-run usually clears it. Suspected cause, unconfirmed: background threads from the server tests overlapping tests that swap the data store path.
+
 ## How to read the ratings
 
 | Rating | Meaning |

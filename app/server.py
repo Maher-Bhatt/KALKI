@@ -4279,26 +4279,10 @@ def ask_anthropic_stream(user_messages, model=None):
                 except Exception:
                     pass
 
-def ask_deepseek_free_stream(user_messages):
-    """Fallback to DeepSeek-R1 via g4f (Free LLM) if no API keys are provided."""
-    try:
-        from g4f.client import Client
-        import g4f
-        client = Client()
-        # g4f expects history to be passed directly
-        response = client.chat.completions.create(
-            model="deepseek-r1",
-            messages=user_messages,
-            stream=True
-        )
-        for chunk in response:
-            if chunk.choices and chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
-    except ImportError:
-        yield "Error: g4f missing. Run: pip install g4f curl_cffi"
-    except Exception as e:
-        log(f"DeepSeek-R1 fallback failed: {e}")
-        yield f"[Free DeepSeek-R1 Fallback Failed]: {e}"
+NO_PROVIDER_MESSAGE = (
+    "I need an AI provider before I can answer. Open Settings, choose AI Models, and add a "
+    "free Groq or Gemini API key, or install Ollama to run a model on this PC."
+)
 
 _PROVIDER_FAILURES = {}
 _CIRCUIT_BREAKER_SECONDS = 600
@@ -4322,7 +4306,7 @@ def resolve_auto_model(last_user):
     low_prompt = (last_user or "").lower()
     
     if not (has_gemini or has_openai or has_groq):
-        return "deepseek-r1"
+        return "ollama"  # the only option left, and it reports clearly if it isn't there
     
     # Preferred Groq fallback model from available models
     best_groq = "qwen/qwen3.8-27b" if "qwen/qwen3.8-27b" in AVAILABLE_GROQ_MODELS else (AVAILABLE_GROQ_MODELS[0] if AVAILABLE_GROQ_MODELS else "llama-3.1-8b-instant")
@@ -4410,16 +4394,11 @@ def ask_ai_stream(user_messages):
         is_offline = not model_manager.check_internet()
         if is_offline: chosen = "ollama"
     
-    if chosen == "deepseek-r1":
-        for token in ask_deepseek_free_stream(user_messages):
-            yield token
-        return
-    
     if chosen == "ollama" or is_offline:
         try:
             model = pick_ollama_model()
             if not model:
-                yield "No local Ollama model found, Sir."
+                yield NO_PROVIDER_MESSAGE
                 return
             payload = json.dumps({"model": model, "messages": msgs, "stream": True}).encode()
             req = urllib.request.Request(f"{config.OLLAMA_URL}/api/chat", data=payload, headers={"Content-Type": "application/json"}, method="POST")
@@ -4506,13 +4485,6 @@ def ask_ai_stream(user_messages):
                     yield token
                 return
             except Exception: pass
-        # Try DeepSeek free fallback
-        try:
-            log("Attempting DeepSeek free stream fallback...")
-            for token in ask_deepseek_free_stream(user_messages):
-                yield token
-            return
-        except Exception: pass
         yield f"I experienced a temporary interruption reaching the cloud models, {config.OWNER_TITLE}. Your system, memory, and desktop tools are fully operational. Please check your API quota or network connection."
         return
 
@@ -4563,12 +4535,6 @@ def ask_ai_stream(user_messages):
             finally:
                 ask_ai_stream._fallback_active = False
             return
-        try:
-            log("Attempting DeepSeek free stream fallback after general cloud stream failure...")
-            for token in ask_deepseek_free_stream(user_messages):
-                yield token
-            return
-        except Exception: pass
         yield f"Unable to reach the active AI provider, {config.OWNER_TITLE}. Your local desktop environment, memory, and cyber tools are ready."
         return
 
@@ -4729,21 +4695,8 @@ def ask_ai(user_messages, force_search=False):
     except Exception as e:
         log(f"[Ollama failed] {e}")
         
-        # Fallback to keyless DeepSeek via g4f
-        try:
-            from g4f.client import Client
-            client = Client()
-            response = client.chat.completions.create(
-                model="deepseek-r1",
-                messages=user_messages
-            )
-            if response and response.choices and response.choices[0].message.content:
-                return response.choices[0].message.content
-        except Exception as deepseek_e:
-            log(f"DeepSeek fallback failed: {deepseek_e}")
-
         if groq_err == "no API key set":
-            raise RuntimeError("I need an AI provider before I can answer. Open Settings, choose AI Models, and add your free Groq API key. Alternatively, check your network connection for the DeepSeek fallback.")
+            raise RuntimeError(NO_PROVIDER_MESSAGE)
         raise RuntimeError(f"I could not reach an AI provider ({groq_err[:140]}). Check the connection and API key in Settings, then try again.")
 
 
