@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Companion Pets — KALKI Sovereign Desktop Assistant</title>
+  <title>Desktop pets — KALKI</title>
   <meta name="description" content="Meet KALKI's always-on-screen companion pets. Standalone desktop overlays that play music, react to your workflow, guard your system, and summon KALKI instantly.">
   <link rel="icon" type="image/x-icon" href="assets/kalki_icon.ico">
 
@@ -778,7 +778,6 @@
 <body>
 
   <!-- Background Ambient Particles Canvas -->
-  <canvas id="ambient-canvas"></canvas>
 
   <!-- Top Navigation -->
   <nav class="top-nav">
@@ -800,9 +799,6 @@
       </ul>
 
       <div class="nav-actions">
-        <button class="btn-sound" id="soundToggleBtn">
-          <span id="soundIcon">🔊</span> Audio
-        </button>
         <a href="https://github.com/maher-kalki/KALKI" class="btn-ghost" target="_blank" rel="noopener">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
           GitHub
@@ -812,337 +808,54 @@
     </div>
   </nav>
 
-  <!-- Hero Section -->
+  <style>
+    .pets-wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px 96px; }
+    .pets-states { display: flex; flex-wrap: wrap; gap: 8px; margin: 28px 0 20px; }
+    .pets-states button { font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 999px; border: 1px solid #333b44; background: #15181c; color: #b3bcc6; cursor: pointer; }
+    .pets-states button[aria-pressed="true"] { border-color: #fff4e2; color: #e6ebef; background: #262c33; }
+    .pets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
+    .pet-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 12px 18px; border: 1px solid #232930; border-radius: 16px; background: #111418; text-align: center; }
+    .pet-tile canvas { width: 128px; height: 128px; image-rendering: pixelated; }
+    .pet-tile strong { font-size: 15px; color: #e6ebef; }
+    .pet-tile span { font-size: 13px; color: #9aa5b1; }
+    .pets-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 48px; }
+    .pets-facts div { padding: 18px 20px; border: 1px solid #232930; border-radius: 14px; background: #111418; }
+    .pets-facts h3 { font-size: 15px; margin: 0 0 6px; color: #e6ebef; }
+    .pets-facts p { margin: 0; font-size: 14px; line-height: 1.55; color: #b3bcc6; }
+    .pets-note { margin-top: 32px; font-size: 13px; color: #8a95a1; }
+  </style>
+
   <section class="page-hero">
     <div class="container">
-      <div class="pill-status">
-        <span class="pill-dot"></span>
-        ALWAYS-ON-SCREEN DESKTOP COMPANIONS // ZERO OVERHEAD
-      </div>
-      <h1 class="page-title">
-        Not a Web Widget.<br>
-        <span class="filament-glow">A Living Desktop Companion.</span>
-      </h1>
+      <h1 class="page-title">A small friend that shows<br><span class="filament-glow">what KALKI is doing.</span></h1>
       <p class="page-lead">
-        KALKI features a dedicated, transparent desktop companion window that floats in your screen corner. When KALKI is minimized or your IDE is fullscreen, your pet stays active—bobbing to Spotify and Apple Music, guarding system memory, and summoning the workspace with a single click.
+        The KALKI pet floats over your other windows. It shows when KALKI is working, when it needs your
+        approval, and when it has finished, so you don't have to keep the app open to know.
       </p>
     </div>
   </section>
 
-  <!-- Interactive Pet Playground Stage -->
-  <section class="container">
-    <div class="pet-stage-card">
-      
-      <!-- Stage Viewport (Left) -->
-      <div class="stage-viewport">
-        <div class="stage-top-meta">
-          <div class="species-badge">
-            <span id="activeEmoji">🐱</span>
-            <span id="activeSpecies">GOBI // CYBER KITTEN</span>
-          </div>
-          <div class="mood-indicator" id="activeMood">
-            <span>●</span>
-            <span id="moodText">JAMMING TO BEATS</span>
-          </div>
-        </div>
-
-        <!-- Speech Bubble -->
-        <div class="speech-bubble" id="petSpeech">
-          "Hey Maher! I'm watching your desktop. Turn on some music and let's groove!"
-        </div>
-
-        <!-- 60FPS 3D Pet Isometric Canvas -->
-        <canvas id="petCanvas" width="280" height="280" title="Click to Pet or Interact"></canvas>
-
-        <!-- Stage Actions -->
-        <div class="stage-actions">
-          <button class="btn-action" id="feedBtn" title="Feed a digital treat">
-            <span>🐟</span> Feed Treat
-          </button>
-          <button class="btn-action" id="danceBtn" title="Toggle rhythm beat synchronization">
-            <span>🎵</span> Dance Mode
-          </button>
-          <button class="btn-action" id="petBtn" title="Pet your companion">
-            <span>💖</span> Pet (+XP)
-          </button>
-          <button class="btn-action" id="voiceBtn" title="Speak companion dialogue">
-            <span>💬</span> Talk
-          </button>
-        </div>
-      </div>
-
-      <!-- Stage Controls & Lore Panel (Right) -->
-      <div class="stage-panel">
-        <div>
-          <div class="panel-header">
-            <h2 class="pet-name-title" id="panelPetName">Gobi</h2>
-            <div class="pet-role-tag" id="panelPetRole">The Sentient AI Kitten &bull; Audio Synchronized</div>
-          </div>
-
-          <p class="pet-desc" id="panelPetDesc">
-            Gobi is KALKI's flagship desktop companion. Rendered in a transparent, GPU-accelerated frameless window, Gobi dances to the real-time BPM of your system audio, gives subtle ambient status alerts, and instantly summons the KALKI workspace when clicked.
-          </p>
-
-          <!-- Companion Bond / XP Level -->
-          <div class="level-box">
-            <div class="level-head">
-              <span style="color: var(--fil); font-weight: 700;">COMPANION BOND</span>
-              <span id="xpLevelText">LVL 14 &bull; 680 / 1000 XP</span>
-            </div>
-            <div class="level-track">
-              <div class="level-fill" id="xpFillBar" style="width: 68%;"></div>
-            </div>
-          </div>
-
-          <!-- Pet Attributes -->
-          <div class="attr-grid">
-            <div class="attr-cell">
-              <div class="attr-lbl">Specialty</div>
-              <div class="attr-val" id="attrSpecialty">Music Beat Sync</div>
-            </div>
-            <div class="attr-cell">
-              <div class="attr-lbl">Defense Trait</div>
-              <div class="attr-val" id="attrTrait">Ambient Watch</div>
-            </div>
-            <div class="attr-cell">
-              <div class="attr-lbl">Favorite Treat</div>
-              <div class="attr-val" id="attrTreat">Salmon RAM Cookie</div>
-            </div>
-            <div class="attr-cell">
-              <div class="attr-lbl">Process Footprint</div>
-              <div class="attr-val" id="attrFootprint">&lt; 14 MB RAM</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Species Picker Carousel -->
-        <div>
-          <div class="picker-title">Switch Companion Species:</div>
-          <div class="species-row">
-            <button class="species-btn active" data-species="gobi">
-              <span class="species-icon">🐱</span>
-              <span class="species-label">Gobi</span>
-            </button>
-            <button class="species-btn" data-species="kittu">
-              <span class="species-icon">🐕</span>
-              <span class="species-label">Kittu</span>
-            </button>
-            <button class="species-btn" data-species="byte">
-              <span class="species-icon">👾</span>
-              <span class="species-label">Byte</span>
-            </button>
-            <button class="species-btn" data-species="draco">
-              <span class="species-icon">🐉</span>
-              <span class="species-label">Draco</span>
-            </button>
-            <button class="species-btn" data-species="nova">
-              <span class="species-icon">🔮</span>
-              <span class="species-label">Nova</span>
-            </button>
-            <button class="species-btn" data-species="kitsu">
-              <span class="species-icon">🦊</span>
-              <span class="species-label">Kitsu</span>
-            </button>
-          </div>
-        </div>
-
-      </div>
+  <main class="pets-wrap">
+    <div class="pets-states" role="group" aria-label="Show a state">
+      <button type="button" data-state="idle" aria-pressed="true">Ready</button>
+      <button type="button" data-state="working" aria-pressed="false">Working</button>
+      <button type="button" data-state="waiting" aria-pressed="false">Needs approval</button>
+      <button type="button" data-state="done" aria-pressed="false">Done</button>
+      <button type="button" data-state="listening" aria-pressed="false">Listening</button>
+      <button type="button" data-state="music" aria-pressed="false">Music</button>
+      <button type="button" data-state="asleep" aria-pressed="false">Resting</button>
     </div>
-  </section>
+    <div class="pets-grid" id="petsGrid"></div>
 
-  <!-- All 6 Species Detailed Roster -->
-  <section class="container" style="padding-bottom: 40px;">
-    <div class="section-title-wrap">
-      <h2 class="section-h2">The Companion Fleet</h2>
-      <p class="section-sub">
-        Choose the pet that suits your workflow. Every species is baked directly into the standalone desktop binary.
-      </p>
+    <div class="pets-facts">
+      <div><h3>Really see-through</h3><p>No box around it. Clicks on empty space go straight to the window behind.</p></div>
+      <div><h3>Approval first</h3><p>When KALKI needs your OK, the pet shows it before anything else. Click it to review.</p></div>
+      <div><h3>Click or drag</h3><p>Click to ask something or open KALKI. Drag it anywhere on your screen.</p></div>
+      <div><h3>Quiet by default</h3><p>Off until you turn it on, no sound unless you choose it, and still images if your system asks for less motion.</p></div>
     </div>
+    <p class="pets-note">The idea is inspired by Codex pets. The six characters and their art are KALKI's own.</p>
+  </main>
 
-    <div class="species-cards-grid">
-      
-      <!-- Gobi -->
-      <div class="pet-card">
-        <div>
-          <div class="card-top">
-            <div class="card-avatar">🐱</div>
-            <span class="badge-personality">PLAYFUL &bull; MUSICAL</span>
-          </div>
-          <h3 class="card-name">Gobi</h3>
-          <p class="card-lore">
-            The original sentient AI kitten. Taps into system audio sessions via WinRT and Windows Media Control to sync bobbing animations to Apple Music, Spotify, and YouTube beats.
-          </p>
-        </div>
-        <div>
-          <ul class="perks-list">
-            <li><strong>Audio Sync:</strong> Dynamic tempo matching (60 - 180 BPM)</li>
-            <li><strong>Summon Action:</strong> Left click launches KALKI Ask view</li>
-            <li><strong>Mood Expressions:</strong> Happy, Jamming, Sleepy, Focused</li>
-          </ul>
-          <button class="btn-ghost" style="width: 100%; justify-content: center;" onclick="selectSpecies('gobi')">Select Gobi</button>
-        </div>
-      </div>
-
-      <!-- Kittu -->
-      <div class="pet-card">
-        <div>
-          <div class="card-top">
-            <div class="card-avatar">🐕</div>
-            <span class="badge-personality">HYPER-VIGILANT &bull; DEFENDER</span>
-          </div>
-          <h3 class="card-name">Kittu</h3>
-          <p class="card-lore">
-            The Chibi Cyber Shiba. Wired directly into the ShieldCore security pipeline. Ears perk up during suspicious background network requests, and barks when a quarantined threat is blocked.
-          </p>
-        </div>
-        <div>
-          <ul class="perks-list">
-            <li><strong>Threat Bark:</strong> Instant audio alert on high-risk detections</li>
-            <li><strong>Network Guard:</strong> Sniffs open port connections and ARP shifts</li>
-            <li><strong>Loyalty Bonus:</strong> +25% XP gain during coding sprints</li>
-          </ul>
-          <button class="btn-ghost" style="width: 100%; justify-content: center;" onclick="selectSpecies('kittu')">Select Kittu</button>
-        </div>
-      </div>
-
-      <!-- Byte -->
-      <div class="pet-card">
-        <div>
-          <div class="card-top">
-            <div class="card-avatar">👾</div>
-            <span class="badge-personality">GLITCH &bull; CODE RUNNER</span>
-          </div>
-          <h3 class="card-name">Byte</h3>
-          <p class="card-lore">
-            A retro holographic glitch sprite engineered for programmers. Emits subtle pixel sparks as tokens stream into the chat composer and pulses with CPU usage telemetry.
-          </p>
-        </div>
-        <div>
-          <ul class="perks-list">
-            <li><strong>Token Streamer:</strong> Vibrates with LLM generation speed</li>
-            <li><strong>Syntax Sparks:</strong> Emits warm filament embers on build success</li>
-            <li><strong>Terminal Mode:</strong> Displays mini error counts in speech bubble</li>
-          </ul>
-          <button class="btn-ghost" style="width: 100%; justify-content: center;" onclick="selectSpecies('byte')">Select Byte</button>
-        </div>
-      </div>
-
-      <!-- Draco -->
-      <div class="pet-card">
-        <div>
-          <div class="card-top">
-            <div class="card-avatar">🐉</div>
-            <span class="badge-personality">FIERCE &bull; HIGH COMPUTE</span>
-          </div>
-          <h3 class="card-name">Draco</h3>
-          <p class="card-lore">
-            The Miniature Cyber Dragon. Breathes subtle warm filament embers when local LLM inference engines (Ollama, llama.cpp) utilize GPU compute cores.
-          </p>
-        </div>
-        <div>
-          <ul class="perks-list">
-            <li><strong>Flame Breath:</strong> Triggered during active local LLM inference</li>
-            <li><strong>Thermal Guard:</strong> Alerts if system temperature rises sharply</li>
-            <li><strong>Deep Roar:</strong> Procedural Web Audio low-frequency purr</li>
-          </ul>
-          <button class="btn-ghost" style="width: 100%; justify-content: center;" onclick="selectSpecies('draco')">Select Draco</button>
-        </div>
-      </div>
-
-      <!-- Nova -->
-      <div class="pet-card">
-        <div>
-          <div class="card-top">
-            <div class="card-avatar">🔮</div>
-            <span class="badge-personality">SERENE &bull; DEEP FOCUS</span>
-          </div>
-          <h3 class="card-name">Nova</h3>
-          <p class="card-lore">
-            A floating astral energy sphere designed for intense study and deep focus sessions. Breathes warm filament light in 4-7-8 rhythmic cycles to keep you centered.
-          </p>
-        </div>
-        <div>
-          <ul class="perks-list">
-            <li><strong>Pomodoro Sync:</strong> Tracks 25/5 study intervals seamlessly</li>
-            <li><strong>Ambient Hum:</strong> Subtle binaural frequency for concentration</li>
-            <li><strong>Distraction Blocker:</strong> Dimmed presence mode during meetings</li>
-          </ul>
-          <button class="btn-ghost" style="width: 100%; justify-content: center;" onclick="selectSpecies('nova')">Select Nova</button>
-        </div>
-      </div>
-
-      <!-- Kitsu -->
-      <div class="pet-card">
-        <div>
-          <div class="card-top">
-            <div class="card-avatar">🦊</div>
-            <span class="badge-personality">STEALTH &bull; CRYPTO VAULT</span>
-          </div>
-          <h3 class="card-name">Kitsu</h3>
-          <p class="card-lore">
-            The Nine-Tailed Cyber Kitsune. The guardian of your encrypted semantic memory and API keys. Swishes iridescent tails whenever DPAPI or AES-256 memory vault is accessed.
-          </p>
-        </div>
-        <div>
-          <ul class="perks-list">
-            <li><strong>Vault Encryption:</strong> Swishes tails on memory storage</li>
-            <li><strong>Anti-Clipper:</strong> Watches clipboard for wallet address tampering</li>
-            <li><strong>Whisper Mode:</strong> Silent low-power nighttime presence</li>
-          </ul>
-          <button class="btn-ghost" style="width: 100%; justify-content: center;" onclick="selectSpecies('kitsu')">Select Kitsu</button>
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- Technical Architecture of Desktop Pet -->
-  <section class="container">
-    <div class="arch-sec">
-      <div class="arch-grid">
-        <div>
-          <div class="pill-status" style="margin-bottom: 16px;">
-            <span>⚙️</span> UNDER THE HOOD
-          </div>
-          <h2 style="font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 18px;">
-            Desktop Overlay Architecture
-          </h2>
-          <p style="color: var(--t2); font-size: 0.98rem; line-height: 1.7; margin-bottom: 18px;">
-            Unlike standard web apps or Electron widgets that hog 800 MB of RAM, KALKI's companion pet runs on an ultra-lightweight native wrapper utilizing PyWebView with isolated WebView2 runtime parameters.
-          </p>
-          <p style="color: var(--t2); font-size: 0.98rem; line-height: 1.7; margin-bottom: 24px;">
-            It runs as an independent child process (<code>desktop_pet.py</code>) completely decoupled from the main UI window. Even if the main KALKI window is closed, your pet remains on your multi-monitor desktop.
-          </p>
-
-          <div style="display: flex; gap: 14px; flex-wrap: wrap;">
-            <a href="docs.html#pet-overlay" class="btn-primary">View Full Pet API</a>
-            <a href="download.html" class="btn-ghost">Get Standalone Installer</a>
-          </div>
-        </div>
-
-        <!-- Terminal Snippet -->
-        <div class="terminal-box">
-          <div class="term-bar">
-            <div class="term-dot"></div>
-            <div class="term-dot"></div>
-            <div class="term-dot"></div>
-            <span class="term-title">terminal &bull; pet launcher</span>
-          </div>
-          <div class="term-body">
-            <div class="term-mut"># Launch standalone pet overlay without opening main UI:</div>
-            <div><span class="term-cmd">python</span> app/desktop_pet.py --pet gobi --scale 1.1</div>
-            <div class="term-green" style="margin-top: 8px;">[KALKI-PET] Initializing transparent borderless viewport...</div>
-            <div class="term-green">[KALKI-PET] WebView2 UserDataFolder: %APPDATA%\KALKI\pet_profile</div>
-            <div class="term-green">[KALKI-PET] Media session hook initialized (Apple Music / Spotify)</div>
-            <div class="term-green">[KALKI-PET] Registered global click-to-summon hook on PID 14902</div>
-            <div style="margin-top: 10px; color: var(--fil);">&gt; Pet active in screen bottom-right. Memory usage: 13.8 MB</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Site Footer -->
   <footer class="site-footer">
     <div class="container footer-inner">
       <div>
@@ -1162,394 +875,32 @@
     </div>
   </footer>
 
-  <!-- Interactive Sound Synthesizer & Canvas Engine -->
-  <script src="assets/mascot3d.js"></script>
+  <script src="assets/pet_sprites.js"></script>
   <script>
-    /* ==========================================================================
-       Web Audio API Procedural Synthesizer
-       Zero external audio files • 100% offline resilient
-       ========================================================================== */
-    class SoundEngine {
-      constructor() {
-        this.ctx = null;
-        this.enabled = true;
-      }
-
-      init() {
-        if (!this.ctx) {
-          const AudioContext = window.AudioContext || window.webkitAudioContext;
-          this.ctx = new AudioContext();
-        }
-        if (this.ctx.state === 'suspended') {
-          this.ctx.resume();
-        }
-      }
-
-      beep(freq = 440, type = 'sine', duration = 0.1, gainVal = 0.12) {
-        if (!this.enabled) return;
-        this.init();
-        try {
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.type = type;
-          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-          gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-          osc.start();
-          osc.stop(this.ctx.currentTime + duration);
-        } catch (e) {}
-      }
-
-      // Cute procedural meow / purr
-      meow() {
-        if (!this.enabled) return;
-        this.init();
-        try {
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.type = 'triangle';
-          const now = this.ctx.currentTime;
-          osc.frequency.setValueAtTime(520, now);
-          osc.frequency.exponentialRampToValueAtTime(740, now + 0.15);
-          osc.frequency.exponentialRampToValueAtTime(420, now + 0.35);
-          gain.gain.setValueAtTime(0.01, now);
-          gain.gain.linearRampToValueAtTime(0.18, now + 0.08);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-          osc.start();
-          osc.stop(now + 0.38);
-        } catch (e) {}
-      }
-
-      // Treat Crunch Sound
-      crunch() {
-        if (!this.enabled) return;
-        this.init();
-        try {
-          for (let i = 0; i < 3; i++) {
-            setTimeout(() => {
-              this.beep(800 + Math.random() * 400, 'square', 0.04, 0.08);
-            }, i * 40);
-          }
-        } catch (e) {}
-      }
-
-      // Level Up Chime
-      levelUp() {
-        if (!this.enabled) return;
-        this.init();
-        const notes = [440, 554, 659, 880];
-        notes.forEach((f, i) => {
-          setTimeout(() => this.beep(f, 'sine', 0.25, 0.15), i * 90);
+    (function () {
+      const Pets = window.KalkiPets;
+      const grid = document.getElementById('petsGrid');
+      const players = Pets.IDS.map((id) => {
+        const tile = document.createElement('div');
+        tile.className = 'pet-tile';
+        const canvas = document.createElement('canvas');
+        canvas.setAttribute('role', 'img');
+        canvas.setAttribute('aria-label', Pets.SPECIES[id].name);
+        const name = document.createElement('strong');
+        name.textContent = Pets.SPECIES[id].name;
+        const blurb = document.createElement('span');
+        blurb.textContent = Pets.SPECIES[id].blurb;
+        tile.append(canvas, name, blurb);
+        grid.appendChild(tile);
+        return Pets.createPlayer(canvas, { species: id });
+      });
+      document.querySelectorAll('.pets-states button').forEach((button) => {
+        button.addEventListener('click', () => {
+          document.querySelectorAll('.pets-states button').forEach((b) => b.setAttribute('aria-pressed', String(b === button)));
+          players.forEach((p) => p.set({ state: button.dataset.state }));
         });
-      }
-
-      // Dance beat chiptune
-      danceBeat() {
-        if (!this.enabled) return;
-        this.init();
-        this.beep(220, 'triangle', 0.1, 0.2);
-        setTimeout(() => this.beep(660, 'sine', 0.08, 0.1), 120);
-      }
-    }
-
-    const sound = new SoundEngine();
-
-    // Sound Toggle Button
-    const soundBtn = document.getElementById('soundToggleBtn');
-    soundBtn.addEventListener('click', () => {
-      sound.enabled = !sound.enabled;
-      document.getElementById('soundIcon').textContent = sound.enabled ? '🔊' : '🔇';
-      if (sound.enabled) sound.beep(520, 'sine', 0.1);
-    });
-
-    /* ==========================================================================
-       Companion Species Database
-       ========================================================================== */
-    const SPECIES_DATA = {
-      gobi: {
-        name: "Gobi",
-        role: "The Sentient AI Kitten • Audio Synchronized",
-        emoji: "🐱",
-        desc: "Gobi is KALKI's flagship desktop companion. Rendered in a transparent, GPU-accelerated frameless window, Gobi dances to the real-time BPM of your system audio, gives subtle ambient status alerts, and instantly summons the KALKI workspace when clicked.",
-        specialty: "Music Beat Sync",
-        trait: "Ambient Watch",
-        treat: "Salmon RAM Cookie",
-        footprint: "< 14 MB RAM",
-        quotes: [
-          "Hey Maher! I'm watching your desktop. Turn on some music and let's groove!",
-          "Purring along with your Apple Music playlist ♪",
-          "Everything looks peaceful on the desktop right now.",
-          "I love this track! Look at my ears bounce!"
-        ]
-      },
-      kittu: {
-        name: "Kittu",
-        role: "The Chibi Cyber Shiba • Threat Defender",
-        emoji: "🐕",
-        desc: "Kittu is a high-vigilance companion wired directly to ShieldCore antivirus. When unknown processes attempt file encryption or network sweeps, Kittu alerts you immediately with low-latency barks.",
-        specialty: "Heuristic Defense",
-        trait: "Port Sniffer",
-        treat: "Bone Cookie",
-        footprint: "< 15 MB RAM",
-        quotes: [
-          "Woof! ShieldCore active and guarding all loopback ports!",
-          "Zero suspicious processes detected. All quiet on the radar.",
-          "I'm keeping my ears up while you browse. Safe travels!",
-          "Good boy protocol active: 100% loyal to your workspace."
-        ]
-      },
-      byte: {
-        name: "Byte",
-        role: "The Holographic Glitch Sprite • Code Studio",
-        emoji: "👾",
-        desc: "Byte lives inside the syntax tree. Perfect for developers, Byte emits pixel particles whenever code is compiled, tests pass, or LLM tokens stream across the chat console.",
-        specialty: "Token Telemetry",
-        trait: "Glitch Particles",
-        treat: "Energy Byte",
-        footprint: "< 12 MB RAM",
-        quotes: [
-          "01001000 01101001! Byte ready to stream code tokens.",
-          "Tests passed with zero errors! Emitting warm filament sparks.",
-          "RAM usage optimal. Syntax highlighting locked and loaded.",
-          "Need a regex pattern or refactor? Summon KALKI anytime!"
-        ]
-      },
-      draco: {
-        name: "Draco",
-        role: "The Mini Cyber Dragon • GPU & Inference",
-        emoji: "🐉",
-        desc: "Draco thrives on high-compute workloads. When local Ollama or llama.cpp models engage GPU tensors, Draco breathes warm filament embers to celebrate sovereign local inference.",
-        specialty: "Compute Thermal",
-        trait: "Ember Breath",
-        treat: "Flame Chili Chip",
-        footprint: "< 16 MB RAM",
-        quotes: [
-          "*Rumble* Local LLM tensor engine firing on all cylinders!",
-          "Sovereign weights loaded in VRAM. Zero data leaves this machine.",
-          "Warm filament embers ready! What complex puzzle are we solving?",
-          "Dragon scales hardened. Anti-malware shields at maximum."
-        ]
-      },
-      nova: {
-        name: "Nova",
-        role: "The Astral Energy Orb • Deep Focus & Zen",
-        emoji: "🔮",
-        desc: "Nova is engineered for deep focus and study sessions. Nova synchronizes with KALKI's study mode and Pomodoro timers, expanding and glowing in rhythmic 4-7-8 breathing cycles.",
-        specialty: "Mindful Pacing",
-        trait: "Breathing Glow",
-        treat: "Starlight Pearl",
-        footprint: "< 11 MB RAM",
-        quotes: [
-          "Breathe in... and breathe out. Focus session in progress.",
-          "All distractions blocked. Let's enter the flow state.",
-          "25 minutes of deep focus. You are doing fantastic work.",
-          "Warm light pulsating at 0.25 Hz. Stay centered."
-        ]
-      },
-      kitsu: {
-        name: "Kitsu",
-        role: "Nine-Tailed Cyber Kitsune • Vault Guardian",
-        emoji: "🦊",
-        desc: "Kitsu guards KALKI's encrypted semantic memories and API secrets. With nine iridescent tails that swish during DPAPI key access, Kitsu prevents unauthorized memory tampering.",
-        specialty: "DPAPI & AES-256",
-        trait: "Vault Sentry",
-        treat: "Moonlight Mochi",
-        footprint: "< 14 MB RAM",
-        quotes: [
-          "Secrets secured in local Windows DPAPI vault. Safe from prying eyes.",
-          "Your memories are encrypted with AES-256-GCM loopback protection.",
-          "Swishing my tails across the memory graph. Recall is instant.",
-          "No third-party telemetry detected. True sovereign autonomy."
-        ]
-      }
-    };
-
-    let currentSpecies = "gobi";
-    let isDancing = true;
-    let xp = 680;
-    let level = 14;
-
-    function selectSpecies(key) {
-      if (!SPECIES_DATA[key]) return;
-      currentSpecies = key;
-      const data = SPECIES_DATA[key];
-
-      // Update button active state
-      document.querySelectorAll('.species-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.species === key);
       });
-
-      // Update panel metadata
-      document.getElementById('activeEmoji').textContent = data.emoji;
-      document.getElementById('activeSpecies').textContent = `${data.name.toUpperCase()} // ${data.role.split('•')[0].trim().toUpperCase()}`;
-      document.getElementById('panelPetName').textContent = data.name;
-      document.getElementById('panelPetRole').textContent = data.role;
-      document.getElementById('panelPetDesc').textContent = data.desc;
-      document.getElementById('attrSpecialty').textContent = data.specialty;
-      document.getElementById('attrTrait').textContent = data.trait;
-      document.getElementById('attrTreat').textContent = data.treat;
-      document.getElementById('attrFootprint').textContent = data.footprint;
-
-      // Update speech
-      const randomQuote = data.quotes[Math.floor(Math.random() * data.quotes.length)];
-      document.getElementById('petSpeech').textContent = `"${randomQuote}"`;
-
-      sound.meow();
-      if (typeof mascotEngine !== "undefined") mascotEngine.setSpecies(key);
-    }
-
-    // Attach click listeners to species buttons
-    document.querySelectorAll('.species-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        selectSpecies(btn.dataset.species);
-      });
-    });
-
-    /* ==========================================================================
-       Interactive 3D Companion Mascot Engine (60FPS Canvas 3D Perspective)
-       ========================================================================== */
-    const canvas = document.getElementById('petCanvas');
-    const mascotEngine = new Mascot3DEngine(canvas, {
-      species: 'gobi',
-      scale: 1.15,
-      fov: 340,
-      isDancing: true,
-      autoOrbit: true,
-      showPlatform: true,
-      interactive: true
-    });
-
-    /* ==========================================================================
-       Interactive Button Events: Feed, Dance, Pet, Talk
-       ========================================================================== */
-    const feedBtn = document.getElementById('feedBtn');
-    feedBtn.addEventListener('click', () => {
-      if (typeof mascotEngine !== 'undefined') {
-        const treatsMap = { gobi: 'fish', kittu: 'cookie', byte: 'energy', draco: 'ember', nova: 'pearl', kitsu: 'cookie' };
-        mascotEngine.feedTreat(treatsMap[currentSpecies] || 'cookie');
-      }
-      sound.crunch();
-      addParticles(140, 150, 24, '#e08c33');
-      const treats = ["energy byte", "salmon cookie", "ram chip", "flame chili"];
-      const randomTreat = treats[Math.floor(Math.random() * treats.length)];
-      document.getElementById('petSpeech').textContent = `*Crunch crunch* "Mmm! Delicious ${randomTreat}! Thank you, Maher!"`;
-      gainXP(30);
-    });
-
-    const danceBtn = document.getElementById('danceBtn');
-    danceBtn.addEventListener('click', () => {
-      isDancing = !isDancing;
-      if (typeof mascotEngine !== 'undefined') {
-        mascotEngine.setDancing(isDancing);
-      }
-      danceBtn.classList.toggle('active', isDancing);
-      document.getElementById('moodText').textContent = isDancing ? "JAMMING TO BEATS" : "CALM & FOCUSED";
-      if (isDancing) {
-        sound.danceBeat();
-        document.getElementById('petSpeech').textContent = `"Turn it up! Dancing to the beat ♪"`;
-      } else {
-        sound.beep(330, 'sine', 0.15);
-        document.getElementById('petSpeech').textContent = `"Taking a breather. Still watching your screen!"`;
-      }
-    });
-
-    const petBtn = document.getElementById('petBtn');
-    petBtn.addEventListener('click', () => {
-      if (typeof mascotEngine !== 'undefined') {
-        mascotEngine.triggerJump();
-      }
-      sound.meow();
-      if (typeof mascotEngine !== "undefined") mascotEngine.setSpecies(key);
-      addParticles(140, 130, 20, '#fff4e2');
-      document.getElementById('petSpeech').textContent = `*Purrrrr* "You're the best! +50 XP!"`;
-      gainXP(50);
-    });
-
-    canvas.addEventListener('click', () => {
-      sound.meow();
-      if (typeof mascotEngine !== "undefined") mascotEngine.setSpecies(key);
-      addParticles(140, 140, 16, '#fff4e2');
-      gainXP(20);
-    });
-
-    const voiceBtn = document.getElementById('voiceBtn');
-    voiceBtn.addEventListener('click', () => {
-      const data = SPECIES_DATA[currentSpecies];
-      const quote = data.quotes[Math.floor(Math.random() * data.quotes.length)];
-      document.getElementById('petSpeech').textContent = `"${quote}"`;
-
-      // Browser Web Speech API if supported
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const utter = new SpeechSynthesisUtterance(quote);
-        utter.rate = 1.05;
-        utter.pitch = 1.2;
-        window.speechSynthesis.speak(utter);
-      } else {
-        sound.beep(600, 'sine', 0.1);
-      }
-    });
-
-    function gainXP(amount) {
-      xp += amount;
-      if (xp >= 1000) {
-        level++;
-        xp -= 1000;
-        sound.levelUp();
-        document.getElementById('petSpeech').textContent = `★ LEVEL UP! Companion Bond reached Level ${level}! ★`;
-      }
-      document.getElementById('xpLevelText').textContent = `LVL ${level} • ${xp} / 1000 XP`;
-      document.getElementById('xpFillBar').style.width = `${Math.min(100, (xp / 1000) * 100)}%`;
-    }
-
-    /* ==========================================================================
-       Ambient Canvas Background (Floating warm dust motes)
-       ========================================================================== */
-    const bgCanvas = document.getElementById('ambient-canvas');
-    const bgCtx = bgCanvas.getContext('2d');
-
-    function resizeBg() {
-      bgCanvas.width = window.innerWidth;
-      bgCanvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resizeBg);
-    resizeBg();
-
-    const motes = Array.from({ length: 45 }, () => ({
-      x: Math.random() * window.innerWidth,
-      y: Math.random() * window.innerHeight,
-      vx: (Math.random() - 0.5) * 0.3,
-      vy: -Math.random() * 0.4 - 0.1,
-      radius: Math.random() * 1.5 + 0.5,
-      alpha: Math.random() * 0.25 + 0.05
-    }));
-
-    function drawAmbient() {
-      bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
-      bgCtx.fillStyle = '#fff4e2';
-
-      for (let m of motes) {
-        m.x += m.vx;
-        m.y += m.vy;
-        if (m.y < 0) m.y = bgCanvas.height;
-        if (m.x < 0) m.x = bgCanvas.width;
-        if (m.x > bgCanvas.width) m.x = 0;
-
-        bgCtx.save();
-        bgCtx.globalAlpha = m.alpha;
-        bgCtx.beginPath();
-        bgCtx.arc(m.x, m.y, m.radius, 0, Math.PI * 2);
-        bgCtx.fill();
-        bgCtx.restore();
-      }
-
-      requestAnimationFrame(drawAmbient);
-    }
-    drawAmbient();
+    })();
   </script>
 </body>
 </html>

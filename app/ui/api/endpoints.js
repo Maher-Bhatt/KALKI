@@ -174,6 +174,8 @@ export const settings = {
   testGoogle: () => get('/api/settings/test_google'),
   testSpotify: () => get('/api/settings/test_spotify'),
   setupTool: (tool) => post('/api/setup/tool', { tool }),
+  findOllama: () => post('/api/setup/ollama', {}),
+  testAi: () => post('/api/setup/test_ai', {}),
   exportUrl: '/api/settings/export',
 };
 

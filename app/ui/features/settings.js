@@ -9,7 +9,7 @@ import { h, mount, frag } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { settings as api, voice, backup, system, vault, desktop, petOverlay } from '../api/endpoints.js';
 import { store, set, applyUi } from '../state/store.js';
-import { skeletonRows, errorState } from '../components/states.js';
+import { skeletonRows, errorState, toggleSwitch, emptyState } from '../components/states.js';
 import { openDialog, confirmDialog, promptDialog } from '../components/dialog.js';
 import { ok, err } from '../state/toasts.js';
 import { openDiagnostics } from './diagnostics.js';
@@ -98,12 +98,13 @@ function row(label, desc, control) {
 
 function toggleRow(label, desc, key, onChange) {
   const checked = key === 'THEME_GLOW' ? store.settings.values[key] !== false : !!store.settings.values[key];
-  const toggle = h('i.tg' + (checked ? '.on' : ''), {
-    style: { cursor: 'pointer' },
+  const toggle = toggleSwitch({
+    checked,
+    label,
     onClick: () => {
       const newVal = !checked;
       if (onChange) onChange(newVal); else save({ [key]: newVal });
-    }
+    },
   });
   if (desc) {
     return h('div.row.sb', { style: { margin: '8px 0' } }, h('div', null, h('div.sm', null, label), h('div.xs.mut', null, desc)), toggle);
@@ -150,6 +151,35 @@ function secretRow([key, label]) {
 }
 
 /* ── Sections ────────────────────────────────────────────────────────── */
+
+let settingsQuery = '';
+
+/** Every setting that matches, from every section. A card whose own title matches stays
+ *  whole. Otherwise only its matching rows stay. */
+function searchResults(query) {
+  const words = query.trim().toLowerCase().split(/\s+/);
+  const matches = (node) => {
+    const text = node.textContent.toLowerCase();
+    return words.every((w) => text.includes(w));
+  };
+  const out = [];
+  for (const [id, label] of SECTIONS) {
+    const kept = [];
+    const body = SECTION_BODY[id]?.() || [];
+    for (const card of [body].flat(4).filter(Boolean)) {
+      if (!(card instanceof Element)) continue;
+      const title = card.querySelector(':scope > h2');
+      if (matches(h('div', null, label)) || (title && matches(title))) { kept.push(card); continue; }
+      const rows = [...card.children].filter((child) => child.matches('.row, .li'));
+      const hits = rows.filter(matches);
+      if (!hits.length) continue;
+      rows.filter((row) => !hits.includes(row)).forEach((row) => row.remove());
+      kept.push(card);
+    }
+    if (kept.length) out.push(h('h2.settings-group', null, label), ...kept);
+  }
+  return out.length ? out : [emptyState({ iconName: 'search', title: 'No settings match', body: `Nothing matches "${query.trim()}".` })];
+}
 
 const SECTION_BODY = {
   general: () => [
@@ -438,8 +468,9 @@ const SECTION_BODY = {
         h('button.btn', { type: 'button', onClick: openVault }, 'Open vault')),
       toggleRow('Confirm dangerous actions', 'Ask before workflows that shut down, restart or delete.', 'REQUIRE_DANGEROUS_CONFIRMATION'),
       row('Security workspace', 'Show the advanced security tools in the navigation rail.',
-        h('i.tg' + (store.ui.securityEnabled ? '.on' : ''), {
-          style: { cursor: 'pointer' },
+        toggleSwitch({
+          checked: !!store.ui.securityEnabled,
+          label: 'Security workspace',
           onClick: () => { store.ui.securityEnabled = !store.ui.securityEnabled; applyUi(); window.dispatchEvent(new CustomEvent('kalki:nav-changed')); },
         }))
     )
@@ -626,6 +657,14 @@ export function settingsView() {
   const aside = h('div.view-body.scroll');
   const viewObj = { main, aside, render: () => {} };
 
+  const searchBox = h('input.input', {
+    type: 'search',
+    placeholder: 'Search settings',
+    'aria-label': 'Search settings',
+    style: { maxWidth: '20rem' },
+    onInput: (e) => { settingsQuery = e.target.value; renderFn(); e.target.focus(); },
+  });
+
   viewObj.render = () => {
     const s = store.settings;
     if (s.loading) {
@@ -640,20 +679,22 @@ export function settingsView() {
 
     mount(main, h('div.pad', null, 
       h('div.hd', null, 
-        h('div', null, h('h1', null, 'Settings'), h('div.sub', null, 'Changes save when you leave a field.')), 
+        h('div', null, h('h1', { id: 'view-title', tabindex: '-1' }, 'Settings'), h('div.sub', null, 'Changes save when you leave a field.')),
+        searchBox,
         h('a.btn', { href: api.exportUrl, download: 'kalki_config_backup.json' }, 'Export settings')
       ), 
       h('div.grid-sw', null, 
         h('div.snav', null, 
-          ...SECTIONS.map(([id, label]) => 
-            h(active === id ? 'a.s' : 'a', { 
-              onClick: () => { active = id; renderFn(); },
-              style: { cursor: 'pointer' }
+          ...SECTIONS.map(([id, label]) =>
+            h('button.snav-item' + (active === id && !settingsQuery.trim() ? '.s' : ''), {
+              type: 'button',
+              'aria-current': active === id && !settingsQuery.trim() ? 'page' : null,
+              onClick: () => { active = id; settingsQuery = ''; searchBox.value = ''; renderFn(); },
             }, label)
           )
         ), 
         h('div.col.g16', null, 
-          (SECTION_BODY[active] || SECTION_BODY.general)()
+          settingsQuery.trim() ? searchResults(settingsQuery) : (SECTION_BODY[active] || SECTION_BODY.general)()
         )
       )
     ));

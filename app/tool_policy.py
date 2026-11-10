@@ -103,6 +103,46 @@ def is_sensitive_filename(name: str) -> bool:
     return any(fnmatch.fnmatch(low, pattern) for pattern in _SENSITIVE_FILES)
 
 
+# What each tool did, and how to name it when it hasn't happened.
+_TOOL_WORDS = {
+    "search_web": ("Searched the web", "Search the web"),
+    "read_url": ("Read a web page", "Read a web page"),
+    "read_emails": ("Read your email", "Read your email"),
+    "read_local_document": ("Read a document", "Read a document"),
+    "get_calendar_events": ("Checked your calendar", "Check your calendar"),
+    "get_daily_briefing": ("Got your briefing", "Get your briefing"),
+    "play_music": ("Played music", "Play music"),
+    "store_user_memory": ("Saved a memory", "Save a memory"),
+    "add_reminder": ("Added a reminder", "Add a reminder"),
+    "send_email": ("Sent an email", "Send an email"),
+    "create_calendar_event": ("Added a calendar event", "Add a calendar event"),
+    "delete_calendar_event": ("Deleted a calendar event", "Delete a calendar event"),
+    "mark_emails_as_read": ("Marked email as read", "Mark email as read"),
+    "create_routine": ("Created a routine", "Create a routine"),
+    "scan_network": ("Scanned a network", "Scan a network"),
+    "manage_tasks": ("Updated your tasks", "Update your tasks"),
+    "system_control": ("Used a PC control", "Use a PC control"),
+}
+
+# Only these are shown on a tool card. Other arguments may be private, like an email body.
+_DETAIL_FIELDS = {"search_web": "query", "read_url": "url", "read_local_document": "path", "scan_network": "target"}
+
+
+def tool_card(tool: str, args: Dict[str, Any], status: str) -> Dict[str, str]:
+    """What Ask shows for one tool call, in plain words."""
+    field = _DETAIL_FIELDS.get(tool)
+    detail = str(args.get(field) or "")[:200] if field else ""
+    if not detail and status == "waiting":
+        detail = describe(tool, args).splitlines()[0][:200]
+    plain = tool.replace("_", " ").capitalize()
+    did, would = _TOOL_WORDS.get(tool, (plain, plain))
+    if tool == "manage_tasks" and args.get("action") == "list":
+        did, would = "Checked your tasks", "Check your tasks"
+    # Never say a thing was done when it's only waiting, or was refused or failed.
+    label = did if status == "done" else would
+    return {"tool": tool, "label": label, "status": status, "detail": detail}
+
+
 def describe(tool: str, args: Dict[str, Any]) -> str:
     """What the approval shows: the exact content, so the user approves what will happen."""
     get = lambda key: str(args.get(key) or "")[:500]  # noqa: E731

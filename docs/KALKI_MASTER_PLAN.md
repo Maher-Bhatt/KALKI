@@ -28,18 +28,23 @@
 - Test a real Defender detection with the harmless EICAR file. It raises a real Defender alert, so it needs your OK.
 - Features 31–34: cancel and progress, scan consent, and safer process killing.
 
-**Phase 2: first pass on `feat/phase-2-design`.** Built directly on a branch for review, rather than as a separate prototype (§5.7).
+**Phase 2: done on `feat/phase-2-design`, waiting for review.** Built directly on a branch for review, rather than as a separate prototype (§5.7).
 
 | Item | Status |
 |---|---|
-| Design tokens | Type, spacing, corners, elevation and motion added. Segoe UI Variable adopted, as the font named before was never loaded. A test fails if a screen uses a token that doesn't exist |
+| Design tokens | Type, spacing, corners, elevation and motion. Segoe UI Variable adopted, as the font named before was never loaded. A test fails if a screen uses a token that doesn't exist |
 | Blur | Dropped, with its setting. It was slow with GPU compositing off |
-| Shell | Labelled rail that collapses (Ask, Today, Library, Studio, Security, Activity, Settings). The top bar has only search and one status menu. Automate waits until automations are discussed |
-| Ask | Calmer side panel, one conversation menu, no made-up wording. Tool cards not done |
+| Shell | Labelled rail that collapses (Ask, Today, Library, Studio, Security, Activity, Settings), and turns into icons below 1000px. The top bar has only search and one status menu. Automate waits until automations are discussed |
+| Ask | Tool cards that say what KALKI did ("Searched the web", "Send an email: waiting for your approval"); only safe details are shown. Approvals appear in the conversation. Real reply times instead of a made-up "1.1 s". A failed AI call says so instead of showing an empty reply |
+| Approvals | One shared card and one shared list for every screen, so they can't drift apart |
 | Today | Ordered by urgency, one "Connect your accounts" row. The invented clipboard suggestion and briefing time are gone |
-| First run | Three steps inside the app: name, AI service, and what KALKI will and won't do. Existing installs skip it |
-| Pets (feature 42) | Six original pixel characters shared by app and desktop. Real transparency through a native layered window, with click-through on empty pixels. Light status polling every 1.5 s, not yet event-driven |
-| Still to do | Library single search, Security's layout, Settings search, six states on every screen, WCAG 2.2 AA audit, 900px to 4K pass, light theme review |
+| Library | One search box across memories, notes and conversations. KALKI has no document or meeting-transcript store yet, so those aren't searched |
+| Security | One honest result at the top ("Windows Defender is on · Definitions updated today · Nothing to review"), with loading and error states. Plain names for every check. Duplicate buttons removed |
+| Settings | Search across every section |
+| First run | Three steps inside the app: name, AI service with a real test and Ollama detection, and what KALKI will and won't do. Ends with a real first answer when the AI test passed. Existing installs skip it |
+| Pets (feature 42) | Six original pixel characters shared by the app, the desktop and the website. The desktop pet has its own layered window: real transparency and click-through, tested over a bright window. Live status, approvals and dragging tested against a running KALKI. Status is read every 1.5 s, not pushed |
+| Accessibility | Every screen audited in dark and light: text contrast passes WCAG AA, every control is at least 24px, has a name and works from the keyboard. Switches are real switches. Rechecked at 900px, 1360px and 4K with no sideways scrolling |
+| Not done | Screenshot tests in CI (no browser on the runners yet), watching real people use first run, and 125%/150% Windows scaling checked by eye. The voice demo screen with made-up states was removed rather than fixed |
 
 **Phase 1: in progress on `feat/phase-1-foundations`, not yet committed.**
 

@@ -823,12 +823,10 @@ main.on {
 
 .shield-hero-card.is-ok {
   border-color: rgba(52, 211, 153, 0.35);
-  animation: shieldGlowOk 4s ease-in-out infinite;
 }
 
 .shield-hero-card.is-alert {
   border-color: rgba(248, 113, 113, 0.45);
-  animation: shieldGlowAlert 2s ease-in-out infinite;
 }
 
 .shield-hero-icon {
@@ -850,7 +848,7 @@ main.on {
 
 .scanner-actions-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   margin-top: 20px;
 }
@@ -865,7 +863,7 @@ main.on {
   justify-content: space-between;
   gap: 12px;
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s, background 0.2s, box-shadow 0.2s;
-  cursor: pointer;
+  cursor: default;
   position: relative;
   overflow: hidden;
 }

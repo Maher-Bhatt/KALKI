@@ -13,13 +13,13 @@ html[data-theme="light"], :root[data-theme="light"] {
   --lst: #94a3b8;
   --text: #0f172a;
   --t2: #334155;
-  --mut: #64748b;
-  --faint: #94a3b8;
+  --mut: #4b5563;
+  --faint: #5b6474;
   --fil: #475569;
   --ok: #16a34a;
   --okt: #15803d;
   --warn: #d97706;
-  --warnt: #b45309;
+  --warnt: #92400e;
   --dng: #dc2626;
   --dngt: #b91c1c;
 }

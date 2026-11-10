@@ -16,6 +16,8 @@ import { openDialog, promptDialog, confirmDialog } from '../components/dialog.js
 import { toast, ok, err } from '../state/toasts.js';
 import { createPetCompanion } from './pet.js';
 import { openMenu } from '../components/menu.js';
+import { approvalCard } from '../components/approval.js';
+import { waitingApprovals } from '../state/approvals.js';
 
 const MAX_UPLOAD = 32 * 1024 * 1024; // server MAX_BODY
 
@@ -128,6 +130,26 @@ function messageActions(msg) {
   return h('div.row.g6', { style: { marginTop: '8px' } }, ...actions);
 }
 
+const TOOL_STATUS = {
+  done: { icon: 'check', word: '' },
+  waiting: { icon: 'alert', word: 'Waiting for your approval' },
+  refused: { icon: 'close', word: 'Not allowed' },
+  failed: { icon: 'alert', word: "Didn't work" },
+};
+
+/** What KALKI did while answering, as small cards. Details open only if there are any. */
+function toolCards(tools) {
+  const box = h('div.toolcards');
+  for (const tool of tools || []) {
+    const status = TOOL_STATUS[tool.status] || TOOL_STATUS.done;
+    const line = [icon(status.icon, 13), h('span', null, tool.label), status.word ? h('span.toolcard-status', null, status.word) : null];
+    box.appendChild(tool.detail
+      ? h('details.toolcard', { dataset: { status: tool.status } }, h('summary', null, ...line), h('div.toolcard-detail', null, tool.detail))
+      : h('div.toolcard', { dataset: { status: tool.status } }, h('div.toolcard-line', null, ...line)));
+  }
+  return box;
+}
+
 function renderMessage(msg) {
   if (msg.role === 'user') {
     return h('div.umsg', { dataset: { id: msg.id } },
@@ -172,11 +194,11 @@ function renderMessage(msg) {
     let executedSystemAction = null;
     rawText = rawText.replace(/\[TASK:\s*(.+?)\]/g, (m, t) => { createdTasks.push(t); return ''; });
     rawText = rawText.replace(/(?:TOOL CALL:\s*)?system_control\(\s*\{[^}]*["']lock["'][^}]*\}\s*\)/gi, () => {
-      executedSystemAction = 'Workstation Locked (Attitude Enforcement Protocol)';
+      executedSystemAction = 'Your PC was locked';
       return '';
     });
     rawText = rawText.replace(/\[ACTION:\s*lock\]/gi, () => {
-      executedSystemAction = 'Workstation Locked (Attitude Enforcement Protocol)';
+      executedSystemAction = 'Your PC was locked';
       return '';
     });
     
@@ -218,7 +240,7 @@ function renderMessage(msg) {
       body.appendChild(
         h('div.note', { style: { marginTop: '8px', borderLeft: '3px solid #f87171', background: 'rgba(248, 113, 113, 0.08)' } },
           icon('security', 16, { style: { color: '#f87171' } }),
-          h('b', { style: { color: '#f87171' } }, 'System Security Action:'),
+          h('b', { style: { color: '#f87171' } }, 'KALKI took an action:'),
           h('span.t2', { style: { flex: '1', marginLeft: '6px' } }, executedSystemAction)
         )
       );
@@ -247,8 +269,7 @@ function renderMessage(msg) {
   }
 
   let chipText = msg.model ? modelLabel(msg.model) : '';
-  if (msg.streaming) chipText += ' · streaming';
-  else if (msg.done) chipText += ' · 1.1 s';
+  if (msg.done && msg.durationMs) chipText += `${chipText ? ' · ' : ''}${(msg.durationMs / 1000).toFixed(1)} s`;
 
   return h('div.kmsg', { dataset: { id: msg.id } },
     h('div.who', null, 
@@ -257,6 +278,7 @@ function renderMessage(msg) {
       chipText ? h('span.chip', null, chipText) : null
     ),
     msg.origin === 'voice' ? h('div.msg-voice-tag', null, 'Spoken · ' + relative(msg.ts)) : null,
+    toolCards(msg.tools),
     body,
     msg.stopped ? h('p.t-meta.faint', { style: { marginTop: 'var(--space-3)' } }, 'Stopped before finishing.') : null,
     !msg.streaming && !msg.failed ? messageActions(msg) : null,
@@ -301,9 +323,16 @@ async function send(text, attachments = []) {
     if (prefix) wire[wire.length - 1] = { role: 'user', content: `${trimmed}\n${prefix}`.slice(0, 120000) };
 
     let acc = '';
+    const tools = [];
+    const startedAt = Date.now();
     await streamChat(wire, {
       signal: ctl.signal,
       threadId: conv.active()?.id,
+      onTool: (tool) => {
+        tools.push(tool);
+        document.querySelector(`.kmsg[data-id="${assistant.id}"] .toolcards`)?.replaceWith(toolCards(tools));
+        announce(tool.label);
+      },
       onToken: (t) => {
         acc += t;
         patchStreaming(assistant.id, acc);
@@ -317,14 +346,14 @@ async function send(text, attachments = []) {
         }
 
         await conv.updateMessage(assistant.id, {
-          content: acc, streaming: false, done: true,
+          content: acc, streaming: false, done: true, tools, durationMs: Date.now() - startedAt,
           model: info.model || store.models.current, stopped: !!info.stopped,
         });
         announce(acc);
         window.dispatchEvent(new CustomEvent('kalki:stream-end'));
       },
       onError: async (e) => {
-        await conv.updateMessage(assistant.id, { content: acc, streaming: false, failed: !acc, error: e.message, detail: e.detail });
+        await conv.updateMessage(assistant.id, { tools, content: acc, streaming: false, failed: !acc, error: e.message, detail: e.detail });
         if (acc) toast({ kind: 'warning', text: 'The reply was cut short.' });
         window.dispatchEvent(new CustomEvent('kalki:stream-end'));
       },
@@ -505,7 +534,7 @@ function composer() {
         )
       )
     ),
-    h('div.xs', { style: { color: 'var(--faint)', marginTop: '8px' } }, 'Enter to send · Shift+Enter for a new line · Esc stops a reply · drop files to attach'),
+    h('div.xs', { style: { color: 'var(--mut)', marginTop: '8px' } }, 'Enter to send · Shift+Enter for a new line · Esc stops a reply · drop files to attach'),
     fileInput,
   );
 
@@ -718,6 +747,8 @@ export function askView() {
     },
   }, icon('dots', 15));
 
+  const approvalSlot = h('div.approval-slot');
+
   const threadEl = h('div.thread', null, 
     h('div.th-h', null, 
       headerTitleEl,
@@ -725,6 +756,7 @@ export function askView() {
     ), 
     welcomeWrap,
     inner,
+    approvalSlot,
     c.el
   );
 
@@ -738,6 +770,7 @@ export function askView() {
   const searchInput = h('input', {
     type: 'search',
     placeholder: 'Search conversations',
+    'aria-label': 'Search conversations',
     style: { border: 'none', background: 'transparent', flex: '1', outline: 'none', color: 'inherit', fontSize: '13px' },
     onInput: (e) => { histSearchQuery = e.target.value; renderHist(); },
   });
@@ -756,7 +789,14 @@ export function askView() {
 
     const activeId = conv.active()?.id;
     const row = (t) => {
-      const el = h('div.t', { onClick: () => conv.switchThread(t.id), title: t.title || 'Untitled' });
+      const el = h('div.t', {
+        role: 'button',
+        tabindex: '0',
+        'aria-current': t.id === activeId ? 'true' : null,
+        onClick: () => conv.switchThread(t.id),
+        onKeydown: (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === el) { e.preventDefault(); conv.switchThread(t.id); } },
+        title: t.title || 'Untitled',
+      });
       if (t.id === activeId) el.classList.add('s');
       if (t.pinned) el.append(icon('pin', 12));
       const lbl = h('span', null, t.title || 'Untitled');
@@ -914,7 +954,7 @@ export function askView() {
       welcomeWrap.hidden = true;
       inner.hidden = false;
       threadEl.classList.remove('is-empty');
-      if (threadEl.lastElementChild !== c.el) {
+      if (c.el.parentElement !== threadEl) {
         const wasFocused = document.activeElement === c.ta;
         threadEl.appendChild(c.el);
         if (wasFocused) c.ta.focus();
@@ -936,6 +976,14 @@ export function askView() {
     }
 
     welcomeTitle.textContent = getGreeting();
+
+    const waitingNow = waitingApprovals();
+    const shownIds = waitingNow.map((a) => a.id).join('|');
+    if (approvalSlot.dataset.ids !== shownIds) {
+      approvalSlot.dataset.ids = shownIds;
+      mount(approvalSlot, ...waitingNow.slice(0, 1).map((a) => approvalCard(a, { position: 1, total: waitingNow.length })));
+      scroller?.toBottom();
+    }
 
     c.sendBtn.classList.toggle('is-stop', store.conv.streaming);
     c.sendBtn.setAttribute('aria-label', store.conv.streaming ? 'Stop generating' : 'Send message');
@@ -1184,8 +1232,12 @@ export function askView() {
   };
   main.render = view.render;
 
+  const onAskEvent = (e) => { if (e.detail) send(String(e.detail), []); };
+  window.addEventListener('kalki:ask', onAskEvent);
+
   view.cleanup = () => {
     removePet();
+    window.removeEventListener('kalki:ask', onAskEvent);
     clearTimeout(mediaTimer);
     mediaTimer = null;
     window.removeEventListener('pointerdown', onActivity);

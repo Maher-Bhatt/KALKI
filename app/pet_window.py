@@ -152,6 +152,14 @@ class PetWindow:
         gdi32.SelectObject.argtypes = (wintypes.HDC, wintypes.HANDLE)
         gdi32.SelectObject.restype = wintypes.HANDLE
         gdi32.CreateDIBSection.restype = wintypes.HANDLE
+        # Handles are 64-bit: without these, ctypes can cut them short and crash.
+        gdi32.CreateDIBSection.argtypes = (wintypes.HDC, ctypes.c_void_p, wintypes.UINT,
+                                           ctypes.POINTER(ctypes.c_void_p), wintypes.HANDLE, wintypes.DWORD)
+        user32.UpdateLayeredWindow.argtypes = (wintypes.HWND, wintypes.HDC, ctypes.c_void_p, ctypes.c_void_p,
+                                               wintypes.HDC, ctypes.c_void_p, wintypes.DWORD, ctypes.c_void_p,
+                                               wintypes.DWORD)
+        user32.ShowWindow.argtypes = (wintypes.HWND, ctypes.c_int)
+        user32.ReleaseCapture.argtypes = ()
         kernel32.GetModuleHandleW.restype = wintypes.HMODULE
         kernel32.GetModuleHandleW.argtypes = (wintypes.LPCWSTR,)
 

@@ -10,7 +10,7 @@ import { h, mount } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { workflows, code, vision, desktop } from '../api/endpoints.js';
 import { store, set } from '../state/store.js';
-import { emptyState } from '../components/states.js';
+import { emptyState, toggleSwitch } from '../components/states.js';
 import { openDialog, confirmDialog } from '../components/dialog.js';
 import { ok, err, toast } from '../state/toasts.js';
 
@@ -784,6 +784,9 @@ function renderWorkflowsTab() {
     );
 
     const newRoutineCard = h('div.card.col.g8', {
+      role: 'button',
+      tabindex: '0',
+      onKeydown: (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) { e.preventDefault(); e.currentTarget.click(); } },
       style: {
         borderStyle: 'dashed',
         cursor: 'pointer',
@@ -1366,11 +1369,7 @@ function renderWorkflowsTab() {
             ),
             h('div.row.g8', null,
               h(`span.chip.${s.enabled ? 'ok' : 'warn'}`, null, s.enabled ? 'Enabled' : 'Disabled'),
-              h(`i.tg${s.enabled ? '.on' : ''}`, {
-                style: { cursor: 'pointer' },
-                'aria-label': `Toggle ${s.name}`,
-                onClick: () => toggleSkill(s)
-              })
+              toggleSwitch({ checked: !!s.enabled, label: s.name, onClick: () => toggleSkill(s) })
             )
           ),
           h('div.sm.t2', { style: { flex: '1' } }, s.desc),

@@ -13,12 +13,14 @@ import { store, applyUi, notify, subscribe } from '../state/store.js';
 import { ok, err, dismiss } from '../state/toasts.js';
 import { createPresence, presenceLabel } from '../components/presence.js';
 import { openDialog } from '../components/dialog.js';
-import { system, desktop, approvals } from '../api/endpoints.js';
+import { system, desktop } from '../api/endpoints.js';
 import { refreshStatus } from '../state/status.js';
 import { openDiagnostics } from './diagnostics.js';
 import { openPalette } from './palette.js';
 import { openMenu } from '../components/menu.js';
 import { go } from './router.js';
+import { approvalCard } from '../components/approval.js';
+import { syncApprovals, waitingApprovals } from '../state/approvals.js';
 
 const DESTINATIONS = [
   { id: 'ask', label: 'Ask', icon: 'ask' },
@@ -157,30 +159,6 @@ export function buildShell(root) {
     ]);
   }
 
-  /* ── Approvals, available from every screen ───────────────────────── */
-  let knownWaiting = 0;
-  let waitingApprovals = [];
-
-  async function loadApprovals() {
-    const r = await approvals.list();
-    waitingApprovals = r.ok ? (r.data.approvals || []) : [];
-    notify();
-  }
-
-  function outcomeText(decision, data) {
-    if (decision !== 'approve') return 'Denied';
-    const result = Array.isArray(data?.result) ? data.result[1] : data?.result;
-    return result ? String(result).slice(0, 160) : 'Approved';
-  }
-
-  async function decideApproval(id, decision) {
-    const r = await approvals.decide(id, decision);
-    if (r.ok) ok(outcomeText(decision, r.data));
-    else err(r.detail || r.message);
-    await loadApprovals();
-    refreshStatus();
-  }
-
   /* ── Offline / update banner ──────────────────────────────────────── */
   function paintBanner() {
     const up = store.status?.updateProgress;
@@ -202,24 +180,21 @@ export function buildShell(root) {
       mount(banner, h('span', null, `Your tasks, notes and memories can't be opened: ${store.status.storeError}`));
       return;
     }
-    const waiting = store.status?.pendingApprovals || 0;
-    if (waiting !== knownWaiting) {
-      knownWaiting = waiting;
-      loadApprovals();
-    }
-    const a = waitingApprovals[0];
-    if (waiting && a && !location.hash.startsWith('#/oversight')) {
+    syncApprovals();
+    const waitingList = waitingApprovals();
+    const a = waitingList[0];
+    const route = store.route?.name;
+    // Ask shows approvals in the conversation, and Activity lists them.
+    if (a && route !== 'oversight' && route !== 'ask') {
       banner.hidden = false;
-      banner.className = 'notice'; banner.dataset.tone = 'warn';
-      mount(banner, h('div.row.sb', { style: { gap: '12px', alignItems: 'flex-start', flex: '1', minWidth: 0 } },
-        h('div.notice-body', null,
-          h('strong', null, waiting === 1 ? 'KALKI needs your approval' : `KALKI needs your approval (1 of ${waiting})`),
-          h('div.sm.notice-detail', null, a.description)),
-        h('div.row.g8', null,
-          h('button.btn.btn-sm.btn-ghost', { type: 'button', onClick: () => decideApproval(a.id, 'deny') }, 'Deny'),
-          h('button.btn.btn-sm.btn-primary', { type: 'button', onClick: () => decideApproval(a.id, 'approve') }, 'Approve'))));
+      banner.className = 'notice notice-approval'; delete banner.dataset.tone;
+      if (banner.dataset.approval !== String(a.id)) {
+        banner.dataset.approval = String(a.id);
+        mount(banner, approvalCard(a, { position: 1, total: waitingList.length }));
+      }
       return;
     }
+    delete banner.dataset.approval;
     const version = store.status?.updateAvailable;
     if (version) {
       banner.hidden = false;
