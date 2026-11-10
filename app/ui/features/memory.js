@@ -1,9 +1,12 @@
-﻿/** Memory — built entirely on the semantic store.
+/** Memory — built entirely on the semantic store.
  *
  *  Organizes memories by topic (Preferences, Projects, Work, Personal, Music, Tech),
  *  with instant keyword & topic search, topic filter chips, importance rating,
  *  pinning, and deletion with confirmation. */
 
+import { notes as notesApi } from '../api/endpoints.js';
+import * as conv from '../state/conversations.js';
+import { go } from './router.js';
 import { h, mount, debounce } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { relative } from '../lib/format.js';
@@ -85,6 +88,17 @@ function normalizeTopic(raw) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+let otherQuery = '';
+let otherResults = { notes: [] };
+
+async function searchOthers(query, view) {
+  if (!query) { otherResults = { notes: [] }; return; }
+  const r = await notesApi.search(query);
+  if (query !== otherQuery) return;
+  otherResults = { notes: r.ok ? r.items : [] };
+  view.render();
+}
+
 export async function loadMemory() {
   set('memory', { loading: true, error: null });
   const r = await memory.list();
@@ -140,22 +154,22 @@ function editor(existing) {
     body: h('div.stack', null,
       h('div.field', null,
         h('label', { for: 'mem-text' }, 'What should KALKI remember?'),
-        h('textarea.textarea', { id: 'mem-text', rows: 3, value: existing?.text || '', ref: (el) => { textEl = el; } }),
+        h('textarea.textarea', { 'aria-label': 'Memory', id: 'mem-text', rows: 3, value: existing?.text || '', ref: (el) => { textEl = el; } }),
       ),
       h('div.field', null,
         h('label', { for: 'mem-topic' }, 'Topic'),
-        h('select.select', { id: 'mem-topic', ref: (el) => { topicEl = el; } },
+        h('select.select', { 'aria-label': 'Topic', id: 'mem-topic', ref: (el) => { topicEl = el; } },
           ...EDIT_TOPICS.map((t) => h('option', { value: t, selected: existingTopic.toLowerCase() === t.toLowerCase() }, t))),
       ),
       h('div.field', null,
         h('label', { for: 'mem-type' }, 'Type'),
-        h('select.select', { id: 'mem-type', ref: (el) => { typeEl = el; } },
+        h('select.select', { 'aria-label': 'Type', id: 'mem-type', ref: (el) => { typeEl = el; } },
           ...TYPES.map((t) => h('option', { value: t, selected: (existing?.type || 'fact') === t }, t === 'pinned' ? 'pinned — always retrieved' : t))),
       ),
       h('div.field', null,
         h('label', { for: 'mem-imp' }, 'Importance'),
         h('input.slider', {
-          id: 'mem-imp', type: 'range', min: '1', max: '10', value: String(existing?.importance ?? 5),
+          'aria-label': 'Importance', id: 'mem-imp', type: 'range', min: '1', max: '10', value: String(existing?.importance ?? 5),
           ref: (el) => { impEl = el; },
           onInput: (e) => { impOut.textContent = e.target.value; },
         }),
@@ -217,12 +231,14 @@ export function memoryView() {
   const quickTa = h('textarea', {
     style: { width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', color: 'inherit', fontFamily: 'inherit' },
     placeholder: 'I prefer concise answers with code snippets...',
+    'aria-label': 'New memory',
     onInput: (e) => { quickText = e.target.value; },
   });
 
   const searchInput = h('input', {
     type: 'search',
-    placeholder: 'Filter memories instantly by keyword or topic…',
+    placeholder: 'Search memories, notes and conversations',
+    'aria-label': 'Search your library',
     style: { border: 'none', background: 'transparent', outline: 'none', flex: '1', color: 'inherit', fontSize: '13px' },
     onInput: debounce((e) => {
       set('memory', { query: e.target.value });
@@ -276,7 +292,7 @@ export function memoryView() {
     const hd = h('div.hd', null,
       h('div', null,
         h('h1', { id: 'view-title', tabindex: '-1' }, 'Library'),
-        h('div.sub', null, 'Knowledge & facts KALKI keeps about you. Stored locally.')
+        h('div.sub', null, 'What KALKI remembers, your notes, and past conversations. Kept on this PC.')
       ),
       h('button.btn.pri', { type: 'button', onClick: () => editor(null) }, h('i', { 'data-i': 'plus' }), 'Add memory')
     );
@@ -347,9 +363,9 @@ export function memoryView() {
       listNodes.push(skeletonRows(3));
     } else if (m.error) {
       listNodes.push(errorState({
-        title: "Memory didn't load",
+        title: "Your memories didn't load",
         message: m.error.kind === 'unavailable'
-          ? 'The embedding backend is unavailable, so semantic search is limited. Your memories are safe.'
+          ? "Smart search isn't available right now, so search is by keyword only. Your memories are safe."
           : m.error.message,
         detail: m.error.detail, onRetry: loadMemory,
       }));
@@ -402,7 +418,7 @@ export function memoryView() {
                 // Importance indicator (stars and meter)
                 h('div.row.g4', { style: { alignItems: 'center' }, title: `Importance: ${imp}/10` },
                   h('span', { style: { color: 'var(--warnt, #e08c33)', fontSize: '12px', letterSpacing: '1px' } },
-                    'â˜…'.repeat(stars) + 'â˜†'.repeat(5 - stars)
+                    '★'.repeat(stars) + '☆'.repeat(5 - stars)
                   ),
                   h('div.meter', { style: { width: '36px', height: '4px', margin: '0 4px' } },
                     h('i', { style: { width: `${imp * 10}%` } })
@@ -440,6 +456,29 @@ export function memoryView() {
 
     const memCard = h('div.card', { id: 'mem', style: { padding: '0', overflow: 'hidden' } }, ...listNodes);
 
+    // Notes and conversations are searched from the same box.
+    const queryText = q.trim();
+    if (queryText !== otherQuery) {
+      otherQuery = queryText;
+      searchOthers(queryText, view);
+    }
+    const noteNodes = queryText ? otherResults.notes.slice(0, 20).map((n) =>
+      h('div.li', { style: { padding: '10px 14px' } },
+        h('div', { style: { flex: '1', minWidth: 0 } },
+          h('div.sm', { style: { overflowWrap: 'anywhere' } }, n.text || String(n)),
+          (n.date || n.added) ? h('div.xs.mut', null, relative(n.date || n.added)) : null))) : [];
+    const threadNodes = queryText ? conv.searchThreads(queryText).slice(0, 20).map((t) =>
+      h('button.li.library-link', {
+        type: 'button',
+        onClick: () => { conv.switchThread(t.id); go('ask', { threadId: t.id }); },
+      }, h('i', { 'data-i': 'ask' }), h('span', { style: { flex: '1', minWidth: 0 } }, t.title || 'Untitled'))) : [];
+    const otherSections = queryText ? [
+      h('h2.library-group', null, `Notes (${noteNodes.length})`),
+      noteNodes.length ? h('div.card', { style: { padding: 0 } }, ...noteNodes) : h('div.sm.mut', null, 'No notes match.'),
+      h('h2.library-group', null, `Conversations (${threadNodes.length})`),
+      threadNodes.length ? h('div.card', { style: { padding: 0 } }, ...threadNodes) : h('div.sm.mut', null, 'No conversations match.'),
+    ] : [];
+
     // Quick Add Memory Card
     const EDIT_TOPICS = ['Preferences', 'Projects', 'Work', 'Personal', 'Music', 'Tech', 'General'];
     const quickAddCard = h('div.card.in.col.g12', { style: { marginBottom: '18px' } },
@@ -451,16 +490,14 @@ export function memoryView() {
         quickTa
       ),
       h('div.row.g8', { style: { flexWrap: 'wrap', alignItems: 'center' } },
-        h('select', {
-          className: 'btn',
-          style: { appearance: 'none', background: 'transparent' },
+        h('select.select', {
+          'aria-label': 'Topic',
           onInput: (e) => { quickTopic = e.target.value; }
         },
           ...EDIT_TOPICS.map((t) => h('option', { value: t, selected: quickTopic === t }, `Topic: ${t}`))
         ),
-        h('select', {
-          className: 'btn',
-          style: { appearance: 'none', background: 'transparent' },
+        h('select.select', {
+          'aria-label': 'Type',
           onInput: (e) => { quickType = e.target.value; }
         },
           ...TYPES.map((t) => h('option', { value: t, selected: quickType === t }, `Type: ${t}`))
@@ -468,7 +505,8 @@ export function memoryView() {
         h('span.xs.mut', null, 'Importance'),
         h('input', {
           type: 'range', min: '1', max: '10', value: String(quickImp),
-          style: { width: '80px' },
+          'aria-label': 'Importance',
+          style: { width: '96px', height: '24px' },
           onInput: (e) => {
             quickImp = Number(e.target.value);
             const badge = quickAddCard.querySelector('#impn');
@@ -507,7 +545,7 @@ export function memoryView() {
     const searchPos = searchInput.selectionStart;
     const quickPos = quickTa?.selectionStart || 0;
 
-    mount(main, hd, banner, quickAddCard, searchRow, topicChips, memCard);
+    mount(main, hd, banner, searchRow, topicChips, memCard, ...otherSections, quickAddCard);
 
     if (wasSearchFocused) {
       searchInput.focus();

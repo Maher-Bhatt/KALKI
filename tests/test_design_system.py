@@ -9,6 +9,7 @@ import sys
 import tempfile
 import time
 import unittest
+import unittest.mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -46,7 +47,19 @@ class Tokens(unittest.TestCase):
 
 
 class PlainLanguage(unittest.TestCase):
-    BANNED = ("Sovereign", "neural intelligence", "ShieldCore", "DESKTOP OS CORE", "Executive", ", Sir")
+    BANNED = ("Sovereign", "neural intelligence", "ShieldCore", "DESKTOP OS CORE", "Executive", ", Sir",
+              "Attitude Enforcement", " 1.1 s", "Eliminate", "Quarantine Vault")
+
+    def test_text_is_not_garbled(self):
+        for path in ui_files(".js", ".html", ".css"):
+            content = path.read_text(encoding="utf-8")
+            self.assertNotRegex(content, "[\u00c2\u00c3\u00e2][\u0080-\u203a]", path.name)
+
+    def test_every_switch_is_a_real_control(self):
+        for path in ui_files(".js"):
+            content = path.read_text(encoding="utf-8")
+            self.assertNotIn("h('i.tg", content, path.name)
+            self.assertNotIn("h(`i.tg", content, path.name)
 
     def test_marketing_words_are_gone_from_the_interface(self):
         for path in ui_files(".js", ".html"):
@@ -118,6 +131,42 @@ class PetStates(unittest.TestCase):
         self.assertEqual(self.resolve({}), "idle")
 
 
+class ToolCards(unittest.TestCase):
+    def setUp(self):
+        server._take_tool_cards()
+        self.addCleanup(server._take_tool_cards)
+
+    def test_a_tool_that_ran_says_it_did(self):
+        with unittest.mock.patch.object(server, "_run_tool_call", return_value="ok"):
+            server.execute_tool_call("manage_tasks", json.dumps({"action": "list"}))
+        card = server._take_tool_cards()[0]
+        self.assertEqual((card["label"], card["status"]), ("Checked your tasks", "done"))
+
+    def test_waiting_for_approval_never_says_done(self):
+        server.execute_tool_call("send_email", json.dumps({"to_address": "a@example.com", "subject": "s", "body": "private"}))
+        card = server._take_tool_cards()[0]
+        self.assertEqual((card["label"], card["status"]), ("Send an email", "waiting"))
+        with server._pending_lock:
+            for key in [k for k, v in server._pending_approvals.items() if "a@example.com" in v["description"]]:
+                del server._pending_approvals[key]
+
+    def test_a_failure_is_shown_as_one(self):
+        with unittest.mock.patch.object(server, "_run_tool_call", return_value="Error: no connection"):
+            server.execute_tool_call("search_web", json.dumps({"query": "weather"}))
+        card = server._take_tool_cards()[0]
+        self.assertEqual((card["label"], card["status"], card["detail"]), ("Search the web", "failed", "weather"))
+
+    def test_private_arguments_stay_off_the_card(self):
+        card = server.tool_policy.tool_card("send_email", {"to_address": "a@example.com", "body": "secret text"}, "done")
+        self.assertNotIn("secret text", json.dumps(card))
+
+    def test_cards_are_taken_once(self):
+        with unittest.mock.patch.object(server, "_run_tool_call", return_value="ok"):
+            server.execute_tool_call("manage_tasks", json.dumps({"action": "list"}))
+        self.assertEqual(len(server._take_tool_cards()), 1)
+        self.assertEqual(server._take_tool_cards(), [])
+
+
 class PetStatus(unittest.TestCase):
     def setUp(self):
         with server._pending_lock:
@@ -171,6 +220,14 @@ class PetStatus(unittest.TestCase):
 
     def test_the_route_needs_a_login(self):
         self.assertFalse(server.Handler._is_public_path(server.Handler, "/api/pet/status"))
+
+
+class Website(unittest.TestCase):
+    def test_the_website_shows_the_same_characters_as_the_app(self):
+        app_copy = (UI / "pet_sprites.js").read_bytes()
+        site_copy = (ROOT / "marketing" / "assets" / "pet_sprites.js").read_bytes()
+        crlf, lf = bytes([13, 10]), bytes([10])
+        self.assertEqual(site_copy.replace(crlf, lf), app_copy.replace(crlf, lf))
 
 
 class PetOverlay(unittest.TestCase):

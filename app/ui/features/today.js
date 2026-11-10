@@ -255,6 +255,7 @@ export function todayView() {
 
   const taskInput = h('input', {
     placeholder: 'Add a task, press Enter',
+    'aria-label': 'Add a task',
     style: { border: 'none', background: 'transparent', flex: '1', outline: 'none', color: 'inherit' },
     onInput: (e) => { taskDraft = e.target.value; },
   });
@@ -273,6 +274,7 @@ export function todayView() {
 
   const noteInput = h('input', {
     placeholder: 'Capture a thought or search notes',
+    'aria-label': 'Add a note',
     style: { border: 'none', background: 'transparent', flex: '1', outline: 'none', color: 'inherit' },
     onInput: (e) => { noteDraft = e.target.value; },
   });
@@ -308,15 +310,8 @@ export function todayView() {
     const f = d.focus;
 
     // What needs you right now comes first, and only appears when something does.
-    const st0 = store.status;
-    const waiting = st0?.pendingApprovals || 0;
     const dueNow = (d.reminders || []).filter((r) => r.due && new Date(r.due).getTime() <= Date.now());
     const nowItems = [];
-    if (waiting) {
-      nowItems.push(h('div.today-alert', null, h('i', { 'data-i': 'alert' }),
-        h('div.grow', null, h('strong', null, waiting === 1 ? 'KALKI is waiting for your approval' : `KALKI is waiting for ${waiting} approvals`)),
-        h('button.btn.pri', { type: 'button', onClick: () => go('oversight') }, 'Review')));
-    }
     for (const r of dueNow.slice(0, 3)) {
       nowItems.push(h('div.today-alert', null, h('i', { 'data-i': 'flag' }),
         h('div.grow', null, h('strong', null, r.text), h('div.xs.mut', null, 'Reminder due'))));

@@ -57,7 +57,7 @@ export async function maybeShowFirstRun() {
 }
 
 export function showFirstRun() {
-  const answers = { name: '', provider: PROVIDERS[0].key, key: '' };
+  const answers = { name: '', provider: PROVIDERS[0].key, key: '', tested: false };
   const root = h('div.first-run', { role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Set up KALKI' });
   const card = h('div.first-card');
   root.appendChild(card);
@@ -70,6 +70,10 @@ export function showFirstRun() {
     remember();
     picker?.destroy();
     root.remove();
+    if (answers.tested) {
+      location.hash = '#/ask';
+      setTimeout(() => window.dispatchEvent(new CustomEvent('kalki:ask', { detail: 'What can you help me with? Keep it short.' })), 300);
+    }
   }
 
   async function saveAndNext(patch) {
@@ -121,12 +125,45 @@ export function showFirstRun() {
       type: 'password', autocomplete: 'off', spellcheck: 'false', placeholder: 'Paste your key',
       onInput: (e) => { answers.key = e.target.value; },
     });
+    const result = h('div.sm', { role: 'status' });
+    const testBtn = h('button.btn', {
+      type: 'button',
+      onClick: async () => {
+        testBtn.disabled = true;
+        result.textContent = 'Trying it…';
+        if (answers.key.trim()) {
+          const saved = await api.save({ [answers.provider]: answers.key.trim() });
+          if (!saved.ok) {
+            result.textContent = "That key couldn't be saved.";
+            testBtn.disabled = false;
+            return;
+          }
+        }
+        const r = await api.testAi();
+        answers.tested = !!(r.ok && r.data?.ok);
+        result.textContent = answers.tested
+          ? `It works. KALKI says: ${r.data.reply}`
+          : "That didn't work. Check the key and try again, or do this later.";
+        testBtn.disabled = false;
+      },
+    }, 'Test it');
+    const ollamaNote = h('div.xs.mut');
+    api.findOllama().then((r) => {
+      if (r.ok && r.data?.running) {
+        const count = r.data.models.length;
+        ollamaNote.textContent = count
+          ? `Ollama is running here with ${count} model${count === 1 ? '' : 's'}, so you can skip the key and use it for free.`
+          : 'Ollama is running here, but has no models yet. Add one with: ollama pull llama3.2';
+      }
+    });
     return [
       h('h1', { id: 'view-title' }, 'Connect an AI'),
       h('p', null, "KALKI needs an AI service to answer questions. Your key is encrypted and stored only on this PC. Tasks, notes and reminders work without one."),
       h('label.first-field', null, 'Service', select),
       noteEl,
       h('label.first-field', null, 'Key', keyInput),
+      ollamaNote,
+      h('div.row.g8', { style: { alignItems: 'flex-start' } }, testBtn, result),
       h('div.first-foot', null,
         h('button.btn.gh', { type: 'button', onClick: () => { step -= 1; paint(); } }, 'Back'),
         h('span.grow'),

@@ -37,3 +37,16 @@ export function loadingRow(text) {
     h('span', null, text),
   );
 }
+
+/** An on/off switch that works with the keyboard and tells screen readers its state. */
+export function toggleSwitch({ checked, label, onClick, disabled = false }) {
+  return h('button.tg' + (checked ? '.on' : ''), {
+    type: 'button',
+    role: 'switch',
+    'aria-checked': checked ? 'true' : 'false',
+    'aria-label': label,
+    title: label,
+    disabled,
+    onClick,
+  });
+}
