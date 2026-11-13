@@ -100,6 +100,8 @@ import threads
 import tool_policy
 import activity
 import approvals
+import commands_assistant
+import routes_backup
 import command_intent
 import mood
 import routes_calendar
@@ -2436,60 +2438,11 @@ def handle_local(text):
         ip = t.replace("shodan scan ip ", "").replace("scan ip ", "").strip()
         return True, shodan_mod.scan_ip(ip)
 
-    # ════════════════════════════════════════════════════
-    # CALENDAR
-
-    # ════════════════════════════════════════════════════
-    # Match any natural phrasing about TOMORROW's calendar
-    if (("calendar" in t or "schedule" in t or "events" in t) and "tomorrow" in t) \
-        or t in ("what's tomorrow", "what is tomorrow", "tomorrow's events"):
-        if not gcal.is_configured():
-            return True, "Calendar not yet linked, Sir."
-        return True, gcal.events_summary(gcal.tomorrow_events(), when_label="tomorrow")
-
-    # Match any natural phrasing that asks about today's calendar / schedule
-    if (("calendar" in t or "schedule" in t)
-        and any(k in t for k in
-                ("what", "tell me", "show", "read", "check", "today", "my "))):
-        if not gcal.is_configured():
-            return True, ("Calendar not yet linked, Sir. Please link Google in the Settings menu "
-                          "to authorize.")
-        return True, gcal.today_summary()
-
-    if t in ("upcoming events", "what's next", "next event", "my upcoming events"):
-        if not gcal.is_configured():
-            return True, "Calendar not yet linked, Sir."
-        return True, gcal.events_summary(gcal.upcoming_events(5))
-
-    if t in ("check gmail", "check my gmail", "any gmail", "read gmail",
-             "gmail summary"):
-        if not gcal.is_configured():
-            return True, "Gmail OAuth not yet linked, Sir. Please link Google in the Settings menu."
-        return True, gcal.gmail_summary()
-
-    # ════════════════════════════════════════════════════
-    # LISTENER PAUSE / RESUME  (free the mic for other apps)
-    # ════════════════════════════════════════════════════
-    if t in ("pause listener", "pause mic", "release the mic", "release mic",
-             "free the mic", "free mic", "stop listening for a bit"):
-        STATE["listener_paused"] = True
-        return True, "Listener paused. Your microphone is free, Sir."
-
-    if t in ("resume listener", "resume mic", "wake up listener",
-             "start listening", "listen again"):
-        STATE["listener_paused"] = False
-        return True, "Listener active again, Sir."
-
-    # ── Owner details ──────────────────────────────────
-    if t in ("who am i", "what's my name", "what is my name",
-             "tell me my details", "my details", "who is your owner",
-             "what do you know about me", "say my details"):
-        mems = load_memory()
-        mem_line = f"I have {len(mems)} memories on file." if mems else "No memories on file yet."
-        return True, (f"You are {config.OWNER_NAME} Bhatt, "
-                      f"based in {config.OWNER_CITY}, {config.OWNER_STATE}, "
-                      f"{config.OWNER_COUNTRY}. Interests: cybersecurity, "
-                      f"web development, gaming, and AI. {mem_line}")
+    # Calendar, microphone and "who am I" live in commands_assistant.py.
+    reply = (commands_assistant.calendar_command(t) or commands_assistant.listener_command(t, STATE)
+             or commands_assistant.owner_command(t, load_memory))
+    if reply is not None:
+        return True, reply
 
     # ════════════════════════════════════════════════════
     # PASSWORD VAULT
@@ -3307,6 +3260,7 @@ routes_pet.configure(DATA_DIR, APP_ROOT, _pet_status)
 routes_settings.configure(DATA_DIR, USER_CONFIG_PATH, LOG_PATH, _persist_lock,
                           lambda *args, **kwargs: ask_native_permission(*args, **kwargs))
 routes_calendar.configure(BASE_DIR, log)
+routes_backup.configure(os.path.dirname(DATA_DIR), DATA_DIR)
 routes_setup.configure(lambda messages: ask_ai(messages), _ReplyInProgress, log)
 
 
@@ -5497,7 +5451,7 @@ class Handler(BaseHTTPRequestHandler):
                  or routes_threads.POST_ROUTES.get(path) or routes_pet.POST_ROUTES.get(path)
                  or approvals.POST_ROUTES.get(path) or activity.POST_ROUTES.get(path)
                  or routes_settings.POST_ROUTES.get(path) or routes_calendar.POST_ROUTES.get(path)
-                 or routes_setup.POST_ROUTES.get(path))
+                 or routes_setup.POST_ROUTES.get(path) or routes_backup.POST_ROUTES.get(path))
         if route:
             payload, status = route(body)
             self._json(payload, status=status)
@@ -6170,76 +6124,6 @@ class Handler(BaseHTTPRequestHandler):
             return
 
 
-
-        if path == "/api/backup/create":
-            try:
-                import zipfile
-                backups_dir = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "backups")
-                os.makedirs(backups_dir, exist_ok=True)
-                ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-                backup_zip = os.path.join(backups_dir, f"kalki_backup_{ts}.zip")
-                
-                files_to_backup = [
-                    os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "user_config.json"),
-                    os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "secure_api_vault.enc"),
-                    os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "vault_integrity.sha256"),
-                    os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI", "ai_usage.json"),
-                    os.path.join(DATA_DIR, "productivity.json")
-                ]
-                with tempfile.TemporaryDirectory() as snapshot_dir:
-                    snapshot = os.path.join(snapshot_dir, "kalki.db")
-                    db.backup_to(snapshot)
-                    with zipfile.ZipFile(backup_zip, "w", zipfile.ZIP_DEFLATED) as z:
-                        for fp in files_to_backup:
-                            if os.path.exists(fp):
-                                z.write(fp, os.path.basename(fp))
-                        z.write(snapshot, "kalki.db")
-                self._json({"ok": True, "file": backup_zip})
-            except Exception as e:
-                self._json({"ok": False, "error": str(e)})
-            return
-
-        if path == "/api/backup/restore":
-            file_path = (body.get("path") or body.get("filepath") or body.get("filePath") or "").strip()
-            if not file_path or not os.path.exists(file_path):
-                self._json({"ok": False, "error": "Invalid file path"}, status=400); return
-            try:
-                import zipfile
-                dest_dir = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "KALKI")
-                os.makedirs(dest_dir, exist_ok=True)
-                allowed = {
-                    "user_config.json", "secure_api_vault.enc", "vault_integrity.sha256",
-                    "semantic_memory.json", "ai_usage.json", "memory.json", "history.json",
-                    "productivity.json"
-                }
-                with zipfile.ZipFile(file_path, "r") as z:
-                    # Check the data store first: if it's bad, nothing gets restored.
-                    if "kalki.db" in z.namelist():
-                        with tempfile.TemporaryDirectory() as restore_dir:
-                            restored = z.extract("kalki.db", restore_dir)
-                            db.restore_from(restored)
-                    for member in z.infolist():
-                        filename = os.path.basename(member.filename)
-                        if not filename or filename not in allowed or member.file_size > 20 * 1024 * 1024:
-                            continue
-                        if filename in ["memory.json", "history.json", "productivity.json"]:
-                            target = os.path.join(DATA_DIR, filename)
-                        else:
-                            target = os.path.join(dest_dir, filename)
-                        with open(target, "wb") as f_out, z.open(member) as f_in:
-                            f_out.write(f_in.read())
-                    if "kalki.db" not in z.namelist():
-                        names = {os.path.basename(n) for n in z.namelist()}
-                        db.reimport_legacy([k for k, f in (("memory", "memory.json"), ("history", "history.json")) if f in names], DATA_DIR)
-                        if "semantic_memory.json" in names:
-                            semantic_memory.memory.reimport_legacy()
-                semantic_memory.memory.reload()
-                self._json({"ok": True, "message": "Restore successful."})
-            except db.StoreError as e:
-                self._json({"ok": False, "error": str(e)}, status=400)
-            except Exception as e:
-                self._json({"ok": False, "error": str(e)}, status=500)
-            return
 
         # ── Vision: uploaded image ─────────────────────
         if path == "/api/vision/image":
