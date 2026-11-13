@@ -102,6 +102,7 @@ import activity
 import approvals
 import commands_assistant
 import commands_chat
+import commands_media
 import routes_backup
 import command_intent
 import mood
@@ -1651,6 +1652,19 @@ def _strip_for_value(raw, anchors):
     return ""
 
 
+def _open_apple_music():
+    """The Apple Music app if it's installed, otherwise its website."""
+    try:
+        subprocess.Popen(["cmd.exe", "/c", "start", "music:"], shell=False)
+        return
+    except OSError:
+        pass
+    try:
+        subprocess.Popen(["explorer.exe", r"shell:AppsFolder\AppleInc.AppleMusicWin_nzyj5cx40ttqa!App"])
+    except OSError:
+        webbrowser.open("https://music.apple.com")
+
+
 def handle_local(text):
     """
     Returns (handled: bool, reply_text: str)
@@ -1737,157 +1751,15 @@ def handle_local(text):
         STATE["joke_offer_pending"] = False
         return True, fetch_online_joke()
 
-    # ════════════════════════════════════════════════════
-    # SPOTIFY
-    # ════════════════════════════════════════════════════
-    if t in ("pause", "pause music", "pause song", "pause spotify",
-             "pause the music"):
-        if spotify_mod.is_configured():
-            return True, spotify_mod.pause()
-        try:
-            media_mod.play_pause()
-            return True, "Music paused, Sir."
-        except Exception:
-            return True, "Music paused, Sir."
-
-    # ── Apple Music Direct Priority ──
-    if "apple music" in t or "on apple" in t or t in ("use apple music", "open apple music", "play apple music", "start apple music"):
-        try:
-            subprocess.Popen(["cmd.exe", "/c", "start", "music:"], shell=False)
-        except Exception:
-            try:
-                subprocess.Popen(["explorer.exe", r"shell:AppsFolder\AppleInc.AppleMusicWin_nzyj5cx40ttqa!App"])
-            except Exception:
-                webbrowser.open("https://music.apple.com")
-        return True, "Opening Apple Music, Sir."
-
-    if t in ("resume", "resume music", "resume song", "play music",
-             "play the music", "play some music", "play any music",
-             "play a song", "play the song", "continue music",
-             "continue the music", "play spotify"):
-        if spotify_mod.is_configured():
-            return True, spotify_mod.play()
-        try:
-            cur = media_mod.get_current_track()
-            if cur and cur.get("title") and cur.get("title") not in ("Unknown", "Nothing playing"):
-                media_mod.play_pause()
-                return True, f"Resuming {cur.get('title')}, Sir."
-        except Exception:
-            pass
-        webbrowser.open("https://music.youtube.com")
-        return True, "Playing music on YouTube Music, Sir."
-
-    if t in ("retry", "try again", "retry that", "play it again",
-             "play it", "try that again", "again"):
-        if spotify_mod.is_configured():
-            return True, spotify_mod.retry()
-        try:
-            media_mod.play_pause()
-            return True, "Playing music, Sir."
-        except Exception:
-            return True, "Playing, Sir."
-
-    if t in ("next", "next song", "next track", "skip", "skip song"):
-        if spotify_mod.is_configured():
-            return True, spotify_mod.next_track()
-        try:
-            media_mod.next_track()
-            return True, "Skipping to next track, Sir."
-        except Exception:
-            return True, "Skipping track, Sir."
-
-    if t in ("previous", "previous song", "previous track", "last song",
-             "go back song"):
-        if spotify_mod.is_configured():
-            return True, spotify_mod.prev_track()
-        try:
-            media_mod.previous_track()
-            return True, "Going back to previous track, Sir."
-        except Exception:
-            return True, "Previous track, Sir."
-
-    if t in ("what's playing", "what is playing", "current song",
-             "now playing", "what song is this"):
-        if spotify_mod.is_configured():
-            return True, spotify_mod.now_playing()
-        cur = media_mod.now_playing()
-        return True, f"Currently playing: {cur}, Sir."
-
-    if t in ("shuffle", "shuffle on", "turn shuffle on"):
-        if spotify_mod.is_configured():
-            return True, spotify_mod.shuffle_on()
-        return True, "Shuffle toggled, Sir."
-
-    # "spotify volume 60" / "music volume 50"
-    m = _re_local.match(
-        r"^(?:spotify|music)\s+volume\s+(\d+)$", t, _re_local.IGNORECASE)
-    if m:
-        if spotify_mod.is_configured():
-            return True, spotify_mod.set_volume(int(m.group(1)))
-        return set_volume(int(m.group(1)))
-
-    # "play X on spotify" / "play X" / "play lo-fi"
-    m = _re_local.match(
-        r"^play\s+(.+?)(?:\s+on\s+spotify)?$", t, _re_local.IGNORECASE)
-    if m and not t.startswith("play youtube") and "youtube" not in t:
-        query = m.group(1).strip()
-        query_norm = _re_local.sub(r"^(?:the|some|a|an|any|my)\s+", "", query).strip()
-        if spotify_mod.is_configured():
-            if query_norm in ("music", "song", "songs", "track", "tracks",
-                              "playlist", "spotify", "something"):
-                return True, spotify_mod.play()
-            if "lofi" in query_norm or "lo-fi" in query_norm or "lo fi" in query_norm:
-                return True, spotify_mod.play_lofi()
-            return True, spotify_mod.play(query)
-        if "apple" in query.lower():
-            webbrowser.open("https://music.apple.com")
-            return True, "Opening Apple Music, Sir."
-        if query_norm in ("music", "song", "songs", "track", "tracks", "playlist", "spotify", "something", "lo-fi", "lofi"):
-            webbrowser.open("https://music.youtube.com")
-            return True, f"Searching and playing '{query}' on YouTube Music, Sir."
-        webbrowser.open(f"https://www.youtube.com/results?search_query={urllib.parse.quote(query)}")
-        return True, f"Playing '{query}' on YouTube, Sir."
-
-    # ════════════════════════════════════════════════════
-    # WHATSAPP — "send whatsapp to NAME saying TEXT"
-    # ════════════════════════════════════════════════════
-    m = _re_local.match(
-        r"^(?:send\s+(?:a\s+)?(?:whatsapp|message|whats\s*app)\s+to\s+|"
-        r"whatsapp\s+|message\s+)([^,]+?)\s+(?:saying|that|to say)\s+(.+)$",
-        t, _re_local.IGNORECASE,
-    )
-    if m:
-        name = m.group(1).strip()
-        # Get the original-cased message body
-        body_lower = m.group(2).strip()
-        idx = t.find(body_lower)
-        body_txt = raw[idx:idx + len(body_lower)] if idx >= 0 else body_lower
-        def _send_whatsapp():
-            result = whatsapp_mod.send_message(name, body_txt)
-            if result.get("ok"):
-                return True, f"WhatsApp dispatched to {name}, Sir."
-            return True, f"WhatsApp failed: {result.get('error')}"
-        return _queue_confirmation(
-            f"Send this WhatsApp message to {name}", _send_whatsapp
-        )
-
-    # "add contact NAME phone +91..."
-    m = _re_local.match(
-        r"^add\s+contact\s+(\S+)\s+(?:phone|number)?\s*(\+?\d[\d\s\-]+)$",
-        t, _re_local.IGNORECASE,
-    )
-    if m:
-        name, phone = m.group(1), m.group(2).replace(" ", "").replace("-", "")
-        whatsapp_mod.add_contact(name, phone)
-        return True, f"Contact {name} saved."
-
-    # "list my contacts"
-    if t in ("list contacts", "list my contacts", "show contacts",
-             "show my contacts", "my contacts"):
-        c = whatsapp_mod.list_contacts()
-        if not c:
-            return True, "No contacts yet, Sir."
-        return True, f"{len(c)} contacts: " + ", ".join(c.keys())
+    # Music and WhatsApp live in commands_media.py.
+    _media_deps = {
+        "spotify": spotify_mod, "media": media_mod, "open_url": webbrowser.open,
+        "set_volume": set_volume, "open_apple_music": _open_apple_music,
+    }
+    result = (commands_media.music_command(t, _media_deps)
+              or commands_media.whatsapp_command(t, raw, whatsapp_mod, _queue_confirmation))
+    if result is not None:
+        return result
 
     # ════════════════════════════════════════════════════
     # NOTES
@@ -1896,22 +1768,9 @@ def handle_local(text):
     if reply is not None:
         return True, reply
 
-    # ════════════════════════════════════════════════════
-    # YOUTUBE DOWNLOAD
-    # ════════════════════════════════════════════════════
-    m = _re_local.search(
-        r"download\s+(?:this\s+)?(?:youtube\s+)?(?:video|audio|song|track)"
-        r"(?:\s+from)?\s+(\S+)",
-        raw, _re_local.IGNORECASE,
-    )
-    if m:
-        url = m.group(1).strip()
-        audio_only = "audio" in t or "song" in t or "music" in t or "mp3" in t
-        speak(f"Downloading. This may take a moment, Sir.")
-        result = ytdl.download(url, audio_only=audio_only)
-        if result.get("ok"):
-            return True, f"Download complete, Sir. Saved to your Downloads folder."
-        return True, f"Download failed: {result.get('error','unknown')}"
+    result = commands_media.youtube_command(t, raw, ytdl, speak)
+    if result is not None:
+        return result
 
     # ════════════════════════════════════════════════════
     # WORKFLOW MODES (fuzzy match — handles STT mishearings)
