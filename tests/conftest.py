@@ -1,13 +1,8 @@
-"""Every test run uses a throwaway profile, set before any test module is imported.
-
-Without this, the first test file to import the server decided where data went, and a
-file that didn't set a temporary profile first sent tests into the real one.
-"""
+"""pytest loads this first. The setup itself lives in _isolation.py, which every test
+file also imports, so tests stay out of the real profile however they're run."""
 
 import os
-import tempfile
+import sys
 
-_HOME = tempfile.mkdtemp(prefix="kalki_tests_")
-for _key in ("HOME", "APPDATA", "LOCALAPPDATA", "USERPROFILE"):
-    os.environ[_key] = _HOME
-os.environ["KALKI_TEST"] = "1"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _isolation  # noqa: E402,F401

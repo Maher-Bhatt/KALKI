@@ -2,6 +2,13 @@
 
 Matching is strict, because a false trigger can end in a locked PC."""
 
+import os as _os
+import sys as _sys
+
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+import _isolation  # noqa: E402,F401  Before anything from the app: a throwaway profile.
+
+
 import sys
 import unittest
 from pathlib import Path

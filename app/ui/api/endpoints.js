@@ -82,7 +82,9 @@ export const reminders = {
     return r.ok ? { ok: true, items: r.data.reminders || [] } : r;
   },
   /** `due` is sent as the user's raw phrase — tasks.parse_when resolves it. */
-  add: (text, due) => post('/api/reminders/add', { text, due }),
+  add: (text, due, repeat = '') => post('/api/reminders/add', { text, due, repeat }),
+  snooze: (id, minutes = 10) => post('/api/reminders/snooze', { id, minutes }),
+  remove: (id) => post('/api/reminders/delete', { id }),
 };
 
 /* ── Notes ────────────────────────────────────────────────────────── */

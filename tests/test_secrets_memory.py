@@ -1,5 +1,12 @@
 """Encryption, both vaults, and semantic memory. These protect the user's data, so
 the main thing tested is failure: a bad read must never destroy anything."""
+
+import os as _os
+import sys as _sys
+
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+import _isolation  # noqa: E402,F401  Before anything from the app: a throwaway profile.
+
 import json
 import os
 import shutil

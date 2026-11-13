@@ -3218,8 +3218,13 @@ def _run_tool_call(tool_name, args):
             with open(matches[0], "r", encoding="utf-8", errors="ignore") as f:
                 return f.read()[:50000]
         elif tool_name == "add_reminder":
-            taskmod.add_reminder(str(args.get("text") or ""), str(args.get("due") or ""))
-            return "Reminder added."
+            try:
+                rid = taskmod.add_reminder(str(args.get("text") or ""), str(args.get("due") or ""),
+                                           repeat=str(args.get("repeat") or ""))
+            except ValueError as e:
+                return f"Error: {e}"
+            added = next((r for r in taskmod.list_reminders() if r["id"] == rid), None)
+            return f"Reminder set for {taskmod.describe(added)}." if added else "Reminder added."
         elif tool_name == "manage_tasks":
             action = args.get("action")
             text = args.get("text", "")
@@ -5888,7 +5893,20 @@ def main():
             try:
                 due = taskmod.pop_due_reminders()
                 for r in due:
-                    speak(f"Reminder, {config.OWNER_TITLE}: {r['text']}"); import oversight, notify; oversight.record_alert("reminder", r['text'], "info"); notify.notify_desktop("Reminder", r['text']) if STATE.get("frontend_hidden", False) else None
+                    import oversight, notify
+                    text = r["text"]
+                    if r.get("late_minutes", 0) >= 3:
+                        try:
+                            was = datetime.fromisoformat(r["due"]).strftime("%I:%M %p").lstrip("0")
+                        except (TypeError, ValueError):
+                            was = "earlier"
+                        spoken = f"You missed a reminder from {was}: {text}"
+                    else:
+                        spoken = f"Reminder, {config.OWNER_TITLE}: {text}"
+                    speak(spoken)
+                    oversight.record_alert("reminder", spoken, "info")
+                    if not notify.notify_desktop("Reminder", spoken):
+                        log("the reminder notification couldn't be shown")
                     log(f"reminder fired: {r['text']}")
             except Exception as e:
                 log(f"reminder loop error: {e}")
