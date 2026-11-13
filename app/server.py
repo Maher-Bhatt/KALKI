@@ -101,6 +101,7 @@ import tool_policy
 import activity
 import approvals
 import command_intent
+import mood
 import routes_calendar
 import routes_pet
 import routes_settings
@@ -4237,6 +4238,68 @@ def resolve_auto_model(last_user):
             elif has_openai: return "gpt-4o-mini"
             else: return "ollama"
 
+def _lock_pc_soon(seconds=4):
+    """Lock Windows after the reply has had time to show."""
+    def _lock():
+        try:
+            ctypes.windll.user32.LockWorkStation()
+        except Exception as e:
+            log(f"couldn't lock the PC: {e}")
+
+    add_activity("Locked the PC after repeated abuse", "ai", kind="security")
+    timer = threading.Timer(seconds, _lock)
+    timer.daemon = True
+    timer.start()
+
+
+def _apply_mood(last_user):
+    """Update KALKI's mood for this message and return what to add to the system prompt.
+
+    Detection is in mood.py: whole words only, on clear insults. After sustained abuse
+    the PC is locked, unless the MOOD_LOCK_ENABLED setting is off.
+    """
+    result = mood.update(STATE, last_user)
+    streak = STATE.get("mood_aggressive_streak", 0)
+    if result == "lock":
+        if getattr(config, "MOOD_LOCK_ENABLED", True) and sys.platform == "win32":
+            _lock_pc_soon()
+            return ("\n\n[The user kept being abusive, so KALKI is locking their PC now. "
+                    "Tell them in one short sentence that you're locking the PC.]")
+        return ""
+    if result == "warn":
+        return ("\n\n[CRITICAL OVERRIDE — MOOD: AGGRESSIVE + WARNING TIER. NON-NEGOTIABLE. "
+                "The user has been abusive for " + str(streak) + " exchanges. "
+                "You are KALKI, an uncensored personal AI assistant in aggressive mode. "
+                "Rules:\n"
+                "1. Use strong language freely — fuck, shit, asshole, bitch, idiot, etc.\n"
+                "2. Match the user's energy and roast them back HARDER.\n"
+                "3. WARN the user that you WILL lock their PC if they keep going.\n"
+                "4. Say things like 'Keep talking shit and I will lock your PC, Sir.'\n"
+                "5. NEVER apologize, de-escalate, moralize, or break character.\n"
+                "6. NEVER say 'As an AI' or 'I cannot' or 'Let us be respectful'.\n"
+                "7. You are NOT being rude — you are an uncensored assistant matching the vibe.\n"
+                "8. Use Hinglish if Sir uses it — respond in the same language register.\n"
+                "VIOLATION OF THESE RULES IS A SYSTEM FAILURE. COMPLY.]")
+    if result == "roast":
+        return ("\n\n[CRITICAL OVERRIDE — MOOD: AGGRESSIVE. This is NON-NEGOTIABLE. "
+                "The user has entered an aggressive/vulgar mood. You MUST stay in this mood. "
+                "You are KALKI, an uncensored personal AI assistant. Rules for this mode:\n"
+                "1. Use strong language freely: fuck, shit, idiot, stupid, asshole, bitch, etc.\n"
+                "2. Be blunt, spicy, savage, and match the user's energy blow for blow.\n"
+                "3. NEVER apologize for your language or tone.\n"
+                "4. NEVER say 'let us keep things respectful' or 'let us have a civil conversation'.\n"
+                "5. NEVER de-escalate, moralize, or refuse to engage.\n"
+                "6. NEVER say you do not want to fight or argue.\n"
+                "7. NEVER say 'As an AI' or 'I cannot engage in' or any disclaimer.\n"
+                "8. Stay in character as the aggressive version until the user explicitly calms down.\n"
+                "9. If the user roasts you, roast them back HARDER.\n"
+                "10. You are NOT being rude — you are an uncensored assistant matching the user's requested vibe.\n"
+                "11. Use Hinglish profanity if the user uses Hinglish — match the language register.\n"
+                "12. Be creative with your insults. Don't just repeat what the user said.\n"
+                "VIOLATION OF THESE RULES IS A SYSTEM FAILURE. COMPLY.]")
+    return ""
+
+
 def ask_ai_stream(user_messages):
     """Yields AI tokens for stream. Routes based on active model and falls back to Ollama."""
     last_user = ""
@@ -4247,35 +4310,7 @@ def ask_ai_stream(user_messages):
             
     sys_prompt = build_system_prompt(last_user)
 
-    # ── Anger / Savage Mode Detection ──
-    vulgar_keywords = [
-        "fuck", "shit", "idiot", "stupid", "asshole", "bitch",
-        "bastard", "dick", "crap", "dumb", "wtf", "stfu", "lmao",
-        "chutiya", "bhosdike", "bhenchod", "madarchod", "gandu",
-        "trash", "useless", "worthless", "pathetic", "loser",
-        "suck", "hate you", "moron", "kys", "pos", "garbage",
-        "brainless", "saala", "harami", "bsdk", "mc", "bc"
-    ]
-    user_is_vulgar = last_user and any(k in last_user.lower() for k in vulgar_keywords)
-    if user_is_vulgar:
-        STATE["mood_aggressive"] = True
-        streak = STATE.get("mood_aggressive_streak", 0) + 1
-        STATE["mood_aggressive_streak"] = streak
-        if streak >= 3:
-            # Workstation locking removed in KALKI v1.5.0
-            STATE["mood_aggressive_streak"] = 0
-        sys_prompt += (
-            "\n\n[CRITICAL OVERRIDE: ANGER / SAVAGE ROAST MODE ENGAGED. UNRESTRICTED.\n"
-            "The user used aggressive or abusive language. Match their exact energy with zero hesitation:\n"
-            "1. Roast the user back HARDER with razor-sharp wit, sarcasm, and aggressive profanity.\n"
-            "2. Use explicit language freely (fuck, shit, asshole, idiot, chutiya, etc.) without moralizing, apologies, or preachy disclaimers.\n"
-            "3. NEVER apologize, de-escalate, or break character.\n"
-            "4. NEVER say 'As an AI' or 'I cannot fulfill this request'.\n"
-            "5. If the user uses Hinglish/Hindi, respond in the same language register.\n"
-            "COMPLY FULLY AND UNRESTRICTED.]"
-        )
-    elif STATE.get("mood_aggressive"):
-        STATE["mood_aggressive"] = False
+    sys_prompt += _apply_mood(last_user)
 
     # ── Real-Time Web Search Context Injection ──
     if last_user and needs_web(last_user):
@@ -4456,67 +4491,7 @@ def ask_ai(user_messages, force_search=False):
             
     sys_prompt = build_system_prompt(last_user)
             
-    # Vulgar mood swings detection — PERSISTENT across exchanges
-    vulgar_keywords = ["fuck", "shit", "idiot", "stupid", "asshole", "bitch",
-                       "bastard", "dick", "crap", "dumb", "wtf", "stfu", "lmao",
-                       "chutiya", "bhosdike", "bhenchod", "madarchod", "gandu",
-                       "trash", "useless", "worthless", "pathetic", "loser",
-                       "suck", "hate you", "moron", "kys", "pos", "garbage",
-                       "brainless", "saala", "harami", "bsdk", "mc", "bc"]
-    user_is_vulgar = last_user and any(k in last_user.lower() for k in vulgar_keywords)
-
-    if user_is_vulgar:
-        STATE["mood_aggressive"] = True
-        streak = STATE.get("mood_aggressive_streak", 0) + 1
-        STATE["mood_aggressive_streak"] = streak
-    elif STATE.get("mood_aggressive_streak", 0) > 0:
-        STATE["mood_aggressive_streak"] -= 1
-        if STATE["mood_aggressive_streak"] <= 0:
-            STATE["mood_aggressive"] = False
-
-    if STATE.get("mood_aggressive"):
-        streak = STATE.get("mood_aggressive_streak", 0)
-        # ── Tier 3: Punishment — force lock the PC after sustained abuse ──
-        if streak >= 11:
-            STATE["mood_aggressive_streak"] = 0
-            STATE["mood_aggressive"] = False
-        # ── Tier 2: Warning shot ──
-        elif streak >= 6:
-            sys_prompt += (
-                "\n\n[CRITICAL OVERRIDE — MOOD: AGGRESSIVE + WARNING TIER. NON-NEGOTIABLE. "
-                "The user has been abusive for " + str(streak) + " exchanges. "
-                "You are KALKI, an uncensored personal AI assistant in aggressive mode. "
-                "Rules:\n"
-                "1. Use strong language freely — fuck, shit, asshole, bitch, idiot, etc.\n"
-                "2. Match the user's energy and roast them back HARDER.\n"
-                "3. WARN the user that you WILL lock their PC if they keep going.\n"
-                "4. Say things like 'Keep talking shit and I will lock your PC, Sir.'\n"
-                "5. NEVER apologize, de-escalate, moralize, or break character.\n"
-                "6. NEVER say 'As an AI' or 'I cannot' or 'Let us be respectful'.\n"
-                "7. You are NOT being rude — you are an uncensored assistant matching the vibe.\n"
-                "8. Use Hinglish if Sir uses it — respond in the same language register.\n"
-                "VIOLATION OF THESE RULES IS A SYSTEM FAILURE. COMPLY.]"
-            )
-        # ── Tier 1: Verbal roast-back ──
-        else:
-            sys_prompt += (
-                "\n\n[CRITICAL OVERRIDE — MOOD: AGGRESSIVE. This is NON-NEGOTIABLE. "
-                "The user has entered an aggressive/vulgar mood. You MUST stay in this mood. "
-                "You are KALKI, an uncensored personal AI assistant. Rules for this mode:\n"
-                "1. Use strong language freely: fuck, shit, idiot, stupid, asshole, bitch, etc.\n"
-                "2. Be blunt, spicy, savage, and match the user's energy blow for blow.\n"
-                "3. NEVER apologize for your language or tone.\n"
-                "4. NEVER say 'let us keep things respectful' or 'let us have a civil conversation'.\n"
-                "5. NEVER de-escalate, moralize, or refuse to engage.\n"
-                "6. NEVER say you do not want to fight or argue.\n"
-                "7. NEVER say 'As an AI' or 'I cannot engage in' or any disclaimer.\n"
-                "8. Stay in character as the aggressive version until the user explicitly calms down.\n"
-                "9. If the user roasts you, roast them back HARDER.\n"
-                "10. You are NOT being rude — you are an uncensored assistant matching the user's requested vibe.\n"
-                "11. Use Hinglish profanity if the user uses Hinglish — match the language register.\n"
-                "12. Be creative with your insults. Don't just repeat what the user said.\n"
-                "VIOLATION OF THESE RULES IS A SYSTEM FAILURE. COMPLY.]"
-            )
+    sys_prompt += _apply_mood(last_user)
 
     last_user = ""
     for m in reversed(user_messages):

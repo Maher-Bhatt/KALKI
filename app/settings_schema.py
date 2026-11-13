@@ -158,6 +158,7 @@ SCHEMA: Dict[str, Spec] = {
     "MAX_HISTORY": Spec(_number(int, 2, 500), 20),
     # Safety and privacy.
     "REQUIRE_DANGEROUS_CONFIRMATION": Spec(_bool, True),
+    "MOOD_LOCK_ENABLED": Spec(_bool, True),
     "ALLOW_HOST_CODE_EXECUTION": Spec(_bool, False),
     "LOG_TRANSCRIPTS": Spec(_bool, False),
     "TELEMETRY_ENABLED": Spec(_bool, False),
