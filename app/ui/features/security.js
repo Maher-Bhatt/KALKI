@@ -587,11 +587,7 @@ function renderAntivirus() {
           h('span.t-meta.muted', null, t.desc),
           h('span.t-meta', null, state.text)
         ),
-        h('div.shield-switch', {
-          class: isOn ? 'shield-switch on' : 'shield-switch',
-          title: `Toggle ${t.label}`,
-          onClick: () => toggleShield(t.key, isOn)
-        }, h('div.shield-switch-thumb'))
+        toggleSwitch({ checked: isOn, label: t.label, onClick: () => toggleShield(t.key, isOn) })
       );
     })
   );
@@ -814,7 +810,48 @@ function renderSecurityAside() {
   const quarantined = (avStatus && avStatus.quarantined_items) || (avStatus && avStatus.quarantined) || [];
 
 
-  return h('div.stack', { style: { gap: '16px', width: '100%' } }
+  return h('div.stack', { style: { gap: '16px', width: '100%' } },
+    h('div.stack', { style: { gap: '8px' } },
+      h('div.row.sb', null,
+        h('h2', { style: { fontSize: '13px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--mut)', margin: 0 } }, 'Protection'),
+        h('span.chip' + (isHealthy ? '.ok' : ''), null, isHealthy ? 'On' : 'Not confirmed')
+      ),
+      h('div.card.col.g8', { style: { padding: '12px' } },
+        h('div.row.sb', null,
+          h('span.sm', null, 'Real-time protection'),
+          h('span.chip' + (isHealthy ? '.ok' : '.warn'), null, isHealthy ? 'Defender on' : 'Check Defender')
+        ),
+        h('div.row.sb', null,
+          h('span.sm', null, 'Windows Defender'),
+          h('span.chip' + (avStatus?.defender?.available ? '.ok' : ''), null, avStatus?.defender?.available ? 'Connected' : 'Unavailable')
+        ),
+        h('div.row.sb', null,
+          h('span.sm', null, 'Quarantine'),
+          h('span.chip' + (quarantined.length === 0 ? '.ok' : '.warn'), null, `${quarantined.length} threats`)
+        ),
+        h('div.row.sb', null,
+          h('span.sm', null, 'Signatures'),
+          h('span.mono.xs.mut', null, avStatus?.defender?.signature_age_days === 0 ? 'Today' : (avStatus?.defender?.signature_age_days == null ? 'Unknown' : `${avStatus.defender.signature_age_days}d old`))
+        )
+      )
+    ),
+
+    h('div.stack', { style: { gap: '8px' } },
+      h('h2', { style: { fontSize: '13px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--mut)', margin: 0 } }, 'Monitors'),
+      h('div.card.col.g12', { style: { padding: '12px' } },
+        ...SHIELD_MONITORS.map((t) => {
+          const state = monitorState(t.key);
+          const isOn = state.on;
+          return h('div.row.sb', { style: { alignItems: 'center', gap: '8px' } },
+            h('div.col', { style: { flex: 1, minWidth: 0 } },
+              h('div.sm', { style: { fontWeight: '600', fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, t.label),
+              h('div.xs.mut', { style: { fontSize: '10.5px' } }, state.text)
+            ),
+            toggleSwitch({ checked: isOn, label: t.label, onClick: () => toggleShield(t.key, isOn) })
+          );
+        })
+      )
+    )
   );
 }
 

@@ -238,7 +238,7 @@ export function memoryView() {
   const searchInput = h('input', {
     type: 'search',
     placeholder: 'Search memories, notes and conversations',
-    'aria-label': 'Search your library',
+    'aria-label': 'Search memory, notes and conversations',
     style: { border: 'none', background: 'transparent', outline: 'none', flex: '1', color: 'inherit', fontSize: '13px' },
     onInput: debounce((e) => {
       set('memory', { query: e.target.value });
@@ -291,8 +291,8 @@ export function memoryView() {
     // MAIN
     const hd = h('div.hd', null,
       h('div', null,
-        h('h1', { id: 'view-title', tabindex: '-1' }, 'Library'),
-        h('div.sub', null, 'What KALKI remembers, your notes, and past conversations. Kept on this PC.')
+        h('h1', { id: 'view-title', tabindex: '-1' }, 'Memory'),
+        h('div.sub', null, 'What KALKI remembers, plus your notes and past conversations, in one search. Kept on this PC.')
       ),
       h('button.btn.pri', { type: 'button', onClick: () => editor(null) }, h('i', { 'data-i': 'plus' }), 'Add memory')
     );

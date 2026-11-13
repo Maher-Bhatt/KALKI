@@ -1394,7 +1394,7 @@ function renderWorkflowsTab() {
   view.render = () => {
     const hd = h('div.hd', null,
       h('div', null,
-        h('h1', { id: 'view-title', tabindex: '-1' }, 'Studio'),
+        h('h1', { id: 'view-title', tabindex: '-1' }, 'Workbench'),
         h('div.sub', null, 'Run routines, generate code, explore vision, and customize skills.')
       ),
       h('div.row.g8', null,
@@ -1476,7 +1476,7 @@ function renderWorkflowsTab() {
 
     /* ── Aside Panel: Status, Logs, and Last Runs ─────────────────────── */
     mount(aside,
-      h('h2', null, 'Studio status'),
+      h('h2', null, 'Workbench status'),
 
       h('div.card.col.g8', null,
         h('div.row.sb', null,
