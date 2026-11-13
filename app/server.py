@@ -102,6 +102,7 @@ import activity
 import approvals
 import commands_assistant
 import commands_chat
+import commands_desktop
 import commands_media
 import routes_backup
 import command_intent
@@ -1874,49 +1875,10 @@ def handle_local(text):
             return True, f"{spoken}\n\n```\n{report_txt}\n```"
         return True, spoken
 
-    # ════════════════════════════════════════════════════
-    # CLIPBOARD GENIE
-    # ════════════════════════════════════════════════════
-    if t in ("decode my clipboard", "explain my clipboard", "read my clipboard",
-             "what's in my clipboard", "what is in my clipboard",
-             "check my clipboard", "analyze my clipboard", "clipboard"):
-        txt = clipboard_mod.read_text()
-        spoken, detail = clipboard_mod.analyze(txt or "")
-        spoken = spoken.replace("{t}", config.OWNER_TITLE)
-        if detail:
-            return True, f"{spoken}\n\n```\n{detail}\n```"
-        return True, spoken
-
-    # ════════════════════════════════════════════════════
-    # SITE WATCHDOG
-    # ════════════════════════════════════════════════════
-    if t.startswith(("watch ", "monitor ")) and (
-            "." in t or "this site" in t or "this website" in t or "this page" in t):
-        rest = raw.split(None, 1)[1].strip()
-        if rest.lower().startswith(("this", "current", "the current")):
-            url = browser_url.get_active_url()
-            if not url:
-                return True, ("I couldn't read your browser address bar, "
-                              f"{config.OWNER_TITLE}. Say watch, then the site.")
-        else:
-            url = rest.rstrip(".?!")
-        return True, watchdog.add_site(url)
-
-    if t.startswith(("unwatch ", "stop watching ", "remove site ")):
-        return True, watchdog.remove_site(raw.split(None, 1)[1].strip())
-
-    if t in ("list watched sites", "my sites", "watched sites",
-             "list my sites", "show watched sites", "what sites am i watching"):
-        sites = watchdog.list_sites()
-        if not sites:
-            return True, f"You aren't watching any sites yet, {config.OWNER_TITLE}."
-        return True, "Watching: " + ", ".join(
-            s.get("label") or watchdog._host(s["url"]) for s in sites) + "."
-
-    if t in ("check my sites", "are my sites up", "site check", "check sites",
-             "status of my sites", "are my websites up"):
-        speak(f"Checking your sites, {config.OWNER_TITLE}.")
-        return True, watchdog.summarize(watchdog.check_all(), config.OWNER_TITLE)
+    result = commands_desktop.clipboard_and_sites_command(t, raw, {
+        "clipboard": clipboard_mod, "watchdog": watchdog, "browser_url": browser_url, "speak": speak})
+    if result is not None:
+        return result
 
     # ════════════════════════════════════════════════════
     # MORNING SECURITY BRIEF
@@ -1961,45 +1923,10 @@ def handle_local(text):
         spoken = cybertools.summarize_attack_surface(result, config.OWNER_TITLE)
         return True, f"{spoken}\n\n```json\n{json.dumps(result, indent=2)}\n```"
 
-    # ════════════════════════════════════════════════════
-    # QUICK CAPTURE & CONVERSATIONAL NOTES
-    # ════════════════════════════════════════════════════
-    # 1. Follow-up note answer if KALKI asked what to remember
-    if STATE.get("pending_note_capture"):
-        STATE["pending_note_capture"] = False
-        notesmod.add_note(text)
-        try:
-            semantic_memory.memory.add_memory(text, tags=["Personal"], importance=4)
-        except Exception as e:
-            log(f"couldn't save note to memory: {e}")
-        return True, f"Saved to your notes, {config.OWNER_TITLE}: '{text}'"
-
-    # 2. Direct note syntax: "remember that ...", "remember this: ...", "save note: ..."
-    m_note = _re_local.search(
-        r"^(?:remember\s+(?:that\s+|this\s*:\s*|to\s+)?|save\s+(?:this\s*:\s*|note\s*:\s*|that\s*:\s*)?|note\s+(?:that\s+|this\s*:\s*)?|take\s+a\s+note\s*:\s*)(.+)$",
-        t, _re_local.IGNORECASE
-    )
-    if m_note:
-        note_content = m_note.group(1).strip()
-        if note_content and len(note_content) > 1 and note_content.lower() not in ("this", "that", "it", ""):
-            notesmod.add_note(note_content)
-            try:
-                semantic_memory.memory.add_memory(note_content, tags=["Personal"], importance=4)
-            except Exception as e:
-                log(f"couldn't save note to memory: {e}")
-            return True, f"Saved to your notes, {config.OWNER_TITLE}: '{note_content}'"
-
-    # 3. Bare capture command ("remember this", "save this")
-    if t in ("remember this", "save this", "capture this", "note this",
-             "save that", "remember that"):
-        txt = clipboard_mod.read_text()
-        if txt and txt.strip():
-            notesmod.add_note(txt.strip())
-            return True, f"Saved clipboard to your notes, {config.OWNER_TITLE}. {len(txt.split())} words."
-        else:
-            STATE["pending_note_capture"] = True
-            return True, (f"Your clipboard is currently empty, {config.OWNER_TITLE}. "
-                          "What would you like me to remember? You can type it directly or copy it.")
+    result = commands_desktop.capture_command(t, text, STATE, {
+        "notes": notesmod, "memory": semantic_memory.memory, "clipboard": clipboard_mod, "log": log})
+    if result is not None:
+        return result
 
     # ════════════════════════════════════════════════════
     # CYBER: CVE, subdomain, reverse shell, github dorks
@@ -2073,59 +2000,13 @@ def handle_local(text):
     if reply is not None:
         return True, reply
 
-    # ── SYSTEM AUTOMATION ──
-    if t in ("lock", "lock pc", "lock my pc", "lock screen", "lock the screen", "lock computer", "lock the computer", "lock workstation", "lock the workstation"):
-        try:
-            ctypes.windll.user32.LockWorkStation()
-            return True, "Locking your workstation now, Sir."
-        except Exception as e:
-            return True, f"Failed to lock workstation: {e}"
-            
-    if t in ("shut down the pc", "shut down pc", "shutdown pc", "shut down", "shutdown the pc"):
-        def _shutdown_exact():
-            subprocess.Popen(["shutdown.exe", "/s", "/t", "30"])
-            return True, "Shutting down in thirty seconds, Sir."
-        return _queue_confirmation("Shut down your PC", _shutdown_exact)
-
-    if t in ("mute audio", "mute volume", "mute the audio", "mute pc", "toggle mute"):
-        try:
-            subprocess.run(["powershell", "-command", "(New-Object -ComObject wscript.shell).SendKeys([char]173)"], capture_output=True)
-            return True, "Toggled mute."
-        except Exception as e:
-            return True, f"Failed to mute audio: {e}"
-
-    if t in ("empty recycle bin", "empty the recycle bin", "clear recycle bin"):
-        def _clear_recycle_bin():
-            subprocess.run(["powershell", "-NoProfile", "-Command", "Clear-RecycleBin -Force -ErrorAction Stop"], capture_output=True, timeout=15)
-            return True, "Recycle bin emptied, Sir."
-        return _queue_confirmation("Empty the recycle bin", _clear_recycle_bin)
-
-    if t in ("open visual studio code", "open vs code", "start visual studio code"):
-        try:
-            subprocess.Popen(["code"], shell=True)
-            return True, "Opening Visual Studio Code, Sir."
-        except Exception as e:
-            return True, f"Failed to open VS Code: {e}"
-
-    # ── CLIPBOARD CODING ──
-    if t in ("fix the code in my clipboard", "fix my code", "fix clipboard code", "fix this code"):
-        try:
-            clip = clipboard_mod.read_text()
-            if not clip:
-                return True, "Your clipboard is empty, Sir."
-            prompt = "Fix this code and return ONLY the raw fixed code. No markdown formatting, no explanations. Code:\n" + clip
-            fixed = coder._llm_call(prompt)
-            if fixed:
-                if fixed.startswith("```"):
-                    lines = fixed.splitlines()
-                    if len(lines) >= 2:
-                        fixed = "\n".join(lines[1:-1])
-                clipboard_mod.set_text(fixed.strip())
-                return True, "Clipboard updated with the fixed code, Sir."
-            else:
-                return True, "I could not generate a fix for the code, Sir."
-        except Exception as e:
-            return True, f"Clipboard coding failed: {e}"
+    # PC control and clipboard coding live in commands_desktop.py.
+    result = commands_desktop.pc_control_command(t, {
+        "lock": lambda: ctypes.windll.user32.LockWorkStation(), "queue": _queue_confirmation,
+        "clipboard": clipboard_mod,
+        "fix_code": lambda prompt: ask_ai([{"role": "user", "content": prompt}])})
+    if result is not None:
+        return result
 
     # ── GITHUB & SHODAN ──
     if t in ("check my github", "check github", "any github notifications", "github notifications", "read my github"):
