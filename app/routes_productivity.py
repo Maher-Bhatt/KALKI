@@ -58,9 +58,31 @@ def list_reminders(body: Dict[str, Any]) -> Result:
 
 def add_reminder(body: Dict[str, Any]) -> Result:
     text, due = _text(body), body.get("due") or ""
+    repeat = str(body.get("repeat") or "")
     if not (text and due):
         return _bad("text and due required")
-    return {"ok": True, "id": tasks.add_reminder(text, due)}, 200
+    if not repeat:
+        # "every day at 9am" can be in the time or in the text.
+        repeat, due = tasks.parse_repeat(str(due))
+        if not repeat:
+            repeat, text = tasks.parse_repeat(text)
+    try:
+        reminder_id = tasks.add_reminder(text, due, repeat=repeat)
+    except ValueError as exc:
+        return _bad(str(exc))
+    added = next((r for r in tasks.list_reminders() if r["id"] == reminder_id), None)
+    return {"ok": True, "id": reminder_id, "reminder": added, "when": tasks.describe(added) if added else ""}, 200
+
+
+def snooze_reminder(body: Dict[str, Any]) -> Result:
+    try:
+        minutes = int(body.get("minutes") or 10)
+    except (TypeError, ValueError):
+        return _bad("minutes must be a number")
+    snoozed = tasks.snooze_reminder(body.get("id"), minutes)
+    if not snoozed:
+        return {"ok": False, "error": "There's no reminder to snooze."}, 404
+    return {"ok": True, "reminder": snoozed}, 200
 
 
 def delete_reminder(body: Dict[str, Any]) -> Result:
@@ -98,6 +120,7 @@ POST_ROUTES: Dict[str, Callable[[Dict[str, Any]], Result]] = {
     "/api/reminders/list": list_reminders,
     "/api/reminders/add": add_reminder,
     "/api/reminders/delete": delete_reminder,
+    "/api/reminders/snooze": snooze_reminder,
     "/api/notes/add": add_note,
     "/api/notes/list": list_notes,
     "/api/notes/search": search_notes,

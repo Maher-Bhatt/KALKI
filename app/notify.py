@@ -3,8 +3,8 @@ import sys
 
 def notify_desktop(title: str, message: str):
     """
-    Shows a native desktop notification using plyer, if available.
-    Degrades silently if unsupported.
+    Shows a native desktop notification using plyer. Returns False if it couldn't,
+    so the caller can record that instead of assuming it was seen.
     """
     try:
         from plyer import notification
@@ -22,5 +22,6 @@ def notify_desktop(title: str, message: str):
             app_icon=icon_path,
             timeout=5
         )
+        return True
     except Exception:
-        pass
+        return False

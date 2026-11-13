@@ -1,5 +1,12 @@
 """Clipboard, note capture, site watching and PC control quick commands."""
 
+import os as _os
+import sys as _sys
+
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+import _isolation  # noqa: E402,F401  Before anything from the app: a throwaway profile.
+
+
 import subprocess
 import sys
 import unittest

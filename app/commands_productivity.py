@@ -34,6 +34,8 @@ _CLEAR_DONE_TASKS = {"clear completed tasks", "clear done tasks", "clear my comp
 _ALL_WORDS = {"all", "every", "everything", "pending", "my", "the"}
 
 _LIST_REMINDERS = {"list reminders", "my reminders", "show reminders"}
+_SNOOZE = re.compile(r"^snooze(?:\s+(?:it|that|the reminder))?(?:\s+(?:for\s+)?(\d+)\s*(?:min(?:ute)?s?)?)?$")
+_DELETE_REMINDER = re.compile(r"^(?:delete|remove|cancel)\s+(?:the\s+)?reminder\s+(?:to\s+|about\s+)?(.+)$")
 
 
 def _original_case(captured: str, lowered: str, raw: str) -> str:
@@ -96,15 +98,30 @@ def reminders_command(t: str, raw: str) -> Optional[str]:
     match = _REMIND.match(t)
     if match:
         text = _original_case(match.group(1), t, raw)
+        repeat, text = tasks.parse_repeat(text)
         when, leftover = tasks.parse_when(text)
         if when is None:
-            return f"No time given — logged as task {tasks.add_task(text)}: {text}."
-        reminder_id = tasks.add_reminder(leftover or text, when)
-        return f"Reminder {reminder_id} set for {when.strftime('%I:%M %p on %A')}: {leftover or text}."
+            if repeat:
+                return "When should it go off? Try 'remind me every day at 9am to stretch'."
+            return f"No time given, so I added it as task {tasks.add_task(text)}: {text}."
+        leftover = re.sub(r"^to\s+", "", leftover or text).strip() or text
+        reminder_id = tasks.add_reminder(leftover, when, repeat=repeat)
+        added = next((r for r in tasks.list_reminders() if r["id"] == reminder_id), {"due": when.isoformat(), "repeat": repeat})
+        return f"Reminder set for {tasks.describe(added)}: {leftover}."
     if t in _LIST_REMINDERS:
         reminders = tasks.list_reminders()
         if not reminders:
-            return "No active reminders, Sir."
-        lines = [f"{r['id']} at {r['due'][11:16]}: {r['text']}" for r in reminders[:6]]
-        return f"{len(reminders)} reminder{'s' if len(reminders) != 1 else ''}. " + ". ".join(lines)
+            return "No reminders set."
+        lines = [f"{r['id']}, {tasks.describe(r)}: {r['text']}" for r in reminders[:6]]
+        return f"{len(reminders)} reminder{'s' if len(reminders) != 1 else ''}. " + ". ".join(lines) + "."
+    match = _SNOOZE.match(t)
+    if match:
+        snoozed = tasks.snooze_reminder(None, int(match.group(1) or 10))
+        if not snoozed:
+            return "There's no reminder to snooze."
+        return f"Snoozed for {int(match.group(1) or 10)} minutes: {snoozed['text']}."
+    match = _DELETE_REMINDER.match(t)
+    if match:
+        target = match.group(1).strip()
+        return "Reminder deleted." if tasks.delete_reminder(target) else f"I couldn't find one reminder matching '{target}'."
     return None

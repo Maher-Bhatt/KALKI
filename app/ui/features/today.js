@@ -195,10 +195,10 @@ async function deleteTask(t) {
 async function addReminder() {
   const text = await promptDialog({ title: 'New reminder', label: 'Remind me to…', confirmLabel: 'Next' });
   if (!text) return;
-  const due = await promptDialog({ title: 'When?', label: 'Say it however you like — "in 20 minutes", "tomorrow at 9"', confirmLabel: 'Add reminder' });
+  const due = await promptDialog({ title: 'When?', label: 'Say it however you like: "in 20 minutes", "tomorrow at 9am", "every weekday at 8am"', confirmLabel: 'Add reminder' });
   if (!due) return;
   const r = await reminders.add(text, due);
-  if (r.ok) { ok('Reminder set'); loadToday(); } else err(r.message, r.detail);
+  if (r.ok) { ok(r.data?.when ? `Reminder set for ${r.data.when}` : 'Reminder set'); loadToday(); } else err(r.message, r.detail);
 }
 
 function groupReminders(rems) {
@@ -433,7 +433,17 @@ export function todayView() {
       for (const [time, items] of Object.entries(rGroups)) {
         remsEl.push(h('div.xs.mut', { style: { margin: '10px 0 2px' } }, time));
         for (const r of items) {
-          remsEl.push(h('div.li', null, h('i.mut', { 'data-i': 'flag' }), h('span', { style: { flex: '1' } }, r.text), null));
+          const repeatWord = { daily: 'Every day', weekdays: 'Every weekday', weekly: 'Every week' }[r.repeat] || '';
+          remsEl.push(h('div.li', null, h('i.mut', { 'data-i': 'flag' }),
+            h('span', { style: { flex: '1', minWidth: 0 } }, r.text, repeatWord ? h('span.xs.mut', null, ` · ${repeatWord}`) : null),
+            h('button.btn.gh', {
+              type: 'button',
+              'aria-label': `Delete reminder: ${r.text}`,
+              onClick: async () => {
+                const res = await reminders.remove(r.id);
+                if (res.ok && res.data?.ok !== false) { ok('Reminder deleted'); loadToday(); } else err("That reminder couldn't be deleted");
+              },
+            }, 'Delete')));
         }
       }
     } else {
