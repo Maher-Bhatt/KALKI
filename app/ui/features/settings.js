@@ -466,6 +466,7 @@ const SECTION_BODY = {
       h('div.sm.t2', null, 'The local API is bound to 127.0.0.1 and authenticated with a per-install token stored in your user data folder. Only the KALKI window and its own helper processes can reach it.'),
       row('Credential vault', 'Hardware-bound encrypted storage for logins KALKI manages.',
         h('button.btn', { type: 'button', onClick: openVault }, 'Open vault')),
+      toggleRow('Lock the PC after repeated abuse', 'If you keep insulting KALKI, it warns you and then locks Windows.', 'MOOD_LOCK_ENABLED'),
       toggleRow('Confirm dangerous actions', 'Ask before workflows that shut down, restart or delete.', 'REQUIRE_DANGEROUS_CONFIRMATION'),
       row('Security workspace', 'Show the advanced security tools in the navigation rail.',
         toggleSwitch({
