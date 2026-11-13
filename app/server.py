@@ -98,7 +98,9 @@ import routes_memory
 import routes_threads
 import threads
 import tool_policy
+import approvals
 import command_intent
+import routes_pet
 import commands_productivity
 import db
 import wifi_security
@@ -449,10 +451,9 @@ STATE = {
 
 _state_lock = threading.RLock()
 
-_pending_lock = threading.Lock()
-_pending_approvals = {}
-_approval_id_seq = 0
-_PENDING_TTL = 30
+# Kept under their old names: other code and the tests still use them.
+_pending_lock = approvals.lock
+_pending_approvals = approvals.pending
 
 _activity_log = []
 _activity_id_seq = 0
@@ -500,22 +501,10 @@ def _public_activity(a):
 def _queue_confirmation(description, action, source="chat", always=False, ttl=None):
     """Hold an action until the user approves it. `always` is for AI-requested actions,
     which the "ask before risky actions" setting can't switch off."""
-    global _approval_id_seq
-    ttl = ttl or _PENDING_TTL
+    ttl = ttl or approvals.DEFAULT_TTL
     if not always and not getattr(config, "REQUIRE_DANGEROUS_CONFIRMATION", True):
         return action()
-    with _pending_lock:
-        _approval_id_seq += 1
-        aid = str(_approval_id_seq)
-        now = time.time()
-        _pending_approvals[aid] = {
-            "id": aid,
-            "description": description,
-            "source": source,
-            "action": action,
-            "created": now,
-            "expires": now + ttl,
-        }
+    approvals.queue(description, action, source=source, ttl=ttl)
     return True, f"{description}. Say confirm within {ttl} seconds, or approve it in Activity."
 
 
@@ -576,32 +565,7 @@ def _copy_secret_briefly(secret, seconds=60):
     return True
 
 def _consume_confirmation(command):
-    global _pending_approvals
-    
-    clean_command = "".join(c for c in command if c not in ".,!?").strip().lower()
-    
-    if clean_command in ("cancel", "never mind", "nevermind"):
-        with _pending_lock:
-            had_pending = len(_pending_approvals) > 0
-            _pending_approvals.clear()
-        return (True, "Cancelled.") if had_pending else None
-    if clean_command not in ("confirm", "yes confirm", "confirm it", "do it"):
-        return None
-        
-    with _pending_lock:
-        if not _pending_approvals:
-            return True, "There is no active action to confirm."
-        now = time.time()
-        for aid in [a for a, p in _pending_approvals.items() if p["expires"] < now]:
-            del _pending_approvals[aid]
-        if not _pending_approvals:
-            return True, "There is no active action to confirm."
-        if len(_pending_approvals) > 1:
-            # Saying "confirm" can't show which one it means, so never guess.
-            return True, (f"{len(_pending_approvals)} actions are waiting, so I won't guess which you mean. "
-                          "Approve or deny each one on screen.")
-        pending = _pending_approvals.pop(next(iter(_pending_approvals)))
-    return pending["action"]()
+    return approvals.answer_spoken(command)
 
 
 def _is_sensitive_command(text):
@@ -889,8 +853,8 @@ def _auto_extract_topic_memory(user_text, reply_text=""):
                                 for item in parsed:
                                     if isinstance(item, dict) and item.get("topic") and item.get("fact"):
                                         extracted.append((item["topic"].strip(), item["fact"].strip()))
-            except Exception:
-                pass
+            except (ValueError, TypeError, AttributeError) as e:
+                log(f"memory extraction returned unreadable data: {e}")
 
         if not extracted and openai_key and not openai_key.startswith("PASTE_") and not openai_key.startswith("your_"):
             try:
@@ -935,8 +899,8 @@ def _auto_extract_topic_memory(user_text, reply_text=""):
                                 for item in parsed:
                                     if isinstance(item, dict) and item.get("topic") and item.get("fact"):
                                         extracted.append((item["topic"].strip(), item["fact"].strip()))
-            except Exception:
-                pass
+            except (ValueError, TypeError, AttributeError) as e:
+                log(f"memory extraction returned unreadable data: {e}")
 
         # 2. Heuristic extraction fallback / enhancement
         if not extracted:
@@ -2327,8 +2291,8 @@ def handle_local(text):
         try:
             with open(result["report_path"], "r", encoding="utf-8") as fh:
                 report_txt = fh.read()
-        except Exception:
-            pass
+        except OSError as e:
+            log(f"couldn't read the scan report: {e}")
         if report_txt:
             return True, f"{spoken}\n\n```\n{report_txt}\n```"
         return True, spoken
@@ -3183,8 +3147,8 @@ def handle_local(text):
                 return True, ab
             if data.get("results"):
                 return True, data["results"][0]["snippet"] or data["results"][0]["title"]
-        except Exception:
-            pass
+        except Exception as e:
+            log(f"quick web answer failed: {e}")
         return True, "I couldn't find a definition right now."
 
     if t.startswith("wiki ") or t.startswith("wikipedia "):
@@ -3194,8 +3158,8 @@ def handle_local(text):
             ab = (data.get("abstract") or "").strip()
             if ab:
                 return True, ab
-        except Exception:
-            pass
+        except Exception as e:
+            log(f"wikipedia lookup failed: {e}")
         return True, "I couldn't reach Wikipedia right now."
 
     if t in ("news", "headlines", "top news") or t.startswith("news about "):
@@ -3206,8 +3170,8 @@ def handle_local(text):
             lines = [r["title"] for r in data.get("results", [])[:4] if r.get("title")]
             if lines:
                 return True, "Top headlines: " + ". Next: ".join(lines[:4]) + "."
-        except Exception:
-            pass
+        except Exception as e:
+            log(f"news lookup failed: {e}")
         return True, "I couldn't fetch the news, Sir."
 
     if t.startswith("play ") and "youtube" in t:
@@ -3458,22 +3422,9 @@ def _counting_reply(tokens):
         yield from tokens
 
 
-def _pet_settings():
-    pet = {"species": "gobi", "name": "Gobi", "sound": False}
-    try:
-        with open(os.path.join(DATA_DIR, "pet_state.json"), "r", encoding="utf-8") as f:
-            saved = json.load(f)
-        if isinstance(saved, dict):
-            pet.update({k: saved[k] for k in pet if k in saved})
-    except (OSError, ValueError):
-        pass
-    return pet
-
-
 def _pet_status():
     """What the pet shows. Deliberately cheap: it reads state and never asks the system."""
-    with _pending_lock:
-        pending = sum(1 for p in _pending_approvals.values() if p["expires"] >= time.time())
+    pending = approvals.count()
     listener = STATE.get("listener_state", "idle")
     playing = STATE.get("cached_now_playing") or {}
     status = str(playing.get("status", "")).lower() if isinstance(playing, dict) else ""
@@ -3483,8 +3434,11 @@ def _pet_status():
         "working": _replies_in_progress > 0 or listener == "thinking",
         "listening": listener == "listening",
         "music": status == "playing",
-        "pet": _pet_settings(),
+        "pet": routes_pet.read_settings(),
     }
+
+
+routes_pet.configure(DATA_DIR, APP_ROOT, _pet_status)
 
 
 class _PublicRedirectsOnly(urllib.request.HTTPRedirectHandler):
@@ -4550,8 +4504,8 @@ def ask_ai_stream(user_messages):
                                 if token:
                                     got_any = True
                                     yield token
-                            except Exception:
-                                pass
+                            except (ValueError, KeyError, IndexError, TypeError):
+                                pass  # A malformed chunk in the stream is skipped.
                     if got_any:
                         return
             except Exception as e_gem:
@@ -4569,7 +4523,8 @@ def ask_ai_stream(user_messages):
                 for token in ask_ai_stream(user_messages):
                     yield token
                 return
-            except Exception: pass
+            except Exception as e:
+                log(f"the backup model failed too: {e}")
         yield f"I experienced a temporary interruption reaching the cloud models, {config.OWNER_TITLE}. Your system, memory, and desktop tools are fully operational. Please check your API quota or network connection."
         return
 
@@ -4602,8 +4557,8 @@ def ask_ai_stream(user_messages):
                         token = chunk["choices"][0]["delta"].get("content", "")
                         if token:
                             yield token
-                    except Exception:
-                        pass
+                    except (ValueError, KeyError, IndexError, TypeError):
+                        pass  # A malformed chunk in the stream is skipped.
     except Exception as e:
         log(f"Cloud stream failed for {chosen}: {e}")
         provider_name = "gemini" if chosen.startswith("gemini") else "openai" if chosen.startswith("gpt") else "anthropic" if chosen.startswith("claude") else "groq"
@@ -5212,6 +5167,12 @@ class Handler(BaseHTTPRequestHandler):
         if not self._require_auth(path):
             return
 
+        route = routes_pet.GET_ROUTES.get(path)
+        if route:
+            payload, status = route({})
+            self._json(payload, status=status)
+            return
+
         if path in ("/pet", "/pet_overlay"):
             pet_html_path = os.path.join(APP_ROOT, "ui", "pet_overlay.html")
             if os.path.exists(pet_html_path):
@@ -5219,46 +5180,6 @@ class Handler(BaseHTTPRequestHandler):
                     content_bytes = f.read()
                 self._public_html(content_bytes)
                 return
-
-        if path == "/api/pet/overlay":
-            running = False
-            for p in psutil.process_iter(['name', 'cmdline']):
-                try:
-                    cmd = ' '.join(p.info.get('cmdline') or [])
-                    if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
-                        running = True
-                        break
-                except Exception:
-                    pass
-
-            self._json({"ok": True, "running": running})
-            return
-
-        if path == "/api/pet/status":
-            self._json(_pet_status())
-            return
-
-        if path == "/api/pet":
-            pet_file = os.path.join(DATA_DIR, "pet_state.json")
-            pet_data = {
-                "species": "gobi",
-                "name": "Gobi",
-                "color": "#ffb833",
-                "sound": True,
-                "enabled": True,
-                "level": 1,
-                "xp": 0
-            }
-            if os.path.exists(pet_file):
-                try:
-                    with open(pet_file, "r", encoding="utf-8") as f:
-                        saved = json.load(f)
-                        if isinstance(saved, dict):
-                            pet_data.update(saved)
-                except Exception:
-                    pass
-            self._json({"ok": True, "pet": pet_data})
-            return
 
         if path in ("/api/briefing/get", "/api/skills/list"):
             self._do_post_inner()
@@ -5513,8 +5434,7 @@ class Handler(BaseHTTPRequestHandler):
                 pass
             if "client=listener" in self.path:
                 STATE["listener_last_seen"] = time.time()
-            with _pending_lock:
-                pending_count = sum(1 for p in _pending_approvals.values() if p["expires"] >= time.time())
+            pending_count = approvals.count()
 
             self._json({
                 "ok": True,
@@ -5843,7 +5763,8 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         route = (routes_productivity.POST_ROUTES.get(path) or routes_memory.POST_ROUTES.get(path)
-                 or routes_threads.POST_ROUTES.get(path))
+                 or routes_threads.POST_ROUTES.get(path) or routes_pet.POST_ROUTES.get(path)
+                 or approvals.POST_ROUTES.get(path))
         if route:
             payload, status = route(body)
             self._json(payload, status=status)
@@ -5892,46 +5813,6 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": str(e)}, status=500)
             return
 
-        if path == "/api/approvals/list":
-            with _pending_lock:
-                now = time.time()
-                active = []
-                expired = []
-                for aid, pending in list(_pending_approvals.items()):
-                    if pending["expires"] < now:
-                        expired.append(aid)
-                    else:
-                        active.append({
-                            "id": aid,
-                            "description": pending["description"],
-                            "expires": pending["expires"]
-                        })
-                for aid in expired:
-                    del _pending_approvals[aid]
-            self._json({"ok": True, "approvals": active})
-            return
-
-        if path == "/api/approvals/decide":
-            aid = body.get("id")
-            decision = body.get("decision")  # 'approve' or 'deny'
-            with _pending_lock:
-                if aid in _pending_approvals:
-                    pending = _pending_approvals.pop(aid)
-                else:
-                    pending = None
-            if not pending or pending["expires"] < time.time():
-                self._json({"ok": False, "error": "Approval expired or not found"}, status=400)
-                return
-            if decision == "approve":
-                try:
-                    res = pending["action"]()
-                    self._json({"ok": True, "result": res})
-                except Exception as e:
-                    self._json({"ok": False, "error": str(e)}, status=500)
-            else:
-                self._json({"ok": True, "result": "Denied"})
-            return
-
         if path == "/api/briefing/get":
             # Compose from calendar, tasks, overdue reminders, watched-site alerts, github
             enabled = getattr(config, "BRIEFING_ENABLED", False)
@@ -5953,8 +5834,8 @@ class Handler(BaseHTTPRequestHandler):
                 bad = [s for s in watched if s.get("status") == "down"]
                 if bad:
                     briefing += f"{len(bad)} watched sites are down. "
-            except Exception:
-                pass
+            except Exception as e:
+                log(f"part of the briefing couldn't be built: {e}")
             
             self._json({"ok": True, "briefing": briefing})
             return
@@ -5980,8 +5861,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/recovery/clear":
             try:
                 os.remove(os.path.join(DATA_DIR, "crash.log"))
-            except Exception:
-                pass
+            except FileNotFoundError:
+                pass  # Already gone.
             self._json({"ok": True})
             return
 
@@ -5994,85 +5875,6 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": True, "secretStatus": _settings_status(SECRET_SETTING_KEYS)})
             except Exception as e:
                 self._json({"ok": False, "error": str(e)})
-            return
-
-        if path == "/api/pet/overlay":
-            running = False
-            for p in psutil.process_iter(['name', 'cmdline']):
-                try:
-                    cmd = ' '.join(p.info.get('cmdline') or [])
-                    if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
-                        running = True
-                        break
-                except Exception:
-                    pass
-
-            if self.command == 'POST':
-                action_enable = body.get('enabled')
-                toggle = body.get('toggle', False)
-                if toggle:
-                    action_enable = not running
-
-                if action_enable is False:
-                    # Kill running pet processes
-                    for p in psutil.process_iter(['name', 'cmdline']):
-                        try:
-                            cmd = ' '.join(p.info.get('cmdline') or [])
-                            if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
-                                p.kill()
-                        except Exception: pass
-                    self._json({"ok": True, "running": False})
-                    return
-                elif action_enable is True and not running:
-                    # Launch desktop pet
-                    try:
-                        base = os.path.dirname(os.path.abspath(__file__))
-                        pet_script = os.path.join(base, "desktop_pet.py")
-                        pet_exe = os.path.join(base, "KALKI_Pet.exe")
-                        if os.path.exists(pet_exe):
-                            subprocess.Popen([pet_exe], cwd=base)
-                        elif os.path.exists(pet_script):
-                            subprocess.Popen([sys.executable, pet_script], cwd=base)
-                        running = True
-                    except Exception as e:
-                        self._json({"ok": False, "error": str(e)})
-                        return
-                    self._json({"ok": True, "running": True})
-                    return
-            self._json({"ok": True, "running": running})
-            return
-
-        if path == "/api/pet":
-            pet_file = os.path.join(DATA_DIR, "pet_state.json")
-            pet_data = {
-                "species": "gobi",
-                "name": "Gobi",
-                "color": "#ffb833",
-                "sound": True,
-                "enabled": True,
-                "level": 1,
-                "xp": 0
-            }
-            if os.path.exists(pet_file):
-                try:
-                    with open(pet_file, "r", encoding="utf-8") as f:
-                        saved = json.load(f)
-                        if isinstance(saved, dict):
-                            pet_data.update(saved)
-                except Exception:
-                    pass
-            pet_data.update({k: v for k, v in body.items() if k in ("species", "name", "color", "sound", "enabled", "level", "xp")})
-            try:
-                os.makedirs(DATA_DIR, exist_ok=True)
-                with open(pet_file, "w", encoding="utf-8") as f:
-                    json.dump(pet_data, f, indent=2)
-                # Also mirror to root user_data_dir so standalone desktop_pet.py always shares state
-                root_pet = os.path.join(os.path.dirname(DATA_DIR), "pet_state.json")
-                with open(root_pet, "w", encoding="utf-8") as f:
-                    json.dump(pet_data, f, indent=2)
-            except Exception:
-                pass
-            self._json({"ok": True, "pet": pet_data})
             return
 
         if path == "/api/settings/clear_cache":
@@ -6479,8 +6281,8 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     from core import model_manager
                     model_manager.track_usage(STATE["model"], len(user_text)//4, len(reply_str)//4, latency)
-                except Exception:
-                    pass
+                except Exception as e:
+                    log(f"usage tracking failed: {e}")
                 
                 self.wfile.write(f"data: {json.dumps({'done': True, 'model': STATE['model']})}\n\n".encode())
                 self.wfile.flush()
@@ -6509,8 +6311,8 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     from core import model_manager
                     model_manager.track_usage(STATE["model"], len(user_text)//4, len(reply)//4, latency)
-                except Exception:
-                    pass
+                except Exception as e:
+                    log(f"usage tracking failed: {e}")
                 
                 self._json({"reply": reply, "source": "ai", "model": STATE["model"]})
                 return
@@ -6616,8 +6418,8 @@ class Handler(BaseHTTPRequestHandler):
                             "size": stat.st_size if not entry.is_dir() else 0,
                             "modified": stat.st_mtime
                         })
-                    except Exception:
-                        pass
+                    except OSError:
+                        pass  # A file that vanished or can't be read is left out of the list.
                 items.sort(key=lambda x: (not x["is_dir"], x["name"].lower()))
                 self._json({"ok": True, "path": safe_target, "items": items})
             except Exception as e:
@@ -6725,18 +6527,6 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/auth/logout":
             runtime_security.rotate_auth_token()
             self._json({"ok": True, "message": "Logged out and token rotated."})
-            return
-
-        if path == "/api/pet/toggle":
-            try:
-                env = os.environ.copy()
-                base = os.path.dirname(os.path.abspath(__file__))
-                pet_script = os.path.join(base, "desktop_pet.py")
-                if os.path.exists(pet_script):
-                    subprocess.Popen([sys.executable, pet_script], cwd=base, env=env)
-                self._json({"ok": True})
-            except Exception as e:
-                self._json({"ok": False, "error": str(e)}, status=500)
             return
 
         if path == "/api/command":

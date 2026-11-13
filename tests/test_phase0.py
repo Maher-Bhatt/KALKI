@@ -1539,7 +1539,7 @@ class StaticSafety(unittest.TestCase):
 
     def test_silent_except_count_can_only_go_down(self):
         """`except: pass` hides real failures. Lower this number as they get fixed."""
-        budget = 165
+        budget = 149
         count = 0
         for path in self._files():
             tree = ast.parse(open(path, encoding="utf-8", errors="replace").read())
