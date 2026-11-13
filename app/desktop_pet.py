@@ -42,7 +42,82 @@ os.environ["WEBVIEW2_USER_DATA_FOLDER"] = pet_profile_dir
 import config
 import webview
 
+CARD_WIDTH = 280
+
+
 class PetApi:
+    # pywebview exposes public attributes to the page, so these stay private.
+    _window = None
+    _pet = None
+    _card_open = False
+    _card_height = 200
+
+    def show_frame(self, rgba_base64):
+        """Draw one frame of the pet in its see-through window."""
+        return bool(self._pet and self._pet.show(rgba_base64))
+
+    def has_native_pet(self):
+        return bool(self._pet and self._pet.hwnd)
+
+    def place_card(self, is_open, height=200):
+        """Show the card next to the pet, or park it off screen.
+
+        It's parked rather than hidden because a hidden page stops running, and the page
+        is what keeps the pet up to date.
+        """
+        self._card_open = bool(is_open)
+        self._card_height = int(height)
+        return self._position_card()
+
+    def _position_card(self):
+        import ctypes
+        import pet_window
+        pet_window.use_real_pixels()
+        hwnd = ctypes.windll.user32.FindWindowW(None, "KALKI Desktop Companion")
+        if not hwnd or not self._pet:
+            return False
+        user32 = ctypes.windll.user32
+        SWP_NOACTIVATE, SWP_NOSIZE = 0x0010, 0x0001
+        HWND_TOPMOST = ctypes.c_void_p(-1)
+        if not self._card_open:
+            user32.SetWindowPos(hwnd, HWND_TOPMOST, -32000, -32000, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE)
+            return True
+        ratio = (user32.GetDpiForWindow(hwnd) or 96) / 96
+        size = (round(CARD_WIDTH * ratio), round(self._card_height * ratio))
+        x, y = pet_window.card_position(self._pet.rect(), size, self._pet.work_area(), gap=round(6 * ratio))
+        user32.SetWindowPos(hwnd, HWND_TOPMOST, x, y, size[0], size[1], 0)
+        user32.SetForegroundWindow(hwnd)
+        return True
+
+    def _local_json(self, path, body=None, timeout=3):
+        import urllib.request
+        port = getattr(config, "PORT", 8888)
+        headers = {runtime_security.TOKEN_HEADER: runtime_security.get_api_token()}
+        data = None
+        if body is not None:
+            data = json.dumps(body).encode("utf-8")
+            headers["Content-Type"] = "application/json"
+        req = urllib.request.Request(f"http://127.0.0.1:{port}{path}", data=data, headers=headers)
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            return json.loads(response.read().decode("utf-8"))
+
+    def get_status(self):
+        """What the pet should show. KALKI not running is reported, never raised."""
+        try:
+            return self._local_json("/api/pet/status")
+        except Exception:
+            return {"ok": False, "pet": self.get_pet_state()}
+
+    def save_pet(self, patch):
+        """Save through KALKI when it's running, so the app and the pet stay in step."""
+        try:
+            self._local_json("/api/pet", patch)
+            return True
+        except Exception:
+            state = self.get_pet_state()
+            state.update({k: v for k, v in patch.items() if k in ("species", "name", "sound")})
+            return self.save_pet_state(state)
+
     def send_command(self, cmd):
         """Send a typed quick command to KALKI with the local token."""
         import json
@@ -131,14 +206,6 @@ class PetApi:
             print(f"[DesktopPet] Failed opening main app: {e}")
         return False
 
-    def get_music_state(self):
-        """Polls active Windows Media Control session directly in native Python."""
-        try:
-            import media_mod
-            return media_mod.now_playing_json()
-        except Exception:
-            return {"status": "stopped", "title": ""}
-
     def get_pet_state(self):
         """Loads pet state from user data or defaults."""
         for pf in [
@@ -171,27 +238,17 @@ class PetApi:
         """Closes the desktop pet window."""
         os._exit(0)
 
-def _apply_stealth_window_styles():
-    """Removes the window from the Windows taskbar and applies full DWM per-pixel transparency."""
+def _apply_window_styles():
+    """Keep the pet off the taskbar."""
     if sys.platform != "win32":
         return
     import ctypes
     import threading
     user32 = ctypes.windll.user32
-    dwmapi = ctypes.windll.dwmapi
-
-    class MARGINS(ctypes.Structure):
-        _fields_ = [
-            ("cxLeftWidth", ctypes.c_int),
-            ("cxRightWidth", ctypes.c_int),
-            ("cyTopHeight", ctypes.c_int),
-            ("cyBottomHeight", ctypes.c_int),
-        ]
 
     GWL_EXSTYLE = -20
     WS_EX_APPWINDOW = 0x00040000
     WS_EX_TOOLWINDOW = 0x00000080
-    WS_EX_LAYERED = 0x00080000
     SWP_FRAMECHANGED = 0x0020
     SWP_NOMOVE = 0x0002
     SWP_NOSIZE = 0x0001
@@ -203,55 +260,59 @@ def _apply_stealth_window_styles():
             time.sleep(0.15)
             hwnd = user32.FindWindowW(None, "KALKI Desktop Companion")
             if hwnd:
-                try:
-                    # Extend frame across entire window to enable true DWM desktop transparency
-                    margins = MARGINS(-1, -1, -1, -1)
-                    dwmapi.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(margins))
+                style = user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+                user32.SetWindowLongW(hwnd, GWL_EXSTYLE, (style & ~WS_EX_APPWINDOW) | WS_EX_TOOLWINDOW)
+                user32.SetWindowPos(
+                    hwnd, 0, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED
+                )
+                return
 
-                    style = user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
-                    new_style = (style & ~WS_EX_APPWINDOW) | WS_EX_TOOLWINDOW | WS_EX_LAYERED
-                    user32.SetWindowLongW(hwnd, GWL_EXSTYLE, new_style)
-                    user32.SetWindowPos(
-                        hwnd, 0, 0, 0, 0, 0,
-                        SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED
-                    )
-                    break
-                except Exception:
-                    pass
+    threading.Thread(target=_worker, daemon=True, name="kalki-pet-window").start()
 
-    threading.Thread(target=_worker, daemon=True, name="kalki-pet-stealth").start()
 
 def main():
-    api = PetApi()
-    
-    # Calculate bottom-right corner docking
-    pet_w = 260
-    pet_h = 320
-    pos_x = max(20, SCREEN_WIDTH - pet_w - 20)
-    pos_y = max(20, SCREEN_HEIGHT - pet_h - 60) # Leave room for Windows taskbar
+    import pet_window
 
+    api = PetApi()
     port = getattr(config, "PORT", 8888)
 
     # Load local HTML directly as native desktop software
     local_html = os.path.join(BASE_DIR, "ui", "pet_overlay.html")
     load_url = local_html if os.path.exists(local_html) else f"http://127.0.0.1:{port}/pet_overlay"
 
-    _apply_stealth_window_styles()
+    _apply_window_styles()
+
+    # The page keeps running while the card is off screen, because it draws the pet.
+    keep_running = " ".join((
+        "--disable-background-timer-throttling",
+        "--disable-renderer-backgrounding",
+        "--disable-backgrounding-occluded-windows",
+        "--disable-features=CalculateNativeWinOcclusion",
+    ))
+    existing = os.environ.get("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "").strip()
+    os.environ["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = f"{existing} {keep_running}".strip()
 
     window = webview.create_window(
         title="KALKI Desktop Companion",
         url=load_url,
-        width=pet_w,
-        height=pet_h,
-        x=pos_x,
-        y=pos_y,
+        width=CARD_WIDTH,
+        height=200,
+        x=-32000,
+        y=-32000,
         frameless=True,
         on_top=True,
-        transparent=True,
-        background_color="#000000",
-        easy_drag=True,
+        background_color="#15181c",
+        min_size=(200, 100),
         js_api=api
     )
+    api._window = window
+
+    def clicked():
+        window.evaluate_js("window.__petClicked && window.__petClicked()")
+
+    api._pet = pet_window.PetWindow(on_click=clicked, on_moved=api._position_card)
+    api._pet.start()
 
     webview.start(gui="edgechromium", private_mode=False)
 

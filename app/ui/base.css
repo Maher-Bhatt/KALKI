@@ -1,4 +1,7 @@
 *{box-sizing:border-box;margin:0}
-html,body,#app{height:100%;width:100%;background:var(--void);color:var(--text);font:400 14px/21px var(--ui);padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0);overflow:hidden}
+html,body,#app{height:100%;width:100%;background:var(--void);color:var(--text);font:400 var(--type-base)/var(--type-base-lh) var(--ui);padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0);overflow:hidden}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
-:focus-visible{outline:2px solid var(--fil);outline-offset:2px;border-radius:6px}
+input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--fil);outline-offset:2px}
+select{background:var(--inset);border:1px solid var(--line);border-radius:var(--radius-sm);padding:2px 6px}
+[hidden]{display:none!important}

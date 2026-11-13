@@ -174,6 +174,8 @@ export const settings = {
   testGoogle: () => get('/api/settings/test_google'),
   testSpotify: () => get('/api/settings/test_spotify'),
   setupTool: (tool) => post('/api/setup/tool', { tool }),
+  findOllama: () => post('/api/setup/ollama', {}),
+  testAi: () => post('/api/setup/test_ai', {}),
   exportUrl: '/api/settings/export',
 };
 
@@ -207,7 +209,7 @@ export const approvals = {
   decide: (id, decision) => post('/api/approvals/decide', { id, decision })
 };
 
-/* ── Antivirus & Endpoint Shield ──────────────────────────────────────── */
+/* ── Security check-up ──────────────────────────────────────── */
 export const antivirus = {
   status: () => get('/api/antivirus/status'),
   scanFile: (path) => post('/api/antivirus/scan/file', { path }, { timeout: 60000 }),
@@ -231,7 +233,7 @@ export const wifi = {
   setAutoConnect: (ssid, enabled) => post('/api/wifi/autoconnect', { ssid, enabled }, { timeout: 30000 }),
 };
 
-/* ── Sovereign Desktop Host Bridge (Native & Local IPC) ───────────────── */
+/* ── Desktop app bridge (Native & Local IPC) ───────────────── */
 export const desktop = {
   exec: (cmd, cwd) => window.pywebview?.api?.exec_command ? window.pywebview.api.exec_command(cmd, cwd) : post('/api/system/exec', { cmd, cwd }),
   readFile: (path) => window.pywebview?.api?.read_file ? window.pywebview.api.read_file(path) : post('/api/system/files/read', { path }),

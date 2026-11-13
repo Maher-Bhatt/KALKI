@@ -10,7 +10,7 @@ import { h, mount } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { workflows, code, vision, desktop } from '../api/endpoints.js';
 import { store, set } from '../state/store.js';
-import { emptyState } from '../components/states.js';
+import { emptyState, toggleSwitch } from '../components/states.js';
 import { openDialog, confirmDialog } from '../components/dialog.js';
 import { ok, err, toast } from '../state/toasts.js';
 
@@ -548,7 +548,7 @@ export function workbenchView() {
   /* ── Tab 1: Workflows Content ───────────────────────────────────────── */
   /* ── System Terminal Tab State & Renderer ────────────────────────── */
 let terminalHistory = [
-  'KALKI Sovereign Desktop Environment [PowerShell / Native Host]',
+  'KALKI terminal (PowerShell)',
   'Type any system command or click quick action presets below.'
 ];
 let terminalInputVal = '';
@@ -784,6 +784,9 @@ function renderWorkflowsTab() {
     );
 
     const newRoutineCard = h('div.card.col.g8', {
+      role: 'button',
+      tabindex: '0',
+      onKeydown: (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) { e.preventDefault(); e.currentTarget.click(); } },
       style: {
         borderStyle: 'dashed',
         cursor: 'pointer',
@@ -1366,11 +1369,7 @@ function renderWorkflowsTab() {
             ),
             h('div.row.g8', null,
               h(`span.chip.${s.enabled ? 'ok' : 'warn'}`, null, s.enabled ? 'Enabled' : 'Disabled'),
-              h(`i.tg${s.enabled ? '.on' : ''}`, {
-                style: { cursor: 'pointer' },
-                'aria-label': `Toggle ${s.name}`,
-                onClick: () => toggleSkill(s)
-              })
+              toggleSwitch({ checked: !!s.enabled, label: s.name, onClick: () => toggleSkill(s) })
             )
           ),
           h('div.sm.t2', { style: { flex: '1' } }, s.desc),
@@ -1395,7 +1394,7 @@ function renderWorkflowsTab() {
   view.render = () => {
     const hd = h('div.hd', null,
       h('div', null,
-        h('h1', null, 'Workbench'),
+        h('h1', { id: 'view-title', tabindex: '-1' }, 'Workbench'),
         h('div.sub', null, 'Run routines, generate code, explore vision, and customize skills.')
       ),
       h('div.row.g8', null,
@@ -1477,7 +1476,7 @@ function renderWorkflowsTab() {
 
     /* ── Aside Panel: Status, Logs, and Last Runs ─────────────────────── */
     mount(aside,
-      h('h1', { style: { fontSize: '16px' } }, 'Workbench Status'),
+      h('h2', null, 'Workbench status'),
 
       h('div.card.col.g8', null,
         h('div.row.sb', null,

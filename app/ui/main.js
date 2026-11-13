@@ -21,7 +21,7 @@ import { oversightView, loadOversight } from './features/oversight.js';
 import { securityView } from './features/security.js';
 import { settingsView, loadSettings, openSettingsSection } from './features/settings.js';
 import { openDiagnostics } from './features/diagnostics.js';
-import { presenceView } from './features/presence.js';
+import { maybeShowFirstRun } from './features/firstrun.js';
 
 const VIEWS = {
   ask: { build: askView, load: () => { loadModels(); loadToday(); } },
@@ -31,7 +31,6 @@ const VIEWS = {
   oversight: { build: oversightView, load: () => loadOversight() },
   security: { build: securityView, load: () => {} },
   settings: { build: settingsView, load: () => { loadSettings(); loadModels(); } },
-  pres: { build: presenceView, load: () => {} },
 };
 
 let shell = null;
@@ -74,7 +73,7 @@ function installShortcuts() {
   bind('mod+2', () => go('today'), { description: 'Go to Today' });
   bind('mod+3', () => go('memory'), { description: 'Go to Memory' });
   bind('mod+4', () => go('workbench'), { description: 'Go to Workbench' });
-  bind('mod+5', () => go('oversight'), { description: 'Go to Oversight' });
+  bind('mod+5', () => go('oversight'), { description: 'Go to Activity' });
   bind('mod+,', () => go('settings'), { description: 'Open settings' });
   bind('mod+n', async () => {
     const { newThread } = await import('./state/conversations.js');
@@ -82,7 +81,7 @@ function installShortcuts() {
     go('ask');
     setTimeout(() => currentView?.focusComposer?.(), 60);
   }, { description: 'Start a new conversation' });
-  bind('mod+b', () => shell.toggleRail(), { description: 'Pin or unpin the navigation rail' });
+  bind('mod+b', () => shell.toggleRail(), { description: 'Show or hide navigation' });
   bind('mod+shift+v', () => window.dispatchEvent(new CustomEvent('kalki:voice-toggle')), { description: 'Open voice' });
   bind('mod+shift+d', () => openDiagnostics(), { description: 'Open diagnostics' });
   bind('mod+/', () => go('settings', { section: 'shortcuts' }), { description: 'Show keyboard shortcuts' });
@@ -125,6 +124,7 @@ async function boot() {
   render();
 
   document.getElementById('boot')?.remove();
+  maybeShowFirstRun();
 
   if (store.ui.debug) {
     window.__kalki = {

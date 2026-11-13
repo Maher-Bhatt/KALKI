@@ -618,9 +618,16 @@ class HonestUi(unittest.TestCase):
         self.assertNotIn("act.ts", text)
 
     def test_banner_can_approve_from_any_screen(self):
-        text = open(os.path.join(APP, "ui", "features", "shell.js"), encoding="utf-8", errors="replace").read()
-        for piece in ("approvals.list", "approvals.decide", "a.description", "'Approve'", "'Deny'"):
-            self.assertIn(piece, text)
+        def read(*parts):
+            return open(os.path.join(APP, "ui", *parts), encoding="utf-8", errors="replace").read()
+
+        shell, card, state = read("features", "shell.js"), read("components", "approval.js"), read("state", "approvals.js")
+        self.assertIn("approvalCard(", shell)
+        self.assertIn("approvalCard(", read("features", "ask.js"))
+        for piece in ("item?.description", "'Approve'", "'Deny'"):
+            self.assertIn(piece, card)
+        for piece in ("api.list()", "api.decide(id, decision)"):
+            self.assertIn(piece, state)
 
     def test_wifi_tab_is_wired(self):
         text = open(os.path.join(APP, "ui", "features", "security.js"), encoding="utf-8", errors="replace").read()
@@ -1104,6 +1111,10 @@ class CommandBehaviour(unittest.TestCase):
         self.assertIn("Buy Paint", self.say("show my notes"))
         self.assertIn("Buy Paint", self.say("search notes for paint"))
         self.assertIn("Buy Paint", self.say("notes this week"))
+        for number in range(6):
+            server.notesmod.add_note(f"older filler {number}")
+        server.notesmod.add_note("Newest Thing")
+        self.assertIn("Newest Thing", self.say("notes this week"))
         self.assertIsInstance(self.say("notes from yesterday"), str)
         server.notesmod.delete_note(recent["id"])
 

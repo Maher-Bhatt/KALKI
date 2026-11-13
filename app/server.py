@@ -516,7 +516,7 @@ def _queue_confirmation(description, action, source="chat", always=False, ttl=No
             "created": now,
             "expires": now + ttl,
         }
-    return True, f"{description}. Say confirm within {ttl} seconds, or approve it in Oversight."
+    return True, f"{description}. Say confirm within {ttl} seconds, or approve it in Activity."
 
 
 def ask_native_permission(description, always=False):
@@ -3435,6 +3435,58 @@ def _safe_public_url(url):
         return False
 
 
+_replies_in_progress = 0
+_replies_lock = threading.Lock()
+
+
+class _ReplyInProgress:
+    """Counts typed replies being written, so the pet can say KALKI is working."""
+
+    def __enter__(self):
+        global _replies_in_progress
+        with _replies_lock:
+            _replies_in_progress += 1
+
+    def __exit__(self, *exc):
+        global _replies_in_progress
+        with _replies_lock:
+            _replies_in_progress -= 1
+
+
+def _counting_reply(tokens):
+    with _ReplyInProgress():
+        yield from tokens
+
+
+def _pet_settings():
+    pet = {"species": "gobi", "name": "Gobi", "sound": False}
+    try:
+        with open(os.path.join(DATA_DIR, "pet_state.json"), "r", encoding="utf-8") as f:
+            saved = json.load(f)
+        if isinstance(saved, dict):
+            pet.update({k: saved[k] for k in pet if k in saved})
+    except (OSError, ValueError):
+        pass
+    return pet
+
+
+def _pet_status():
+    """What the pet shows. Deliberately cheap: it reads state and never asks the system."""
+    with _pending_lock:
+        pending = sum(1 for p in _pending_approvals.values() if p["expires"] >= time.time())
+    listener = STATE.get("listener_state", "idle")
+    playing = STATE.get("cached_now_playing") or {}
+    status = str(playing.get("status", "")).lower() if isinstance(playing, dict) else ""
+    return {
+        "ok": True,
+        "pending": pending,
+        "working": _replies_in_progress > 0 or listener == "thinking",
+        "listening": listener == "listening",
+        "music": status == "playing",
+        "pet": _pet_settings(),
+    }
+
+
 class _PublicRedirectsOnly(urllib.request.HTTPRedirectHandler):
     """Check every redirect. Otherwise a public page could point the fetch at a private
     address, such as a router or this PC, after the first check had passed."""
@@ -3679,6 +3731,29 @@ def _apply_reply_actions(reply):
     return re.sub(r"\[(?:TASK|REMIND|NOTE|ACTION):.+?\]|TOOL CALL:\s*.+", "", text).strip()
 
 
+_tool_cards = threading.local()
+
+
+def _note_tool(tool_name, args, status):
+    cards = getattr(_tool_cards, "pending", None)
+    if cards is None:
+        cards = _tool_cards.pending = []
+    cards.append(tool_policy.tool_card(tool_name, args, status))
+
+
+def _take_tool_cards():
+    """The tool calls made on this thread since the last time this was asked."""
+    cards = getattr(_tool_cards, "pending", None) or []
+    _tool_cards.pending = []
+    return cards
+
+
+def _send_tool_cards(handler):
+    for card in _take_tool_cards():
+        handler.wfile.write(f"data: {json.dumps({'tool': card})}\n\n".encode())
+    handler.wfile.flush()
+
+
 def execute_tool_call(tool_name, tool_args):
     """Every tool the AI calls comes through here, past the same policy check."""
     try:
@@ -3689,8 +3764,10 @@ def execute_tool_call(tool_name, tool_args):
         args = {}
     refused = tool_policy.refusal(tool_name, args)
     if refused:
+        _note_tool(tool_name, args, "refused")
         return refused
     if tool_policy.needs_approval(tool_name, args):
+        _note_tool(tool_name, args, "waiting")
         description = tool_policy.describe(tool_name, args)
 
         def _approved():
@@ -3702,8 +3779,11 @@ def execute_tool_call(tool_name, tool_args):
         log(f"[tool approval] waiting: {tool_name}")
         return (f"Not done yet: this needs the user's approval. Waiting on: {description}\n"
                 f"Tell the user what you want to do and that they can say confirm, or approve it in "
-                f"Oversight, within {AI_APPROVAL_SECONDS} seconds. Don't say it has been done.")
-    return tool_policy.label_output(tool_name, _run_tool_call(tool_name, args))
+                f"Activity, within {AI_APPROVAL_SECONDS} seconds. Don't say it has been done.")
+    result = _run_tool_call(tool_name, args)
+    failed = str(result).startswith(("Error", "Failed"))
+    _note_tool(tool_name, args, "failed" if failed else "done")
+    return tool_policy.label_output(tool_name, result)
 
 
 def _run_tool_call(tool_name, args):
@@ -5154,6 +5234,10 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": True, "running": running})
             return
 
+        if path == "/api/pet/status":
+            self._json(_pet_status())
+            return
+
         if path == "/api/pet":
             pet_file = os.path.join(DATA_DIR, "pet_state.json")
             pet_data = {
@@ -6081,6 +6165,27 @@ class Handler(BaseHTTPRequestHandler):
 
 
 
+        if path == "/api/setup/ollama":
+            base = str(getattr(config, "OLLAMA_URL", "") or "http://localhost:11434").rstrip("/")
+            try:
+                with urllib.request.urlopen(f"{base}/api/tags", timeout=1.5) as response:
+                    models = json.loads(response.read().decode("utf-8")).get("models", [])
+                self._json({"ok": True, "running": True, "models": [str(m.get("name", "")) for m in models][:20]})
+            except (OSError, ValueError):
+                self._json({"ok": True, "running": False, "models": []})
+            return
+
+        if path == "/api/setup/test_ai":
+            # A real question, so the answer proves the whole path works.
+            try:
+                with _ReplyInProgress():
+                    reply = ask_ai([{"role": "user", "content": "Say hello in one short sentence."}])
+            except Exception as exc:
+                self._json({"ok": False, "error": str(exc)[:300]})
+                return
+            self._json({"ok": bool(str(reply or "").strip()), "reply": str(reply or "")[:500]})
+            return
+
         if path == "/api/setup/tool":
             tool_id = body.get("tool")
             try:
@@ -6183,7 +6288,8 @@ class Handler(BaseHTTPRequestHandler):
                 if not handled:
                     try:
                         convo = _shared_context() + [{"role": "user", "content": cmd}]
-                        reply = ask_ai(convo)
+                        with _ReplyInProgress():
+                            reply = ask_ai(convo)
                     except Exception as e:
                         reply = f"My link hiccuped, Sir — say that again? ({str(e)[:80]})"
                 
@@ -6331,7 +6437,8 @@ class Handler(BaseHTTPRequestHandler):
 
             if stream_req:
                 start_time = time.time()
-                generator = ask_ai_stream(messages)
+                _take_tool_cards()  # Threads are reused, so drop anything left from an earlier request.
+                generator = _counting_reply(ask_ai_stream(messages))
                 try:
                     first_token = next(generator)
                 except StopIteration:
@@ -6347,14 +6454,17 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 
                 full_reply = []
+                _send_tool_cards(self)
                 if first_token:
                     full_reply.append(first_token)
                     self.wfile.write(f"data: {json.dumps({'token': first_token})}\n\n".encode())
                     self.wfile.flush()
                 for token in generator:
+                    _send_tool_cards(self)
                     full_reply.append(token)
                     self.wfile.write(f"data: {json.dumps({'token': token})}\n\n".encode())
                     self.wfile.flush()
+                _send_tool_cards(self)
                 
                 reply_str = "".join(full_reply)
                 spoken_reply = _apply_reply_actions(reply_str)
@@ -6380,7 +6490,8 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     # Prepend recent conversation so KALKI remembers context.
                     convo = (_shared_context() + messages) if shared_source else messages
-                    reply = ask_ai(convo)
+                    with _ReplyInProgress():
+                        reply = ask_ai(convo)
                 except Exception as e:
                     self._json({"ok": False, "error": str(e)})
                     return

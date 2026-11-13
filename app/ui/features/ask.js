@@ -14,7 +14,12 @@ import { refreshStatus, loadModels } from '../state/status.js';
 import * as conv from '../state/conversations.js';
 import { openDialog, promptDialog, confirmDialog } from '../components/dialog.js';
 import { toast, ok, err } from '../state/toasts.js';
-import { createPetCompanion, triggerPetReaction, openPetSettings } from './pet.js';
+import { createPetCompanion } from './pet.js';
+import { mountainArt } from '../components/brand.js';
+import { go } from './router.js';
+import { openMenu } from '../components/menu.js';
+import { approvalCard } from '../components/approval.js';
+import { waitingApprovals } from '../state/approvals.js';
 
 const MAX_UPLOAD = 32 * 1024 * 1024; // server MAX_BODY
 
@@ -33,9 +38,9 @@ function announce(text) {
 
 function getGreeting() {
   const hr = new Date().getHours();
-  if (hr < 12) return 'Good morning, Sir';
-  if (hr < 18) return 'Good afternoon, Sir';
-  return 'Good evening, Sir';
+  const part = hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
+  const name = String(store.status?.owner || '').trim();
+  return name && name !== 'YourName' ? `${part}, ${name.split(/\s+/)[0]}.` : `${part}.`;
 }
 
 export function exportChatMarkdown(thread) {
@@ -127,6 +132,26 @@ function messageActions(msg) {
   return h('div.row.g6', { style: { marginTop: '8px' } }, ...actions);
 }
 
+const TOOL_STATUS = {
+  done: { icon: 'check', word: '' },
+  waiting: { icon: 'alert', word: 'Waiting for your approval' },
+  refused: { icon: 'close', word: 'Not allowed' },
+  failed: { icon: 'alert', word: "Didn't work" },
+};
+
+/** What KALKI did while answering, as small cards. Details open only if there are any. */
+function toolCards(tools) {
+  const box = h('div.toolcards');
+  for (const tool of tools || []) {
+    const status = TOOL_STATUS[tool.status] || TOOL_STATUS.done;
+    const line = [icon(status.icon, 13), h('span', null, tool.label), status.word ? h('span.toolcard-status', null, status.word) : null];
+    box.appendChild(tool.detail
+      ? h('details.toolcard', { dataset: { status: tool.status } }, h('summary', null, ...line), h('div.toolcard-detail', null, tool.detail))
+      : h('div.toolcard', { dataset: { status: tool.status } }, h('div.toolcard-line', null, ...line)));
+  }
+  return box;
+}
+
 function renderMessage(msg) {
   if (msg.role === 'user') {
     return h('div.umsg', { dataset: { id: msg.id } },
@@ -171,11 +196,11 @@ function renderMessage(msg) {
     let executedSystemAction = null;
     rawText = rawText.replace(/\[TASK:\s*(.+?)\]/g, (m, t) => { createdTasks.push(t); return ''; });
     rawText = rawText.replace(/(?:TOOL CALL:\s*)?system_control\(\s*\{[^}]*["']lock["'][^}]*\}\s*\)/gi, () => {
-      executedSystemAction = 'Workstation Locked (Attitude Enforcement Protocol)';
+      executedSystemAction = 'Your PC was locked';
       return '';
     });
     rawText = rawText.replace(/\[ACTION:\s*lock\]/gi, () => {
-      executedSystemAction = 'Workstation Locked (Attitude Enforcement Protocol)';
+      executedSystemAction = 'Your PC was locked';
       return '';
     });
     
@@ -217,7 +242,7 @@ function renderMessage(msg) {
       body.appendChild(
         h('div.note', { style: { marginTop: '8px', borderLeft: '3px solid #f87171', background: 'rgba(248, 113, 113, 0.08)' } },
           icon('security', 16, { style: { color: '#f87171' } }),
-          h('b', { style: { color: '#f87171' } }, 'System Security Action:'),
+          h('b', { style: { color: '#f87171' } }, 'KALKI took an action:'),
           h('span.t2', { style: { flex: '1', marginLeft: '6px' } }, executedSystemAction)
         )
       );
@@ -246,8 +271,7 @@ function renderMessage(msg) {
   }
 
   let chipText = msg.model ? modelLabel(msg.model) : '';
-  if (msg.streaming) chipText += ' · streaming';
-  else if (msg.done) chipText += ' · 1.1 s';
+  if (msg.done && msg.durationMs) chipText += `${chipText ? ' · ' : ''}${(msg.durationMs / 1000).toFixed(1)} s`;
 
   return h('div.kmsg', { dataset: { id: msg.id } },
     h('div.who', null, 
@@ -256,6 +280,7 @@ function renderMessage(msg) {
       chipText ? h('span.chip', null, chipText) : null
     ),
     msg.origin === 'voice' ? h('div.msg-voice-tag', null, 'Spoken · ' + relative(msg.ts)) : null,
+    toolCards(msg.tools),
     body,
     msg.stopped ? h('p.t-meta.faint', { style: { marginTop: 'var(--space-3)' } }, 'Stopped before finishing.') : null,
     !msg.streaming && !msg.failed ? messageActions(msg) : null,
@@ -300,9 +325,16 @@ async function send(text, attachments = []) {
     if (prefix) wire[wire.length - 1] = { role: 'user', content: `${trimmed}\n${prefix}`.slice(0, 120000) };
 
     let acc = '';
+    const tools = [];
+    const startedAt = Date.now();
     await streamChat(wire, {
       signal: ctl.signal,
       threadId: conv.active()?.id,
+      onTool: (tool) => {
+        tools.push(tool);
+        document.querySelector(`.kmsg[data-id="${assistant.id}"] .toolcards`)?.replaceWith(toolCards(tools));
+        announce(tool.label);
+      },
       onToken: (t) => {
         acc += t;
         patchStreaming(assistant.id, acc);
@@ -316,14 +348,14 @@ async function send(text, attachments = []) {
         }
 
         await conv.updateMessage(assistant.id, {
-          content: acc, streaming: false, done: true,
+          content: acc, streaming: false, done: true, tools, durationMs: Date.now() - startedAt,
           model: info.model || store.models.current, stopped: !!info.stopped,
         });
         announce(acc);
         window.dispatchEvent(new CustomEvent('kalki:stream-end'));
       },
       onError: async (e) => {
-        await conv.updateMessage(assistant.id, { content: acc, streaming: false, failed: !acc, error: e.message, detail: e.detail });
+        await conv.updateMessage(assistant.id, { tools, content: acc, streaming: false, failed: !acc, error: e.message, detail: e.detail });
         if (acc) toast({ kind: 'warning', text: 'The reply was cut short.' });
         window.dispatchEvent(new CustomEvent('kalki:stream-end'));
       },
@@ -500,12 +532,11 @@ function composer() {
           }, modelLabel(store.models.current) || 'auto', icon('chev', 16))
         ),
         h('div.row.g8', null,
-          h('span.xs.mut', { id: 'context-meter-comp' }, ''),
           sendBtn
         )
       )
     ),
-    h('div.xs', { style: { color: 'var(--faint)', marginTop: '8px' } }, 'Enter to send · Shift+Enter for a new line · Esc stops a reply · drop files to attach'),
+    h('div.xs', { style: { color: 'var(--mut)', marginTop: '8px' } }, 'Enter to send · Shift+Enter for a new line · Esc stops a reply · drop files to attach'),
     fileInput,
   );
 
@@ -572,46 +603,79 @@ export function askView() {
   liveRegion = h('div.sr-only', { role: 'status', 'aria-live': 'polite', 'aria-atomic': 'false' });
   const c = composer();
 
-  const suggestionPills = [
-    { text: "What's on my schedule today?", icon: 'calendar' },
-    { text: 'Summarize recent notes', icon: 'note' },
-    { text: 'System health check', icon: 'cpu' },
-    { text: 'Start focus session', icon: 'clock' },
-    { text: 'Interact with AI companion', icon: 'pet', action: () => triggerPetReaction('happy', 3000, 'Ready to assist, Sir! ✨') },
+  // Quick actions: each one does what it says.
+  const startWith = (text) => {
+    c.ta.value = text;
+    c.ta.focus();
+    c.ta.setSelectionRange(text.length, text.length);
+    c.ta.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+  const quickActions = [
+    { title: 'Research', sub: 'Search the web and summarise', icon: 'search', run: () => startWith('Research ') },
+    { title: 'Build', sub: 'Write, run or debug code', icon: 'code', run: () => go('workbench') },
+    { title: 'Automate', sub: 'Routines that run for you', icon: 'flow', run: () => go('workbench') },
+    { title: 'Analyze', sub: 'Files, data and PDFs', icon: 'layers', run: () => document.getElementById('composer-file')?.click() },
   ];
+  const actionsRow = h('div.quick-actions', null, ...quickActions.map((q) =>
+    h('button.quick-card', { type: 'button', onClick: q.run },
+      h('span.quick-icon', null, icon(q.icon, 18)),
+      h('span.quick-title', null, q.title),
+      h('span.quick-sub', null, q.sub))));
 
-  const pillsContainer = h('div.welcome-pills', null,
-    ...suggestionPills.map((p) =>
-      h('button.suggestion-pill', {
-        type: 'button',
-        onClick: () => {
-          if (p.action) {
-            p.action();
-            return;
-          }
-          c.ta.value = p.text;
-          c.ta.value = '';
-          c.ta.style.height = 'auto';
-          send(p.text, []);
-        },
-      }, icon(p.icon, 14), p.text)
-    )
-  );
+  const glance = h('section.glance', { 'aria-label': 'Today at a glance' });
+  function paintGlance() {
+    const td = store.today || {};
+    const st = store.status || {};
+    const open = (td.tasks || []).filter((t) => !t.done);
+    const rems = td.reminders || [];
+    const bar = (label, value) => h('div.glance-bar', null,
+      h('span', null, label),
+      h('span.meter', null, h('i', { style: { width: `${Math.max(0, Math.min(100, value || 0))}%` } })),
+      h('span.glance-num', null, typeof value === 'number' ? `${Math.round(value)}%` : '—'));
+    mount(glance,
+      h('div.glance-head', null, h('h2', null, 'Today at a glance'),
+        h('span.glance-date', null, new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }))),
+      h('div.glance-grid', null,
+        h('button.glance-card', { type: 'button', onClick: () => go('today') },
+          h('span.glance-title', null, icon('check', 15), `Tasks · ${open.length}`),
+          open.length
+            ? h('ul.glance-list', null, ...open.slice(0, 3).map((t) => h('li', null, t.text)))
+            : h('span.glance-empty', null, 'Nothing open')),
+        h('button.glance-card', { type: 'button', onClick: () => go('today') },
+          h('span.glance-title', null, icon('flag', 15), `Reminders · ${rems.length}`),
+          rems.length
+            ? h('ul.glance-list', null, ...rems.slice(0, 3).map((r) => h('li', null, r.text)))
+            : h('span.glance-empty', null, 'Nothing scheduled')),
+        h('div.glance-card', null,
+          h('span.glance-title', null, icon('cpu', 15), 'This PC'),
+          bar('CPU', st.cpu), bar('RAM', st.ram), bar('Disk', st.disk)),
+        h('div.glance-card', null,
+          h('span.glance-title', null, icon('ask', 15), 'Recent conversations'),
+          ...(() => {
+            const recentThreads = conv.searchThreads('').filter((t) => t.messages?.length).slice(0, 3);
+            return recentThreads.length
+              ? recentThreads.map((t) => h('button.glance-link', { type: 'button', onClick: () => conv.switchThread(t.id) }, t.title || 'Untitled'))
+              : [h('span.glance-empty', null, 'Your conversations will show here')];
+          })())));
+  }
 
   const composerSlot = h('div.welcome-comp-slot');
   if (!conv.active()?.messages?.length) {
     composerSlot.appendChild(c.el);
   }
 
+  const welcomeTitle = h('h2.welcome-title', null, getGreeting());
+
   const welcomeWrap = h('div.welcome-stage', null,
+    h('div.welcome-art', null, mountainArt()),
     h('div.welcome-inner', null,
       h('div.welcome-head', null,
-        h('div.welcome-icon', null, icon('ask', 30)),
-        h('h2.welcome-title', null, `${getGreeting()} — Ask KALKI`),
-        h('p.welcome-desc', null, 'Type below, attach a file, or speak. KALKI answers with neural intelligence and pairs with your live AI desk companion.'),
+        welcomeTitle,
+        h('p.welcome-desc', null, "I'm KALKI, your personal AI workspace.", h('br'), 'Ask, build, automate, research, or run tasks on your PC.'),
       ),
       composerSlot,
-      pillsContainer,
+      actionsRow,
+      glance,
     )
   );
 
@@ -637,113 +701,101 @@ export function askView() {
     }
   }, 'Ask');
 
-  const headerExportBtn = h('button.ib', {
-    type: 'button',
-    title: 'Export conversation as Markdown',
-    'aria-label': 'Export Markdown',
-    onClick: () => {
-      const cur = conv.active();
-      exportChatMarkdown(cur);
-    }
-  }, icon('export', 15));
-
-  const headerClearBtn = h('button.ib', {
-    type: 'button',
-    title: 'Clear active conversation messages',
-    'aria-label': 'Clear messages',
-    onClick: async () => {
-      const cur = conv.active();
-      if (!cur || !cur.messages?.length) {
-        ok('Conversation is already empty');
-        return;
-      }
-      const confirmed = await confirmDialog({
-        title: 'Clear conversation messages?',
-        description: `Permanently clear all ${cur.messages.length} messages in "${cur.title || 'this conversation'}"? The conversation thread itself will remain.`,
-        confirmLabel: 'Clear messages',
-        danger: true,
-      });
-      if (confirmed) {
-        await conv.setThread(cur.id, { messages: [] });
-        ok('Messages cleared');
-        main.render();
-      }
-    }
-  }, icon('trash', 15));
-
-  const headerPetBtn = h('button.ib', {
-    type: 'button',
-    title: 'AI Companion Pet settings',
-    'aria-label': 'Companion Pet',
-    onClick: () => openPetSettings()
-  }, icon('pet', 15));
-
-  const headerPinBtn = h('button.ib', {
-    type: 'button',
-    title: 'Pin / unpin conversation',
-    'aria-label': 'Pin conversation',
-    onClick: async () => {
-      const cur = conv.active();
-      if (!cur) return;
-      await conv.setThread(cur.id, { pinned: !cur.pinned });
-      headerPinBtn.classList.toggle('is-active', !!cur.pinned);
+  const renameThread = async () => {
+    const cur = conv.active();
+    if (!cur) return;
+    const next = await promptDialog({
+      title: 'Rename conversation',
+      label: 'Conversation title',
+      defaultValue: cur.title || 'Conversation',
+      confirmLabel: 'Save title',
+    });
+    if (next && next.trim()) {
+      await conv.setThread(cur.id, { title: next.trim() });
+      ok('Renamed conversation');
       renderHist();
-      ok(cur.pinned ? 'Pinned conversation' : 'Unpinned conversation');
+      main.render();
     }
-  }, icon('pin', 15));
+  };
+
+  const clearThread = async () => {
+    const cur = conv.active();
+    if (!cur || !cur.messages?.length) {
+      ok('This conversation is already empty');
+      return;
+    }
+    const confirmed = await confirmDialog({
+      title: 'Clear this conversation?',
+      description: `This permanently removes all ${cur.messages.length} messages in "${cur.title || 'this conversation'}".`,
+      confirmLabel: 'Clear messages',
+      danger: true,
+    });
+    if (confirmed) {
+      await conv.setThread(cur.id, { messages: [] });
+      ok('Messages cleared');
+      main.render();
+    }
+  };
+
+  const deleteThread = async () => {
+    const cur = conv.active();
+    if (!cur) return;
+    const confirmed = await confirmDialog({
+      title: 'Delete this conversation?',
+      description: `"${cur.title || 'This conversation'}" will be permanently deleted.`,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (confirmed) {
+      await conv.removeThread(cur.id);
+      ok('Conversation deleted');
+      renderHist();
+      main.render();
+    }
+  };
+
+  const togglePinned = async () => {
+    const cur = conv.active();
+    if (!cur) return;
+    const pinned = !cur.pinned;
+    await conv.setThread(cur.id, { pinned });
+    renderHist();
+    ok(pinned ? 'Pinned conversation' : 'Unpinned conversation');
+  };
 
   const headerDotsBtn = h('button.ib', {
     type: 'button',
     title: 'Conversation options',
     'aria-label': 'Conversation options',
-    onClick: async () => {
+    'aria-haspopup': 'menu',
+    'aria-expanded': 'false',
+    onClick: () => {
       const cur = conv.active();
-      if (!cur) return;
-      const choice = await promptDialog({
-        title: 'Manage Conversation',
-        label: 'Enter new title, or type "export" / "delete":',
-        defaultValue: cur.title || 'New conversation',
-        confirmLabel: 'Apply',
-      });
-      if (!choice) return;
-      const trimmed = choice.trim();
-      if (trimmed.toLowerCase() === 'delete') {
-        await conv.removeThread(cur.id);
-        ok('Conversation deleted');
-        renderHist();
-        main.render();
-      } else if (trimmed.toLowerCase() === 'export') {
-        exportChatMarkdown(cur);
-      } else if (trimmed) {
-        await conv.setThread(cur.id, { title: trimmed });
-        ok('Renamed conversation');
-        renderHist();
-        main.render();
-      }
-    }
+      openMenu(headerDotsBtn, [
+        { label: 'Rename', icon: 'edit', run: renameThread },
+        { label: cur?.pinned ? 'Unpin' : 'Pin', icon: 'pin', run: togglePinned },
+        { label: 'Export as Markdown', icon: 'export', run: () => exportChatMarkdown(cur) },
+        'rule',
+        { label: 'Clear messages', icon: 'trash', run: clearThread },
+        { label: 'Delete conversation', icon: 'close', danger: true, run: deleteThread },
+      ]);
+    },
   }, icon('dots', 15));
+
+  const approvalSlot = h('div.approval-slot');
 
   const threadEl = h('div.thread', null, 
     h('div.th-h', null, 
-      h('div', null, 
-        headerTitleEl, 
-        h('div.sub', { id: 'context-meter-header' }, '')
-      ), 
-      h('div.row.g4', null,
-        headerExportBtn,
-        headerClearBtn,
-        headerPetBtn,
-        headerPinBtn, 
-        headerDotsBtn
-      )
+      headerTitleEl,
+      headerDotsBtn
     ), 
     welcomeWrap,
     inner,
+    approvalSlot,
     c.el
   );
 
-  // Mount interactive Companion Pet in Ask thread
-  createPetCompanion(threadEl);
+  const removePet = createPetCompanion(threadEl);
 
   scroller = stickyScroll(inner);
 
@@ -753,6 +805,7 @@ export function askView() {
   const searchInput = h('input', {
     type: 'search',
     placeholder: 'Search conversations',
+    'aria-label': 'Search conversations',
     style: { border: 'none', background: 'transparent', flex: '1', outline: 'none', color: 'inherit', fontSize: '13px' },
     onInput: (e) => { histSearchQuery = e.target.value; renderHist(); },
   });
@@ -771,7 +824,14 @@ export function askView() {
 
     const activeId = conv.active()?.id;
     const row = (t) => {
-      const el = h('div.t', { onClick: () => conv.switchThread(t.id), title: t.title || 'Untitled' });
+      const el = h('div.t', {
+        role: 'button',
+        tabindex: '0',
+        'aria-current': t.id === activeId ? 'true' : null,
+        onClick: () => conv.switchThread(t.id),
+        onKeydown: (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === el) { e.preventDefault(); conv.switchThread(t.id); } },
+        title: t.title || 'Untitled',
+      });
       if (t.id === activeId) el.classList.add('s');
       if (t.pinned) el.append(icon('pin', 12));
       const lbl = h('span', null, t.title || 'Untitled');
@@ -871,12 +931,6 @@ export function askView() {
   const asideNextUp    = h('div.card.row', null, h('div.xs.mut', null, '—'));
   const asideTasksList = h('div.card');
   const asideTaskCount = h('span.xs.mut', null, '—');
-  const asideInboxTxt  = h('span.sm', null, '—');
-  const asideInboxChip = h('span.chip', null, '—');
-  const asideVoiceWake = h('span.mono.xs.t2', null, '—');
-  const asideVoiceTTS  = h('span.xs.t2', null, '—');
-  const asideVoiceChip = h('span.chip', null, '—');
-  const asideSys       = h('div.card.col.g8', { id: 'sys' });
 
   function renderAside() {
     const st = store.status;
@@ -908,56 +962,15 @@ export function askView() {
         : h('div.li', null, h('span.sm.mut', null, 'No open tasks'))
     );
 
-    // Inbox
-    const unread = st?.unreadImportant ?? 0;
-    if (st && !st.mailConfigured) {
-      asideInboxTxt.textContent = 'Mail isn\'t connected';
-      mount(asideInboxChip, 'Not connected');
-      asideInboxChip.className = 'chip';
-    } else {
-      asideInboxTxt.textContent = `${unread} unread important`;
-      mount(asideInboxChip, unread === 0 ? 'All clear' : `${unread} to read`);
-      asideInboxChip.className = 'chip ' + (unread === 0 ? 'ok' : 'warn');
-    }
-
-    // Voice
-    asideVoiceWake.textContent = st?.wakeWords || 'hey kalki';
-    asideVoiceTTS.textContent  = st?.ttsVoice  || '—';
-    const micReady = !!st?.listenerOnline && (store.voice?.state === 'attending' || store.voice?.state === 'idle');
-    mount(asideVoiceChip, micReady ? 'Mic ready' : (st && !st.listenerOnline ? 'Voice off' : (store.voice?.state || '—')));
-    asideVoiceChip.className = 'chip ' + (micReady ? 'ok' : '');
-
-    // System
-    if (st) {
-      const uh = Math.floor((st.uptimeSec || 0) / 3600);
-      const um = Math.floor(((st.uptimeSec || 0) % 3600) / 60);
-      mount(asideSys,
-        h('div.row.sb', null, h('span.xs.mut', null, 'CPU'),    h('span.mono.xs', null, `${st.cpu ?? '—'}%`)),
-        h('div.row.sb', null, h('span.xs.mut', null, 'RAM'),    h('span.mono.xs', null, `${st.ram ?? '—'}%`)),
-        h('div.row.sb', null, h('span.xs.mut', null, 'Model'),  h('span.mono.xs', null, st.model || '—')),
-        h('div.row.sb', null, h('span.xs.mut', null, 'Uptime'), h('span.mono.xs', null, uh ? `${uh} h ${um} m` : `${um} m`))
-      );
-    }
-
     renderHist();
   }
 
   const aside = frag(
-    h('div.row.sb', null, h('h1', { style: { fontSize: '16px' } }, 'Context'), icon('panel', 16)),
     h('div.col.g8', null, h('h2', null, 'Next up'), asideNextUp),
     h('div.col.g8', null, h('div.row.sb', null, h('h2', null, 'Tasks'), asideTaskCount), asideTasksList),
-    h('div.col.g8', null, h('h2', null, 'Inbox'), h('div.card.row.sb', null, asideInboxTxt, asideInboxChip)),
     h('div.col.g8', null, h('h2', null, 'Now playing'), h('div.card.col.g8', { id: 'music-panel' },
       h('div.xs.mut', { style: { textAlign: 'center', padding: '8px' } }, 'Loading…')
-    )),
-    h('div.col.g8', null, h('div.row.sb', null, h('h2', null, 'System'), h('span.xs.mut', null, 'Live')), asideSys),
-    h('div.col.g8', null, h('h2', null, 'Voice'),
-      h('div.card.col.g8', null,
-        h('div.row.sb', null, h('span.xs.mut', null, 'Wake words'), asideVoiceChip),
-        asideVoiceWake,
-        h('div.row.sb', null, h('span.xs.mut', null, 'Speech'), asideVoiceTTS)
-      )
-    )
+    ))
   );
 
   main.render = () => {
@@ -976,7 +989,7 @@ export function askView() {
       welcomeWrap.hidden = true;
       inner.hidden = false;
       threadEl.classList.remove('is-empty');
-      if (threadEl.lastElementChild !== c.el) {
+      if (c.el.parentElement !== threadEl) {
         const wasFocused = document.activeElement === c.ta;
         threadEl.appendChild(c.el);
         if (wasFocused) c.ta.focus();
@@ -997,15 +1010,17 @@ export function askView() {
       mount(chip, modelLabel(store.models.current) || 'auto', icon('chev', 16));
     }
 
-    const ctx = store.conv.contextTurns
-        ? `${store.conv.contextTurns} of ${store.conv.maxTurns} turns in context`
-        : `${store.conv.maxTurns} turns of context`;
+    welcomeTitle.textContent = getGreeting();
+    if (!welcomeWrap.hidden) paintGlance();
+    document.body.classList.toggle('ask-home', !welcomeWrap.hidden);
 
-    const meter1 = main.querySelector('#context-meter-header');
-    if (meter1) meter1.textContent = ctx;
-
-    const meter2 = main.querySelector('#context-meter-comp');
-    if (meter2) meter2.textContent = ctx;
+    const waitingNow = waitingApprovals();
+    const shownIds = waitingNow.map((a) => a.id).join('|');
+    if (approvalSlot.dataset.ids !== shownIds) {
+      approvalSlot.dataset.ids = shownIds;
+      mount(approvalSlot, ...waitingNow.slice(0, 1).map((a) => approvalCard(a, { position: 1, total: waitingNow.length })));
+      scroller?.toBottom();
+    }
 
     c.sendBtn.classList.toggle('is-stop', store.conv.streaming);
     c.sendBtn.setAttribute('aria-label', store.conv.streaming ? 'Stop generating' : 'Send message');
@@ -1254,7 +1269,13 @@ export function askView() {
   };
   main.render = view.render;
 
+  const onAskEvent = (e) => { if (e.detail) send(String(e.detail), []); };
+  window.addEventListener('kalki:ask', onAskEvent);
+
   view.cleanup = () => {
+    removePet();
+    document.body.classList.remove('ask-home');
+    window.removeEventListener('kalki:ask', onAskEvent);
     clearTimeout(mediaTimer);
     mediaTimer = null;
     window.removeEventListener('pointerdown', onActivity);

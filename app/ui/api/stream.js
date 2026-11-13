@@ -14,7 +14,7 @@ import { post } from './client.js';
  *          signal?:AbortSignal, clientSpeech?:boolean}} handlers
  */
 export async function streamChat(messages, handlers) {
-  const { onToken, onDone, onError, signal, clientSpeech, threadId } = handlers;
+  const { onToken, onTool, onDone, onError, signal, clientSpeech, threadId } = handlers;
   let stopped = false;
 
   const onAbort = () => { stopped = true; post('/api/stop', {}).catch(() => {}); };
@@ -39,6 +39,7 @@ export async function streamChat(messages, handlers) {
     const decoder = new TextDecoder();
     let buffer = '';
     let model;
+    let sawFrame = false;
 
     while (true) {
       const { value, done } = await reader.read();
@@ -50,11 +51,20 @@ export async function streamChat(messages, handlers) {
         const frame = buffer.slice(0, cut).trim();
         buffer = buffer.slice(cut + 2);
         if (!frame.startsWith('data:')) continue;
+        sawFrame = true;
         let payload;
         try { payload = JSON.parse(frame.slice(5).trim()); } catch { continue; }
+        if (payload.tool) onTool?.(payload.tool);
         if (typeof payload.token === 'string' && payload.token) onToken(payload.token);
         if (payload.done) { model = payload.model || model; onDone({ model }); return; }
       }
+    }
+    // The server answers with plain JSON, not a stream, when the AI fails before its first word.
+    if (!sawFrame && !stopped) {
+      let detail = buffer.trim();
+      try { detail = JSON.parse(detail).error || detail; } catch { /* Not JSON: show it as it is. */ }
+      onError({ message: "KALKI couldn't get an answer from the AI service.", detail });
+      return;
     }
     onDone({ model, truncated: !stopped });
   } catch (err) {

@@ -1,6 +1,6 @@
 /** Today — the context surface. Tasks, reminders, notes, agenda, mail, focus.
  *
- *  Executive daily briefing dashboard integrating Google Calendar, Morning Briefing,
+ *  Your day in order of urgency, integrating Google Calendar, Morning Briefing,
  *  tasks, reminders, quick notes, focus session, and universal media playback. */
 
 import { h, mount, frag } from '../lib/dom.js';
@@ -148,7 +148,7 @@ export function openGoogleCalendarGuide() {
         h('div.xs.mut', { style: { marginTop: '4px' } }, 'Click "Connect Account" below to launch the OAuth consent screen. Sign in to your Google Account.')
       ),
       h('div.card', { style: { background: 'var(--inset)', border: '1px solid var(--line)', padding: '12px' } },
-        h('div.nm', null, h('strong', null, '3. Executive Briefing Integration')),
+        h('div.nm', null, h('strong', null, '3. Morning briefing')),
         h('div.xs.mut', { style: { marginTop: '4px' } }, 'KALKI synchronizes today’s appointments, surfaces Google Meet links, and includes your schedule in morning voice briefings.')
       )
     ),
@@ -255,6 +255,7 @@ export function todayView() {
 
   const taskInput = h('input', {
     placeholder: 'Add a task, press Enter',
+    'aria-label': 'Add a task',
     style: { border: 'none', background: 'transparent', flex: '1', outline: 'none', color: 'inherit' },
     onInput: (e) => { taskDraft = e.target.value; },
   });
@@ -273,6 +274,7 @@ export function todayView() {
 
   const noteInput = h('input', {
     placeholder: 'Capture a thought or search notes',
+    'aria-label': 'Add a note',
     style: { border: 'none', background: 'transparent', flex: '1', outline: 'none', color: 'inherit' },
     onInput: (e) => { noteDraft = e.target.value; },
   });
@@ -296,70 +298,37 @@ export function todayView() {
 
     const hd = h('div.hd', null,
       h('div', null,
-        h('h1', null, (() => { const hr = new Date().getHours(); return hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening'; })()),
-        h('div.sub', null, new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' · Executive Daily Briefing')
+        h('h1', { id: 'view-title', tabindex: '-1' }, (() => { const hr = new Date().getHours(); return hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening'; })()),
+        h('div.sub', null, new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))
       ),
       h('div.row.g8', null,
-        h('button.btn', { type: 'button', title: 'Refresh briefing and agenda', onClick: async () => { ok('Refreshing briefing…'); await loadToday(); } }, h('i', { 'data-i': 'refresh' }), 'Refresh'),
-        h('button.btn', { type: 'button', onClick: async () => { const text = await promptDialog({ title: 'New note', label: 'Quick capture thought…', confirmLabel: 'Save' }); if (text) addNote(text); } }, h('i', { 'data-i': 'plus' }), 'Quick note'),
-        h('button.btn.pri', { type: 'button', onClick: async () => { await system.command('start a focus session'); setTimeout(syncFocus, 600); } }, h('i', { 'data-i': 'play' }), 'Start focus session')
+        h('button.btn', { type: 'button', title: 'Refresh Today', onClick: async () => { await loadToday(); ok('Up to date'); } }, h('i', { 'data-i': 'refresh' }), 'Refresh'),
+        h('button.btn', { type: 'button', onClick: async () => { const text = await promptDialog({ title: 'New note', label: 'Note', confirmLabel: 'Save' }); if (text) addNote(text); } }, h('i', { 'data-i': 'plus' }), 'Quick note')
       )
     );
 
-    // Executive KPI Summary Strip
     const f = d.focus;
-    const statStrip = h('div', {
-      style: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '12px',
-        marginBottom: '16px'
-      }
-    },
-      h('div.card.col.g4', { style: { padding: '10px 14px' } },
-        h('div.xs.mut', null, 'Agenda Today'),
-        h('div.row.sb', { style: { alignItems: 'baseline' } },
-          h('strong', { style: { fontSize: '18px' } }, d.calendarConfigured === false ? 'Unlinked' : String(d.events?.length || 0)),
-          h('span.xs.t2', null, d.calendarConfigured === false ? 'Google' : 'events')
-        )
-      ),
-      h('div.card.col.g4', { style: { padding: '10px 14px' } },
-        h('div.xs.mut', null, 'Open Actions'),
-        h('div.row.sb', { style: { alignItems: 'baseline' } },
-          h('strong', { style: { fontSize: '18px' } }, String(d.tasks?.length || 0)),
-          h('span.xs.t2', null, 'tasks')
-        )
-      ),
-      h('div.card.col.g4', { style: { padding: '10px 14px' } },
-        h('div.xs.mut', null, 'Scheduled Reminders'),
-        h('div.row.sb', { style: { alignItems: 'baseline' } },
-          h('strong', { style: { fontSize: '18px' } }, String(d.reminders?.length || 0)),
-          h('span.xs.t2', null, 'alerts')
-        )
-      ),
-      h('div.card.col.g4', { style: { padding: '10px 14px' } },
-        h('div.xs.mut', null, 'Focus Session'),
-        h('div.row.sb', { style: { alignItems: 'baseline' } },
-          h('strong', { style: { fontSize: '18px' } }, f?.active ? clock(f.remainingSec) : `${f?.minutes || 25}:00`),
-          h('span.chip' + (f?.active ? '.ok' : ''), { style: { fontSize: '10px', padding: '1px 5px' } }, f?.active ? 'Active' : 'Ready')
-        )
-      )
-    );
+
+    // What needs you right now comes first, and only appears when something does.
+    const dueNow = (d.reminders || []).filter((r) => r.due && new Date(r.due).getTime() <= Date.now());
+    const nowItems = [];
+    for (const r of dueNow.slice(0, 3)) {
+      nowItems.push(h('div.today-alert', null, h('i', { 'data-i': 'flag' }),
+        h('div.grow', null, h('strong', null, r.text), h('div.xs.mut', null, 'Reminder due'))));
+    }
+    const nowBlock = nowItems.length ? h('div.today-now', null, ...nowItems) : null;
 
     // Morning Briefing Card
     const briefingCard = (d.briefing && !d.snoozedBriefing) ? h('div.card', {
       style: {
-        marginBottom: '16px',
-        borderLeft: '4px solid var(--fil, #e08c33)',
-        background: 'linear-gradient(90deg, rgba(224, 140, 51, 0.05) 0%, transparent 100%)'
+        marginBottom: '16px'
       }
     },
       h('div.row.sb', null,
         h('span.row.g8', null,
-          h('h2', null, 'Morning briefing'),
-          h('span.chip.ok', null, 'Executive summary')
+          h('h2', null, 'Morning briefing')
         ),
-        h('span.xs.mut', null, 'Prepared 08:00 · KALKI voice synthesis ready')
+        null
       ),
       h('div', { style: { marginTop: '10px', lineHeight: '1.6', color: 'var(--text)' } },
         typeof d.briefing === 'string' ? h('div.sm', null, d.briefing) : h('div.sm', null, JSON.stringify(d.briefing))
@@ -368,7 +337,6 @@ export function todayView() {
         h('button.btn.pri', {
           type: 'button',
           onClick: async () => {
-            ok('Reading morning briefing aloud…');
             const r = await system.command('read morning briefing');
             if (!r.ok) err(r.message, r.detail);
           }
@@ -392,55 +360,7 @@ export function todayView() {
     // Agenda Section
     let agendaContent;
     if (d.calendarConfigured === false) {
-      agendaContent = h('div.card', {
-        style: {
-          background: 'linear-gradient(135deg, rgba(66, 133, 244, 0.08), rgba(219, 68, 55, 0.04), rgba(244, 180, 0, 0.04), rgba(15, 157, 88, 0.08))',
-          border: '1px solid rgba(66, 133, 244, 0.25)',
-          padding: '16px',
-          borderRadius: '8px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px'
-        }
-      },
-        h('div.row.sb', null,
-          h('div.row.g8', { style: { alignItems: 'center' } },
-            h('div', {
-              style: {
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                background: 'rgba(66, 133, 244, 0.15)',
-                display: 'grid',
-                placeItems: 'center',
-                color: '#4285f4'
-              }
-            }, h('i', { 'data-i': 'calendar' })),
-            h('div', null,
-              h('strong', { style: { fontSize: '14px', display: 'block' } }, 'Connect Google Calendar'),
-              h('div.xs.mut', null, 'Sync agenda, appointments, and Google Meet links')
-            )
-          ),
-          h('span.chip.warn', null, 'Not connected')
-        ),
-        h('div.sm', { style: { color: 'var(--t2)', lineHeight: '1.4' } },
-          'Connect your Google Calendar account to see today\u2019s schedule, join video calls in one click, and receive proactive morning agenda briefings.'
-        ),
-        h('div.row.g8', null,
-          h('button.btn.pri', {
-            type: 'button',
-            onClick: connectGoogleCalendar
-          }, h('i', { 'data-i': 'link' }), 'Connect Account'),
-          h('button.btn.gh', {
-            type: 'button',
-            onClick: openGoogleCalendarGuide
-          }, 'Setup guide'),
-          h('button.btn.gh', {
-            type: 'button',
-            onClick: () => go('settings', { section: 'integrations' })
-          }, 'Settings')
-        )
-      );
+      agendaContent = h('div.li', null, h('span.mut', { style: { flex: '1' } }, 'Connect a calendar to see your day here.'));
     } else if (d.agendaError) {
       agendaContent = h('div.li', null, h('div.nm', null, "Calendar didn't load: " + (d.agendaError.message || 'unknown error')));
     } else if (d.events && d.events.length) {
@@ -485,16 +405,11 @@ export function todayView() {
         );
       }));
     } else {
-      agendaContent = h('div.li', null, h('div', { style: { flex: '1' } }, h('div.nm', null, 'Nothing on the calendar today'), h('div.xs.mut', null, 'Your daily schedule is clear')));
+      agendaContent = h('div.li', null, h('div', { style: { flex: '1' } }, h('div.nm', null, 'Nothing on the calendar today')));
     }
 
     const agendaCard = h('div.card', null,
-      h('div.row.sb', null,
-        h('h2', null, 'Agenda'),
-        d.calendarConfigured === false
-          ? h('span.chip.warn', null, 'Not connected')
-          : h('span.chip.ok', null, 'Google Calendar')
-      ),
+      h('h2', null, 'Agenda'),
       agendaContent
     );
 
@@ -518,7 +433,7 @@ export function todayView() {
       for (const [time, items] of Object.entries(rGroups)) {
         remsEl.push(h('div.xs.mut', { style: { margin: '10px 0 2px' } }, time));
         for (const r of items) {
-          remsEl.push(h('div.li', null, h('i.mut', { 'data-i': 'flag' }), h('span', { style: { flex: '1' } }, r.text), h('span.mono.xs.t2', null, '')));
+          remsEl.push(h('div.li', null, h('i.mut', { 'data-i': 'flag' }), h('span', { style: { flex: '1' } }, r.text), null));
         }
       }
     } else {
@@ -549,7 +464,7 @@ export function todayView() {
       h('div.meter', null, h('i', { style: { width: f?.active && f.minutes ? `${100 - (f.remainingSec / (f.minutes * 60) * 100)}%` : '0%' } })),
       h('div.row.g8', null,
         f?.active
-          ? h('button.btn.pri', { type: 'button', onClick: () => ok(`Focus session running: ${clock(f.remainingSec)} remaining`) }, 'Running')
+          ? h('button.btn.pri', { type: 'button', onClick: () => ok(`${clock(f.remainingSec)} left`) }, 'Running')
           : h('button.btn.pri', { type: 'button', onClick: async () => { await system.command('start a focus session'); setTimeout(syncFocus, 600); } }, 'Start session'),
         h('button.btn.gh', {
           type: 'button',
@@ -564,22 +479,26 @@ export function todayView() {
       )
     );
 
-    // Inbox
+    // One row for every account that isn't connected yet, instead of a card for each.
     const liveStatus = store.status;
-    const inboxCard = h('div.card.col.g12', null,
-      h('h2', null, 'Inbox and code'),
-      h('div.row.sb', null, h('span', null, 'Important mail'), liveStatus?.mailConfigured
-        ? h('span.mono', null, `${liveStatus.unreadImportant ?? 0} unread`)
-        : h('span.chip', null, 'Not connected')),
-      h('div.rule', null),
-      h('div.row.sb', null, h('span', null, 'GitHub'), liveStatus?.githubConfigured
-        ? h('span.chip.ok', null, 'Connected')
-        : h('span.chip', null, 'Not connected'))
-    );
+    const missing = [
+      d.calendarConfigured === false ? 'calendar' : null,
+      liveStatus && !liveStatus.mailConfigured ? 'email' : null,
+      liveStatus && !liveStatus.githubConfigured ? 'GitHub' : null,
+    ].filter(Boolean);
+    const connectRow = missing.length ? h('div.connect-row', null, h('i', { 'data-i': 'link' }),
+      h('div.grow', null, h('strong', null, 'Connect your accounts'),
+        h('div.xs.mut', null, `Add your ${missing.join(', ').replace(/, ([^,]*)$/, ' and $1')} to see them here.`)),
+      d.calendarConfigured === false ? h('button.btn.gh', { type: 'button', onClick: openGoogleCalendarGuide }, 'Calendar help') : null,
+      h('button.btn', { type: 'button', onClick: () => go('settings', { section: 'integrations' }) }, 'Connect')
+    ) : null;
+    const unreadRow = liveStatus?.mailConfigured && liveStatus.unreadImportant
+      ? h('div.today-alert', null, h('i', { 'data-i': 'mail' }), h('div.grow', null, h('strong', null, `${liveStatus.unreadImportant} important unread`)))
+      : null;
 
     const wasTaskFocused = document.activeElement === taskInput;
     const wasNoteFocused = document.activeElement === noteInput;
-    mount(main, hd, statStrip, briefingCard, h('div.grid2', null, agendaCard, tasksCard, remsCard, notesCard, focusCard, inboxCard));
+    mount(main, hd, nowBlock, unreadRow, briefingCard, h('div.grid2', null, agendaCard, tasksCard, remsCard, focusCard, notesCard), connectRow);
     if (wasTaskFocused && taskInput) {
       taskInput.focus();
       taskInput.selectionStart = taskInput.selectionEnd = taskInput.value.length;
@@ -642,48 +561,10 @@ export function todayView() {
 
     const musicSection = h('div.col.g8', null, h('h2', null, 'Music'), musicCard);
 
-    const clipboardCard = h('div.col.g8', null,
-      h('h2', null, 'Clipboard'),
-      h('div.card.col.g8', null,
-        h('div.sm', null, 'KALKI noticed a long block of text. Analyse it?'),
-        h('div.row.g8', null,
-          h('button.btn.pri', {
-            type: 'button',
-            onClick: async () => {
-              let clip = '';
-              try { clip = await navigator.clipboard?.readText(); } catch { /* ignore */ }
-              go('ask');
-              if (clip && clip.trim()) {
-                setTimeout(() => {
-                  const composerTa = document.querySelector('textarea.composer-ta');
-                  if (composerTa) {
-                    composerTa.value = `Please analyse this text:\n\n${clip.trim()}`;
-                    composerTa.focus();
-                  }
-                }, 100);
-              }
-            }
-          }, 'Yes, analyse'),
-          h('button.btn.gh', {
-            type: 'button',
-            onClick: () => {
-              sessionStorage.setItem('kalki.ignoreClipboard', '1');
-              ok('Clipboard suggestion dismissed');
-              clipboardCard.style.display = 'none';
-            }
-          }, 'Ignore')
-        )
-      )
-    );
-    if (sessionStorage.getItem('kalki.ignoreClipboard') === '1') {
-      clipboardCard.style.display = 'none';
-    }
-
     mount(aside, frag(
-      h('h1', { style: { fontSize: '16px' } }, 'Dashboard'),
+      h('h2', null, 'This PC'),
       dashboardCard,
-      musicSection,
-      clipboardCard
+      musicSection
     ));
   };
 

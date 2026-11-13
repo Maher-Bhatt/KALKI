@@ -1,7 +1,7 @@
-/** Security & Antivirus Shield Center.
+/** Security: check-ups, Wi-Fi safety and security tools.
  *
  *  Unified safety & intelligence suite:
- *  1. KALKI ShieldCore Antivirus: Windows Defender integration, live scan terminal,
+ *  1. Security check-up: Windows Defender integration, live scan terminal,
  *     heuristic static analyzer, cryptominer detection, and quarantine vault.
  *  2. Cyber Tools Direct Viewer: Comprehensive visual directory of all 12 cybersecurity
  *     modules with category filters, plain-English security guides, and presets.
@@ -12,7 +12,7 @@ import { h, mount } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { bytes, relative, dateTime } from '../lib/format.js';
 import { cyber, antivirus, desktop, wifi } from '../api/endpoints.js';
-import { emptyState, loadingRow } from '../components/states.js';
+import { emptyState, loadingRow, toggleSwitch, errorState } from '../components/states.js';
 import { ok, err } from '../state/toasts.js';
 
 /* ── 12 Comprehensive Cybersecurity Tools ────────────────────────── */
@@ -112,7 +112,7 @@ const CYBER_CATALOG = [
     scope: 'Offline transform',
     hint: 'Encode strings into Base64 format.',
     field: 'Text to encode',
-    preset: 'Hello from KALKI ShieldCore',
+    preset: 'Hello from KALKI',
     run: (v) => cyber.encode(v),
     desc: 'Encodes binary and text strings into standardized Base64 or Hexadecimal formats for safe network transmission.'
   },
@@ -178,6 +178,7 @@ let toolBusy = false;
 
 // Antivirus state
 let avStatus = null;
+let avError = null;
 let avScanning = false;
 let avScanType = null;
 let avScanProgress = 0;
@@ -191,6 +192,9 @@ async function fetchAvStatus() {
   const r = await antivirus.status();
   if (r.ok && r.data) {
     avStatus = r.data;
+    avError = null;
+  } else {
+    avError = r;
   }
   renderFn();
 }
@@ -209,7 +213,7 @@ async function runQuickScan() {
   avScanProgress = 10;
   avScanLogs = [];
   avScanResult = null;
-  addScanLog('Initializing KALKI ShieldCore endpoint scanner...', 'info');
+  addScanLog('Starting the check-up...', 'info');
   addScanLog('Bridging with Windows Defender MpCmdRun definitions...', 'info');
   renderFn();
 
@@ -344,7 +348,7 @@ async function quarantineThreat(filePath, threatName) {
   const r = await antivirus.quarantine(filePath, threatName || 'Generic.Threat');
   avActionBusy = false;
   if (r.ok) {
-    ok('File safely isolated in Quarantine Vault');
+    ok('File moved to quarantine');
     fetchAvStatus();
   } else {
     err('Failed to quarantine file', r.detail || r.message);
@@ -414,34 +418,45 @@ function renderAntivirus() {
   const quarantined = avStatus?.quarantined_items || [];
   const lastScan = avStatus?.last_scan;
 
-  // Hero Card
-  const heroCard = h('div.shield-hero-card.stagger-1', { class: isProtected ? 'shield-hero-card is-ok' : 'shield-hero-card is-alert' },
-    h('div.inline', { style: { gap: '18px', alignItems: 'center' } },
-      h('div.shield-hero-icon', null, icon('security', 36)),
-      h('div.stack', { style: { gap: '4px' } },
-        h('div.inline', { style: { gap: '10px', alignItems: 'center' } },
-          h('h2', { style: { margin: 0, fontSize: '18px', fontWeight: 600 } },
-            isProtected ? 'Windows Defender is protecting this PC' : (defender.available ? 'Windows Defender needs attention' : "Can't confirm Windows Defender")),
-          h('span.chip', { class: isProtected ? 'chip-ok' : 'chip-warning' },
-            isProtected ? 'Real-time protection on' : 'Not confirmed'),
-        ),
-        h('span.t-meta.muted', null,
-          'Defender does the real-time protection. KALKI adds download, process, clipboard and link checks.'),
-        h('span.t-meta', { style: { color: defender.available && defender.realtime_enabled ? '#34d399' : 'var(--mut)' } },
-          defender.available
-            ? `Windows Defender definitions: ${defender.signature_age_days === 0 ? 'updated today' : defender.signature_age_days + ' days old'}`
-            : (defender.reason || defender.error || "KALKI couldn't read Windows Defender's status.")),
-        lastScan ? h('span.t-meta.muted', null,
-          `Last scan: ${relative(lastScan.timestamp)} • ${lastScan.scanned_files || 0} files examined • ${lastScan.threats_count || 0} threats`) : null,
-      )
+  if (avError && !avStatus) {
+    return errorState({
+      title: "The check-up didn't load",
+      message: avError.message,
+      detail: avError.detail,
+      onRetry: fetchAvStatus,
+    });
+  }
+  if (!avStatus) return skeletonRows(4);
+
+  // One honest result. Each part is only stated if it was actually read.
+  const toReview = quarantined.length;
+  const age = defender.signature_age_days;
+  const definitions = !defender.available || age === undefined || age === null
+    ? null
+    : age === 0 ? 'Definitions updated today' : `Definitions ${age} day${age === 1 ? '' : 's'} old`;
+  const headline = isProtected
+    ? 'Windows Defender is on'
+    : defender.available ? 'Windows Defender is off' : "Windows Defender's status is unknown";
+  const facts = [
+    definitions,
+    toReview ? `${toReview} item${toReview === 1 ? '' : 's'} to review` : (isProtected ? 'Nothing to review' : null),
+    lastScan ? `Last check ${relative(lastScan.timestamp)}` : 'No check-up run yet',
+  ].filter(Boolean);
+
+  const heroCard = h('section.security-result', { dataset: { tone: isProtected ? (toReview ? 'warn' : 'ok') : 'warn' } },
+    h('div.security-result-icon', null, icon('security', 26)),
+    h('div.security-result-text', null,
+      h('h2', null, headline),
+      h('p', null, facts.join(' · ')),
+      !defender.available && (defender.reason || defender.error)
+        ? h('p.xs.mut', null, defender.reason || defender.error)
+        : null,
     ),
-    h('div.inline', { style: { gap: '10px' } },
-      h('button.btn.btn-primary', {
-        type: 'button',
-        disabled: avScanning,
-        onClick: runQuickScan
-      }, avScanning && avScanType === 'quick' ? 'Scanning...' : 'Run Threat Scan')
-    )
+    h('button.btn.pri', {
+      type: 'button',
+      disabled: avScanning,
+      onClick: runQuickScan,
+    }, avScanning && avScanType === 'quick' ? 'Checking…' : 'Run a check-up'),
   );
 
   // Live Scan Theater (Radar + Streaming Terminal Console)
@@ -451,7 +466,7 @@ function renderAntivirus() {
       h('div.panel-head', null,
         h('div.inline', { style: { gap: '8px', alignItems: 'center' } },
           icon('security', 16),
-          h('h3', null, avScanning ? 'Live Threat Scan In Progress' : 'Last Scan Execution Log')
+          h('h3', null, avScanning ? 'Check-up in progress' : 'Last check-up')
         ),
         h('span.spacer'),
         h('span.t-meta.muted', null, avScanning ? `${avScanProgress}% completed` : 'Finished')
@@ -472,79 +487,71 @@ function renderAntivirus() {
 
   // 4 Action Scanner Cards
   const actionCards = h('div.scanner-actions-grid.stagger-2', null,
-    h('div.scanner-action-card', { onClick: runQuickScan },
+    h('div.scanner-action-card', null,
       h('div.scanner-action-head', null,
         h('div.scanner-action-icon', null, icon('security', 18)),
         h('div.stack', { style: { gap: '2px' } },
-          h('strong', { style: { fontSize: '13.5px' } }, 'Quick Threat Scan'),
-          h('span.t-meta.muted', null, 'Downloads & startup vectors')
+          h('strong', { style: { fontSize: '13.5px' } }, 'Quick check'),
+          h('span.t-meta.muted', null, 'Downloads and startup')
         )
       ),
       h('p.t-meta.muted', { style: { margin: 0 } },
-        'Audits Downloads, AppData Temp, and Windows Startup vectors in under 1 second.'),
-      h('button.btn.btn-sm.btn-secondary', { type: 'button', disabled: avScanning }, 'Scan Now')
+        'Looks through Downloads, temporary files and programs that start with Windows.'),
+      h('button.btn.btn-sm.btn-secondary', { type: 'button', disabled: avScanning, onClick: runQuickScan }, 'Check now')
     ),
 
-    h('div.scanner-action-card', { onClick: runProcessScan },
+    h('div.scanner-action-card', null,
       h('div.scanner-action-head', null,
         h('div.scanner-action-icon', null, icon('cpu', 18)),
         h('div.stack', { style: { gap: '2px' } },
-          h('strong', { style: { fontSize: '13.5px' } }, 'Process & Miner Audit'),
-          h('span.t-meta.muted', null, 'Memory & background tasks')
+          h('strong', { style: { fontSize: '13.5px' } }, 'Running programs'),
+          h('span.t-meta.muted', null, 'What is running now')
         )
       ),
       h('p.t-meta.muted', { style: { margin: 0 } },
-        'Scans active processes for hidden XMRig miners, mining ports, and rogue Temp executions.'),
-      h('button.btn.btn-sm.btn-secondary', { type: 'button', disabled: avScanning }, 'Audit Processes')
+        'Looks for hidden crypto miners and programs running from temporary folders.'),
+      h('button.btn.btn-sm.btn-secondary', { type: 'button', disabled: avScanning, onClick: runProcessScan }, 'Check programs')
     ),
 
-    h('div.scanner-action-card', {
-      onClick: () => {
-        const inp = document.getElementById('kalki-scan-target-inp');
-        if (inp) inp.focus();
-      }
-    },
+    h('div.scanner-action-card', null,
       h('div.scanner-action-head', null,
         h('div.scanner-action-icon', null, icon('sparkles', 18)),
         h('div.stack', { style: { gap: '2px' } },
-          h('strong', { style: { fontSize: '13.5px' } }, 'Target File Inspector'),
-          h('span.t-meta.muted', null, 'Entropy, macros & droppers')
+          h('strong', { style: { fontSize: '13.5px' } }, 'Check a file'),
+          h('span.t-meta.muted', null, 'One file you choose')
         )
       ),
       h('p.t-meta.muted', { style: { margin: 0 } },
-        'Deobfuscates scripts, flags double extensions (.pdf.exe), and checks Shannon byte entropy.'),
-      h('button.btn.btn-sm.btn-secondary', { type: 'button' }, 'Inspect File')
+        'Flags disguised names like .pdf.exe, scripts that hide their code, and packed files.'),
+      h('button.btn.btn-sm.btn-secondary', { type: 'button', onClick: () => document.getElementById('kalki-scan-target-inp')?.focus() }, 'Check a file')
     ),
 
-    h('div.scanner-action-card', {
-      onClick: () => {
-        const inp = document.getElementById('kalki-scan-target-inp');
-        if (inp) {
-          inp.value = 'https://';
-          avTargetInput = 'https://';
-          inp.focus();
-        }
-      }
-    },
+    h('div.scanner-action-card', null,
       h('div.scanner-action-head', null,
         h('div.scanner-action-icon', null, icon('link', 18)),
         h('div.stack', { style: { gap: '2px' } },
-          h('strong', { style: { fontSize: '13.5px' } }, 'Phishing & URL Guard'),
-          h('span.t-meta.muted', null, 'Domain & link reputation')
+          h('strong', { style: { fontSize: '13.5px' } }, 'Check a link'),
+          h('span.t-meta.muted', null, 'Before you open it')
         )
       ),
       h('p.t-meta.muted', { style: { margin: 0 } },
-        'Screens links for typosquatting, raw IP servers, data URIs, and payload droppers.'),
-      h('button.btn.btn-sm.btn-secondary', { type: 'button' }, 'Inspect Link')
+        'Flags look-alike addresses, bare IP addresses and links that download files.'),
+      h('button.btn.btn-sm.btn-secondary', {
+        type: 'button',
+        onClick: () => {
+          const inp = document.getElementById('kalki-scan-target-inp');
+          if (inp) { inp.value = 'https://'; avTargetInput = 'https://'; inp.focus(); }
+        },
+      }, 'Check a link')
     )
   );
 
   // Target File / URL Box
   const targetBox = h('section.panel.stagger-3', { style: { marginTop: '20px' } },
     h('div.panel-head', null,
-      h('h3', null, 'Target File or Link Analyzer'),
+      h('h3', null, 'Check a file or link'),
       h('span.spacer'),
-      h('span.t-meta.muted', null, 'Local heuristic & Defender verification')
+      h('span.t-meta.muted', null, 'Checked on this PC and with Defender')
     ),
     h('div.panel-body.stack', null,
       h('div.inline', { style: { gap: '8px' } },
@@ -552,6 +559,7 @@ function renderAntivirus() {
           id: 'kalki-scan-target-inp',
           value: avTargetInput,
           placeholder: 'Paste file path (e.g. C:\\Downloads\\invoice.pdf.exe) or URL (https://...)',
+          'aria-label': 'File path or link to check',
           style: { flex: 1 },
           onInput: (e) => { avTargetInput = e.target.value; },
           onKeydown: (e) => { if (e.key === 'Enter') runTargetScan(); }
@@ -560,7 +568,7 @@ function renderAntivirus() {
           type: 'button',
           disabled: avScanning || !avTargetInput.trim(),
           onClick: runTargetScan
-        }, avScanning && avScanType === 'target' ? 'Analyzing...' : 'Scan Target')
+        }, avScanning && avScanType === 'target' ? 'Checking…' : 'Check')
       ),
       avScanResult ? renderScanResult(avScanResult) : null
     )
@@ -579,31 +587,27 @@ function renderAntivirus() {
           h('span.t-meta.muted', null, t.desc),
           h('span.t-meta', null, state.text)
         ),
-        h('div.shield-switch', {
-          class: isOn ? 'shield-switch on' : 'shield-switch',
-          title: `Toggle ${t.label}`,
-          onClick: () => toggleShield(t.key, isOn)
-        }, h('div.shield-switch-thumb'))
+        toggleSwitch({ checked: isOn, label: t.label, onClick: () => toggleShield(t.key, isOn) })
       );
     })
   );
 
-  // Quarantine Vault Table
+  // Quarantine table
   const quarantineCard = h('section.panel.stagger-4', { style: { marginTop: '20px' } },
     h('div.panel-head', null,
       h('div.inline', { style: { gap: '8px', alignItems: 'center' } },
-        h('h3', null, 'Quarantine Vault'),
+        h('h3', null, 'Quarantine'),
         h('span.chip', { class: quarantined.length > 0 ? 'chip-warning' : 'chip-ok' },
           `${quarantined.length} ${quarantined.length === 1 ? 'threat' : 'threats'}`)
       ),
       h('span.spacer'),
-      h('span.t-meta.muted', null, 'Hardened read-only permission isolation')
+      h('span.t-meta.muted', null, "Files KALKI has set aside so they can't run")
     ),
     h('div.panel-body', null,
       quarantined.length === 0
         ? h('div.state', { style: { padding: '24px' } },
             icon('security', 24),
-            h('span', null, 'Quarantine Vault is clean — no active threats isolated.'))
+            h('span', null, 'Nothing in quarantine.'))
         : h('div.quarantine-table-wrap', null,
             h('table.quarantine-table', null,
               h('thead', null,
@@ -634,7 +638,7 @@ function renderAntivirus() {
                         title: 'Permanently delete threat',
                         disabled: avActionBusy,
                         onClick: () => resolveQuarantineItem(item.id, 'delete')
-                      }, 'Eliminate')
+                      }, 'Delete')
                     )
                   )
                 ))
@@ -671,7 +675,7 @@ function renderScanResult(res) {
       h('div.inline', { style: { gap: '10px', alignItems: 'center' } },
         icon(isClean ? 'check' : 'alert', 20),
         h('strong', { style: { fontSize: '14px', color: isClean ? '#34d399' : '#f87171' } },
-          isClean ? 'Analysis Complete: Clean' : `Threat Detected: ${res.threat_name || 'Suspicious Activity'}`),
+          isClean ? 'Nothing suspicious found' : `Threat Detected: ${res.threat_name || 'Something looks suspicious'}`),
         h('span.chip', { class: isClean ? 'chip-ok' : 'chip-warning' }, threatLevel)
       ),
       !isClean && res.path && res.path !== 'memory' ? h('button.btn.btn-sm.btn-danger', {
@@ -733,7 +737,7 @@ function renderCyberCatalog() {
           activeTab = 'studio';
           renderFn();
         }
-      }, 'Launch Tool')
+      }, 'Open')
     )
   ));
 
@@ -779,7 +783,7 @@ function renderCyberStudio() {
         toolBusy ? loadingRow(`Executing ${currentTool.label.toLowerCase()}`) : null,
         toolResult ? resultView(toolResult)
           : !toolBusy ? emptyState({
-              iconName: 'security', title: 'Ready to Execute',
+              iconName: 'security', title: 'Ready',
               body: `Enter ${currentTool.field} above and click Execute. Structured telemetry appears here.`,
             }) : null,
       )
@@ -809,7 +813,7 @@ function renderSecurityAside() {
   return h('div.stack', { style: { gap: '16px', width: '100%' } },
     h('div.stack', { style: { gap: '8px' } },
       h('div.row.sb', null,
-        h('h2', { style: { fontSize: '13px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--mut)', margin: 0 } }, 'Defense Telemetry'),
+        h('h2', { style: { fontSize: '13px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--mut)', margin: 0 } }, 'Protection'),
         h('span.chip' + (isHealthy ? '.ok' : ''), null, isHealthy ? 'On' : 'Not confirmed')
       ),
       h('div.card.col.g8', { style: { padding: '12px' } },
@@ -822,7 +826,7 @@ function renderSecurityAside() {
           h('span.chip' + (avStatus?.defender?.available ? '.ok' : ''), null, avStatus?.defender?.available ? 'Connected' : 'Unavailable')
         ),
         h('div.row.sb', null,
-          h('span.sm', null, 'Quarantine Vault'),
+          h('span.sm', null, 'Quarantine'),
           h('span.chip' + (quarantined.length === 0 ? '.ok' : '.warn'), null, `${quarantined.length} threats`)
         ),
         h('div.row.sb', null,
@@ -843,37 +847,9 @@ function renderSecurityAside() {
               h('div.sm', { style: { fontWeight: '600', fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, t.label),
               h('div.xs.mut', { style: { fontSize: '10.5px' } }, state.text)
             ),
-            h('i.tg' + (isOn ? '.on' : ''), {
-              style: { cursor: 'pointer', flexShrink: 0 },
-              title: `Toggle ${t.label}`,
-              onClick: () => toggleShield(t.key, isOn)
-            })
+            toggleSwitch({ checked: isOn, label: t.label, onClick: () => toggleShield(t.key, isOn) })
           );
         })
-      )
-    ),
-
-    h('div.stack', { style: { gap: '8px' } },
-      h('h2', { style: { fontSize: '13px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--mut)', margin: 0 } }, 'Instant Scans'),
-      h('div.card.col.g8', { style: { padding: '12px' } },
-        h('button.btn.btn-sm.btn-secondary', {
-          type: 'button',
-          style: { width: '100%', justifyContent: 'flex-start', gap: '8px' },
-          disabled: avScanning,
-          onClick: () => runLiveScan('quick')
-        }, icon('sparkles', 14), ' Quick Threat Scan'),
-        h('button.btn.btn-sm.btn-secondary', {
-          type: 'button',
-          style: { width: '100%', justifyContent: 'flex-start', gap: '8px' },
-          disabled: avScanning,
-          onClick: () => runLiveScan('full')
-        }, icon('security', 14), ' Deep System Scan'),
-        h('button.btn.btn-sm.btn-secondary', {
-          type: 'button',
-          style: { width: '100%', justifyContent: 'flex-start', gap: '8px' },
-          disabled: avScanning,
-          onClick: () => runLiveScan('memory')
-        }, icon('term', 14), ' Process & Memory Audit')
       )
     )
   );
@@ -1211,33 +1187,38 @@ export function securityView() {
   viewObj.render = () => {
     const header = h('header.view-head', { style: { margin: '0 0 16px 0' } },
       h('div.inline', { style: { gap: '12px', alignItems: 'center' } },
-        h('h1', { tabindex: '-1', id: 'view-title', style: { fontSize: '18px', margin: 0 } }, 'Security & Shields'),
+        h('h1', { tabindex: '-1', id: 'view-title', style: { margin: 0 } }, 'Security'),
         h('div.inline', { role: 'tablist', 'aria-label': 'Security sections' },
           h('button.btn.btn-sm', {
             type: 'button',
+            role: 'tab', 'aria-selected': activeTab === 'antivirus' ? 'true' : 'false',
             class: activeTab === 'antivirus' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost',
             onClick: () => { activeTab = 'antivirus'; renderFn(); }
-          }, icon('security', 14), ' Antivirus & Shields'),
+          }, icon('security', 14), ' Check-up'),
           h('button.btn.btn-sm', {
             type: 'button',
+            role: 'tab', 'aria-selected': activeTab === 'catalog' ? 'true' : 'false',
             class: activeTab === 'catalog' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost',
             onClick: () => { activeTab = 'catalog'; renderFn(); }
-          }, icon('sparkles', 14), ' Cyber Tools Directory'),
+          }, icon('sparkles', 14), ' Tools'),
           h('button.btn.btn-sm', {
             type: 'button',
+            role: 'tab', 'aria-selected': activeTab === 'studio' ? 'true' : 'false',
             class: activeTab === 'studio' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost',
             onClick: () => { activeTab = 'studio'; renderFn(); }
-          }, icon('term', 14), ' Interactive Studio'),
+          }, icon('term', 14), ' Tool runner'),
           h('button.btn.btn-sm', {
             type: 'button',
+            role: 'tab', 'aria-selected': activeTab === 'wifi' ? 'true' : 'false',
             class: activeTab === 'wifi' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost',
             onClick: () => { activeTab = 'wifi'; renderFn(); }
           }, icon('security', 14), ' Wi-Fi'),
           h('button.btn.btn-sm', {
             type: 'button',
+            role: 'tab', 'aria-selected': activeTab === 'processes' ? 'true' : 'false',
             class: activeTab === 'processes' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost',
             onClick: () => { activeTab = 'processes'; renderFn(); }
-          }, icon('cpu', 14), ' Process Defense')
+          }, icon('cpu', 14), ' Programs')
         )
       ),
       h('span.spacer'),
