@@ -44,10 +44,12 @@ export async function maybeShowFirstRun() {
   if (alreadyDone()) return false;
   const r = await api.get();
   if (!r.ok) return false;
-  const values = r.data.keys || r.data.values || r.data;
+  // Keys that are set come back empty, so their status says whether they're there.
+  const values = r.data.settings || {};
+  const status = r.data.secretStatus || {};
   const name = String(values.OWNER_NAME || '').trim();
   const hasName = !!name && name !== PLACEHOLDER_NAME;
-  const hasKey = PROVIDERS.some((p) => isSet(values[p.key]));
+  const hasKey = PROVIDERS.some((p) => status[p.key] === true || isSet(values[p.key]));
   if (hasName || hasKey) {
     remember();
     return false;
