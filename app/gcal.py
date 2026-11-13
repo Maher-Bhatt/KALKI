@@ -54,8 +54,10 @@ def _get_creds(interactive=False):
                     creds = pickle.load(f)
             except (EOFError, pickle.UnpicklingError, OSError) as e:
                 print(f"[gcal] token corrupt — discarding: {e}")
-                try: os.remove(TOKEN_PATH)
-                except Exception: pass
+                try:
+                    os.remove(TOKEN_PATH)
+                except OSError as remove_error:
+                    print(f"[gcal] couldn't remove the damaged token: {remove_error}")
                 creds = None
         if creds and creds.valid:
             return creds

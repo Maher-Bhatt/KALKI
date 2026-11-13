@@ -1400,7 +1400,7 @@ class HistoryAndActivity(unittest.TestCase):
         act_id = server.add_activity("did a thing", "test", reversible=True, undo_fn=lambda: calls.append(1))
         listed = {a["id"]: a for a in json.loads(request("POST", "/api/activity/list", {}, AUTH)[2])["activities"]}
         self.assertTrue(listed[act_id]["reversible"])
-        with mock.patch.object(server, "_activity_log", []):  # what a restart looks like
+        with mock.patch.object(server.activity, "items", []):  # what a restart looks like
             listed = {a["id"]: a for a in json.loads(request("POST", "/api/activity/list", {}, AUTH)[2])["activities"]}
             self.assertEqual(listed[act_id]["action"], "did a thing")
             self.assertFalse(listed[act_id]["reversible"])
@@ -1539,7 +1539,7 @@ class StaticSafety(unittest.TestCase):
 
     def test_silent_except_count_can_only_go_down(self):
         """`except: pass` hides real failures. Lower this number as they get fixed."""
-        budget = 165
+        budget = 149
         count = 0
         for path in self._files():
             tree = ast.parse(open(path, encoding="utf-8", errors="replace").read())

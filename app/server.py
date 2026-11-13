@@ -98,7 +98,13 @@ import routes_memory
 import routes_threads
 import threads
 import tool_policy
+import activity
+import approvals
 import command_intent
+import routes_calendar
+import routes_pet
+import routes_settings
+import routes_setup
 import commands_productivity
 import db
 import wifi_security
@@ -344,84 +350,13 @@ load_plugins()
 
 AVAILABLE_GROQ_MODELS = []
 
-SECRET_SETTING_KEYS = {
-    "GROQ_API_KEY",
-    "OPENAI_API_KEY",
-    "ANTHROPIC_API_KEY",
-    "GEMINI_API_KEY",
-    "ELEVENLABS_API_KEY",
-    "EMAIL_APP_PASSWORD",
-    "GITHUB_TOKEN",
-    "SHODAN_API_KEY",
-    "SPOTIFY_CLIENT_SECRET",
-    "GOOGLE_CLIENT_SECRET",
-    "CLOUD_SYNC_PASSPHRASE",
-    "TELEGRAM_BOT_TOKEN",
-}
-
-PLACEHOLDER_VALUES = {
-    "",
-    "PASTE_YOUR_GROQ_KEY_HERE",
-    "your_personal_access_token",
-    "your_shodan_api_key",
-}
-
-
-def _is_configured_secret(value):
-    value = str(value or "").strip()
-    return bool(value and value not in PLACEHOLDER_VALUES and not value.startswith("PASTE_"))
-
-
-def _public_settings_value(key, value):
-    if key in SECRET_SETTING_KEYS:
-        return "" if _is_configured_secret(value) else value
-    return value
-
-
-def _settings_status(keys):
-    try:
-        vault_secrets = api_vault.list_secrets()
-    except Exception:
-        vault_secrets = {}
-    return {k: _is_configured_secret(getattr(config, k, "") or vault_secrets.get(k, "")) for k in keys}
-
-
-_THEME_COLOR_KEYS = ("THEME_PRIMARY", "THEME_PEACOCK", "THEME_INDIGO", "THEME_SAFFRON")
-_THEME_DEFAULTS = {
-    "THEME_PRESET": "Obsidian K",
-    "THEME_MODE": "dark",
-    "THEME_PRIMARY": "#b6553f",
-    "THEME_PEACOCK": "#1c6d70",
-    "THEME_INDIGO": "#263a63",
-    "THEME_SAFFRON": "#db7d37",
-    "THEME_MOTION": 0.78,
-    "THEME_GLOW": True,
-}
-
-
-def _sanitize_theme_updates(updates):
-    """Validate client-provided appearance settings before persisting them."""
-    clean = dict(updates or {})
-    for key in _THEME_COLOR_KEYS:
-        if key in clean:
-            value = str(clean[key] or "").strip()
-            if not re.fullmatch(r"#[0-9a-fA-F]{6}", value):
-                clean[key] = _THEME_DEFAULTS[key]
-            else:
-                clean[key] = value.lower()
-    if "THEME_MODE" in clean:
-        clean["THEME_MODE"] = "light" if str(clean["THEME_MODE"]).strip().lower() == "light" else "dark"
-    if "THEME_PRESET" in clean:
-        value = str(clean["THEME_PRESET"] or "").strip()
-        clean["THEME_PRESET"] = value[:40] or _THEME_DEFAULTS["THEME_PRESET"]
-    if "THEME_MOTION" in clean:
-        try:
-            clean["THEME_MOTION"] = max(0.25, min(1.0, float(clean["THEME_MOTION"])))
-        except (TypeError, ValueError):
-            clean["THEME_MOTION"] = _THEME_DEFAULTS["THEME_MOTION"]
-    if "THEME_GLOW" in clean:
-        clean["THEME_GLOW"] = bool(clean["THEME_GLOW"])
-    return clean
+# Settings rules now live in routes_settings.py. These names are kept for older code.
+SECRET_SETTING_KEYS = routes_settings.SECRET_SETTING_KEYS
+PLACEHOLDER_VALUES = routes_settings.PLACEHOLDER_VALUES
+_is_configured_secret = routes_settings.is_configured_secret
+_public_settings_value = routes_settings.public_value
+_settings_status = routes_settings.secret_status
+_sanitize_theme_updates = routes_settings.sanitize_theme
 
 
 STATE = {
@@ -449,73 +384,25 @@ STATE = {
 
 _state_lock = threading.RLock()
 
-_pending_lock = threading.Lock()
-_pending_approvals = {}
-_approval_id_seq = 0
-_PENDING_TTL = 30
+# Kept under their old names: other code and the tests still use them.
+_pending_lock = approvals.lock
+_pending_approvals = approvals.pending
 
-_activity_log = []
-_activity_id_seq = 0
-_activity_lock = threading.Lock()
-
-def add_activity(action, source, reversible=False, undo_fn=None, kind="info"):
-    """Record something KALKI did. Returns the activity id (string).
-
-    `undo_fn` is kept server-side only; /api/activity/list never serialises
-    it. An activity can be undone once, after which it is marked undone."""
-    global _activity_id_seq
-    now = time.time()
-    try:
-        with db.connect() as conn:
-            cursor = conn.execute("INSERT INTO activity (action, source, kind, time) VALUES (?, ?, ?, ?)",
-                                  (action, source, kind, now))
-            activity_id = str(cursor.lastrowid)
-            conn.execute("DELETE FROM activity WHERE id NOT IN (SELECT id FROM activity ORDER BY id DESC LIMIT 2000)")
-    except Exception as e:
-        # Recording must never stop the action itself.
-        log(f"couldn't save activity: {e}")
-        _activity_id_seq += 1
-        activity_id = f"unsaved-{_activity_id_seq}"
-    with _activity_lock:
-        act = {
-            "id": activity_id,
-            "action": action,
-            "source": source,
-            "kind": kind,
-            "time": now,
-            "reversible": bool(reversible and undo_fn),
-            "undone": False,
-            "undo_fn": undo_fn,
-        }
-        _activity_log.append(act)
-        if len(_activity_log) > 500:
-            _activity_log.pop(0)
-        return act["id"]
-
-
-def _public_activity(a):
-    return {k: a[k] for k in ("id", "action", "source", "kind", "time", "reversible", "undone")}
+# Activity now lives in activity.py. These names are kept for older code and tests.
+activity.log = log
+_activity_log = activity.items
+_activity_lock = activity.lock
+add_activity = activity.record
+_public_activity = activity.public
 
 
 def _queue_confirmation(description, action, source="chat", always=False, ttl=None):
     """Hold an action until the user approves it. `always` is for AI-requested actions,
     which the "ask before risky actions" setting can't switch off."""
-    global _approval_id_seq
-    ttl = ttl or _PENDING_TTL
+    ttl = ttl or approvals.DEFAULT_TTL
     if not always and not getattr(config, "REQUIRE_DANGEROUS_CONFIRMATION", True):
         return action()
-    with _pending_lock:
-        _approval_id_seq += 1
-        aid = str(_approval_id_seq)
-        now = time.time()
-        _pending_approvals[aid] = {
-            "id": aid,
-            "description": description,
-            "source": source,
-            "action": action,
-            "created": now,
-            "expires": now + ttl,
-        }
+    approvals.queue(description, action, source=source, ttl=ttl)
     return True, f"{description}. Say confirm within {ttl} seconds, or approve it in Activity."
 
 
@@ -576,32 +463,7 @@ def _copy_secret_briefly(secret, seconds=60):
     return True
 
 def _consume_confirmation(command):
-    global _pending_approvals
-    
-    clean_command = "".join(c for c in command if c not in ".,!?").strip().lower()
-    
-    if clean_command in ("cancel", "never mind", "nevermind"):
-        with _pending_lock:
-            had_pending = len(_pending_approvals) > 0
-            _pending_approvals.clear()
-        return (True, "Cancelled.") if had_pending else None
-    if clean_command not in ("confirm", "yes confirm", "confirm it", "do it"):
-        return None
-        
-    with _pending_lock:
-        if not _pending_approvals:
-            return True, "There is no active action to confirm."
-        now = time.time()
-        for aid in [a for a, p in _pending_approvals.items() if p["expires"] < now]:
-            del _pending_approvals[aid]
-        if not _pending_approvals:
-            return True, "There is no active action to confirm."
-        if len(_pending_approvals) > 1:
-            # Saying "confirm" can't show which one it means, so never guess.
-            return True, (f"{len(_pending_approvals)} actions are waiting, so I won't guess which you mean. "
-                          "Approve or deny each one on screen.")
-        pending = _pending_approvals.pop(next(iter(_pending_approvals)))
-    return pending["action"]()
+    return approvals.answer_spoken(command)
 
 
 def _is_sensitive_command(text):
@@ -889,8 +751,8 @@ def _auto_extract_topic_memory(user_text, reply_text=""):
                                 for item in parsed:
                                     if isinstance(item, dict) and item.get("topic") and item.get("fact"):
                                         extracted.append((item["topic"].strip(), item["fact"].strip()))
-            except Exception:
-                pass
+            except (ValueError, TypeError, AttributeError) as e:
+                log(f"memory extraction returned unreadable data: {e}")
 
         if not extracted and openai_key and not openai_key.startswith("PASTE_") and not openai_key.startswith("your_"):
             try:
@@ -935,8 +797,8 @@ def _auto_extract_topic_memory(user_text, reply_text=""):
                                 for item in parsed:
                                     if isinstance(item, dict) and item.get("topic") and item.get("fact"):
                                         extracted.append((item["topic"].strip(), item["fact"].strip()))
-            except Exception:
-                pass
+            except (ValueError, TypeError, AttributeError) as e:
+                log(f"memory extraction returned unreadable data: {e}")
 
         # 2. Heuristic extraction fallback / enhancement
         if not extracted:
@@ -1030,41 +892,7 @@ def _auto_extract_topic_memory(user_text, reply_text=""):
         log(f"[TopicMemory] Extraction error: {ex}")
 
 
-def _format_calendar_events(events):
-    """Format Google Calendar event objects with summary, startTime, endTime, location, htmlLink."""
-    if not isinstance(events, list):
-        return []
-    formatted = []
-    for ev in events:
-        if not isinstance(ev, dict):
-            continue
-        start_obj = ev.get("start") or {}
-        end_obj = ev.get("end") or {}
-        start_time = start_obj.get("dateTime") or start_obj.get("date") or ""
-        end_time = end_obj.get("dateTime") or end_obj.get("date") or ""
-
-        when_str = ""
-        if hasattr(gcal, "_format_when"):
-            try:
-                when_str = gcal._format_when(ev)
-            except Exception:
-                when_str = start_time
-        else:
-            when_str = start_time
-
-        formatted.append({
-            "id": ev.get("id", ""),
-            "summary": ev.get("summary") or "Untitled event",
-            "title": ev.get("summary") or "Untitled event",
-            "startTime": start_time,
-            "endTime": end_time,
-            "start": when_str,
-            "when": when_str,
-            "location": ev.get("location") or "",
-            "htmlLink": ev.get("htmlLink") or "",
-            "description": ev.get("description") or "",
-        })
-    return formatted
+_format_calendar_events = routes_calendar.format_events
 
 
 def _desktop_dir():
@@ -2327,8 +2155,8 @@ def handle_local(text):
         try:
             with open(result["report_path"], "r", encoding="utf-8") as fh:
                 report_txt = fh.read()
-        except Exception:
-            pass
+        except OSError as e:
+            log(f"couldn't read the scan report: {e}")
         if report_txt:
             return True, f"{spoken}\n\n```\n{report_txt}\n```"
         return True, spoken
@@ -3183,8 +3011,8 @@ def handle_local(text):
                 return True, ab
             if data.get("results"):
                 return True, data["results"][0]["snippet"] or data["results"][0]["title"]
-        except Exception:
-            pass
+        except Exception as e:
+            log(f"quick web answer failed: {e}")
         return True, "I couldn't find a definition right now."
 
     if t.startswith("wiki ") or t.startswith("wikipedia "):
@@ -3194,8 +3022,8 @@ def handle_local(text):
             ab = (data.get("abstract") or "").strip()
             if ab:
                 return True, ab
-        except Exception:
-            pass
+        except Exception as e:
+            log(f"wikipedia lookup failed: {e}")
         return True, "I couldn't reach Wikipedia right now."
 
     if t in ("news", "headlines", "top news") or t.startswith("news about "):
@@ -3206,8 +3034,8 @@ def handle_local(text):
             lines = [r["title"] for r in data.get("results", [])[:4] if r.get("title")]
             if lines:
                 return True, "Top headlines: " + ". Next: ".join(lines[:4]) + "."
-        except Exception:
-            pass
+        except Exception as e:
+            log(f"news lookup failed: {e}")
         return True, "I couldn't fetch the news, Sir."
 
     if t.startswith("play ") and "youtube" in t:
@@ -3458,22 +3286,9 @@ def _counting_reply(tokens):
         yield from tokens
 
 
-def _pet_settings():
-    pet = {"species": "gobi", "name": "Gobi", "sound": False}
-    try:
-        with open(os.path.join(DATA_DIR, "pet_state.json"), "r", encoding="utf-8") as f:
-            saved = json.load(f)
-        if isinstance(saved, dict):
-            pet.update({k: saved[k] for k in pet if k in saved})
-    except (OSError, ValueError):
-        pass
-    return pet
-
-
 def _pet_status():
     """What the pet shows. Deliberately cheap: it reads state and never asks the system."""
-    with _pending_lock:
-        pending = sum(1 for p in _pending_approvals.values() if p["expires"] >= time.time())
+    pending = approvals.count()
     listener = STATE.get("listener_state", "idle")
     playing = STATE.get("cached_now_playing") or {}
     status = str(playing.get("status", "")).lower() if isinstance(playing, dict) else ""
@@ -3483,8 +3298,15 @@ def _pet_status():
         "working": _replies_in_progress > 0 or listener == "thinking",
         "listening": listener == "listening",
         "music": status == "playing",
-        "pet": _pet_settings(),
+        "pet": routes_pet.read_settings(),
     }
+
+
+routes_pet.configure(DATA_DIR, APP_ROOT, _pet_status)
+routes_settings.configure(DATA_DIR, USER_CONFIG_PATH, LOG_PATH, _persist_lock,
+                          lambda *args, **kwargs: ask_native_permission(*args, **kwargs))
+routes_calendar.configure(BASE_DIR, log)
+routes_setup.configure(lambda messages: ask_ai(messages), _ReplyInProgress, log)
 
 
 class _PublicRedirectsOnly(urllib.request.HTTPRedirectHandler):
@@ -4550,8 +4372,8 @@ def ask_ai_stream(user_messages):
                                 if token:
                                     got_any = True
                                     yield token
-                            except Exception:
-                                pass
+                            except (ValueError, KeyError, IndexError, TypeError):
+                                pass  # A malformed chunk in the stream is skipped.
                     if got_any:
                         return
             except Exception as e_gem:
@@ -4569,7 +4391,8 @@ def ask_ai_stream(user_messages):
                 for token in ask_ai_stream(user_messages):
                     yield token
                 return
-            except Exception: pass
+            except Exception as e:
+                log(f"the backup model failed too: {e}")
         yield f"I experienced a temporary interruption reaching the cloud models, {config.OWNER_TITLE}. Your system, memory, and desktop tools are fully operational. Please check your API quota or network connection."
         return
 
@@ -4602,8 +4425,8 @@ def ask_ai_stream(user_messages):
                         token = chunk["choices"][0]["delta"].get("content", "")
                         if token:
                             yield token
-                    except Exception:
-                        pass
+                    except (ValueError, KeyError, IndexError, TypeError):
+                        pass  # A malformed chunk in the stream is skipped.
     except Exception as e:
         log(f"Cloud stream failed for {chosen}: {e}")
         provider_name = "gemini" if chosen.startswith("gemini") else "openai" if chosen.startswith("gpt") else "anthropic" if chosen.startswith("claude") else "groq"
@@ -5212,6 +5035,13 @@ class Handler(BaseHTTPRequestHandler):
         if not self._require_auth(path):
             return
 
+        route = (routes_pet.GET_ROUTES.get(path) or routes_settings.GET_ROUTES.get(path)
+                 or routes_calendar.GET_ROUTES.get(path))
+        if route:
+            payload, status = route({})
+            self._json(payload, status=status)
+            return
+
         if path in ("/pet", "/pet_overlay"):
             pet_html_path = os.path.join(APP_ROOT, "ui", "pet_overlay.html")
             if os.path.exists(pet_html_path):
@@ -5219,46 +5049,6 @@ class Handler(BaseHTTPRequestHandler):
                     content_bytes = f.read()
                 self._public_html(content_bytes)
                 return
-
-        if path == "/api/pet/overlay":
-            running = False
-            for p in psutil.process_iter(['name', 'cmdline']):
-                try:
-                    cmd = ' '.join(p.info.get('cmdline') or [])
-                    if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
-                        running = True
-                        break
-                except Exception:
-                    pass
-
-            self._json({"ok": True, "running": running})
-            return
-
-        if path == "/api/pet/status":
-            self._json(_pet_status())
-            return
-
-        if path == "/api/pet":
-            pet_file = os.path.join(DATA_DIR, "pet_state.json")
-            pet_data = {
-                "species": "gobi",
-                "name": "Gobi",
-                "color": "#ffb833",
-                "sound": True,
-                "enabled": True,
-                "level": 1,
-                "xp": 0
-            }
-            if os.path.exists(pet_file):
-                try:
-                    with open(pet_file, "r", encoding="utf-8") as f:
-                        saved = json.load(f)
-                        if isinstance(saved, dict):
-                            pet_data.update(saved)
-                except Exception:
-                    pass
-            self._json({"ok": True, "pet": pet_data})
-            return
 
         if path in ("/api/briefing/get", "/api/skills/list"):
             self._do_post_inner()
@@ -5513,8 +5303,7 @@ class Handler(BaseHTTPRequestHandler):
                 pass
             if "client=listener" in self.path:
                 STATE["listener_last_seen"] = time.time()
-            with _pending_lock:
-                pending_count = sum(1 for p in _pending_approvals.values() if p["expires"] >= time.time())
+            pending_count = approvals.count()
 
             self._json({
                 "ok": True,
@@ -5587,109 +5376,9 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"models": models})
             return
 
-        if path == "/api/settings/get":
-            keys = {
-                "GROQ_API_KEY": getattr(config, "GROQ_API_KEY", ""),
-                "OPENAI_API_KEY": getattr(config, "OPENAI_API_KEY", ""),
-                "ANTHROPIC_API_KEY": getattr(config, "ANTHROPIC_API_KEY", ""),
-                "GEMINI_API_KEY": getattr(config, "GEMINI_API_KEY", ""),
-                "ELEVENLABS_API_KEY": getattr(config, "ELEVENLABS_API_KEY", ""),
-                "OWNER_NAME": getattr(config, "OWNER_NAME", ""),
-                "OWNER_TITLE": getattr(config, "OWNER_TITLE", ""),
-                "SPOTIFY_CLIENT_ID": getattr(config, "SPOTIFY_CLIENT_ID", ""),
-                "SPOTIFY_CLIENT_SECRET": getattr(config, "SPOTIFY_CLIENT_SECRET", ""),
-                "GOOGLE_CLIENT_ID": getattr(config, "GOOGLE_CLIENT_ID", ""),
-                "GOOGLE_CLIENT_SECRET": getattr(config, "GOOGLE_CLIENT_SECRET", ""),
-                "GOOGLE_PROJECT_ID": getattr(config, "GOOGLE_PROJECT_ID", ""),
-                "TELEMETRY_ENABLED": getattr(config, "TELEMETRY_ENABLED", True),
-                "CPU_ALERTS_ENABLED": getattr(config, "CPU_ALERTS_ENABLED", False),
-                "SCREENSAVER_ENABLED": getattr(config, "SCREENSAVER_ENABLED", True),
-                "SCREENSAVER_IDLE_MINS": getattr(config, "SCREENSAVER_IDLE_MINS", 5),
-                "OWNER_CITY": getattr(config, "OWNER_CITY", ""),
-                "OWNER_STATE": getattr(config, "OWNER_STATE", ""),
-                "OWNER_COUNTRY": getattr(config, "OWNER_COUNTRY", ""),
-                "EMAIL_ADDRESS": getattr(config, "EMAIL_ADDRESS", ""),
-                "EMAIL_APP_PASSWORD": getattr(config, "EMAIL_APP_PASSWORD", ""),
-                "GITHUB_TOKEN": getattr(config, "GITHUB_TOKEN", ""),
-                "SHODAN_API_KEY": getattr(config, "SHODAN_API_KEY", ""),
-                "CLOUD_SYNC_PASSPHRASE": getattr(config, "CLOUD_SYNC_PASSPHRASE", ""),
-                "MODEL_CHAT": getattr(config, "MODEL_CHAT", "auto"),
-                "MODEL_VISION": getattr(config, "MODEL_VISION", "auto"),
-                "MODEL_CODING": getattr(config, "MODEL_CODING", "auto"),
-                "MODEL_VOICE": getattr(config, "MODEL_VOICE", "auto"),
-                "TTS_PROVIDER": getattr(config, "TTS_PROVIDER", "edge"),
-                "TTS_VOICE": getattr(config, "TTS_VOICE", ""),
-                "TTS_RATE": getattr(config, "TTS_RATE", "+0%"),
-                "TTS_PITCH": getattr(config, "TTS_PITCH", "+0Hz"),
-                "TTS_VOLUME": getattr(config, "TTS_VOLUME", "+0%"),
-                "TTS_OUTPUT_DEVICE": getattr(config, "TTS_OUTPUT_DEVICE", ""),
-                "TTS_GROQ_TIMEOUT_SEC": getattr(config, "TTS_GROQ_TIMEOUT_SEC", 3),
-                "THEME_PRESET": getattr(config, "THEME_PRESET", "Obsidian K"),
-                "THEME_MODE": getattr(config, "THEME_MODE", "dark"),
-                "THEME_PRIMARY": getattr(config, "THEME_PRIMARY", "#b6553f"),
-                "THEME_PEACOCK": getattr(config, "THEME_PEACOCK", "#1c6d70"),
-                "THEME_INDIGO": getattr(config, "THEME_INDIGO", "#263a63"),
-                "THEME_SAFFRON": getattr(config, "THEME_SAFFRON", "#db7d37"),
-                "THEME_MOTION": getattr(config, "THEME_MOTION", 0.78),
-                "THEME_GLOW": getattr(config, "THEME_GLOW", True)
-            }
-            public_keys = {k: _public_settings_value(k, v) for k, v in keys.items()}
-            # removed local import
-            
-            # calculate cache size
-            cache_size_mb = 0
-            data_dir = DATA_DIR
-            if os.path.exists(data_dir):
-                size_bytes = sum(os.path.getsize(os.path.join(data_dir, f)) for f in os.listdir(data_dir) if os.path.isfile(os.path.join(data_dir, f)))
-                cache_size_mb = size_bytes / (1024*1024)
-                
-            self._json({
-                "ok": True, 
-                "settings": public_keys,
-                "secretStatus": _settings_status(SECRET_SETTING_KEYS),
-                "spotifyConfigured": spotify_mod.is_configured(), 
-                "googleConfigured": gcal.is_configured(),
-                "cacheSize": f"{cache_size_mb:.2f} MB"
-            })
-            return
-
-        if path == "/api/settings/test":
-            try:
-                req = urllib.request.Request("https://api.groq.com/openai/v1/models", headers={"Authorization": f"Bearer {getattr(config,'GROQ_API_KEY','')}"})
-                with urllib.request.urlopen(req, timeout=5) as res:
-                    groq_status = "OK" if res.status == 200 else "FAILED"
-                self._json({
-                    "ok": True,
-                    "groq": groq_status,
-                    "spotify": "OK" if spotify_mod.is_configured() else "NOT LINKED",
-                    "google": "OK" if gcal.is_configured() else "NOT LINKED",
-                })
-            except Exception as e:
-                self._json({"ok": False, "error": str(e)})
-            return
-            
-        if path == "/api/settings/test_google":
-            
-            self._json({"ok": gcal.is_configured(), "message": "Google Connection Valid" if gcal.is_configured() else "Google Auth Missing or Invalid"})
-            return
-            
-        if path == "/api/settings/test_spotify":
-            # removed local import
-            self._json({"ok": spotify_mod.is_configured(), "message": "Spotify Connection Valid" if spotify_mod.is_configured() else "Spotify Auth Missing or Invalid"})
-            return
-
-        if path == "/api/settings/reset":
-            self._json({"ok": False, "error": "POST required"}, status=405)
-            return
-            
-        if path == "/api/settings/clear_cache":
-            self._json({"ok": False, "error": "POST required"}, status=405)
-            return
-
         if path == "/api/settings/export":
-            if os.path.exists(USER_CONFIG_PATH):
-                with open(USER_CONFIG_PATH, "r", encoding="utf-8-sig") as f:
-                    content = f.read()
+            content = routes_settings.export_text()  # Never includes a secret.
+            if content is not None:
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Content-Disposition', 'attachment; filename="kalki_config_backup.json"')
@@ -5725,19 +5414,6 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(media_mod.now_playing_json())
             except Exception as e:
                 self._json({"ok": False, "status": "Error", "error": str(e), "title": "Nothing playing", "artist": ""}, status=500)
-            return
-
-        if path == "/api/calendar/status":
-            connected = gcal.is_configured()
-            events = []
-            if connected:
-                try:
-                    raw_events = gcal.today_events()
-                    events = _format_calendar_events(raw_events)
-                except Exception as ex:
-                    log(f"[Calendar] status fetch error: {ex}")
-                    events = []
-            self._json({"ok": True, "connected": connected, "events": events})
             return
 
         if path == "/favicon.ico":
@@ -5843,7 +5519,10 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         route = (routes_productivity.POST_ROUTES.get(path) or routes_memory.POST_ROUTES.get(path)
-                 or routes_threads.POST_ROUTES.get(path))
+                 or routes_threads.POST_ROUTES.get(path) or routes_pet.POST_ROUTES.get(path)
+                 or approvals.POST_ROUTES.get(path) or activity.POST_ROUTES.get(path)
+                 or routes_settings.POST_ROUTES.get(path) or routes_calendar.POST_ROUTES.get(path)
+                 or routes_setup.POST_ROUTES.get(path))
         if route:
             payload, status = route(body)
             self._json(payload, status=status)
@@ -5858,80 +5537,6 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         
-        if path == "/api/activity/list":
-            with _activity_lock:
-                live = {a["id"]: a for a in _activity_log}
-            with db.connect() as conn:
-                rows = conn.execute("SELECT * FROM activity ORDER BY id DESC LIMIT 500").fetchall()
-            filtered = []
-            for row in reversed(rows):
-                act = live.get(str(row["id"]))
-                filtered.append({
-                    "id": str(row["id"]), "action": row["action"], "source": row["source"], "time": row["time"],
-                    "undone": bool(row["undone"]),
-                    # Undo only exists while the app that did it is still running.
-                    "reversible": bool(act and act["reversible"] and not row["undone"]),
-                })
-            self._json({"ok": True, "activities": filtered})
-            return
-
-        if path == "/api/activity/undo":
-            act_id = body.get("id")
-            with _activity_lock:
-                act = next((a for a in _activity_log if a["id"] == act_id), None)
-            if not act or not act["reversible"] or not act["undo_fn"] or act.get("undone"):
-                self._json({"ok": False, "error": "Cannot undo this activity"}, status=400)
-                return
-            try:
-                act["undo_fn"]()
-                act["undone"] = True
-                with db.connect() as conn:
-                    conn.execute("UPDATE activity SET undone = 1 WHERE id = ?", (act["id"],))
-                self._json({"ok": True})
-            except Exception as e:
-                self._json({"ok": False, "error": str(e)}, status=500)
-            return
-
-        if path == "/api/approvals/list":
-            with _pending_lock:
-                now = time.time()
-                active = []
-                expired = []
-                for aid, pending in list(_pending_approvals.items()):
-                    if pending["expires"] < now:
-                        expired.append(aid)
-                    else:
-                        active.append({
-                            "id": aid,
-                            "description": pending["description"],
-                            "expires": pending["expires"]
-                        })
-                for aid in expired:
-                    del _pending_approvals[aid]
-            self._json({"ok": True, "approvals": active})
-            return
-
-        if path == "/api/approvals/decide":
-            aid = body.get("id")
-            decision = body.get("decision")  # 'approve' or 'deny'
-            with _pending_lock:
-                if aid in _pending_approvals:
-                    pending = _pending_approvals.pop(aid)
-                else:
-                    pending = None
-            if not pending or pending["expires"] < time.time():
-                self._json({"ok": False, "error": "Approval expired or not found"}, status=400)
-                return
-            if decision == "approve":
-                try:
-                    res = pending["action"]()
-                    self._json({"ok": True, "result": res})
-                except Exception as e:
-                    self._json({"ok": False, "error": str(e)}, status=500)
-            else:
-                self._json({"ok": True, "result": "Denied"})
-            return
-
         if path == "/api/briefing/get":
             # Compose from calendar, tasks, overdue reminders, watched-site alerts, github
             enabled = getattr(config, "BRIEFING_ENABLED", False)
@@ -5953,8 +5558,8 @@ class Handler(BaseHTTPRequestHandler):
                 bad = [s for s in watched if s.get("status") == "down"]
                 if bad:
                     briefing += f"{len(bad)} watched sites are down. "
-            except Exception:
-                pass
+            except Exception as e:
+                log(f"part of the briefing couldn't be built: {e}")
             
             self._json({"ok": True, "briefing": briefing})
             return
@@ -5980,241 +5585,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/recovery/clear":
             try:
                 os.remove(os.path.join(DATA_DIR, "crash.log"))
-            except Exception:
-                pass
+            except FileNotFoundError:
+                pass  # Already gone.
             self._json({"ok": True})
             return
-
-        if path == "/api/settings/reset":
-            try:
-                if os.path.exists(USER_CONFIG_PATH): os.remove(USER_CONFIG_PATH)
-                if os.path.exists(os.path.join(DATA_DIR, "token.json")): os.remove(os.path.join(DATA_DIR, "token.json"))
-                if os.path.exists(os.path.join(DATA_DIR, "spotify_token.json")): os.remove(os.path.join(DATA_DIR, "spotify_token.json"))
-                if os.path.exists(os.path.join(DATA_DIR, "credentials.json")): os.remove(os.path.join(DATA_DIR, "credentials.json"))
-                self._json({"ok": True, "secretStatus": _settings_status(SECRET_SETTING_KEYS)})
-            except Exception as e:
-                self._json({"ok": False, "error": str(e)})
-            return
-
-        if path == "/api/pet/overlay":
-            running = False
-            for p in psutil.process_iter(['name', 'cmdline']):
-                try:
-                    cmd = ' '.join(p.info.get('cmdline') or [])
-                    if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
-                        running = True
-                        break
-                except Exception:
-                    pass
-
-            if self.command == 'POST':
-                action_enable = body.get('enabled')
-                toggle = body.get('toggle', False)
-                if toggle:
-                    action_enable = not running
-
-                if action_enable is False:
-                    # Kill running pet processes
-                    for p in psutil.process_iter(['name', 'cmdline']):
-                        try:
-                            cmd = ' '.join(p.info.get('cmdline') or [])
-                            if 'desktop_pet.py' in cmd or 'KALKI_Pet.exe' in cmd:
-                                p.kill()
-                        except Exception: pass
-                    self._json({"ok": True, "running": False})
-                    return
-                elif action_enable is True and not running:
-                    # Launch desktop pet
-                    try:
-                        base = os.path.dirname(os.path.abspath(__file__))
-                        pet_script = os.path.join(base, "desktop_pet.py")
-                        pet_exe = os.path.join(base, "KALKI_Pet.exe")
-                        if os.path.exists(pet_exe):
-                            subprocess.Popen([pet_exe], cwd=base)
-                        elif os.path.exists(pet_script):
-                            subprocess.Popen([sys.executable, pet_script], cwd=base)
-                        running = True
-                    except Exception as e:
-                        self._json({"ok": False, "error": str(e)})
-                        return
-                    self._json({"ok": True, "running": True})
-                    return
-            self._json({"ok": True, "running": running})
-            return
-
-        if path == "/api/pet":
-            pet_file = os.path.join(DATA_DIR, "pet_state.json")
-            pet_data = {
-                "species": "gobi",
-                "name": "Gobi",
-                "color": "#ffb833",
-                "sound": True,
-                "enabled": True,
-                "level": 1,
-                "xp": 0
-            }
-            if os.path.exists(pet_file):
-                try:
-                    with open(pet_file, "r", encoding="utf-8") as f:
-                        saved = json.load(f)
-                        if isinstance(saved, dict):
-                            pet_data.update(saved)
-                except Exception:
-                    pass
-            pet_data.update({k: v for k, v in body.items() if k in ("species", "name", "color", "sound", "enabled", "level", "xp")})
-            try:
-                os.makedirs(DATA_DIR, exist_ok=True)
-                with open(pet_file, "w", encoding="utf-8") as f:
-                    json.dump(pet_data, f, indent=2)
-                # Also mirror to root user_data_dir so standalone desktop_pet.py always shares state
-                root_pet = os.path.join(os.path.dirname(DATA_DIR), "pet_state.json")
-                with open(root_pet, "w", encoding="utf-8") as f:
-                    json.dump(pet_data, f, indent=2)
-            except Exception:
-                pass
-            self._json({"ok": True, "pet": pet_data})
-            return
-
-        if path == "/api/settings/clear_cache":
-            try:
-                data_dir = DATA_DIR
-                keep = {"token.json", "spotify_token.json", "credentials.json", "google_token.pickle", "kalki.db", "api_token.txt"}
-                if os.path.exists(data_dir):
-                    for f in os.listdir(data_dir):
-                        fp = os.path.join(data_dir, f)
-                        if os.path.isfile(fp) and f not in keep:
-                            os.remove(fp)
-                self._json({"ok": True, "secretStatus": _settings_status(SECRET_SETTING_KEYS)})
-            except Exception as e:
-                self._json({"ok": False, "error": str(e)})
-            return
-
-
-
-        if path == "/api/settings/save":
-            try:
-                raw_updates = body.get("updates") if (isinstance(body, dict) and "updates" in body and isinstance(body.get("updates"), dict)) else body
-                updates = _sanitize_theme_updates(raw_updates) if isinstance(raw_updates, dict) else {}
-                updates, invalid = settings_schema.validate_updates(updates)
-                if invalid:
-                    # All or nothing, so a form never half-saves.
-                    summary = "; ".join(f"{k} {why}" for k, why in invalid.items())
-                    self._json({"ok": False, "error": f"Not saved: {summary}", "fields": invalid}, status=400)
-                    return
-                # A token isn't enough to weaken safety: the prompt comes from the server.
-                if updates.get("ALLOW_HOST_CODE_EXECUTION") is True and not config.ALLOW_HOST_CODE_EXECUTION:
-                    if not ask_native_permission("let apps and tools run code directly on this PC", always=True):
-                        self._json({"ok": False, "kind": "denied", "error": "You declined the change."}, status=403)
-                        return
-                if updates.get("REQUIRE_DANGEROUS_CONFIRMATION") is False and config.REQUIRE_DANGEROUS_CONFIRMATION:
-                    if not ask_native_permission("stop asking before risky actions", always=True):
-                        self._json({"ok": False, "kind": "denied", "error": "You declined the change."}, status=403)
-                        return
-                cfg_path = USER_CONFIG_PATH
-                effective_updates = {}
-                with _persist_lock:
-                    new_conf, _load_problems = settings_schema.read_raw_user_config(cfg_path)
-                    for _problem in _load_problems:
-                        runtime_log.log_event(LOG_PATH, "warning", "settings_problem", detail=_problem)
-                    os.makedirs(os.path.dirname(cfg_path), exist_ok=True)
-
-                    for k, v in updates.items():
-                        if k in SECRET_SETTING_KEYS:
-                            if str(v or "").strip():
-                                api_vault.set_secret(k, v)
-                                effective_updates[k] = v
-                            new_conf.pop(k, None)
-                        else:
-                            new_conf[k] = v
-                            effective_updates[k] = v
-
-                    _atomic_write_json(cfg_path, new_conf)
-                
-                # Apply locally to current config module
-                for k, v in effective_updates.items():
-                    setattr(config, k, v)
-                    if k == "SPOTIFY_CLIENT_ID": os.environ["SPOTIFY_CLIENT_ID"] = v
-                    if k == "SPOTIFY_CLIENT_SECRET": os.environ["SPOTIFY_CLIENT_SECRET"] = v
-                
-                # Check if we should dynamically generate credentials.json for Google Auth
-                google_client_id = effective_updates.get("GOOGLE_CLIENT_ID") or getattr(config, "GOOGLE_CLIENT_ID", "")
-                google_client_secret = effective_updates.get("GOOGLE_CLIENT_SECRET") or getattr(config, "GOOGLE_CLIENT_SECRET", "")
-                google_project_id = effective_updates.get("GOOGLE_PROJECT_ID") or getattr(config, "GOOGLE_PROJECT_ID", "")
-                if google_client_id and google_client_secret and google_project_id:
-                    cred_path = os.path.join(DATA_DIR, "credentials.json")
-                    cred_data = {
-                        "installed": {
-                            "client_id": google_client_id,
-                            "project_id": google_project_id,
-                            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                            "token_uri": "https://oauth2.googleapis.com/token",
-                            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                            "client_secret": google_client_secret,
-                            "redirect_uris": ["http://localhost:8080/"]
-                        }
-                    }
-                    if not os.path.exists(DATA_DIR):
-                        os.makedirs(DATA_DIR, exist_ok=True)
-                    with open(cred_path, "w", encoding="utf-8") as cf:
-                        json.dump(cred_data, cf, indent=4)
-                
-                self._json({"ok": True, "secretStatus": _settings_status(SECRET_SETTING_KEYS)})
-            except Exception as e:
-                self._json({"ok": False, "error": str(e)})
-            return
-
-
-
-        if path == "/api/setup/ollama":
-            base = str(getattr(config, "OLLAMA_URL", "") or "http://localhost:11434").rstrip("/")
-            try:
-                with urllib.request.urlopen(f"{base}/api/tags", timeout=1.5) as response:
-                    models = json.loads(response.read().decode("utf-8")).get("models", [])
-                self._json({"ok": True, "running": True, "models": [str(m.get("name", "")) for m in models][:20]})
-            except (OSError, ValueError):
-                self._json({"ok": True, "running": False, "models": []})
-            return
-
-        if path == "/api/setup/test_ai":
-            # A real question, so the answer proves the whole path works.
-            try:
-                with _ReplyInProgress():
-                    reply = ask_ai([{"role": "user", "content": "Say hello in one short sentence."}])
-            except Exception as exc:
-                self._json({"ok": False, "error": str(exc)[:300]})
-                return
-            self._json({"ok": bool(str(reply or "").strip()), "reply": str(reply or "")[:500]})
-            return
-
-        if path == "/api/setup/tool":
-            tool_id = body.get("tool")
-            try:
-                if tool_id == "google":
-                    def _do_google():
-                        
-                        gcal._get_creds(interactive=True)
-                        log("Google Setup complete.")
-                    threading.Thread(target=_do_google, daemon=True).start()
-                elif tool_id == "spotify":
-                    def _do_spotify():
-                        # removed local import
-                        spotify_mod._client(interactive=True)
-                        log("Spotify Setup complete.")
-                    threading.Thread(target=_do_spotify, daemon=True).start()
-                elif tool_id == "reconnect_spotify":
-                    def _do_reconnect_spotify():
-                        # removed local import
-                        if spotify_mod.CACHE_PATH and os.path.exists(spotify_mod.CACHE_PATH):
-                            os.remove(spotify_mod.CACHE_PATH)
-                        spotify_mod._client(interactive=True)
-                        log("Spotify Reconnect complete.")
-                    threading.Thread(target=_do_reconnect_spotify, daemon=True).start()
-                self._json({"ok": True, "secretStatus": _settings_status(SECRET_SETTING_KEYS)})
-            except Exception as e:
-                self._json({"ok": False, "error": str(e)})
-            return
-
-
 
         if path == "/api/cloud_restore":
             try:
@@ -6479,8 +5853,8 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     from core import model_manager
                     model_manager.track_usage(STATE["model"], len(user_text)//4, len(reply_str)//4, latency)
-                except Exception:
-                    pass
+                except Exception as e:
+                    log(f"usage tracking failed: {e}")
                 
                 self.wfile.write(f"data: {json.dumps({'done': True, 'model': STATE['model']})}\n\n".encode())
                 self.wfile.flush()
@@ -6509,8 +5883,8 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     from core import model_manager
                     model_manager.track_usage(STATE["model"], len(user_text)//4, len(reply)//4, latency)
-                except Exception:
-                    pass
+                except Exception as e:
+                    log(f"usage tracking failed: {e}")
                 
                 self._json({"reply": reply, "source": "ai", "model": STATE["model"]})
                 return
@@ -6616,8 +5990,8 @@ class Handler(BaseHTTPRequestHandler):
                             "size": stat.st_size if not entry.is_dir() else 0,
                             "modified": stat.st_mtime
                         })
-                    except Exception:
-                        pass
+                    except OSError:
+                        pass  # A file that vanished or can't be read is left out of the list.
                 items.sort(key=lambda x: (not x["is_dir"], x["name"].lower()))
                 self._json({"ok": True, "path": safe_target, "items": items})
             except Exception as e:
@@ -6725,18 +6099,6 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/auth/logout":
             runtime_security.rotate_auth_token()
             self._json({"ok": True, "message": "Logged out and token rotated."})
-            return
-
-        if path == "/api/pet/toggle":
-            try:
-                env = os.environ.copy()
-                base = os.path.dirname(os.path.abspath(__file__))
-                pet_script = os.path.join(base, "desktop_pet.py")
-                if os.path.exists(pet_script):
-                    subprocess.Popen([sys.executable, pet_script], cwd=base, env=env)
-                self._json({"ok": True})
-            except Exception as e:
-                self._json({"ok": False, "error": str(e)}, status=500)
             return
 
         if path == "/api/command":
@@ -7013,82 +6375,6 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": True, "paused": False}); return
 
         # ── Calendar ───────────────────────────────────
-        if path == "/api/calendar/status":
-            connected = gcal.is_configured()
-            events = []
-            if connected:
-                try:
-                    raw_events = gcal.today_events()
-                    events = _format_calendar_events(raw_events)
-                except Exception as ex:
-                    log(f"[Calendar] status fetch error: {ex}")
-                    events = []
-            self._json({"ok": True, "connected": connected, "events": events})
-            return
-
-        if path == "/api/calendar/today":
-            raw_ev = gcal.today_events()
-            formatted_ev = _format_calendar_events(raw_ev)
-            self._json({
-                "ok": True,
-                "connected": gcal.is_configured(),
-                "events": formatted_ev,
-                "summary": gcal.events_summary(raw_ev)
-            })
-            return
-
-        if path == "/api/calendar/upcoming":
-            n = int(body.get("n") or 5)
-            raw_ev = gcal.upcoming_events(n)
-            self._json({
-                "ok": True,
-                "connected": gcal.is_configured(),
-                "events": _format_calendar_events(raw_ev),
-                "summary": gcal.events_summary(raw_ev, when_label="upcoming")
-            })
-            return
-
-        if path == "/api/calendar/connect":
-            google_client_id = getattr(config, "GOOGLE_CLIENT_ID", "")
-            google_client_secret = getattr(config, "GOOGLE_CLIENT_SECRET", "")
-            google_project_id = getattr(config, "GOOGLE_PROJECT_ID", "") or "kalki-desktop"
-            if google_client_id and google_client_secret and gcal.CRED_PATH and not os.path.exists(gcal.CRED_PATH):
-                try:
-                    cred_data = {
-                        "installed": {
-                            "client_id": google_client_id,
-                            "project_id": google_project_id,
-                            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                            "token_uri": "https://oauth2.googleapis.com/token",
-                            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                            "client_secret": google_client_secret,
-                            "redirect_uris": ["http://localhost:8080/"]
-                        }
-                    }
-                    os.makedirs(os.path.dirname(gcal.CRED_PATH), exist_ok=True)
-                    with open(gcal.CRED_PATH, "w", encoding="utf-8") as cf:
-                        json.dump(cred_data, cf, indent=4)
-                except Exception as ce:
-                    log(f"[Calendar] Error writing google credentials: {ce}")
-
-            def _do_google():
-                try:
-                    log("[Calendar] Starting Google OAuth connection flow...")
-                    gcal._get_creds(interactive=True)
-                    log("[Calendar] Google OAuth setup complete.")
-                except Exception as e:
-                    log(f"[Calendar] Google OAuth flow notice: {e}")
-                    setup_script = os.path.join(BASE_DIR, "setup_google.py")
-                    if os.path.exists(setup_script):
-                        try:
-                            subprocess.Popen([sys.executable, setup_script])
-                        except Exception:
-                            pass
-
-            threading.Thread(target=_do_google, daemon=True).start()
-            self._json({"ok": True, "message": "Google authentication started in browser"})
-            return
-
         # ── Spotify ────────────────────────────────────
         if path == "/api/spotify/play":
             self._json({"reply": spotify_mod.play(body.get("query"))}); return
