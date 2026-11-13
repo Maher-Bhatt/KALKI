@@ -1,6 +1,13 @@
 """Activity, settings, calendar and setup routes, moved out of server.py, and the guard that
 keeps every test away from the real profile."""
 
+import os as _os
+import sys as _sys
+
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+import _isolation  # noqa: E402,F401  Before anything from the app: a throwaway profile.
+
+
 import json
 import os
 import sys
@@ -81,6 +88,15 @@ class SettingsExport(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("OWNER_NAME", payload["settings"])
         self.assertIn("GROQ_API_KEY", payload["secretStatus"])
+
+    def test_every_setting_the_screen_shows_is_sent(self):
+        import re
+        screen = (ROOT / "app" / "ui" / "features" / "settings.js").read_text(encoding="utf-8")
+        used = set(re.findall(r"toggleRow\([^)]*?'([A-Z_]{3,})'", screen))
+        used |= set(re.findall(r"textRow\([^)]*?'([A-Z_]{3,})'", screen))
+        used |= set(re.findall(r"values\.([A-Z_]{3,})", screen))
+        sent = set(routes_settings.get_settings({})[0]["settings"])
+        self.assertEqual(sorted(used - sent - routes_settings.SECRET_SETTING_KEYS), [])
 
     def test_first_run_reads_those_names(self):
         page = (ROOT / "app" / "ui" / "features" / "firstrun.js").read_text(encoding="utf-8")

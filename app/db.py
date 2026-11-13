@@ -94,6 +94,10 @@ MIGRATIONS: List[Tuple[int, str]] = [
         UNIQUE (thread_id, msg_id)
     );
     """),
+    (4, """
+    ALTER TABLE reminders ADD COLUMN repeat TEXT NOT NULL DEFAULT '';
+    ALTER TABLE reminders ADD COLUMN fired_at TEXT;
+    """),
 ]
 SCHEMA_VERSION = MIGRATIONS[-1][0]
 
