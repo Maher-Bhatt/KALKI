@@ -1111,6 +1111,10 @@ class CommandBehaviour(unittest.TestCase):
         self.assertIn("Buy Paint", self.say("show my notes"))
         self.assertIn("Buy Paint", self.say("search notes for paint"))
         self.assertIn("Buy Paint", self.say("notes this week"))
+        for number in range(6):
+            server.notesmod.add_note(f"older filler {number}")
+        server.notesmod.add_note("Newest Thing")
+        self.assertIn("Newest Thing", self.say("notes this week"))
         self.assertIsInstance(self.say("notes from yesterday"), str)
         server.notesmod.delete_note(recent["id"])
 

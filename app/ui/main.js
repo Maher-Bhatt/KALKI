@@ -71,8 +71,8 @@ function installShortcuts() {
   bind('mod+k', () => openPalette(), { description: 'Open the command palette', allowInInput: true });
   bind('mod+1', () => go('ask'), { description: 'Go to Ask' });
   bind('mod+2', () => go('today'), { description: 'Go to Today' });
-  bind('mod+3', () => go('memory'), { description: 'Go to Library' });
-  bind('mod+4', () => go('workbench'), { description: 'Go to Studio' });
+  bind('mod+3', () => go('memory'), { description: 'Go to Memory' });
+  bind('mod+4', () => go('workbench'), { description: 'Go to Workbench' });
   bind('mod+5', () => go('oversight'), { description: 'Go to Activity' });
   bind('mod+,', () => go('settings'), { description: 'Open settings' });
   bind('mod+n', async () => {

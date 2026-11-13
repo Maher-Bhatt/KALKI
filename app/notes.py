@@ -51,9 +51,10 @@ def notes_yesterday():
 
 
 def notes_this_week():
+    """Newest first, so a spoken summary starts with what's most recent."""
     today = datetime.now().date()
     start = today - timedelta(days=today.weekday())
-    return _query("WHERE date >= ? ORDER BY ts, id", (start.strftime("%Y-%m-%d"),))
+    return _query("WHERE date >= ? ORDER BY ts DESC, id DESC", (start.strftime("%Y-%m-%d"),))
 
 
 def search(query):

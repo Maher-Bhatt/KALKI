@@ -33,8 +33,8 @@ const navCommands = () => {
   const base = [
     { group: 'Go to', label: 'Ask', icon: 'ask', shortcut: 'mod+1', run: () => go('ask') },
     { group: 'Go to', label: 'Today', icon: 'today', shortcut: 'mod+2', run: () => go('today') },
-    { group: 'Go to', label: 'Library', icon: 'memory', shortcut: 'mod+3', run: () => go('memory') },
-    { group: 'Go to', label: 'Studio', icon: 'workbench', shortcut: 'mod+4', run: () => go('workbench') },
+    { group: 'Go to', label: 'Memory', icon: 'memory', shortcut: 'mod+3', run: () => go('memory') },
+    { group: 'Go to', label: 'Workbench', icon: 'workbench', shortcut: 'mod+4', run: () => go('workbench') },
   ];
   if (store.ui.securityEnabled) base.push({ group: 'Go to', label: 'Security', icon: 'security', run: () => go('security') });
   base.push({ group: 'Go to', label: 'Settings', icon: 'settings', shortcut: 'mod+,', run: () => go('settings') });

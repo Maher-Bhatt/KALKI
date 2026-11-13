@@ -69,12 +69,27 @@ class PlainLanguage(unittest.TestCase):
 
 
 class Navigation(unittest.TestCase):
-    def test_the_rail_uses_the_planned_names(self):
+    def test_the_sidebar_uses_the_chosen_names(self):
         shell = (UI / "features" / "shell.js").read_text(encoding="utf-8")
-        for label in ("Ask", "Today", "Library", "Studio", "Security", "Activity"):
+        for label in ("Ask", "Today", "Memory", "Workbench", "Security"):
             self.assertIn(f"label: '{label}'", shell)
-        for old in ("Antivirus", "Oversight", "Workbench"):
+        for old in ("Antivirus", "Oversight", "Library", "Studio"):
             self.assertNotIn(f"label: '{old}", shell)
+        # Activity moved to the bell in the top bar, which also counts approvals.
+        self.assertIn("go('oversight')", shell)
+        self.assertIn("bellCount", shell)
+
+    def test_the_look_is_loaded(self):
+        index = (ROOT / "app" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('href="/ui/theme.css"', index)
+        tokens = (UI / "tokens.css").read_text(encoding="utf-8")
+        self.assertIn("--serif:", tokens)
+        self.assertIn('html[data-theme="light"]', tokens)
+
+    def test_voice_mode_says_when_voice_is_off(self):
+        voice = (UI / "features" / "voice.js").read_text(encoding="utf-8")
+        self.assertIn("voice listener isn", voice)
+        self.assertIn("parts.mainBtn.disabled = !online", voice)
 
     def test_the_top_bar_has_no_chips(self):
         shell = (UI / "features" / "shell.js").read_text(encoding="utf-8")

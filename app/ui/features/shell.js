@@ -11,8 +11,6 @@ import { duration, modelLabel } from '../lib/format.js';
 import { label as keyLabel } from '../lib/keys.js';
 import { store, applyUi, notify, subscribe } from '../state/store.js';
 import { ok, err, dismiss } from '../state/toasts.js';
-import { createPresence, presenceLabel } from '../components/presence.js';
-import { openDialog } from '../components/dialog.js';
 import { system, desktop } from '../api/endpoints.js';
 import { refreshStatus } from '../state/status.js';
 import { openDiagnostics } from './diagnostics.js';
@@ -21,22 +19,32 @@ import { openMenu } from '../components/menu.js';
 import { go } from './router.js';
 import { approvalCard } from '../components/approval.js';
 import { syncApprovals, waitingApprovals } from '../state/approvals.js';
+import { brand } from '../components/brand.js';
+import { openVoiceMode, closeVoiceMode, voiceModeOpen, paintVoiceMode } from './voice.js';
 
 const DESTINATIONS = [
   { id: 'ask', label: 'Ask', icon: 'ask' },
   { id: 'today', label: 'Today', icon: 'today' },
-  { id: 'memory', label: 'Library', icon: 'memory' },
-  { id: 'workbench', label: 'Studio', icon: 'workbench' },
+  { id: 'memory', label: 'Memory', icon: 'memory' },
+  { id: 'workbench', label: 'Workbench', icon: 'workbench' },
   { id: 'security', label: 'Security', icon: 'security' },
-  { id: 'oversight', label: 'Activity', icon: 'alert' },
 ];
 
-let railPresence = null;
-let overlayPresence = null;
-let voiceDialog = null;
+const LOCAL_MODEL = /llama|qwen|phi|gemma|mistral|ollama|deepseek|local/i;
+
+function initials(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return 'K';
+  return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+}
+
+function ownerName() {
+  const name = String(store.status?.owner || '').trim();
+  return name && name !== 'YourName' ? name : '';
+}
+
 
 export function buildShell(root) {
-  railPresence = createPresence();
   let shellApi = null;
 
   const railNav = h('nav.rail', { 'aria-label': 'Destinations' });
@@ -59,22 +67,42 @@ export function buildShell(root) {
     onClick: () => openStatusMenu(),
   }, statusDot, statusText, icon('chevronD', 12));
 
-  const railBtn = h('button.ib', {
+  const railBtn = h('button.ib.rail-toggle', {
     type: 'button',
     'aria-label': 'Show or hide navigation',
     title: `Show or hide navigation (${keyLabel('mod+b')})`,
     onClick: () => shellApi.toggleRail(),
   }, icon('panel', 16));
 
+  const modelPill = h('button.pill', {
+    type: 'button',
+    title: 'Choose the AI model',
+    onClick: () => go('settings', { section: 'models' }),
+  });
+  const bellCount = h('span.bell-count', { hidden: true });
+  const bellBtn = h('button.ib.bell', {
+    type: 'button',
+    'aria-label': 'Activity and approvals',
+    title: 'Activity and approvals',
+    onClick: () => go('oversight'),
+  }, icon('alert', 17), bellCount);
+
   const titlebar = h('div.title.pywebview-drag-region', null,
-    railBtn,
-    h('div.title-brand', null, 'KALKI'),
+    h('button.ib', { type: 'button', 'aria-label': 'Back', title: 'Back', onClick: () => history.back() }, h('span.nav-arrow', { 'aria-hidden': 'true' }, '‹')),
+    h('button.ib', { type: 'button', 'aria-label': 'Forward', title: 'Forward', onClick: () => history.forward() }, h('span.nav-arrow', { 'aria-hidden': 'true' }, '›')),
     palBtn,
+    h('span.title-space'),
+    modelPill,
     statusBtn,
+    bellBtn,
   );
 
-  const bodyEl = h('div.body', null, railNav, viewSlot, contextEl);
-  const appEl = h('div.app', null, titlebar, banner, bodyEl);
+  const railHead = h('div.rail-head.pywebview-drag-region', null, brand(), railBtn);
+  const railFoot = h('div.rail-foot');
+  const sidebar = h('div.sidebar', null, railHead, railNav, railFoot);
+  const bodyEl = h('div.body', null, viewSlot, contextEl);
+  const stage = h('div.stage', null, titlebar, banner, bodyEl);
+  const appEl = h('div.app', null, sidebar, stage);
 
   mount(root, appEl, toastsEl, announcer);
 
@@ -94,6 +122,7 @@ export function buildShell(root) {
     const active = document.activeElement;
     const focusedPlace = active && railNav.contains(active) ? active.dataset.place : null;
     railNav.dataset.open = String(open);
+    sidebar.dataset.open = String(open);
 
     const place = (id, label, iconName, count = 0) => h('button.nav', {
       type: 'button',
@@ -105,12 +134,36 @@ export function buildShell(root) {
     }, icon(iconName, 17), h('span.nav-label', null, label), count ? h('span.nav-count', null, String(count)) : null);
 
     mount(railNav,
-      ...DESTINATIONS.map((d) => place(d.id, d.label, d.icon, d.id === 'oversight' ? waiting : 0)),
-      h('div.sp', null),
+      ...DESTINATIONS.map((d) => place(d.id, d.label, d.icon)),
       place('settings', 'Settings', 'settings'),
     );
+    paintFoot();
 
     if (focusedPlace) railNav.querySelector(`[data-place="${focusedPlace}"]`)?.focus();
+  }
+
+  /* ── Bottom of the sidebar: the model, this PC and you ─────────────── */
+  let lastFootSig = '';
+  function paintFoot() {
+    const st = store.status || {};
+    const model = store.models?.current || st.model || 'auto';
+    const where = model === 'auto' ? 'Picks the best for each question' : (LOCAL_MODEL.test(model) ? 'On this PC' : 'Cloud');
+    const name = ownerName();
+    const sig = `${model}|${where}|${name}|${st.cpu}|${store.online}|${store.ui.railLabels}`;
+    if (sig === lastFootSig) return;
+    lastFootSig = sig;
+    mount(railFoot,
+      h('button.foot-card', { type: 'button', title: 'Choose the AI model', onClick: () => go('settings', { section: 'models' }) },
+        h('span.foot-label', null, 'Model'),
+        h('span.foot-value', null, h('span.status-dot', { dataset: { tone: store.online ? 'ok' : 'off' } }), h('span.foot-text', null, modelLabel(model) || 'Auto')),
+        h('span.foot-sub', null, where)),
+      h('button.foot-card', { type: 'button', title: 'Open Today', onClick: () => go('today') },
+        h('span.foot-label', null, 'This PC'),
+        h('span.foot-value', null, icon('cpu', 14), h('span.foot-text', null, typeof st.cpu === 'number' ? `CPU ${Math.round(st.cpu)}% · RAM ${Math.round(st.ram || 0)}%` : 'Not measured yet'))),
+      h('button.profile', { type: 'button', title: 'Your profile', onClick: () => go('settings', { section: 'general' }) },
+        h('span.avatar', null, initials(name || 'KALKI')),
+        h('span.profile-text', null, h('strong', null, name || 'Set your name'), h('span', null, 'Profile and settings'))),
+    );
   }
 
   /* ── The status button ────────────────────────────────────────────── */
@@ -150,9 +203,10 @@ export function buildShell(root) {
       { info: now.text, detail: now.detail },
       (store.status?.pendingApprovals || 0) > 0 ? { label: 'Review approvals', icon: 'alert', run: () => go('oversight') } : null,
       'rule',
-      { label: voiceLine(), icon: 'mic', hint: keyLabel('mod+shift+v'), run: () => window.dispatchEvent(new CustomEvent('kalki:voice-toggle')) },
+      { label: `Voice mode · ${voiceLine()}`, icon: 'mic', hint: keyLabel('mod+shift+v'), run: () => window.dispatchEvent(new CustomEvent('kalki:voice-toggle')) },
       { label: 'Show or hide the desktop pet', icon: 'pet', run: togglePet },
       isDesktop ? { label: 'Keep KALKI on top', icon: 'pin', run: togglePin } : null,
+      { label: 'Activity', icon: 'alert', run: () => go('oversight') },
       'rule',
       { label: 'Diagnostics', icon: 'info', hint: keyLabel('mod+shift+d'), run: () => openDiagnostics() },
       { label: 'Settings', icon: 'settings', run: () => go('settings') },
@@ -227,30 +281,10 @@ export function buildShell(root) {
 
   /* ── Voice overlay ────────────────────────────────────────────────── */
   function openVoiceOverlay() {
-    if (voiceDialog) return;
-    overlayPresence = createPresence();
-    store.voice.sessionOpen = true;
-    refreshStatus();
-
-    const caption = h('p.t-title-2', null, presenceLabel(store.voice.state));
-    const hint = h('p.t-body-sm.muted', null, 'Say "Hey KALKI", or close this and keep typing.');
-
-    const { close } = openDialog({
-      title: 'Voice',
-      width: '24rem',
-      body: h('div', { id: 'voice-overlay', style: { textAlign: 'center' } },
-        overlayPresence.el, caption, hint,
-      ),
-      actions: [
-        h('button.btn.btn-secondary', { type: 'button', onClick: async () => { await system.stop(); refreshStatus(); } }, 'Stop speaking'),
-        h('button.btn.btn-primary', { type: 'button', onClick: async () => { const r = await system.wake(''); if (r.ok) refreshStatus(); } }, 'Wake KALKI'),
-      ],
-      onClose: () => { voiceDialog = null; overlayPresence = null; store.voice.sessionOpen = false; },
-    });
-    voiceDialog = { close, caption };
+    openVoiceMode(stage);
   }
 
-  window.addEventListener('kalki:voice-toggle', () => (voiceDialog ? voiceDialog.close() : openVoiceOverlay()));
+  window.addEventListener('kalki:voice-toggle', () => (voiceModeOpen() ? closeVoiceMode() : openVoiceOverlay()));
   window.addEventListener('kalki:nav-changed', () => { paintRail(true); notify(); });
 
   function render() {
@@ -261,8 +295,15 @@ export function buildShell(root) {
     statusDot.dataset.tone = now.tone;
     statusText.textContent = now.text;
     statusBtn.title = now.detail;
-    overlayPresence?.update?.(store.voice.state, { ttsTrouble: store.voice.ttsTrouble });
-    if (voiceDialog) voiceDialog.caption.textContent = presenceLabel(store.voice.state);
+    const model = store.models?.current || store.status?.model || 'auto';
+    mount(modelPill, h('span.status-dot', { dataset: { tone: store.online ? 'ok' : 'off' } }),
+      model === 'auto' ? 'Auto' : `${LOCAL_MODEL.test(model) ? 'Local' : 'Cloud'} · ${modelLabel(model)}`, icon('chevronD', 12));
+    const waiting = store.status?.pendingApprovals || 0;
+    bellCount.hidden = !waiting;
+    bellCount.textContent = String(waiting);
+    bellBtn.setAttribute('aria-label', waiting ? `Activity, ${waiting} waiting for approval` : 'Activity and approvals');
+    paintFoot();
+    if (voiceModeOpen()) paintVoiceMode();
   }
 
   render();

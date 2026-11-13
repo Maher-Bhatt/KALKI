@@ -32,9 +32,10 @@
 
 | Item | Status |
 |---|---|
+| Look (13 Nov 2026) | Rebuilt from your reference images: warm paper light theme (now the default) and a warm ink dark theme, serif greetings, a KALKI mountain mark and ink-wash mountains on Ask. Full-height sidebar with the model, this PC and your profile at the bottom; top bar with back and forward, search, model, status and an Activity bell that counts approvals. Ask's empty screen is a home page with quick actions and Today at a glance. Voice mode is a full screen that only shows real states |
 | Design tokens | Type, spacing, corners, elevation and motion. Segoe UI Variable adopted, as the font named before was never loaded. A test fails if a screen uses a token that doesn't exist |
 | Blur | Dropped, with its setting. It was slow with GPU compositing off |
-| Shell | Labelled rail that collapses (Ask, Today, Library, Studio, Security, Activity, Settings), and turns into icons below 1000px. The top bar has only search and one status menu. Automate waits until automations are discussed |
+| Shell | Labelled sidebar that collapses (Ask, Today, Memory, Workbench, Security, Settings), and turns into icons below 1000px. Activity is the bell in the top bar. The top bar has only search and one status menu. Automate waits until automations are discussed |
 | Ask | Tool cards that say what KALKI did ("Searched the web", "Send an email: waiting for your approval"); only safe details are shown. Approvals appear in the conversation. Real reply times instead of a made-up "1.1 s". A failed AI call says so instead of showing an empty reply |
 | Approvals | One shared card and one shared list for every screen, so they can't drift apart |
 | Today | Ordered by urgency, one "Connect your accounts" row. The invented clipboard suggestion and briefing time are gone |

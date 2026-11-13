@@ -15,6 +15,8 @@ import * as conv from '../state/conversations.js';
 import { openDialog, promptDialog, confirmDialog } from '../components/dialog.js';
 import { toast, ok, err } from '../state/toasts.js';
 import { createPetCompanion } from './pet.js';
+import { mountainArt } from '../components/brand.js';
+import { go } from './router.js';
 import { openMenu } from '../components/menu.js';
 import { approvalCard } from '../components/approval.js';
 import { waitingApprovals } from '../state/approvals.js';
@@ -38,7 +40,7 @@ function getGreeting() {
   const hr = new Date().getHours();
   const part = hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
   const name = String(store.status?.owner || '').trim();
-  return name && name !== 'YourName' ? `${part}, ${name}` : part;
+  return name && name !== 'YourName' ? `${part}, ${name.split(/\s+/)[0]}.` : `${part}.`;
 }
 
 export function exportChatMarkdown(thread) {
@@ -601,30 +603,61 @@ export function askView() {
   liveRegion = h('div.sr-only', { role: 'status', 'aria-live': 'polite', 'aria-atomic': 'false' });
   const c = composer();
 
-  const suggestionPills = [
-    { text: "What's on my schedule today?", icon: 'calendar' },
-    { text: 'Summarize recent notes', icon: 'note' },
-    { text: 'How is my PC doing?', icon: 'cpu' },
-    { text: 'Start a focus session', icon: 'clock' },
+  // Quick actions: each one does what it says.
+  const startWith = (text) => {
+    c.ta.value = text;
+    c.ta.focus();
+    c.ta.setSelectionRange(text.length, text.length);
+    c.ta.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+  const quickActions = [
+    { title: 'Research', sub: 'Search the web and summarise', icon: 'search', run: () => startWith('Research ') },
+    { title: 'Build', sub: 'Write, run or debug code', icon: 'code', run: () => go('workbench') },
+    { title: 'Automate', sub: 'Routines that run for you', icon: 'flow', run: () => go('workbench') },
+    { title: 'Analyze', sub: 'Files, data and PDFs', icon: 'layers', run: () => document.getElementById('composer-file')?.click() },
   ];
+  const actionsRow = h('div.quick-actions', null, ...quickActions.map((q) =>
+    h('button.quick-card', { type: 'button', onClick: q.run },
+      h('span.quick-icon', null, icon(q.icon, 18)),
+      h('span.quick-title', null, q.title),
+      h('span.quick-sub', null, q.sub))));
 
-  const pillsContainer = h('div.welcome-pills', null,
-    ...suggestionPills.map((p) =>
-      h('button.suggestion-pill', {
-        type: 'button',
-        onClick: () => {
-          if (p.action) {
-            p.action();
-            return;
-          }
-          c.ta.value = p.text;
-          c.ta.value = '';
-          c.ta.style.height = 'auto';
-          send(p.text, []);
-        },
-      }, icon(p.icon, 14), p.text)
-    )
-  );
+  const glance = h('section.glance', { 'aria-label': 'Today at a glance' });
+  function paintGlance() {
+    const td = store.today || {};
+    const st = store.status || {};
+    const open = (td.tasks || []).filter((t) => !t.done);
+    const rems = td.reminders || [];
+    const bar = (label, value) => h('div.glance-bar', null,
+      h('span', null, label),
+      h('span.meter', null, h('i', { style: { width: `${Math.max(0, Math.min(100, value || 0))}%` } })),
+      h('span.glance-num', null, typeof value === 'number' ? `${Math.round(value)}%` : '—'));
+    mount(glance,
+      h('div.glance-head', null, h('h2', null, 'Today at a glance'),
+        h('span.glance-date', null, new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }))),
+      h('div.glance-grid', null,
+        h('button.glance-card', { type: 'button', onClick: () => go('today') },
+          h('span.glance-title', null, icon('check', 15), `Tasks · ${open.length}`),
+          open.length
+            ? h('ul.glance-list', null, ...open.slice(0, 3).map((t) => h('li', null, t.text)))
+            : h('span.glance-empty', null, 'Nothing open')),
+        h('button.glance-card', { type: 'button', onClick: () => go('today') },
+          h('span.glance-title', null, icon('flag', 15), `Reminders · ${rems.length}`),
+          rems.length
+            ? h('ul.glance-list', null, ...rems.slice(0, 3).map((r) => h('li', null, r.text)))
+            : h('span.glance-empty', null, 'Nothing scheduled')),
+        h('div.glance-card', null,
+          h('span.glance-title', null, icon('cpu', 15), 'This PC'),
+          bar('CPU', st.cpu), bar('RAM', st.ram), bar('Disk', st.disk)),
+        h('div.glance-card', null,
+          h('span.glance-title', null, icon('ask', 15), 'Recent conversations'),
+          ...(() => {
+            const recentThreads = conv.searchThreads('').filter((t) => t.messages?.length).slice(0, 3);
+            return recentThreads.length
+              ? recentThreads.map((t) => h('button.glance-link', { type: 'button', onClick: () => conv.switchThread(t.id) }, t.title || 'Untitled'))
+              : [h('span.glance-empty', null, 'Your conversations will show here')];
+          })())));
+  }
 
   const composerSlot = h('div.welcome-comp-slot');
   if (!conv.active()?.messages?.length) {
@@ -634,13 +667,15 @@ export function askView() {
   const welcomeTitle = h('h2.welcome-title', null, getGreeting());
 
   const welcomeWrap = h('div.welcome-stage', null,
+    h('div.welcome-art', null, mountainArt()),
     h('div.welcome-inner', null,
       h('div.welcome-head', null,
         welcomeTitle,
-        h('p.welcome-desc', null, 'Ask anything, attach a file, or speak.'),
+        h('p.welcome-desc', null, "I'm KALKI, your personal AI workspace.", h('br'), 'Ask, build, automate, research, or run tasks on your PC.'),
       ),
       composerSlot,
-      pillsContainer,
+      actionsRow,
+      glance,
     )
   );
 
@@ -976,6 +1011,8 @@ export function askView() {
     }
 
     welcomeTitle.textContent = getGreeting();
+    if (!welcomeWrap.hidden) paintGlance();
+    document.body.classList.toggle('ask-home', !welcomeWrap.hidden);
 
     const waitingNow = waitingApprovals();
     const shownIds = waitingNow.map((a) => a.id).join('|');
@@ -1237,6 +1274,7 @@ export function askView() {
 
   view.cleanup = () => {
     removePet();
+    document.body.classList.remove('ask-home');
     window.removeEventListener('kalki:ask', onAskEvent);
     clearTimeout(mediaTimer);
     mediaTimer = null;

@@ -16,7 +16,7 @@ export const store = {
   today: { tasks: [], reminders: [], events: [], notes: [], mail: null, focus: null, loading: false },
   settings: { values: {}, secretStatus: {}, meta: {}, loading: false, saving: false },
   ui: {
-    railLabels: true, contextOpen: true, theme: 'dark', motion: 'auto',
+    railLabels: true, contextOpen: true, theme: 'light', motion: 'auto',
     density: 'comfortable', securityEnabled: true, debug: false,
   },
   toasts: [],
