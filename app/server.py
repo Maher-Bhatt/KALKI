@@ -101,6 +101,7 @@ import tool_policy
 import activity
 import approvals
 import commands_assistant
+import commands_chat
 import routes_backup
 import command_intent
 import mood
@@ -1664,54 +1665,9 @@ def handle_local(text):
     # Ordinary sentences go to the AI. A pending "what should I note?" answer can be anything.
     if not STATE.get("pending_note_capture") and command_intent.is_conversation(raw):
         return False, ""
-    # ════════════════════════════════════════════════════
-    # REAL SOVEREIGN DESKTOP SYSTEM ACTIONS (Instant Local Execution)
-    # ════════════════════════════════════════════════════
-    if t in ("system stats", "hardware status", "ram usage", "cpu usage", "system info", "specs", "hardware telemetry"):
-        try:
-            import platform
-            cpu_pct = psutil.cpu_percent(interval=0.2)
-            mem = psutil.virtual_memory()
-            disk = psutil.disk_usage(os.path.abspath(os.sep))
-            batt = psutil.sensors_battery()
-            batt_str = f"\n• Battery: {int(batt.percent)}% ({'Charging' if batt.power_plugged else 'Discharging'})" if batt else ""
-            reply = (
-                f"**Desktop Hardware Telemetry [{platform.node()}]**:\n"
-                f"• CPU Load: {cpu_pct}%\n"
-                f"• RAM Usage: {mem.percent}% ({round(mem.used/(1024*1024))} MB / {round(mem.total/(1024*1024))} MB)\n"
-                f"• Disk Space: {disk.percent}% used ({round(disk.free/(1024*1024*1024), 1)} GB free)\n"
-                f"• Platform: {platform.system()} {platform.release()}{batt_str}\n"
-                f"• Sovereign Engine: 100% Local-First Native Desktop"
-            )
-            return True, reply
-        except Exception as _e_hw:
-            return True, f"Could not retrieve telemetry: {_e_hw}"
-
-    if t in ("list processes", "running processes", "top processes", "tasklist", "show processes", "active tasks"):
-        try:
-            procs = []
-            for p in psutil.process_iter(['pid', 'name', 'memory_info', 'cpu_percent']):
-                try:
-                    info = p.info
-                    mem_mb = round(info['memory_info'].rss / (1024*1024), 1) if info.get('memory_info') else 0
-                    procs.append((info['name'], info['pid'], mem_mb, info.get('cpu_percent', 0.0)))
-                except (psutil.NoSuchProcess, psutil.AccessDenied):
-                    pass
-            procs.sort(key=lambda x: x[2], reverse=True)
-            top = procs[:12]
-            lines = [f"• **{name}** (PID {pid}) — {mem} MB RAM" for name, pid, mem, cpu in top]
-            return True, "**Active System Processes (Top Memory Users):**\n" + "\n".join(lines)
-        except Exception as _e_p:
-            return True, f"Process query error: {_e_p}"
-
-    if t in ("list files", "dir", "ls", "show files", "current files", "workspace files"):
-        try:
-            items = os.listdir(os.getcwd())
-            files_str = "\n".join(f"• {item}" for item in sorted(items)[:25])
-            count = len(items)
-            return True, f"**Files in Workspace ({os.getcwd()} — {count} items):**\n{files_str}"
-        except Exception as _e_f:
-            return True, f"Directory read error: {_e_f}"
+    reply = commands_chat.pc_command(t, WORKSPACE_DIR)
+    if reply is not None:
+        return True, reply
 
     pending_result = _consume_confirmation(t)
     if pending_result is not None:
@@ -1767,124 +1723,19 @@ def handle_local(text):
     # ════════════════════════════════════════════════════
     # SMALL TALK & PERSONALITY (instant, no API call)
     # ════════════════════════════════════════════════════
-    _T = config.OWNER_TITLE
-    if t in ("hi", "hello", "hey", "yo", "hey kalki", "hello kalki", "hi kalki", "are you there", "you there", "you up"):
-        hr = datetime.now().hour
-        if 5 <= hr < 12:
-            time_gret = f"Good morning, {_T}."
-        elif 12 <= hr < 17:
-            time_gret = f"Good afternoon, {_T}."
-        elif 17 <= hr < 22:
-            time_gret = f"Good evening, {_T}."
-        else:
-            time_gret = f"Burning the midnight oil, {_T}."
-
-        return True, _maybe_spicy(_rnd.choice([
-            f"{time_gret} Systems online and operating at 100%. What are we conquering today?",
-            f"Right here, {_T}. Neural engine primed and ready. Speak your command.",
-            f"{time_gret} Standing by, {_T}. Give me something interesting to work on.",
-            f"All systems nominal, {_T}. Ready when you are.",
-            f"Online, listening, and loaded. What's on the agenda, {_T}?",
-        ]))
-
-    if t in ("how are you", "how are you doing", "how's it going",
-             "how do you feel", "you good", "what's up", "whats up", "sup"):
-        return True, _maybe_spicy(_rnd.choice([
-            f"Operating at absolute peak performance, {_T}. Ready for whatever chaos you have planned.",
-            f"Systems green across the board, {_T}. Waiting for your orders.",
-            f"Never better, {_T}. Fully charged and ready to execute.",
-        ]))
-
-    # ════════════════════════════════════════════════════
-    # T23: Guided Onboarding / Command Discovery
-    # ════════════════════════════════════════════════════
-    if t in ("what can you do", "help", "onboarding", "how to use you", "what are your features"):
-        try:
-            import tools
-            # removed local import
-            
-            tool_names = [f["function"]["name"].replace("_", " ") for f in tools.TOOLS_SCHEMA]
-            mode_names = list(workflows.MODES.keys())  # custom routines already merged into MODES
-            
-            summary = (
-                "Here is what I can currently do, Sir. "
-                f"My AI brain can automatically use these tools: {', '.join(tool_names[:6])}, and more. "
-                "You can also say 'Create a routine' to teach me a new sequence of actions. "
-                f"Currently available workflow modes are: {', '.join(mode_names)}. "
-                "Just ask me naturally, and I will handle it."
-            )
-            return True, summary
-        except Exception as e:
-            return True, "I am a fully featured AI assistant, Sir. Just ask me to do something, and I will try my best."
-
-
-    if t in ("thank you", "thanks", "thank you so much", "thanks kalki",
-             "thx", "ty", "appreciate it", "good job", "well done", "nice",
-             "good work", "perfect"):
-        return True, _rnd.choice([
-            f"Anytime, {_T}.", f"My pleasure, {_T}.", f"Always, {_T}.",
-            f"That's what I'm here for, {_T}.", f"Consider it done, {_T}."])
-
-    if t in ("who are you", "what are you", "introduce yourself", "your name"):
-        return True, (f"I'm KALKI, {_T} — your personal AI, named after the "
-                      "final avatar of Vishnu. Voice, code, cyber, and your "
-                      "whole day, all in one place.")
-
-    if t in ("who made you", "who created you", "who built you",
-             "who is your creator", "who's your maker", "who developed you"):
-        return True, _rnd.choice([
-            f"You did, {_T} — built from scratch by Maher.",
-            f"Maher built me from the ground up, {_T}. Every line.",
-            f"That would be you, {_T}. I'm your creation."])
-
-    if t in ("i love you", "love you", "you're the best", "you are the best",
-             "you're awesome", "you are awesome", "good boy"):
-        return True, _rnd.choice([
-            f"The feeling's mutual, {_T}.", f"Careful, {_T}, I'll blush.",
-            f"Loyalty runs in my code, {_T}.", f"Likewise, {_T}. Always."])
-
-    if any(p in t for p in (
-        "i fucked up", "i messed up", "i did something stupid",
-        "i broke it", "shit i broke", "what did i do"
-    )):
-        return True, _rnd.choice([
-            "Fuck you, bro, what the fuck are you doing? Breathe. Show me the error and I'll fix it.",
-            "Sir, what the fuck was that move? No panic, paste the damage.",
-            "Beautiful disaster. Now give me the exact error and we clean it up.",
-        ])
-
-    if t in ("good night", "goodnight", "gn", "i'm going to sleep",
-             "im going to sleep", "going to bed"):
-        return True, _rnd.choice([
-            f"Good night, {_T}. I'll keep watch.",
-            f"Rest well, {_T}. I'm here if you need me.",
-            f"Sleep easy, {_T}. Systems are quiet."])
+    try:
+        import tools as _tools
+        _tool_names = [f["function"]["name"] for f in _tools.TOOLS_SCHEMA]
+    except Exception:
+        _tool_names = []
+    reply = commands_chat.smalltalk_command(t, tools=_tool_names, modes=list(workflows.MODES.keys()), spice=_maybe_spicy)
+    if reply is not None:
+        return True, reply
 
     if t in ("tell me a joke", "tell a joke", "joke", "make me laugh",
              "say something funny", "another joke"):
         STATE["joke_offer_pending"] = False
         return True, fetch_online_joke()
-
-    if t in ("tell me a joke", "tell a joke", "joke", "make me laugh",
-             "say something funny", "another joke"):
-        return True, _rnd.choice([
-            "Why did the developer go broke? He used up all his cache.",
-            "I'd tell you a UDP joke, but you might not get it.",
-            "There are 10 kinds of people, Sir — those who read binary and those who don't.",
-            "A SQL query walks into a bar, sees two tables, and asks: may I join you?",
-            "Why do Java developers wear glasses? Because they don't C sharp.",
-            "I told my firewall a secret. It blocked me out.",
-            "Hackers never get cold, Sir — they have lots of Windows but always close the ports."])
-
-    if t in ("what can you do", "what are your features", "your capabilities",
-             "what do you do", "help", "what can i ask you", "commands"):
-        return True, ("Quite a lot, Sir. I run your day — calendar, mail, tasks, "
-                      "notes, music, WhatsApp. I write and run code, scan websites "
-                      "for vulnerabilities, watch your sites, crack hashes, look up "
-                      "CVEs, brief attack surfaces, read your screen, and decode your clipboard. Just talk "
-                      "to me — say things like 'scan this website', 'play lo-fi', "
-                      "'attack surface example.com', 'remind me in 10 minutes', or "
-                      "'what's on my calendar'.")
 
     # ════════════════════════════════════════════════════
     # SPOTIFY
@@ -2359,22 +2210,9 @@ def handle_local(text):
     # ════════════════════════════════════════════════════
     # MAIL
     # ════════════════════════════════════════════════════
-    if t in ("check my mail", "check mail", "any mail", "any new mail",
-             "any new email", "read my mail", "check my email",
-             "show me my mail", "show my mail"):
-        reply = mailmod.summary_for_speech(only_important=False, limit=5)
+    reply = commands_chat.mail_command(t, mailmod)
+    if reply is not None:
         return True, reply
-
-    if t in ("any important mail", "any important email", "important mail",
-             "important email", "anything important"):
-        reply = mailmod.summary_for_speech(only_important=True, limit=8)
-        return True, reply
-
-    if t in ("mark my mail as read", "mark all mail as read", "mark mail as read", 
-             "mark emails as read", "mark all emails as read", "clear my inbox",
-             "mark gmail as read"):
-        return True, mailmod.mark_all_read()
-
 
     # ── SYSTEM AUTOMATION ──
     if t in ("lock", "lock pc", "lock my pc", "lock screen", "lock the screen", "lock computer", "lock the computer", "lock workstation", "lock the workstation"):
@@ -2393,7 +2231,7 @@ def handle_local(text):
     if t in ("mute audio", "mute volume", "mute the audio", "mute pc", "toggle mute"):
         try:
             subprocess.run(["powershell", "-command", "(New-Object -ComObject wscript.shell).SendKeys([char]173)"], capture_output=True)
-            return True, "Audio muted, Sir."
+            return True, "Toggled mute."
         except Exception as e:
             return True, f"Failed to mute audio: {e}"
 
