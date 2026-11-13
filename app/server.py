@@ -104,6 +104,7 @@ import commands_assistant
 import commands_chat
 import commands_desktop
 import commands_media
+import commands_private
 import routes_backup
 import command_intent
 import mood
@@ -2022,116 +2023,16 @@ def handle_local(text):
     if reply is not None:
         return True, reply
 
-    # ════════════════════════════════════════════════════
-    # PASSWORD VAULT
-    # ════════════════════════════════════════════════════
-    # SAVE: "save my X password as Y" / "save password for X as Y"
-    #       "remember my X password is Y" / "store X password Y"
-    m = _re_local.search(
-        r"(?:save|store|remember|note|keep)\s+(?:my\s+)?(?:the\s+)?"
-        r"(.+?)\s+password\s+(?:is|as|=|:)\s+(.+)$",
-        t, flags=_re_local.IGNORECASE,
-    )
-    if m:
-        label = m.group(1).strip()
-        pwd   = raw[-len(m.group(2).strip()):].strip().strip("\"'")
-        res = vault.save_entry(label, password=pwd)
-        if isinstance(res, dict) and res.get("error"):
-            return True, res["error"]
-        return True, f"Password for {label} sealed in your vault, {config.OWNER_TITLE}."
+    result = commands_private.vault_command(t, raw, {
+        "vault": vault, "copy_briefly": _copy_secret_briefly, "queue": _queue_confirmation,
+        "random_password": cybertools.random_password})
+    if result is not None:
+        return result
 
-    # SAVE compact: "save password X for Y" or "vault X for Y"
-    m = _re_local.search(
-        r"(?:save|store|vault)\s+password\s+(\S+)\s+for\s+(.+)$",
-        t, flags=_re_local.IGNORECASE,
-    )
-    if m:
-        pwd, label = m.group(1).strip().strip("\"'"), m.group(2).strip()
-        res = vault.save_entry(label, password=pwd)
-        if isinstance(res, dict) and res.get("error"):
-            return True, res["error"]
-        return True, f"Password for {label} sealed in your vault, {config.OWNER_TITLE}."
-
-    # GET: "what is my X password" / "show X password" / "get X password"
-    m = _re_local.search(
-        r"(?:what(?:'s| is)|show|get|retrieve|tell me|reveal)\s+(?:me\s+)?"
-        r"(?:my\s+)?(.+?)\s+password\??$",
-        t, flags=_re_local.IGNORECASE,
-    )
-    if m:
-        label = m.group(1).strip()
-        e = vault.find_entry(label)
-        if e:
-            clipboard_mod.set_text(e["password"])
-            return True, f"Copied the {e['label']} password to your clipboard."
-        return True, f"I have no password saved for {label}, Sir."
-
-    # LIST
-    if t in ("list passwords", "list my passwords", "show my passwords",
-             "show passwords", "what passwords do you have"):
-        labels = vault.list_labels()
-        if not labels:
-            return True, "Your vault is empty, Sir."
-        names = ", ".join(l["label"] for l in labels)
-        return True, f"I have {len(labels)} entries: {names}."
-
-    # DELETE
-    m = _re_local.search(r"(?:delete|remove|forget)\s+(?:my\s+)?(.+?)\s+password$",
-                          t, flags=_re_local.IGNORECASE)
-    if m:
-        label = m.group(1).strip()
-        def _delete_vault_entry():
-            ok = vault.delete_entry(label)
-            return True, (f"Deleted {label} from the vault." if ok
-                          else f"No vault entry for {label}.")
-        return _queue_confirmation(
-            f"Delete the {label} vault entry", _delete_vault_entry
-        )
-
-    # GENERATE password
-    m = _re_local.search(r"generate\s+(?:a\s+)?(?:strong\s+)?password(?:\s+of\s+(\d+))?",
-                          t, flags=_re_local.IGNORECASE)
-    if m:
-        length = int(m.group(1)) if m.group(1) else 20
-        if not 8 <= length <= 128:
-            return True, "Password length must be between 8 and 128."
-        pw = cybertools.random_password(length=length)
-        clipboard_mod.set_text(pw)
-        return True, "Generated a strong password and copied it to your clipboard."
-
-    # ════════════════════════════════════════════════════
-    # SCREEN VISION  (HUGE — "see my screen", "solve this")
-    # ════════════════════════════════════════════════════
-    screen_triggers = [
-        "see my screen", "see the screen", "look at my screen", "look at the screen",
-        "what's on my screen", "what is on my screen", "read my screen",
-        "analyze my screen", "analyze the screen", "ocr my screen", "ocr the screen",
-        "solve this", "solve what's on", "what does this say", "help me with this",
-        "what am i looking at",
-    ]
-    if any(s in t for s in screen_triggers) or t.startswith("look at "):
-        # Extract the question if present
-        question = raw
-        for s in screen_triggers:
-            question = _re_local.sub(_re_local.escape(s), "", question, flags=_re_local.IGNORECASE)
-        question = question.strip(" .,?!:") or "What is on screen, Sir? Answer or solve it."
-
-        result = vision.analyze_screen(question)
-        if result["mode"] == "vision":
-            return True, result["reply"]
-        if result["mode"] == "ocr":
-            # Hand OCR'd text to text-model
-            ocr = result["ocr"]
-            try:
-                reply = ask_ai([{
-                    "role": "user",
-                    "content": (f"I captured the screen. OCR text:\n---\n{ocr[:4000]}\n---\n\n"
-                                f"My question: {result['question']}\n\nAnswer directly, Sir."),
-                }])
-                return True, reply
-            except Exception as e:
-                return True, f"Screen capture worked but AI failed: {e}"
-        return True, result["reply"]
+    result = commands_private.screen_command(t, raw, {
+        "analyze_screen": vision.analyze_screen, "ask": lambda messages: ask_ai(messages)})
+    if result is not None:
+        return result
 
     # ════════════════════════════════════════════════════
     # HASH / CRYPTO
