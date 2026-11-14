@@ -591,37 +591,84 @@ def inspect_clipboard(text: str) -> Dict[str, Any]:
     }
 
 
+QUARANTINE_MAGIC = b"KALKIQ1\0"
+QUARANTINE_MAX_BYTES = 512 * 1024 * 1024
+
+
+def _quarantine_key() -> bytes:
+    """A 256-bit key for quarantined files, kept encrypted with Windows DPAPI (secure_store)."""
+    import base64
+    import secure_store
+    path = os.path.join(_get_quarantine_dir(), "quarantine.key")
+    with _lock:
+        try:
+            with open(path, "r", encoding="ascii") as f:
+                return base64.b64decode(secure_store.unprotect(f.read().strip()))
+        except FileNotFoundError:
+            pass
+        key = os.urandom(32)
+        with open(path, "w", encoding="ascii") as f:
+            f.write(secure_store.protect(base64.b64encode(key).decode("ascii")))
+        return key
+
+
+def _encrypt_into(src: str, dest: str) -> None:
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    with open(src, "rb") as f:
+        data = f.read()
+    nonce = os.urandom(12)
+    with open(dest, "wb") as f:
+        f.write(QUARANTINE_MAGIC + nonce + AESGCM(_quarantine_key()).encrypt(nonce, data, QUARANTINE_MAGIC))
+
+
+def _decrypt_into(src: str, dest: str) -> None:
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    with open(src, "rb") as f:
+        blob = f.read()
+    nonce, body = blob[len(QUARANTINE_MAGIC):len(QUARANTINE_MAGIC) + 12], blob[len(QUARANTINE_MAGIC) + 12:]
+    data = AESGCM(_quarantine_key()).decrypt(nonce, body, QUARANTINE_MAGIC)
+    os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
+    with open(dest, "wb") as f:
+        f.write(data)
+
+
 def quarantine_file(file_path: str, threat_name: str = "Flagged in a check-up") -> Dict[str, Any]:
-    """Safely move a flagged file to the quarantine vault with restricted permissions."""
-    if not os.path.exists(file_path):
+    """Move a flagged file into quarantine, encrypted (AES-256-GCM, key protected by Windows
+    DPAPI), so it can't run or be opened by accident. Restore brings back the exact original."""
+    if not os.path.isfile(file_path):
         return {"ok": False, "error": "File does not exist"}
+    try:
+        size = os.path.getsize(file_path)
+    except OSError as e:
+        return {"ok": False, "error": str(e)}
+    if size > QUARANTINE_MAX_BYTES:
+        return {"ok": False, "error": "This file is too large to quarantine (over 512 MB). Delete it or let Windows Defender handle it."}
 
     qdir = _get_quarantine_dir()
     file_id = f"q_{int(time.time())}_{secrets_token(6)}"
     filename = os.path.basename(file_path)
     quarantine_path = os.path.join(qdir, f"{file_id}.kalki_quarantined")
-
     try:
-        shutil.move(file_path, quarantine_path)
-        # Restrict permissions
-        if os.name == "nt":
-            subprocess.run(["icacls", quarantine_path, "/inheritance:r", "/grant:r", f"{os.environ.get('USERNAME', 'Everyone')}:(R)"], capture_output=True)
-        else:
-            os.chmod(quarantine_path, 0o400)
-
+        _encrypt_into(file_path, quarantine_path)
+        try:
+            os.remove(file_path)
+        except OSError as e:
+            os.remove(quarantine_path)
+            return {"ok": False, "error": f"Couldn't remove the original file ({e.strerror or e}). It may be in use."}
         entry = {
-            "id": file_id,
-            "original_path": file_path,
-            "filename": filename,
-            "quarantine_path": quarantine_path,
-            "threat_name": threat_name,
-            "timestamp": time.time(),
+            "id": file_id, "original_path": file_path, "filename": filename,
+            "quarantine_path": quarantine_path, "threat_name": threat_name,
+            "timestamp": time.time(), "encrypted": True, "size_bytes": size,
         }
-
         _add_quarantine_entry(entry)
-        oversight.record_alert("antivirus", f"Quarantined threat: {filename} ({threat_name})", "info")
+        oversight.record_alert("antivirus", f"Quarantined {filename} ({threat_name}). It's encrypted and can be restored.", "info")
         return {"ok": True, "entry": entry}
     except Exception as e:
+        if os.path.exists(quarantine_path) and os.path.exists(file_path):
+            try:
+                os.remove(quarantine_path)
+            except OSError:
+                pass
         return {"ok": False, "error": str(e)}
 
 
@@ -669,7 +716,14 @@ def resolve_quarantine(threat_id: str, action: str) -> Dict[str, Any]:
         if action == "delete":
             try:
                 if os.path.exists(qpath):
-                    os.unlink(qpath)
+                    try:
+                        os.unlink(qpath)
+                    except PermissionError:
+                        # Files quarantined by older versions were made read-only for this user.
+                        if os.name == "nt":
+                            subprocess.run(["icacls", qpath, "/grant", f"{os.environ.get('USERNAME', '')}:F"],
+                                           capture_output=True, timeout=15)
+                        os.unlink(qpath)
                 entries = [e for e in entries if e.get("id") != threat_id]
                 safe_json.write_json(path, entries)
                 return {"ok": True, "action": "deleted"}
@@ -679,8 +733,14 @@ def resolve_quarantine(threat_id: str, action: str) -> Dict[str, Any]:
         elif action == "restore":
             try:
                 if os.path.exists(qpath):
+                    if os.path.exists(orig):
+                        return {"ok": False, "error": "A file already exists at the original location. Move it first."}
                     os.makedirs(os.path.dirname(orig), exist_ok=True)
-                    shutil.move(qpath, orig)
+                    if target.get("encrypted"):
+                        _decrypt_into(qpath, orig)
+                        os.remove(qpath)
+                    else:  # quarantined before encryption existed
+                        shutil.move(qpath, orig)
                 entries = [e for e in entries if e.get("id") != threat_id]
                 safe_json.write_json(path, entries)
                 return {"ok": True, "action": "restored", "path": orig}

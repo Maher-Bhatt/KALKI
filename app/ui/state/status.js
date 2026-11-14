@@ -13,7 +13,7 @@ import { health } from '../api/client.js';
 import { store, set, notify } from './store.js';
 
 const ACTIVE_MS = 2000;
-const IDLE_MS = 10000;
+const IDLE_MS = 2500;
 const OFFLINE_MS = 5000;
 
 let timer = null;
@@ -24,13 +24,24 @@ let lastSeq = -1;
 
 export function onExchange(fn) { onVoiceExchange = fn; }
 
-/** Derive the voice state from signals the backend actually reports.
- *  There is deliberately no `listening` state: listener.py does not report
- *  whether the microphone is capturing, and animating an unverified state
- *  would be a lie. */
+/** Derive the voice state from signals the backend actually reports. */
 function deriveVoice(s) {
-  if (!s || !s.ok) return 'error';
-  return s.listenerState || 'idle';
+  const now = Date.now();
+  if (!s || !s.listenerOnline) return 'unavailable';
+  if (store.conv.streaming) return 'thinking';
+  if (s.speaking) return 'speaking';
+  if (attending && now - attending < 5000) return 'attending';
+  if (s.listenerPaused) return 'mic-released';
+  if (s.listenerMicMuted) return 'mic-muted';
+  return 'ready';
+}
+
+export function setAttending() {
+  attending = Date.now();
+  if (store.status) {
+    store.voice.state = deriveVoice(store.status);
+    notify();
+  }
 }
 
 function ttsTrouble(s) {
@@ -82,14 +93,15 @@ let lastSignature = '';
 
 /** Readings that change on nearly every poll but are never shown live, or are
  *  painted by their own timers (the focus countdown). */
-const VOLATILE = new Set(['uptimeSec', 'cpu', 'batteryPct', 'listenerSeenAt', 'ttsLastLatencyMs', 'timeFull',
+const VOLATILE = new Set(['uptimeSec', 'batteryPct', 'listenerSeenAt', 'ttsLastLatencyMs', 'timeFull',
   'terminalLogs', 'remainingSec', 'serverTime', 'ts']);
 
 export function statusSignature(s) {
-  const attending = s?.listenerState === 'attending';
+  const isAttending = store.voice?.state === 'attending' || s?.listenerState === 'attending';
   return JSON.stringify(s, (key, value) => {
     if (VOLATILE.has(key)) return undefined;
-    if (key === 'micLevel' && !attending) return undefined; // only animates while attending
+    if (key === 'micLevel' && !isAttending) return undefined; // only animates while attending
+    if (key === 'cpu' || key === 'ram') return typeof value === 'number' ? Math.round(value) : value;
     return value;
   });
 }

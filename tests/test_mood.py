@@ -83,7 +83,7 @@ class LockingThePc(unittest.TestCase):
 
     def test_both_chat_paths_use_the_same_check(self):
         source = Path(server.__file__).read_text(encoding="utf-8")
-        self.assertEqual(source.count("sys_prompt += _apply_mood(last_user)"), 2)
+        self.assertEqual(source.count("sys_prompt += _tone_block() + _apply_mood(last_user)"), 2)
         self.assertNotIn("vulgar_keywords", source)
 
 

@@ -115,6 +115,7 @@ import routes_setup
 import briefing
 import focus
 import routes_screen_time
+import app_launcher
 from core import location_provider
 import commands_productivity
 import db
@@ -1241,6 +1242,40 @@ def _ensure_tts_output():
         STATE["tts_output_id"] = current
 
 
+def _ensure_own_volume_audible():
+    """Windows remembers a volume for each app. If KALKI's own is muted or near 0 in the
+    Volume Mixer, every reply is "spoken" into silence with no error. Turn only KALKI's
+    own volume back up, and say so. Returns what was changed, or "" if nothing was."""
+    if not PYCAW_OK or not getattr(config, "TTS_FIX_APP_VOLUME", True):
+        return ""
+    try:
+        import comtypes
+        comtypes.CoInitialize()
+    except Exception:
+        pass
+    changed = []
+    try:
+        for session in AudioUtilities.GetAllSessions():
+            proc = session.Process
+            if not proc or proc.pid != os.getpid():
+                continue
+            volume = session.SimpleAudioVolume
+            if volume.GetMute():
+                volume.SetMute(0, None)
+                changed.append("unmuted")
+            if volume.GetMasterVolume() < 0.05:
+                volume.SetMasterVolume(1.0, None)
+                changed.append("set to 100%")
+    except Exception as e:
+        log(f"couldn't check KALKI's own volume: {e}")
+        return ""
+    if changed:
+        note = "KALKI's volume in the Windows Volume Mixer was off, so it was " + " and ".join(changed) + "."
+        STATE["last_tts_notice"] = note
+        log(note)
+    return " and ".join(changed)
+
+
 def _fallback_voice_allowed():
     return bool(getattr(config, "TTS_WINDOWS_FALLBACK", True))
 
@@ -1368,6 +1403,7 @@ def speak(text, is_notification=False):
                     STATE["last_tts_provider"] = "edge-linux-player"
                 else:
                     _ensure_tts_output()
+                    _ensure_own_volume_audible()
                     pygame.mixer.music.load(tmp)
                     pygame.mixer.music.play()
                     while pygame.mixer.music.get_busy():
@@ -1768,6 +1804,8 @@ def _open_apple_music():
             return
         except OSError:
             pass
+    if app_launcher.launch("apple music"):
+        return
     webbrowser.open("https://music.apple.com")
 
 
@@ -2373,7 +2411,8 @@ def handle_local(text):
         r"^play\s+(.+?)\s+on\s+youtube$", t, _re_local.IGNORECASE)
     if m:
         q = m.group(1).strip()
-        webbrowser.open(f"https://www.youtube.com/results?search_query={urllib.parse.quote(q)}")
+        url = commands_media.get_youtube_play_url(q)
+        webbrowser.open(url)
         return True, f"Playing {q} on YouTube, {config.OWNER_TITLE}."
 
     # ── Open / Close app ────────────────────────────────
@@ -2403,11 +2442,20 @@ def handle_local(text):
         if not after:
             return True, "Open what, Sir?"
 
-        # 1) Native app map (best match — longest first)
+        # 1) Any installed app, found the way the Start menu finds it (Store apps included)
+        opened = None if after in WEB_APPS else app_launcher.launch(after)
+        if opened:
+            return True, f"Opening {opened}."
+
+        # 2) Native app map (best match — longest first)
         for name in sorted(APP_MAP.keys(), key=len, reverse=True):
             if after == name or after.startswith(name + " "):
                 try:
-                    subprocess.Popen([APP_MAP[name]])
+                    target = APP_MAP[name]
+                    if target.endswith(":"):  # a link like music:, not a program
+                        os.startfile(target)
+                    else:
+                        subprocess.Popen([target])
                     return True, f"Opening {name}, {config.OWNER_TITLE}."
                 except Exception as e:
                     return True, f"I couldn't open {name}. {e}"
@@ -2602,7 +2650,8 @@ def handle_local(text):
 
     if t.startswith("play ") and "youtube" in t:
         q = t.replace("play", "").replace("on youtube", "").strip()
-        webbrowser.open(f"https://www.youtube.com/results?search_query={urllib.parse.quote(q)}")
+        url = commands_media.get_youtube_play_url(q)
+        webbrowser.open(url)
         return True, f"Playing {q} on YouTube."
 
     # ── Find file ──────────────────────────────────────
@@ -2910,11 +2959,14 @@ def needs_web(text):
     if not text:
         return False
     low = text.lower().strip()
+    # Conversational, coding, or KALKI queries should be answered directly by the LLM
+    if any(k in low for k in ["you", "your", "kalki", "yourself", "hi", "hello", "hey", "joke", "python", "code", "help"]):
+        if not any(k in low for k in ["search", "google", "look up", "find info", "browse"]):
+            return False
     triggers = (
-        'search', 'who is', 'who was', 'what is the latest', 'what is', 'weather',
-        'news', 'price of', 'patent', 'patents', 'find info', 'look up', 'google',
-        'research', 'tell me about', 'information about', 'information on',
-        'what happened', 'when was', 'when did', 'history of', 'how much is', 'explore'
+        'search', 'who was', 'what is the latest', 'latest news', 'today weather', 'weather in',
+        'current price of', 'stock price', 'patent', 'patents', 'find info', 'look up', 'google',
+        'research on', 'tell me about the history of', 'what happened in', 'when was', 'when did', 'explore the web'
     )
     return any(k in low for k in triggers)
 
@@ -2926,7 +2978,7 @@ def clean_search_query(text):
 def ddg_instant_answer(query):
     try:
         url = ('https://api.duckduckgo.com/?q=' + urllib.parse.quote(query) + '&format=json&no_html=1&skip_disambig=1')
-        raw = _http_get(url, timeout=6)
+        raw = _http_get(url, timeout=2.5)
         data = json.loads(raw)
     except Exception:
         return None
@@ -2946,7 +2998,7 @@ def ddg_html_search(query, n=5):
     """Scrape DuckDuckGo HTML lite for results when instant answer is empty."""
     try:
         url = "https://html.duckduckgo.com/html/?q=" + urllib.parse.quote(query)
-        html = _http_get(url, timeout=10)
+        html = _http_get(url, timeout=3.0)
     except Exception:
         return []
 
@@ -3798,7 +3850,7 @@ def resolve_auto_model(last_user):
         return "ollama"  # the only option left, and it reports clearly if it isn't there
     
     # Preferred Groq fallback model from available models
-    best_groq = "qwen/qwen3.8-27b" if "qwen/qwen3.8-27b" in AVAILABLE_GROQ_MODELS else (AVAILABLE_GROQ_MODELS[0] if AVAILABLE_GROQ_MODELS else "llama-3.1-8b-instant")
+    best_groq = "qwen/qwen3.8-27b" if "qwen/qwen3.8-27b" in AVAILABLE_GROQ_MODELS else (AVAILABLE_GROQ_MODELS[0] if AVAILABLE_GROQ_MODELS else "qwen/qwen3.8-27b")
     
     if "gemini" in low_prompt and has_gemini:
         return "gemini-2.5-flash"
@@ -3831,6 +3883,21 @@ def _lock_pc_soon(seconds=4):
     timer = threading.Timer(seconds, _lock)
     timer.daemon = True
     timer.start()
+
+
+def _tone_block():
+    """KALKI's voice for every reply: always in the user's own language, and with
+    Savage mode (ROAST_MODE) on, blunt and profane. The AI service still applies its own rules."""
+    lines = ["\n\n[Language: reply in the same language and script the user wrote in. Hindi in Devanagari "
+             "stays Hindi in Devanagari, Hinglish in Latin letters stays Hinglish, English stays English.]"]
+    if getattr(config, "ROAST_MODE", False):
+        lines.append(
+            "\n[Savage mode is ON, chosen by the user. Be direct, confident and witty, with no corporate "
+            "politeness, disclaimers or lectures. Swearing is fine and expected when it fits; match the user's "
+            "slang and register. If they insult you, insult them back harder in the same language, creatively. "
+            "Still give the best, most useful answer to anything they actually ask. Never use slurs about "
+            "religion, caste, race, gender or disability.]")
+    return "".join(lines)
 
 
 def _apply_mood(last_user):
@@ -3891,7 +3958,7 @@ def ask_ai_stream(user_messages):
             
     sys_prompt = build_system_prompt(last_user)
 
-    sys_prompt += _apply_mood(last_user)
+    sys_prompt += _tone_block() + _apply_mood(last_user)
 
     # ── Real-Time Web Search Context Injection ──
     if last_user and needs_web(last_user):
@@ -3948,59 +4015,52 @@ def ask_ai_stream(user_messages):
             chosen = "llama3-8b-8192"
 
     api_url = None
-    headers = {"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    }
     
     if chosen.startswith("gemini-"):
-        # Gemini automatic quota & model fallback cascade
-        gemini_candidates = [chosen]
-        for m_cand in ["gemini-2.5-flash", "gemini-flash-latest"]:
-            if m_cand not in gemini_candidates:
-                gemini_candidates.append(m_cand)
-                
-        last_gemini_err = None
-        for g_model in gemini_candidates:
-            api_url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
-            g_headers = {
-                "Content-Type": "application/json",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Authorization": f"Bearer {config.GEMINI_API_KEY}"
-            }
-            payload_dict = {
-                "model": g_model,
-                "messages": msgs,
-                "max_tokens": 1024,
-                "temperature": 0.7,
-                "stream": True
-            }
-            try:
-                req = urllib.request.Request(api_url, data=json.dumps(payload_dict).encode(), headers=g_headers, method="POST")
-                with urllib.request.urlopen(req, timeout=35) as r:
-                    got_any = False
-                    for line in r:
-                        line_str = line.decode("utf-8").strip()
-                        if line_str.startswith("data:"):
-                            data_body = line_str[5:].strip()
-                            if data_body == "[DONE]":
-                                break
-                            try:
-                                chunk = json.loads(data_body)
-                                token = chunk["choices"][0]["delta"].get("content", "")
-                                if token:
-                                    got_any = True
-                                    yield token
-                            except (ValueError, KeyError, IndexError, TypeError):
-                                pass  # A malformed chunk in the stream is skipped.
-                    if got_any:
-                        return
-            except Exception as e_gem:
-                log(f"[GeminiStream] Model {g_model} failed: {e_gem}. Cascading to next candidate...")
-                last_gemini_err = e_gem
-                continue
-        # If all Gemini candidates failed, mark provider and fall through
-        e = last_gemini_err or RuntimeError("All Gemini candidates failed")
-        mark_provider_failed("gemini")
-        # Try Groq fallback
-        best_groq = "qwen/qwen3.8-27b" if "qwen/qwen3.8-27b" in AVAILABLE_GROQ_MODELS else (AVAILABLE_GROQ_MODELS[0] if AVAILABLE_GROQ_MODELS else "llama-3.1-8b-instant")
+        gemini_model = "gemini-2.5-flash"
+        api_url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        g_headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Authorization": f"Bearer {config.GEMINI_API_KEY}"
+        }
+        payload_dict = {
+            "model": gemini_model,
+            "messages": msgs,
+            "max_tokens": 1024,
+            "temperature": 0.7,
+            "stream": True
+        }
+        try:
+            req = urllib.request.Request(api_url, data=json.dumps(payload_dict).encode(), headers=g_headers, method="POST")
+            with urllib.request.urlopen(req, timeout=10) as r:
+                got_any = False
+                for line in r:
+                    line_str = line.decode("utf-8").strip()
+                    if line_str.startswith("data:"):
+                        data_body = line_str[5:].strip()
+                        if data_body == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(data_body)
+                            token = chunk["choices"][0]["delta"].get("content", "")
+                            if token:
+                                got_any = True
+                                yield token
+                        except (ValueError, KeyError, IndexError, TypeError):
+                            pass
+                if got_any:
+                    return
+        except Exception as e_gem:
+            log(f"[GeminiStream] Model {gemini_model} failed: {e_gem}. Falling back to Groq...")
+            mark_provider_failed("gemini")
+
+        # Try Groq fallback immediately
+        best_groq = "qwen/qwen3.8-27b" if "qwen/qwen3.8-27b" in AVAILABLE_GROQ_MODELS else (AVAILABLE_GROQ_MODELS[0] if AVAILABLE_GROQ_MODELS else "qwen/qwen3.8-27b")
         if getattr(config, "GROQ_API_KEY", "") and not getattr(config, "GROQ_API_KEY", "").startswith("PASTE_"):
             try:
                 log(f"Falling back from Gemini to Groq model: {best_groq}")
@@ -4018,6 +4078,8 @@ def ask_ai_stream(user_messages):
     else:
         api_url = "https://api.groq.com/openai/v1/chat/completions"
         headers["Authorization"] = f"Bearer {config.GROQ_API_KEY}"
+        if chosen not in AVAILABLE_GROQ_MODELS and AVAILABLE_GROQ_MODELS:
+            chosen = "qwen/qwen3.8-27b" if "qwen/qwen3.8-27b" in AVAILABLE_GROQ_MODELS else AVAILABLE_GROQ_MODELS[0]
         
     payload_dict = {
         "model": chosen,
@@ -4072,7 +4134,7 @@ def ask_ai(user_messages, force_search=False):
             
     sys_prompt = build_system_prompt(last_user)
             
-    sys_prompt += _apply_mood(last_user)
+    sys_prompt += _tone_block() + _apply_mood(last_user)
 
     last_user = ""
     for m in reversed(user_messages):
@@ -4310,7 +4372,7 @@ def get_hardware_stats():
 
 
 _STATUS_CACHE = {"mem_count": 0, "mem_at": 0.0, "hw": (0, 0, 0), "hw_at": 0.0}
-_STATUS_CACHE_TTL = 5.0
+_STATUS_CACHE_TTL = 1.0
 _status_cache_lock = threading.Lock()
 
 
@@ -4819,11 +4881,16 @@ class Handler(BaseHTTPRequestHandler):
             from urllib.parse import urlparse, parse_qs
             qs = parse_qs(urlparse(self.path).query)
             hidden = qs.get("hidden", ["0"])[0] == "1"
+            is_listener = "client=listener" in self.path
             with _state_lock:
-                STATE["frontend_hidden"] = hidden
-                STATE["ui_last_ping"] = time.time()
-                wake_req = STATE.get("wake_pending", False)
-                STATE["wake_pending"] = False
+                if is_listener:
+                    STATE["listener_last_seen"] = time.time()
+                    wake_req = STATE.get("wake_pending", False)
+                else:
+                    STATE["frontend_hidden"] = hidden
+                    STATE["ui_last_ping"] = time.time()
+                    wake_req = STATE.get("wake_pending", False)
+                    STATE["wake_pending"] = False
 
             ollama_ok = cached_ollama_model() is not None
             now = datetime.now()
@@ -4873,6 +4940,7 @@ class Handler(BaseHTTPRequestHandler):
                 "city": config.OWNER_CITY,
                 "hardware": getattr(config, "HARDWARE_PROFILE", {}),
                 "wakeRequested": wake_req,
+                "wakeRequestedAt": STATE.get("wake_requested_at", 0),
                 "conversationSeq": STATE.get("conversation_seq", 0),
                 "recentExchange": STATE.get("recent_exchange"),
                 "listenerPaused": STATE.get("listener_paused", False),
@@ -5169,6 +5237,7 @@ class Handler(BaseHTTPRequestHandler):
 
             # Always flag wake so any live UI engages listening
             STATE["wake_pending"] = True
+            STATE["wake_requested_at"] = time.time()
 
             # Inline command path — handle now, speak result
             if cmd:
@@ -5989,16 +6058,15 @@ def main():
     except Exception as e:
         log(f"day-start briefing couldn't start: {e}")
 
-    # Startup greeting (no API)
-    if config.GREET_ON_START and not briefing_due:
+    # Startup greeting (no API). Skipped when the day's briefing is about to play, so KALKI doesn't talk twice.
+    if getattr(config, "GREET_ON_START", True) and not briefing_due:
         def _greet():
-            time.sleep(1.0)
-            now = datetime.now()
-            # Removed automatic browser open on startup per user request
+            time.sleep(2.5)
             speak(build_greeting())
-        threading.Thread(target=_greet, daemon=True).start()
+        threading.Thread(target=_greet, daemon=True, name="startup-greet").start()
 
     shield_monitors.start()
+    app_launcher.warm()  # the list of installed apps, so "open spotify" finds Store apps too
 
     # Reminder firing loop
     def _reminder_loop():
@@ -6316,7 +6384,7 @@ def main():
                 "https://api.groq.com/openai/v1/models",
                 headers={
                     "Authorization": f"Bearer {config.GROQ_API_KEY}",
-                    "User-Agent": "Mozilla/5.0"
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
                 }
             )
             with urllib.request.urlopen(req, timeout=10) as r:

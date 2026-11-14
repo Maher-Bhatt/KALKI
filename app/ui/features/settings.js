@@ -359,6 +359,10 @@ const SECTION_BODY = {
       textRow('City', 'Used for weather, time and local context.', 'OWNER_CITY', 'City'),
       textRow('State', null, 'OWNER_STATE', 'State'),
       textRow('Country', null, 'OWNER_COUNTRY', 'Country')
+    ),
+    h('div.card.col.g12', null,
+      h('h2', null, 'Personality'),
+      toggleRow('Savage mode', 'Blunt, witty and free to swear. Insults get roasted back in your own language. The AI service still applies its own rules.', 'ROAST_MODE')
     )
   ],
 
@@ -529,6 +533,7 @@ const SECTION_BODY = {
         )
       ),
       toggleRow('Use the Windows voice if the natural voice fails', 'Otherwise KALKI stays silent when the online voice service is down.', 'TTS_WINDOWS_FALLBACK'),
+      toggleRow("Keep KALKI's volume up", "If KALKI's own volume in the Windows Volume Mixer is at 0 or muted, turn it back up before speaking.", 'TTS_FIX_APP_VOLUME'),
       row('Voice', 'How KALKI sounds when it speaks (Andrew, Ryan, Brian, Guy, Tony, etc.).',
         h('select.select', {
           style: { maxWidth: '24rem', width: '100%' }, 'aria-label': 'Voice identity',
