@@ -134,6 +134,8 @@ SCHEMA: Dict[str, Spec] = {
     "LATITUDE": Spec(_optional_float(-90, 90)),
     "LONGITUDE": Spec(_optional_float(-180, 180)),
     "AUTO_IP_LOCATION": Spec(_bool, False),
+    # This PC's location from Windows (GPS, Wi-Fi), for the weather. Never the IP address.
+    "USE_DEVICE_LOCATION": Spec(_bool, False),
     # Voice.
     "TTS_PROVIDER": Spec(_text(40), "edge"),
     "TTS_VOICE": Spec(_text(100), "en-US-AndrewMultilingualNeural"),
@@ -203,12 +205,14 @@ SCHEMA: Dict[str, Spec] = {
     "SCREEN_TIME_RETENTION_DAYS": Spec(_number(int, 1, 365), 30),
     # Daily briefing.
     "BRIEFING_SECTIONS": Spec(_subset("calendar", "reminders", "tasks", "mail", "sites", "screen_time", "weather"),
-                              ["calendar", "reminders", "tasks", "sites"]),
+                              ["calendar", "reminders", "tasks", "weather"]),
+    "BRIEFING_ON_START": Spec(_bool, True),
     # Mail and integrations.
     "EMAIL_ADDRESS": Spec(_text(320), ""),
     "IMAP_SERVER": Spec(_text(255), "imap.gmail.com"),
     "IMAP_PORT": Spec(_number(int, 1, 65535), 993),
     "GOOGLE_PROJECT_ID": Spec(_text(100)),
+    "MUSIC_APP": Spec(_choice("auto", "spotify", "apple_music", "youtube"), "auto"),
     "SPOTIFY_REDIRECT_URI": Spec(_url("http", "https"), "http://127.0.0.1:8889/callback"),
     # Alerts.
     "ALERTS_ENABLED": Spec(_bool, True),

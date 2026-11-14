@@ -288,6 +288,28 @@ def play():
     return "Played."
 
 
+async def _async_play_app(fragment: str):
+    manager = await _get_manager()
+    if not manager:
+        return None
+    for session in manager.get_sessions():
+        aumid = getattr(session, "source_app_user_model_id", "") or ""
+        if fragment.lower() in aumid.lower():
+            return bool(await asyncio.wait_for(session.try_play_async(), timeout=2.0))
+    return None
+
+
+def play_app(fragment):
+    """Press play in one app's player, found by its app id (e.g. "AppleMusic"), not whichever
+    player is current. True: it accepted. False: it refused. None: that app has no player open."""
+    if not _winrt_available:
+        return None
+    try:
+        return _run_coro(_async_play_app(fragment))
+    except Exception:
+        return None
+
+
 def pause():
     if _winrt_available:
         try:

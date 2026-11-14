@@ -34,9 +34,13 @@ def _done(sentence: str) -> str:
 
 
 def music_command(t: str, deps: Dict[str, Any]) -> Reply:
-    """deps: spotify, media, open_url, set_volume, open_apple_music."""
+    """deps: spotify, media, open_url, set_volume, open_apple_music, and optionally
+    music_app() -> "spotify" | "apple_music" | "youtube" (which app plays music) and
+    apple_music(query) -> reply (opens Apple Music and starts it, or searches it)."""
     spotify, media, open_url = deps["spotify"], deps["media"], deps["open_url"]
-    linked = spotify.is_configured()
+    app = deps.get("music_app", lambda: "spotify" if spotify.is_configured() else "youtube")()
+    linked = app == "spotify"
+    apple = app == "apple_music" and "apple_music" in deps
 
     def windows(action: Callable[[], str], failed: str) -> Tuple[bool, str]:
         try:
@@ -55,6 +59,8 @@ def music_command(t: str, deps: Dict[str, Any]) -> Reply:
         playing = (media.now_playing_json() or {}) if hasattr(media, "now_playing_json") else {}
         if playing.get("title") and playing.get("title") not in ("Unknown", "Nothing playing"):
             return windows(media.play, "I couldn't resume the music")
+        if apple:
+            return True, deps["apple_music"](None)
         open_url("https://music.youtube.com")
         return True, "Nothing was playing, so I opened YouTube Music."
     if t in _AGAIN:
@@ -85,6 +91,8 @@ def music_command(t: str, deps: Dict[str, Any]) -> Reply:
             if plain.replace("-", "").replace(" ", "") == "lofi":
                 return True, spotify.play_lofi()
             return True, spotify.play(query)
+        if apple:
+            return True, deps["apple_music"](None if plain in _GENERIC else query)
         if plain in _GENERIC or plain.replace("-", "").replace(" ", "") == "lofi":
             open_url("https://music.youtube.com")
             return True, "Opened YouTube Music. Connect Spotify in Settings to play songs directly."

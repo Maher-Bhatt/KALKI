@@ -115,6 +115,7 @@ import routes_setup
 import briefing
 import focus
 import routes_screen_time
+from core import location_provider
 import commands_productivity
 import db
 import wifi_security
@@ -1677,17 +1678,87 @@ def _strip_for_value(raw, anchors):
     return ""
 
 
+APPLE_MUSIC_APP_ID = "AppleInc.AppleMusicWin_nzyj5cx40ttqa!App"
+_apple_music_found = None
+
+
+def apple_music_installed():
+    """Whether the Apple Music app from the Microsoft Store is installed. Checked once."""
+    global _apple_music_found
+    if _apple_music_found is None:
+        _apple_music_found = False
+        if sys.platform == "win32":
+            try:
+                import winreg
+                key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Classes\Local Settings\Software\Microsoft"
+                                     r"\Windows\CurrentVersion\AppModel\Repository\Packages")
+                with key:
+                    i = 0
+                    while True:
+                        try:
+                            name = winreg.EnumKey(key, i)
+                        except OSError:
+                            break
+                        if name.startswith("AppleInc.AppleMusicWin_"):
+                            _apple_music_found = True
+                            break
+                        i += 1
+            except OSError:
+                pass
+    return _apple_music_found
+
+
+def music_app():
+    """Which app plays music: the MUSIC_APP setting, or on "auto" Spotify if it's connected,
+    then Apple Music if it's installed, then YouTube Music in the browser."""
+    choice = (getattr(config, "MUSIC_APP", "auto") or "auto").lower()
+    if choice == "spotify" and spotify_mod.is_configured():
+        return "spotify"
+    if choice == "apple_music" and apple_music_installed():
+        return "apple_music"
+    if choice == "youtube":
+        return "youtube"
+    if spotify_mod.is_configured():
+        return "spotify"
+    return "apple_music" if apple_music_installed() else "youtube"
+
+
 def _open_apple_music():
     """The Apple Music app if it's installed, otherwise its website."""
-    try:
-        subprocess.Popen(["cmd.exe", "/c", "start", "music:"], shell=False)
-        return
-    except OSError:
-        pass
-    try:
-        subprocess.Popen(["explorer.exe", r"shell:AppsFolder\AppleInc.AppleMusicWin_nzyj5cx40ttqa!App"])
-    except OSError:
-        webbrowser.open("https://music.apple.com")
+    if apple_music_installed():
+        try:
+            subprocess.Popen(["explorer.exe", "shell:AppsFolder\\" + APPLE_MUSIC_APP_ID])
+            return
+        except OSError:
+            pass
+    webbrowser.open("https://music.apple.com")
+
+
+def _apple_music(query=None, wait_seconds=20):
+    """Play music in Apple Music. With no query: open it and press play, which continues
+    your last song or queue. With a query: open an Apple Music search for it, since only
+    you can pick the exact result. The reply says what really happened."""
+    if query:
+        term = urllib.parse.quote(query)
+        try:
+            if not apple_music_installed():
+                raise OSError("not installed")
+            os.startfile("musics://music.apple.com/search?term=" + term)  # opens in the Apple Music app
+        except (OSError, AttributeError):
+            webbrowser.open("https://music.apple.com/search?term=" + term)
+        return f"Opened an Apple Music search for '{query}'. Pick a result to play it."
+    if media_mod.play_app("AppleMusic"):
+        return "Playing Apple Music."
+    _open_apple_music()
+    deadline = time.time() + wait_seconds
+    while time.time() < deadline:
+        time.sleep(1.5)
+        played = media_mod.play_app("AppleMusic")
+        if played:
+            return "Opened Apple Music and started playing."
+        if played is False:
+            break
+    return "Opened Apple Music. It didn't start playing on its own, so press play there."
 
 
 BRIEFING_PHRASES = frozenset((
@@ -1778,6 +1849,7 @@ def handle_local(text):
     _media_deps = {
         "spotify": spotify_mod, "media": media_mod, "open_url": webbrowser.open,
         "set_volume": set_volume, "open_apple_music": _open_apple_music,
+        "music_app": music_app, "apple_music": _apple_music,
     }
     result = (commands_media.music_command(t, _media_deps)
               or commands_media.whatsapp_command(t, raw, whatsapp_mod, _queue_confirmation))
@@ -3104,9 +3176,14 @@ def _run_tool_call(tool_name, args):
         elif tool_name == "scan_network":
             return cybertools.attack_surface_brief(args.get("target", ""))
         elif tool_name == "play_music":
-            # removed local import
-            spotify_mod.play(args.get("query", ""))
-            return "Playing music on Spotify."
+            # The same path as saying "play ...": Spotify, Apple Music or YouTube, whichever is set up.
+            query = (args.get("query") or "").strip() or "some music"
+            handled = commands_media.music_command(f"play {query}".lower(), {
+                "spotify": spotify_mod, "media": media_mod, "open_url": webbrowser.open,
+                "set_volume": set_volume, "open_apple_music": _open_apple_music,
+                "music_app": music_app, "apple_music": _apple_music,
+            })
+            return handled[1] if handled else "I couldn't start the music."
         elif tool_name == "get_daily_briefing":
             result = briefing.current()
             return "\n".join(f"{sec['title']} ({sec['status']}): {sec['text']}" for sec in result["sections"]) or result["text"]
@@ -4948,7 +5025,8 @@ class Handler(BaseHTTPRequestHandler):
                  or approvals.POST_ROUTES.get(path) or activity.POST_ROUTES.get(path)
                  or routes_settings.POST_ROUTES.get(path) or routes_calendar.POST_ROUTES.get(path)
                  or routes_setup.POST_ROUTES.get(path) or routes_backup.POST_ROUTES.get(path)
-                 or focus.POST_ROUTES.get(path) or routes_screen_time.POST_ROUTES.get(path))
+                 or focus.POST_ROUTES.get(path) or routes_screen_time.POST_ROUTES.get(path)
+                 or location_provider.POST_ROUTES.get(path))
         if route:
             payload, status = route(body)
             self._json(payload, status=status)
@@ -5862,8 +5940,20 @@ def main():
     except Exception as e:
         print(f"Failed to start auto-updater: {e}")
 
+    # The day's briefing, spoken the first time KALKI starts or the PC wakes each day.
+    # When it's due it replaces the greeting, since it starts with one.
+    def _briefing_on():
+        return bool(getattr(config, "BRIEFING_ON_START", True))
+    briefing_due = False
+    try:
+        import core.productivity as _prod
+        briefing_due = _briefing_on() and briefing.due_today()
+        briefing.start_day_watch(speak, _briefing_on, _prod._idle_seconds)
+    except Exception as e:
+        log(f"day-start briefing couldn't start: {e}")
+
     # Startup greeting (no API)
-    if config.GREET_ON_START:
+    if config.GREET_ON_START and not briefing_due:
         def _greet():
             time.sleep(1.0)
             now = datetime.now()
@@ -6212,7 +6302,10 @@ def main():
     def _resolve_location_after_startup():
         """Resolve optional GPS/IP location without delaying the local UI."""
         try:
-            from core import location_provider
+            if location_provider.enabled():
+                fix = location_provider.refresh()  # this PC's location from Windows, for the weather
+                if not fix.get("ok"):
+                    log(f"device location: {fix.get('reason')}")
             loc = location_provider.get_resolved_location()
             config.OWNER_CITY = loc.get("city", config.OWNER_CITY)
             config.OWNER_STATE = loc.get("state", config.OWNER_STATE)
