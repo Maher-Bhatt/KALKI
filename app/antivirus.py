@@ -136,28 +136,62 @@ def _find_mpcmdrun() -> Optional[str]:
     return None
 
 
-def get_windows_defender_status() -> Dict[str, Any]:
-    """Query native Windows Defender health via PowerShell."""
-    if os.name != "nt":
-        return {"available": False, "reason": "Non-Windows platform"}
+def _age(value: Any) -> Optional[int]:
+    """Defender reports ages in days; 4294967295 (or -1) means "never"."""
     try:
-        cmd = [
-            "powershell", "-NoProfile", "-NonInteractive", "-Command",
-            "Get-MpComputerStatus | Select-Object AntivirusEnabled, RealTimeProtectionEnabled, AntivirusSignatureAge, QuickScanAge, ComputerState | ConvertTo-Json"
-        ]
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=6)
-        if res.returncode == 0 and res.stdout.strip():
-            data = json.loads(res.stdout)
-            return {
-                "available": True,
-                "antivirus_enabled": bool(data.get("AntivirusEnabled")),
-                "realtime_enabled": bool(data.get("RealTimeProtectionEnabled")),
-                "signature_age_days": data.get("AntivirusSignatureAge", 0),
-                "quick_scan_age_days": data.get("QuickScanAge", 0),
-            }
-    except Exception as e:
-        return {"available": False, "error": str(e)}
-    return {"available": False, "reason": "No response"}
+        n = int(value)
+    except (TypeError, ValueError):
+        return None
+    return None if n < 0 or n >= 65535 else n
+
+
+def get_windows_defender_status() -> Dict[str, Any]:
+    """Windows Defender's real state, from Get-MpComputerStatus. Nothing is assumed:
+    a value Windows doesn't report stays None and the screen says "unknown"."""
+    if os.name != "nt":
+        return {"available": False, "reason": "Windows Defender is only on Windows."}
+    fields = ("AMServiceEnabled", "AntivirusEnabled", "RealTimeProtectionEnabled", "IsTamperProtected",
+              "AntivirusSignatureAge", "AntivirusSignatureLastUpdated", "QuickScanAge", "FullScanAge",
+              "QuickScanEndTime", "AMProductVersion")
+    cmd = ["powershell", "-NoProfile", "-NonInteractive", "-Command",
+           "Get-MpComputerStatus | Select-Object " + ", ".join(fields)
+           + " | ConvertTo-Json -Compress -Depth 2"]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=12,
+                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    except subprocess.TimeoutExpired:
+        return {"available": False, "reason": "Windows Defender didn't answer in time."}
+    except OSError as e:
+        return {"available": False, "reason": f"Couldn't ask Windows Defender ({e.strerror or e})."}
+    if res.returncode != 0 or not res.stdout.strip():
+        detail = (res.stderr or "").strip().splitlines()
+        reason = "Windows Defender isn't running. Another antivirus may have replaced it."
+        if detail and "0x800106ba" in detail[0].lower():
+            reason = "Windows Defender's service isn't running. Another antivirus may have replaced it."
+        return {"available": False, "reason": reason}
+    try:
+        data = json.loads(res.stdout)
+    except ValueError:
+        return {"available": False, "reason": "Windows Defender's answer couldn't be read."}
+
+    def when(value: Any) -> Optional[str]:
+        # PowerShell 5 serialises dates as "/Date(1731577200000)/".
+        m = re.search(r"(\d{10,})", str(value or ""))
+        return time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(int(m.group(1)) / 1000)) if m else None
+
+    return {
+        "available": True,
+        "service_enabled": bool(data.get("AMServiceEnabled")),
+        "antivirus_enabled": bool(data.get("AntivirusEnabled")),
+        "realtime_enabled": bool(data.get("RealTimeProtectionEnabled")),
+        "tamper_protected": data.get("IsTamperProtected"),
+        "signature_age_days": _age(data.get("AntivirusSignatureAge")),
+        "signatures_updated": when(data.get("AntivirusSignatureLastUpdated")),
+        "quick_scan_age_days": _age(data.get("QuickScanAge")),
+        "full_scan_age_days": _age(data.get("FullScanAge")),
+        "last_quick_scan": when(data.get("QuickScanEndTime")),
+        "version": data.get("AMProductVersion") or "",
+    }
 
 
 def _calculate_entropy(data: bytes) -> float:
@@ -177,138 +211,151 @@ def _calculate_entropy(data: bytes) -> float:
     return round(entropy, 2)
 
 
-def scan_file(file_path: str) -> Dict[str, Any]:
-    """
-    Perform deep static heuristic & signature analysis on a file.
-    Runs Defender CLI if available on Windows, supplemented with Python heuristics.
-    """
-    if not os.path.exists(file_path):
-        return {"ok": False, "clean": False, "scan_status": "not_scanned", "error": "File does not exist", "path": file_path}
+def _defender_threat_name(output: str) -> str:
+    """The threat name Defender printed, if any (e.g. "Virus:DOS/EICAR_Test_File"). Only used for
+    display: whether something was detected comes from the exit code."""
+    m = re.search(r"Threat\s*:\s*(\S[^\r\n]*)", output or "")
+    return m.group(1).strip() if m else ""
 
+
+def defender_scan(file_path: str, timeout: int = 120) -> Dict[str, Any]:
+    """Ask Windows Defender about one file. MpCmdRun's documented exit codes: 0 means no
+    threat, 2 means a threat was found, anything else means the scan didn't complete."""
+    path = _find_mpcmdrun()
+    if not path:
+        return {"checked": False, "detected": False, "error": "Windows Defender isn't available on this PC."}
+    try:
+        res = subprocess.run([path, "-Scan", "-ScanType", "3", "-File", file_path, "-DisableRemediation"],
+                             capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return {"checked": False, "detected": False, "error": "Windows Defender took too long to check this file."}
+    except (OSError, subprocess.SubprocessError) as e:
+        return {"checked": False, "detected": False, "error": f"Windows Defender couldn't be started ({type(e).__name__})."}
+    if res.returncode == 0:
+        return {"checked": True, "detected": False}
+    if res.returncode == 2:
+        return {"checked": True, "detected": True, "name": _defender_threat_name(res.stdout)}
+    return {"checked": False, "detected": False, "error": f"Windows Defender couldn't check this file (exit code {res.returncode})."}
+
+
+# File types where script-style patterns mean something. In programs and documents
+# they match ordinary content (nearly every .exe mentions VirtualAlloc).
+SCRIPT_EXTENSIONS = {".ps1", ".psm1", ".bat", ".cmd", ".vbs", ".vbe", ".js", ".jse", ".hta", ".wsf", ".wsh", ".sct"}
+MACRO_EXTENSIONS = {".docm", ".xlsm", ".pptm", ".dotm", ".xltm"}
+PATTERN_BYTES = 4 * 1024 * 1024
+# Windows refuses to open a file Defender has blocked with these errors.
+BLOCKED_BY_DEFENDER = {225, 226}  # ERROR_VIRUS_INFECTED, ERROR_VIRUS_DELETED
+
+
+def _blocked_by_defender(path: str, error: OSError) -> bool:
+    """Whether Windows refused the file because Defender reported it infected. Python's open()
+    turns that into a plain "Invalid argument", so ask Windows for the real error."""
+    if getattr(error, "winerror", None) in BLOCKED_BY_DEFENDER:
+        return True
+    if os.name != "nt" or error.errno != 22:
+        return False
+    try:
+        import ctypes
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        k32.CreateFileW.restype = ctypes.c_void_p
+        handle = k32.CreateFileW(str(path), 0x80000000, 1, None, 3, 0x80, None)  # GENERIC_READ, OPEN_EXISTING
+        if handle not in (None, ctypes.c_void_p(-1).value):
+            k32.CloseHandle(ctypes.c_void_p(handle))
+            return False
+        return ctypes.get_last_error() in BLOCKED_BY_DEFENDER
+    except (AttributeError, OSError):
+        return False
+
+
+def scan_file(file_path: str) -> Dict[str, Any]:
+    """Check one file with Windows Defender, plus a few plain checks of KALKI's own.
+
+    verdict is one of:
+      "threat"     Windows Defender detected it (or Windows blocked it as infected)
+      "suspicious" KALKI's checks found something worth a look; Defender didn't flag it
+      "clean"      Defender checked it and found nothing, and KALKI's checks agree
+      "unchecked"  KALKI's checks found nothing but Defender couldn't check it, so this isn't a clean result
+    KALKI never makes up a malware name: findings say what was seen and why it matters.
+    """
+    base = {"path": file_path, "filename": os.path.basename(file_path), "timestamp": time.time()}
+    if not os.path.isfile(file_path):
+        return {"ok": False, "clean": False, "verdict": "unchecked", "scan_status": "not_scanned",
+                "error": "That file doesn't exist.", **base}
     try:
         file_size = os.path.getsize(file_path)
     except OSError as e:
-        return {"ok": False, "clean": False, "scan_status": "not_scanned", "error": str(e), "path": file_path}
+        return {"ok": False, "clean": False, "verdict": "unchecked", "scan_status": "not_scanned",
+                "error": f"Couldn't read the file: {e.strerror or e}", **base}
 
-    filename = os.path.basename(file_path)
-    base_name, ext = os.path.splitext(filename)
-    lower_ext = ext.lower()
-
+    lower_ext = os.path.splitext(base["filename"])[1].lower()
     findings: List[str] = []
-    threat_level = "Clean"
-    threat_name = ""
+    notes: List[str] = []
 
-    # 1. Double extension check (e.g. invoice.pdf.exe)
-    double_ext_match = re.search(r"\.(pdf|docx?|xlsx?|pptx?|txt|jpg|png|mp3|zip)\.(exe|scr|vbs|bat|cmd|ps1|hta)$", filename, re.IGNORECASE)
-    if double_ext_match:
-        findings.append(f"Deceptive double extension detected: '.{double_ext_match.group(1)}.{double_ext_match.group(2)}'")
-        threat_level = "Critical"
-        threat_name = "Trojan.DoubleExtension.Dropper"
-
-    # 2. Compute SHA-256 and MD5 hashes
-    sha256_hash = hashlib.sha256()
-    md5_hash = hashlib.md5()
+    sha256_hash, md5_hash, head = hashlib.sha256(), hashlib.md5(), b""
     try:
         with open(file_path, "rb") as f:
-            # Read first chunk for quick inspection
-            header_bytes = f.read(65536)
-            sha256_hash.update(header_bytes)
-            md5_hash.update(header_bytes)
-            while chunk := f.read(131072):
+            head = f.read(PATTERN_BYTES)
+            sha256_hash.update(head)
+            md5_hash.update(head)
+            while chunk := f.read(1024 * 1024):
                 sha256_hash.update(chunk)
                 md5_hash.update(chunk)
-    except Exception as e:
-        err_msg = str(e)
-        if "virus" in err_msg.lower() or "225" in err_msg or "operation did not complete successfully" in err_msg.lower() or "invalid argument" in err_msg.lower():
-            return {
-                "ok": True,
-                "clean": False,
-                "scan_status": "scanned",
-                "threat_level": "Critical",
-                "threat_name": "Win32.Malware.BlockedByOS",
-                "findings": ["File access was immediately blocked by Windows Defender / Antivirus protection."],
-                "path": file_path,
-                "filename": filename,
-                "size_bytes": file_size,
-                "sha256": "blocked_by_os_shield",
-                "md5": "blocked_by_os_shield",
-                "timestamp": time.time(),
-            }
-        return {"ok": False, "clean": False, "scan_status": "not_scanned", "error": f"Failed reading file: {e}", "path": file_path}
+    except OSError as e:
+        if _blocked_by_defender(file_path, e):
+            result = {"ok": True, "clean": False, "verdict": "threat", "scan_status": "scanned", "defender_checked": True,
+                      "threat_level": "Critical", "threat_name": "Blocked by Windows Defender",
+                      "findings": ["Windows refused to open this file because Windows Defender reported it as infected."],
+                      "notes": [], "size_bytes": file_size, "sha256": "", "md5": "", **base}
+            oversight.record_alert("antivirus", f"Windows Defender blocked {base['filename']}.", "critical")
+            return result
+        return {"ok": False, "clean": False, "verdict": "unchecked", "scan_status": "not_scanned",
+                "error": f"Couldn't scan this file: {e.strerror or e}. It may be open in another program.",
+                "size_bytes": file_size, **base}
 
-    sha256_hex = sha256_hash.hexdigest().lower()
-    md5_hex = md5_hash.hexdigest().lower()
+    sha256_hex, md5_hex = sha256_hash.hexdigest(), md5_hash.hexdigest()
 
-    # 3. Known signature & EICAR test file check
-    if sha256_hex == EICAR_SHA256 or EICAR_SUBSTRING in header_bytes:
-        findings.append("Standard EICAR Antivirus Test Signature detected")
-        threat_level = "High"
-        threat_name = "Test.Virus.EICAR.Standard"
-
-    # 4. Pattern matching for scripts and macros
-    if lower_ext in {".ps1", ".bat", ".cmd", ".vbs", ".hta", ".js", ".wsf", ".docm", ".xlsm"} or lower_ext not in {".png", ".jpg", ".mp4", ".mkv"}:
+    # KALKI's own checks: plain reasons, never a malware name.
+    double_ext = re.search(r"\.(pdf|docx?|xlsx?|pptx?|txt|jpe?g|png|mp[34]|zip)\.(exe|scr|com|pif|vbs|bat|cmd|ps1|hta|js)$",
+                           base["filename"], re.IGNORECASE)
+    if double_ext:
+        findings.append(f"Suspicious because it ends in .{double_ext.group(1)}.{double_ext.group(2)}: it looks like a "
+                        f"{double_ext.group(1).upper()} but runs as a program.")
+    if sha256_hex == EICAR_SHA256 or EICAR_SUBSTRING in head[:1024]:
+        findings.append("This is the EICAR test file, a harmless file every antivirus treats as a threat for testing.")
+    if lower_ext in SCRIPT_EXTENSIONS or lower_ext in MACRO_EXTENSIONS:
         for pat, desc in SUSPICIOUS_PATTERNS:
-            if pat.search(header_bytes):
-                findings.append(f"Suspicious heuristic signature: {desc}")
-                if threat_level == "Clean":
-                    threat_level = "Medium"
-                    threat_name = f"Heur.{desc.split()[0]}"
-
-    # 5. Shannon entropy analysis for executables (packed / ransomware payloads)
+            if pat.search(head):
+                findings.append(f"Suspicious because the script contains: {desc}.")
     if lower_ext in {".exe", ".dll", ".scr"} and file_size > 1024:
-        entropy = _calculate_entropy(header_bytes)
+        entropy = _calculate_entropy(head[:65536])
         if entropy > 7.45:
-            findings.append(f"Extremely high byte entropy ({entropy}/8.0) indicating packed/encrypted payload")
-            if threat_level == "Clean":
-                threat_level = "Medium"
-                threat_name = "Suspicious.HighEntropy.Packer"
+            # Installers and compressed programs look like this too, so it's a note, not a finding.
+            notes.append(f"Its content is packed or compressed (entropy {entropy}/8). Common for installers; "
+                         "also used to hide malware.")
+    if file_size > PATTERN_BYTES and (lower_ext in SCRIPT_EXTENSIONS or lower_ext in MACRO_EXTENSIONS):
+        notes.append(f"Only the first {PATTERN_BYTES // (1024 * 1024)} MB was checked by KALKI's own checks.")
 
-    # 6. Windows Defender native scan fallback/confirmation
-    defender_path = _find_mpcmdrun()
-    defender_output = ""
-    defender_checked = False
-    defender_error = "Windows Defender isn't available on this PC."
-    if defender_path:
-        try:
-            res = subprocess.run(
-                [defender_path, "-Scan", "-ScanType", "3", "-File", file_path, "-DisableRemediation"],
-                capture_output=True, text=True, timeout=60
-            )
-            defender_output = res.stdout or ""
-            # 0 is clean and 2 is a detection. Anything else means it didn't finish.
-            defender_checked = res.returncode in (0, 2)
-            defender_error = "" if defender_checked else f"Windows Defender couldn't check this file (code {res.returncode})."
-            # MpCmdRun reports e.g. "found 1 threats" and returns 2 for a detection.
-            if res.returncode == 2 or re.search(r"found\s+[1-9]\d*\s+threat", defender_output, re.IGNORECASE):
-                threat_level = "Critical"
-                findings.append("Windows Defender flagged this file as malicious")
-                threat_name = threat_name or "Win32.Malware.Generic"
-        except (OSError, subprocess.SubprocessError) as e:
-            defender_error = f"Windows Defender couldn't check this file ({type(e).__name__})."
-
-    is_clean = (threat_level == "Clean")
+    defender = defender_scan(file_path)
+    if defender["detected"]:
+        verdict, level = "threat", "Critical"
+        name = f"Windows Defender: {defender['name']}" if defender.get("name") else "Windows Defender detected a threat"
+        findings.insert(0, "Windows Defender detected a threat in this file.")
+    elif findings:
+        verdict, level = "suspicious", "Medium"
+        name = "Looks suspicious"
+    elif defender["checked"]:
+        verdict, level, name = "clean", "Clean", "Nothing found"
+    else:
+        verdict, level, name = "unchecked", "Unknown", "Not fully checked"
 
     result = {
-        "ok": True,
-        "clean": is_clean,
-        "scan_status": "scanned",
-        "defender_checked": defender_checked,
-        **({} if defender_checked else {"defender_error": defender_error}),
-        "threat_level": threat_level,
-        "threat_name": threat_name or ("None" if is_clean else "Suspicious.File"),
-        "findings": findings,
-        "path": file_path,
-        "filename": filename,
-        "size_bytes": file_size,
-        "sha256": sha256_hex,
-        "md5": md5_hex,
-        "timestamp": time.time(),
+        "ok": True, "clean": verdict == "clean", "verdict": verdict, "scan_status": "scanned",
+        "defender_checked": defender["checked"], **({} if defender["checked"] else {"defender_error": defender["error"]}),
+        "threat_level": level, "threat_name": name, "findings": findings, "notes": notes,
+        "size_bytes": file_size, "sha256": sha256_hex, "md5": md5_hex, **base,
     }
-
-    if not is_clean:
-        severity = "critical" if threat_level in ("Critical", "High") else "warning"
-        oversight.record_alert("antivirus", f"Flagged {filename}: {threat_name} ({threat_level})", severity)
-
+    if verdict in ("threat", "suspicious"):
+        oversight.record_alert("antivirus", f"{base['filename']}: {name}.", "critical" if verdict == "threat" else "warning")
     return result
 
 
@@ -360,7 +407,7 @@ def scan_quick() -> Dict[str, Any]:
                             else:
                                 if not res.get("defender_checked"):
                                     defender_unchecked += 1
-                                if not res.get("clean"):
+                                if res.get("verdict") in ("threat", "suspicious"):
                                     threats_found.append(res)
                             if scanned_files >= 250:
                                 break
@@ -377,8 +424,10 @@ def scan_quick() -> Dict[str, Any]:
         threats_found.append({
             "clean": False,
             "threat_level": "High",
-            "threat_name": p_threat.get("reason", "Suspicious.Process"),
-            "findings": [f"PID {p_threat.get('pid')}: {p_threat.get('name')} at {p_threat.get('exe')}"],
+            "verdict": "suspicious",
+            "threat_name": "Suspicious process",
+            "findings": [f"Suspicious because: {p_threat.get('reason', 'it behaves unusually')}.",
+                         f"PID {p_threat.get('pid')}: {p_threat.get('name')} at {p_threat.get('exe')}"],
             "path": p_threat.get("exe", "memory"),
             "filename": p_threat.get("name", "process"),
         })
@@ -542,7 +591,7 @@ def inspect_clipboard(text: str) -> Dict[str, Any]:
     }
 
 
-def quarantine_file(file_path: str, threat_name: str = "Generic.Malware") -> Dict[str, Any]:
+def quarantine_file(file_path: str, threat_name: str = "Flagged in a check-up") -> Dict[str, Any]:
     """Safely move a flagged file to the quarantine vault with restricted permissions."""
     if not os.path.exists(file_path):
         return {"ok": False, "error": "File does not exist"}
@@ -681,6 +730,6 @@ def get_antivirus_status() -> Dict[str, Any]:
         "quarantined_count": len(quarantined),
         "quarantined_items": quarantined,
         "last_scan": last_scan,
-        "engine_version": "1.5.0-ShieldCore",
+        "engine_version": defender.get("version") or "",
         "system_protected": system_protected,
     }

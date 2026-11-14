@@ -82,10 +82,10 @@ class DownloadWatcher:
         name = os.path.basename(path)
         if verdict.get("scan_status") == "not_scanned":
             _alert("shield_download", f"Couldn't scan the new download '{name}'. Open it with care.", "warning")
-        elif not verdict.get("clean"):
-            level = verdict.get("threat_level", "Medium")
-            severity = "critical" if level in ("Critical", "High") else "warning"
-            _alert("shield_download", f"New download '{name}' looks risky ({level}). Review it in Security.", severity)
+        elif (verdict.get("verdict") or ("clean" if verdict.get("clean") else "threat")) == "threat":
+            _alert("shield_download", f"Windows Defender detected a threat in the new download '{name}'. Review it in Security.", "critical")
+        elif verdict.get("verdict") == "suspicious":
+            _alert("shield_download", f"New download '{name}' looks suspicious. Review it in Security.", "warning")
 
 
 class ProcessMonitor:

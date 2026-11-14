@@ -13,7 +13,7 @@ import { icon } from '../lib/icons.js';
 import { bytes, relative, dateTime } from '../lib/format.js';
 import { cyber, antivirus, desktop, wifi } from '../api/endpoints.js';
 import { emptyState, loadingRow, toggleSwitch, errorState } from '../components/states.js';
-import { ok, err } from '../state/toasts.js';
+import { ok, err, toast } from '../state/toasts.js';
 
 /* ── 12 Comprehensive Cybersecurity Tools ────────────────────────── */
 const CYBER_CATALOG = [
@@ -285,7 +285,7 @@ async function runTargetScan() {
   avScanProgress = 40;
   avScanLogs = [];
   avScanResult = null;
-  addScanLog(`Executing deep heuristic analysis on target: ${target}`, 'info');
+  addScanLog(`Checking ${target}${/^https?:/i.test(target) ? '' : ' with Windows Defender'}…`, 'info');
   renderFn();
 
   let r;
@@ -305,12 +305,20 @@ async function runTargetScan() {
     r = await antivirus.scanFile(target);
     if (r.ok) {
       avScanResult = { type: 'file', ...r.data };
-      if (r.data.clean) {
-        addScanLog(r.data.defender_checked ? 'No problems found in this file.' : `KALKI's checks found nothing, but this isn't a full result: ${r.data.defender_error}`, r.data.defender_checked ? 'ok' : 'alert');
-        ok(r.data.defender_checked ? 'No problems found' : "Nothing found, but Defender couldn't check it");
+      const v = r.data.verdict || (r.data.clean ? 'clean' : 'suspicious');
+      if (v === 'clean') {
+        addScanLog('Windows Defender checked this file and found nothing.', 'ok');
+        ok('No problems found');
+      } else if (v === 'unchecked') {
+        addScanLog(`KALKI's checks found nothing, but this isn't a full result: ${r.data.defender_error}`, 'alert');
+        toast({ kind: 'warning', text: "Nothing found, but Windows Defender couldn't check it" });
+      } else if (v === 'threat') {
+        addScanLog(`${r.data.threat_name}.`, 'alert');
+        err(r.data.threat_name || 'Windows Defender detected a threat');
+        fetchAvStatus();
       } else {
-        addScanLog(`MALWARE DETECTED: ${r.data.threat_name} (${r.data.threat_level})`, 'alert');
-        err(`Threat detected: ${r.data.threat_name || 'Malware'}`);
+        addScanLog(`Looks suspicious: ${(r.data.findings || [])[0] || 'see the details'}`, 'alert');
+        toast({ kind: 'warning', text: 'This file looks suspicious. See why below.' });
         fetchAvStatus();
       }
     }
@@ -345,7 +353,7 @@ async function toggleShield(key, currentVal) {
 async function quarantineThreat(filePath, threatName) {
   if (avActionBusy || !filePath) return;
   avActionBusy = true;
-  const r = await antivirus.quarantine(filePath, threatName || 'Generic.Threat');
+  const r = await antivirus.quarantine(filePath, threatName || 'Flagged in a check-up');
   avActionBusy = false;
   if (r.ok) {
     ok('File moved to quarantine');
@@ -436,9 +444,12 @@ function renderAntivirus() {
     : age === 0 ? 'Definitions updated today' : `Definitions ${age} day${age === 1 ? '' : 's'} old`;
   const headline = isProtected
     ? 'Windows Defender is on'
-    : defender.available ? 'Windows Defender is off' : "Windows Defender's status is unknown";
+    : !defender.available ? "Windows Defender's status is unknown"
+      : defender.antivirus_enabled ? "Windows Defender's real-time protection is off" : 'Windows Defender is off';
+  const qAge = defender.quick_scan_age_days;
   const facts = [
     definitions,
+    defender.available && qAge != null ? `Windows scanned ${qAge === 0 ? 'today' : `${qAge} day${qAge === 1 ? '' : 's'} ago`}` : null,
     toReview ? `${toReview} item${toReview === 1 ? '' : 's'} to review` : (isProtected ? 'Nothing to review' : null),
     lastScan ? `Last check ${relative(lastScan.timestamp)}` : 'No check-up run yet',
   ].filter(Boolean);
@@ -451,6 +462,7 @@ function renderAntivirus() {
       !defender.available && (defender.reason || defender.error)
         ? h('p.xs.mut', null, defender.reason || defender.error)
         : null,
+      h('p.xs.mut', null, "KALKI isn't an antivirus. It works with Windows Defender, and adds a few checks of its own."),
     ),
     h('button.btn.pri', {
       type: 'button',
@@ -612,7 +624,7 @@ function renderAntivirus() {
             h('table.quarantine-table', null,
               h('thead', null,
                 h('tr', null,
-                  h('th', null, 'Threat Name'),
+                  h('th', null, 'Why'),
                   h('th', null, 'Filename'),
                   h('th', null, 'Original Path'),
                   h('th', null, 'Quarantined'),
@@ -621,7 +633,7 @@ function renderAntivirus() {
               ),
               h('tbody', null,
                 ...quarantined.map((item) => h('tr', null,
-                  h('td', null, h('span.chip.chip-warning', null, item.threat_name || 'Generic.Threat')),
+                  h('td', null, h('span.chip.chip-warning', null, item.threat_name || 'Flagged in a check-up')),
                   h('td', null, h('strong', null, item.filename || 'Unknown')),
                   h('td.t-meta.muted', { style: { maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, item.original_path || '—'),
                   h('td.t-meta', null, relative(item.timestamp)),
@@ -658,35 +670,47 @@ function renderAntivirus() {
   );
 }
 
+const VERDICT_VIEW = {
+  clean: { color: '#34d399', icon: 'check', title: () => 'Nothing found', chip: 'Checked by Windows Defender' },
+  unchecked: { color: '#d97706', icon: 'info', title: () => 'Not fully checked', chip: "Defender couldn't check it" },
+  suspicious: { color: '#f59e0b', icon: 'alert', title: () => 'Looks suspicious', chip: 'Review it' },
+  threat: { color: '#f87171', icon: 'alert', title: (r) => r.threat_name || 'Windows Defender detected a threat', chip: 'Threat' },
+};
+
 function renderScanResult(res) {
-  const isClean = res.clean;
-  const threatLevel = res.threat_level || (isClean ? 'Clean' : 'High');
-  const findings = res.findings || [];
+  const verdict = res.verdict || (res.clean ? 'clean' : (res.suspicious?.length || res.threat_level ? 'suspicious' : 'clean'));
+  const view = VERDICT_VIEW[verdict] || VERDICT_VIEW.suspicious;
+  const isClean = verdict === 'clean' || (res.type !== 'file' && res.clean);
+  const threatLevel = res.type === 'file' ? view.chip : (res.threat_level || (isClean ? 'Clean' : 'High'));
+  const findings = [...(res.findings || []), ...(res.defender_error && verdict !== 'clean' ? [res.defender_error] : [])];
+  const notes = res.notes || [];
   const suspiciousList = res.suspicious || [];
+  const color = res.type === 'file' ? view.color : (isClean ? '#34d399' : '#f87171');
 
   return h('div.card', {
     style: {
       marginTop: '12px',
-      borderLeft: `4px solid ${isClean ? '#34d399' : '#f87171'}`,
-      background: isClean ? 'rgba(52, 211, 153, 0.05)' : 'rgba(248, 113, 113, 0.07)'
+      borderLeft: `4px solid ${color}`,
+      background: `color-mix(in srgb, ${color} 7%, transparent)`
     }
   },
     h('div.inline', { style: { justifyContent: 'space-between', alignItems: 'center' } },
       h('div.inline', { style: { gap: '10px', alignItems: 'center' } },
-        icon(isClean ? 'check' : 'alert', 20),
-        h('strong', { style: { fontSize: '14px', color: isClean ? '#34d399' : '#f87171' } },
-          isClean ? 'Nothing suspicious found' : `Threat Detected: ${res.threat_name || 'Something looks suspicious'}`),
+        icon(res.type === 'file' ? view.icon : (isClean ? 'check' : 'alert'), 20),
+        h('strong', { style: { fontSize: '14px', color } },
+          res.type === 'file' ? view.title(res) : (isClean ? 'Nothing suspicious found' : 'Something looks suspicious')),
         h('span.chip', { class: isClean ? 'chip-ok' : 'chip-warning' }, threatLevel)
       ),
-      !isClean && res.path && res.path !== 'memory' ? h('button.btn.btn-sm.btn-danger', {
+      (verdict === 'threat' || verdict === 'suspicious') && res.path && res.path !== 'memory' ? h('button.btn.btn-sm.btn-danger', {
         type: 'button',
         disabled: avActionBusy,
         onClick: () => quarantineThreat(res.path, res.threat_name)
       }, 'Quarantine File') : null
     ),
     findings.length > 0 ? h('ul', { style: { margin: '8px 0 0 20px', padding: 0, fontSize: '12.5px' } },
-      ...findings.map((f) => h('li', { style: { color: isClean ? 'var(--text)' : '#f87171' } }, f))
+      ...findings.map((f) => h('li', { style: { color: isClean ? 'var(--text)' : color } }, f))
     ) : null,
+    notes.length > 0 ? h('ul.xs.mut', { style: { margin: '6px 0 0 20px', padding: 0 } }, ...notes.map((n) => h('li', null, n))) : null,
     suspiciousList.length > 0 ? h('div.stack', { style: { marginTop: '8px', gap: '4px' } },
       ...suspiciousList.map((p) => h('div.t-meta', { style: { color: '#f87171' } },
         `PID ${p.pid} (${p.name}): ${p.reason}`))
