@@ -21,18 +21,14 @@ export async function loadToday() {
   loadTodayInFlight = true;
   try {
     set('today', { loading: true });
-  const [t, r, n, b, c] = await Promise.all([
+  // The briefing checks live sources, so it loads on its own and never holds up the rest.
+  loadBriefing();
+  const [t, r, n, c] = await Promise.all([
     tasks.list(),
     reminders.list(),
     notes.list(6),
-    system.briefing().catch(() => ({ ok: false })),
     calendar.today().catch((err) => ({ ok: false, error: err }))
   ]);
-
-  let briefingData = null;
-  if (b.ok) {
-    briefingData = b.data?.text || b.data || b.text;
-  }
 
   const s = store.status;
   const isGcalConnected = (s && s.gcalConfigured === false)
@@ -47,7 +43,6 @@ export async function loadToday() {
     tasksError: t.ok ? null : t,
     reminders: r.ok ? r.items : [],
     notes: n.ok ? n.items : [],
-    briefing: store.today?.snoozedBriefing ? null : briefingData,
     events: rawEvents,
     calendarConfigured: isGcalConnected,
     agendaError: c.ok ? null : c,
@@ -55,6 +50,74 @@ export async function loadToday() {
   } finally {
     loadTodayInFlight = false;
   }
+}
+
+const SNOOZE_KEY = 'kalki.briefingSnoozedOn';
+
+function briefingSnoozed() {
+  try { return localStorage.getItem(SNOOZE_KEY) === new Date().toDateString(); } catch { return false; }
+}
+
+export async function loadBriefing() {
+  set('today', { briefingLoading: true });
+  const b = await system.briefing().catch((e) => ({ ok: false, message: e?.message }));
+  set('today', {
+    briefingLoading: false,
+    briefing: b.ok ? (b.data?.briefing || null) : null,
+    briefingError: b.ok ? null : (b.message || "The briefing couldn't load."),
+  });
+}
+
+const STATUS_CHIP = {
+  empty: ['', 'Nothing today'],
+  unavailable: ['.sub', 'Not set up'],
+  failed: ['.warn', "Couldn't load"],
+  timeout: ['.warn', 'Too slow'],
+};
+
+function briefingCardView(d, rerender) {
+  if (briefingSnoozed()) return null;
+  const sections = d.briefing?.sections || [];
+  let body;
+  if (d.briefingLoading && !d.briefing) {
+    body = h('div.sm.mut', null, 'Putting your briefing together…');
+  } else if (d.briefingError) {
+    body = h('div.sm.mut', null, d.briefingError);
+  } else if (!sections.length) {
+    body = h('div.sm.mut', null, 'The briefing has nothing to cover. Choose its sections in Settings.');
+  } else {
+    body = h('div.col.g8', null, ...sections.map((sec) => {
+      const [cls, label] = STATUS_CHIP[sec.status] || ['', ''];
+      return h('div.briefing-row', null,
+        h('div.row.g8', null, h('strong.sm', null, sec.title), label ? h('span.chip' + cls, null, label) : null),
+        h('div.sm' + (sec.status === 'ok' ? '' : '.mut'), null, sec.text));
+    }));
+  }
+  return h('div.card', { style: { marginBottom: '16px' } },
+    h('div.row.sb', null,
+      h('h2', null, 'Your briefing'),
+      h('button.btn.gh', { type: 'button', 'aria-label': 'Refresh the briefing', onClick: () => loadBriefing() },
+        h('i', { 'data-i': 'refresh' }), d.briefingLoading ? 'Refreshing…' : 'Refresh')),
+    h('div', { style: { marginTop: '10px', lineHeight: '1.6' } }, body),
+    h('div.row.g8', { style: { marginTop: '14px' } },
+      h('button.btn.pri', {
+        type: 'button',
+        disabled: !d.briefing,
+        onClick: async () => {
+          const r = await system.command('read my briefing');
+          if (!r.ok) err(r.message, r.detail);
+        }
+      }, h('i', { 'data-i': 'play' }), 'Read aloud'),
+      h('button.btn', {
+        type: 'button',
+        onClick: () => {
+          try { localStorage.setItem(SNOOZE_KEY, new Date().toDateString()); } catch { /* private mode */ }
+          toast({ kind: 'info', text: "Briefing hidden until tomorrow" });
+          rerender();
+        }
+      }, 'Hide until tomorrow'),
+      h('button.btn.gh', { type: 'button', onClick: () => go('settings', { section: 'briefing' }) }, 'Choose sections')
+    ));
 }
 
 export async function loadAgenda() {
@@ -318,44 +381,7 @@ export function todayView() {
     }
     const nowBlock = nowItems.length ? h('div.today-now', null, ...nowItems) : null;
 
-    // Morning Briefing Card
-    const briefingCard = (d.briefing && !d.snoozedBriefing) ? h('div.card', {
-      style: {
-        marginBottom: '16px'
-      }
-    },
-      h('div.row.sb', null,
-        h('span.row.g8', null,
-          h('h2', null, 'Morning briefing')
-        ),
-        null
-      ),
-      h('div', { style: { marginTop: '10px', lineHeight: '1.6', color: 'var(--text)' } },
-        typeof d.briefing === 'string' ? h('div.sm', null, d.briefing) : h('div.sm', null, JSON.stringify(d.briefing))
-      ),
-      h('div.row.g8', { style: { marginTop: '14px' } },
-        h('button.btn.pri', {
-          type: 'button',
-          onClick: async () => {
-            const r = await system.command('read morning briefing');
-            if (!r.ok) err(r.message, r.detail);
-          }
-        }, h('i', { 'data-i': 'play' }), 'Read aloud'),
-        h('button.btn', {
-          type: 'button',
-          onClick: () => {
-            store.today.snoozedBriefing = true;
-            set('today', { briefing: null, snoozedBriefing: true });
-            toast({ kind: 'info', text: 'Morning briefing snoozed until tomorrow' });
-            view.render();
-          }
-        }, 'Snooze until tomorrow'),
-        h('button.btn.gh', {
-          type: 'button',
-          onClick: () => go('settings', { section: 'routines' })
-        }, 'Change briefing time')
-      )
-    ) : null;
+    const briefingCard = briefingCardView(d, () => view.render());
 
     // Agenda Section
     let agendaContent;
