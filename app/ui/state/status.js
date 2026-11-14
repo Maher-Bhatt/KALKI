@@ -71,8 +71,27 @@ async function tick() {
   store.voice.state = deriveVoice(s);
   store.voice.ttsTrouble = ttsTrouble(s);
   if (s.model && s.model !== store.models.current) store.models.current = s.model;
-  notify();
+  // Re-render only when something shown actually changed. Polls arrive every few
+  // seconds, and re-rendering on each one interrupted typing on every screen.
+  const sig = statusSignature(s);
+  if (sig !== lastSignature) { lastSignature = sig; notify(); }
   schedule();
+}
+
+let lastSignature = '';
+
+/** Readings that change on nearly every poll but are never shown live, or are
+ *  painted by their own timers (the focus countdown). */
+const VOLATILE = new Set(['uptimeSec', 'cpu', 'batteryPct', 'listenerSeenAt', 'ttsLastLatencyMs', 'timeFull',
+  'terminalLogs', 'remainingSec', 'serverTime', 'ts']);
+
+export function statusSignature(s) {
+  const attending = s?.listenerState === 'attending';
+  return JSON.stringify(s, (key, value) => {
+    if (VOLATILE.has(key)) return undefined;
+    if (key === 'micLevel' && !attending) return undefined; // only animates while attending
+    return value;
+  });
 }
 
 function interval() {
