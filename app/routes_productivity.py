@@ -105,11 +105,47 @@ def list_notes(body: Dict[str, Any]) -> Result:
 
 
 def search_notes(body: Dict[str, Any]) -> Result:
-    return {"ok": True, "notes": notes.search(body.get("q") or "")}, 200
+    return {"ok": True, "notes": notes.search(body.get("q") or "", body.get("tag") or "")}, 200
 
 
 def delete_note(body: Dict[str, Any]) -> Result:
-    return {"ok": notes.delete_note(_target(body))}, 200
+    deleted = notes.delete_note(_target(body))
+    if not deleted:
+        return {"ok": False, "error": "That note doesn't exist."}, 404
+    return {"ok": True, "deleted": deleted}, 200
+
+
+def update_note(body: Dict[str, Any]) -> Result:
+    try:
+        nid = int(body.get("id"))
+    except (TypeError, ValueError):
+        return _bad("id required")
+    try:
+        note = notes.update_note(nid, _text(body))
+    except ValueError as exc:
+        return _bad(str(exc))
+    if not note:
+        return {"ok": False, "error": "That note doesn't exist."}, 404
+    return {"ok": True, "note": note}, 200
+
+
+def restore_note(body: Dict[str, Any]) -> Result:
+    note = body.get("note")
+    if not isinstance(note, dict) or not all(k in note for k in ("id", "text", "ts", "date")):
+        return _bad("note required")
+    try:
+        return {"ok": True, "note": notes.restore_note(note)}, 200
+    except (TypeError, ValueError):
+        return _bad("that isn't a note")
+
+
+def note_tags(body: Dict[str, Any]) -> Result:
+    return {"ok": True, "tags": notes.all_tags()}, 200
+
+
+def export_notes(body: Dict[str, Any]) -> Result:
+    chosen = notes.search(body.get("q") or "", body.get("tag") or "")
+    return {"ok": True, "markdown": notes.export_markdown(chosen), "count": len(chosen)}, 200
 
 
 POST_ROUTES: Dict[str, Callable[[Dict[str, Any]], Result]] = {
@@ -125,4 +161,8 @@ POST_ROUTES: Dict[str, Callable[[Dict[str, Any]], Result]] = {
     "/api/notes/list": list_notes,
     "/api/notes/search": search_notes,
     "/api/notes/delete": delete_note,
+    "/api/notes/update": update_note,
+    "/api/notes/restore": restore_note,
+    "/api/notes/tags": note_tags,
+    "/api/notes/export": export_notes,
 }

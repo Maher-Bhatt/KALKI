@@ -12,6 +12,7 @@ import { emptyState, errorState, skeletonRows } from '../components/states.js';
 import { promptDialog, confirmDialog, openDialog } from '../components/dialog.js';
 import { ok, err, toast } from '../state/toasts.js';
 import { go } from './router.js';
+import { noteRow, openNotesDialog } from './notes.js';
 
 let focusTimer = null;
 let loadTodayInFlight = false;
@@ -410,7 +411,7 @@ export function todayView() {
   }, h('div.field', { style: { margin: '10px 0 4px', display: 'flex' } }, taskInput));
 
   const noteInput = h('input', {
-    placeholder: 'Capture a thought or search notes',
+    placeholder: 'Capture a thought. Use #tags to group notes',
     'aria-label': 'Add a note',
     style: { border: 'none', background: 'transparent', flex: '1', outline: 'none', color: 'inherit' },
     onInput: (e) => { noteDraft = e.target.value; },
@@ -426,7 +427,7 @@ export function todayView() {
         await addNote(val);
       }
     }
-  }, h('div.field', { style: { margin: '10px 0 4px', display: 'flex', alignItems: 'center', gap: '8px' } }, h('i', { 'data-i': 'search' }), noteInput));
+  }, h('div.field', { style: { margin: '10px 0 4px', display: 'flex', alignItems: 'center', gap: '8px' } }, h('i', { 'data-i': 'note' }), noteInput));
 
   view.render = () => {
     const d = store.today;
@@ -558,11 +559,12 @@ export function todayView() {
 
     // Notes
     const notesContent = d.notes && d.notes.length
-      ? frag(...d.notes.map((n) => h('div.li.col', { style: { alignItems: 'flex-start', gap: '2px' } }, h('span.xs.mut', null, relative(n.date || n.added)), h('span.sm', null, n.text || String(n)))))
+      ? frag(...d.notes.map((n) => noteRow(n, loadToday)))
       : h('div.li', null, h('span.sm', null, 'No notes yet'));
 
     const notesCard = h('div.card', null,
-      h('div.row.sb', null, h('h2', null, 'Notes'), h('span.xs.mut', null, (d.notes?.length || 0) + ' this week')),
+      h('div.row.sb', null, h('h2', null, 'Notes'),
+        h('button.btn.gh', { type: 'button', onClick: () => openNotesDialog(loadToday) }, 'All notes')),
       noteForm,
       notesContent
     );
