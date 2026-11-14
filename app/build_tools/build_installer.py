@@ -118,6 +118,8 @@ def main():
             if script in ("main_app.py", "desktop_pet.py"):
                 cmd.append("--collect-all=webview")
             cmd.append("--windowed")
+        if script == "desktop_pet.py":
+            cmd.append("--hidden-import=pet_window")
         if script == "kalki_setup_wizard.py":
             cmd.append("--collect-all=customtkinter")
             cmd.append("--collect-all=pystray")
@@ -128,6 +130,7 @@ def main():
             cmd.append("--hidden-import=plyer")
             cmd.append("--hidden-import=media_mod")
             cmd.append("--hidden-import=antivirus")
+            cmd.append("--hidden-import=tool_policy")
             
         if script == "listener.py":
             cmd.append("--hidden-import=pyaudio")
