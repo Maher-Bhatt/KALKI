@@ -113,6 +113,7 @@ import routes_pet
 import routes_settings
 import routes_setup
 import briefing
+import focus
 import commands_productivity
 import db
 import wifi_security
@@ -386,8 +387,6 @@ STATE = {
     "joke_offer_pending": False,
     "mood_aggressive": False,
     "mood_aggressive_streak": 0,
-    "focus_until": 0.0,
-    "focus_minutes": 25,
 }
 
 _state_lock = threading.RLock()
@@ -1294,7 +1293,7 @@ def is_urgent(text):
 
 def speak(text, is_notification=False):
     """Non-blocking TTS using the configured neural voice. Markdown stripped first."""
-    if is_notification and (STATE.get("gaming") or STATE.get("focus") or STATE.get("workflow") in ["gaming", "focus"]):
+    if is_notification and (STATE.get("gaming") or STATE.get("workflow") == "gaming" or _focus_active()):
         if not is_urgent(text):
             log(f"Suppressed non-urgent notification due to DND: {text}")
             return False
@@ -1562,6 +1561,22 @@ def build_security_brief():
     return f"Security brief, {config.OWNER_TITLE}. " + " ".join(parts)
 
 
+def _announce_finished_focus():
+    """Say when a focus session has run its full time. One that ended while KALKI was
+    closed is only noted in the alerts, not spoken as if it had just ended."""
+    import oversight, notify
+    for session in focus.pop_finished():
+        on = f" on {session['label']}" if session["label"] else ""
+        if session["late"]:
+            oversight.record_alert("focus", f"Your {session['minutes']}-minute focus session{on} finished while KALKI was closed.", "info")
+            continue
+        text = f"Focus session{on} done: {session['minutes']} minutes. Take a short break."
+        speak(text)
+        oversight.record_alert("focus", text, "info")
+        if not notify.notify_desktop("Focus session done", text):
+            log("the focus notification couldn't be shown")
+
+
 # ─────────────────────────────────────────────────────────────
 # Volume / Audio (pycaw)
 # ─────────────────────────────────────────────────────────────
@@ -1600,15 +1615,21 @@ import re as _re_local
 
 
 def _focus_active():
-    return float(STATE.get("focus_until") or 0) > time.time()
+    return focus.is_active()
 
 
 def _focus_status_text():
-    if not _focus_active():
-        return "No focus session is active."
-    remaining = max(0, int(float(STATE["focus_until"]) - time.time()))
-    minutes, seconds = divmod(remaining, 60)
-    return f"Focus session active: {minutes:02d}:{seconds:02d} remaining."
+    return focus.command("focus status") or "No focus session is running."
+
+
+def _focus_payload():
+    """The focus part of the status and dashboard payloads."""
+    try:
+        st = focus.status()
+    except Exception as e:
+        log(f"focus status unavailable: {e}")
+        return {"active": False, "remainingSec": 0, "minutes": focus.DEFAULT_MINUTES}
+    return {k: st.get(k) for k in ("active", "remainingSec", "minutes", "label", "endsAt", "todayMinutes")}
 
 
 def _daily_plan_reply():
@@ -1731,22 +1752,9 @@ def handle_local(text):
     if t in ("what needs my attention", "attention brief", "what needs attention", "anything urgent"):
         return True, _attention_reply()
 
-    if t in ("start a focus session", "start focus", "begin focus", "focus session", "focus timer"):
-        STATE["focus_minutes"] = 25
-        STATE["focus_until"] = time.time() + (STATE["focus_minutes"] * 60)
-        STATE["workflow"] = "focus"
-        workflows.ACTIVE_STATE = "focus"
-        return True, f"Focus session started for 25 minutes, {config.OWNER_TITLE}. { _focus_status_text() }"
-
-    if t in ("end focus session", "stop focus", "cancel focus", "finish focus"):
-        was_active = _focus_active()
-        STATE["focus_until"] = 0.0
-        STATE["workflow"] = "idle"
-        workflows.ACTIVE_STATE = None
-        return True, "Focus session ended." if was_active else "No focus session was active."
-
-    if t in ("focus status", "how long is left", "how much focus time"):
-        return True, _focus_status_text()
+    reply = focus.command(t)
+    if reply is not None:
+        return True, reply
 
     # ════════════════════════════════════════════════════
     # SMALL TALK & PERSONALITY (instant, no API call)
@@ -2752,6 +2760,17 @@ routes_settings.configure(DATA_DIR, USER_CONFIG_PATH, LOG_PATH, _persist_lock,
 routes_calendar.configure(BASE_DIR, log)
 routes_backup.configure(os.path.dirname(DATA_DIR), DATA_DIR)
 routes_setup.configure(lambda messages: ask_ai(messages), _ReplyInProgress, log)
+def _focus_changed(running):
+    """A focus session started, stopped or finished: hold back notifications only while one runs."""
+    if running:
+        STATE["workflow"] = "focus"
+        workflows.ACTIVE_STATE = "focus"
+    elif STATE.get("workflow") == "focus":
+        STATE["workflow"] = "idle"
+        workflows.ACTIVE_STATE = None
+
+
+focus.configure(_focus_changed)
 briefing.configure(lambda: (getattr(config, "BRIEFING_SECTIONS", None), getattr(config, "OWNER_TITLE", "")), log)
 
 
@@ -4458,7 +4477,8 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         route = (routes_pet.GET_ROUTES.get(path) or routes_settings.GET_ROUTES.get(path)
-                 or routes_calendar.GET_ROUTES.get(path) or briefing.GET_ROUTES.get(path))
+                 or routes_calendar.GET_ROUTES.get(path) or briefing.GET_ROUTES.get(path)
+                 or focus.GET_ROUTES.get(path))
         if route:
             payload, status = route({})
             self._json(payload, status=status)
@@ -4548,16 +4568,6 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": str(e)})
             return
 
-        if path == "/api/focus":
-            remaining = max(0, int(float(STATE.get("focus_until") or 0) - time.time()))
-            self._json({
-                "ok": True,
-                "active": remaining > 0,
-                "remainingSec": remaining,
-                "minutes": int(STATE.get("focus_minutes") or 25),
-            })
-            return
-
         if path == "/api/github/status":
             try:
                 result = github_mod.get_notifications(limit=5)
@@ -4589,11 +4599,7 @@ class Handler(BaseHTTPRequestHandler):
                     "screenTime": tracker_status,
                     "uptimeSec": int(time.time() - STATE["started_at"]),
                     "state": STATE.get("workflow", STATE.get("current_routine", "idle")),
-                    "focus": {
-                        "active": _focus_active(),
-                        "remainingSec": max(0, int(float(STATE.get("focus_until") or 0) - time.time())),
-                        "minutes": int(STATE.get("focus_minutes") or 25),
-                    },
+                    "focus": _focus_payload(),
                     "memCount": cached_mem_count()
                 }
                 self._json({"ok": True, "data": dashboard_data})
@@ -4768,11 +4774,7 @@ class Handler(BaseHTTPRequestHandler):
                 "todayEvents": STATE.get("cached_today_events", []),
                 "unreadImportant": STATE.get("cached_unread_count", 0),
                 "nowPlaying": STATE.get("cached_now_playing"),
-                "focus": {
-                    "active": _focus_active(),
-                    "remainingSec": max(0, int(float(STATE.get("focus_until") or 0) - time.time())),
-                    "minutes": int(STATE.get("focus_minutes") or 25),
-                },
+                "focus": _focus_payload(),
                 "pendingApprovals": pending_count,
                 "hostExecution": bool(getattr(config, "ALLOW_HOST_CODE_EXECUTION", False)),
                 "storeError": STORE_ERROR,
@@ -4944,7 +4946,8 @@ class Handler(BaseHTTPRequestHandler):
                  or routes_threads.POST_ROUTES.get(path) or routes_pet.POST_ROUTES.get(path)
                  or approvals.POST_ROUTES.get(path) or activity.POST_ROUTES.get(path)
                  or routes_settings.POST_ROUTES.get(path) or routes_calendar.POST_ROUTES.get(path)
-                 or routes_setup.POST_ROUTES.get(path) or routes_backup.POST_ROUTES.get(path))
+                 or routes_setup.POST_ROUTES.get(path) or routes_backup.POST_ROUTES.get(path)
+                 or focus.POST_ROUTES.get(path))
         if route:
             payload, status = route(body)
             self._json(payload, status=status)
@@ -5871,7 +5874,15 @@ def main():
 
     # Reminder firing loop
     def _reminder_loop():
+        try:
+            _focus_changed(focus.is_active())  # a session that was running when KALKI closed carries on
+        except Exception as e:
+            log(f"focus restore error: {e}")
         while True:
+            try:
+                _announce_finished_focus()
+            except Exception as e:
+                log(f"focus check error: {e}")
             try:
                 due = taskmod.pop_due_reminders()
                 for r in due:
