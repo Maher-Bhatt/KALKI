@@ -436,10 +436,16 @@ def run_vosk(dev_index):
 
             if contains_stop(phrase):
                 post_stop(); continue
-            if not contains_wake(phrase):
+
+            # If user clicked Wake / Voice Mode in UI within 8 seconds, phrase is the command directly
+            wake_act = (time.time() - LAST_STATUS.get("wakeRequestedAt", 0) < 8.0) or LAST_STATUS.get("wakeRequested")
+
+            if not contains_wake(phrase) and not wake_act:
                 continue
 
-            inline = extract_inline(phrase)
+            inline = extract_inline(phrase) if contains_wake(phrase) else phrase
+            LAST_STATUS["wakeRequested"] = False
+            LAST_STATUS["wakeRequestedAt"] = 0
             if inline:
                 close_vosk_stream()
                 post_chat_voice(inline)
@@ -478,22 +484,60 @@ def run_vosk(dev_index):
             time.sleep(1)
 
 
+def _listen_once():
+    """Capture a single command after UI button press in push-to-talk mode."""
+    if sr is None:
+        log("push-to-talk: speech_recognition is not available")
+        return
+    try:
+        log("push-to-talk: opening mic for single command...")
+        dev_index = pick_input_device()
+        recognizer = sr.Recognizer()
+        recognizer.dynamic_energy_threshold = True
+        recognizer.pause_threshold = 0.8
+        try:
+            mic = sr.Microphone(device_index=dev_index)
+        except Exception:
+            mic = sr.Microphone()
+        with mic as source:
+            recognizer.adjust_for_ambient_noise(source, duration=0.8)
+            log("push-to-talk: listening...")
+            audio = recognizer.listen(source, timeout=6.0, phrase_time_limit=8.0)
+        lang = getattr(config, "STT_LANGUAGE", "en-US")
+        phrase = recognizer.recognize_google(audio, language=lang).strip()
+        log(f"push-to-talk heard: {phrase}")
+        if phrase:
+            if contains_stop(phrase):
+                post_stop()
+            else:
+                inline = extract_inline(phrase) if contains_wake(phrase) else phrase
+                post_chat_voice(inline)
+                wait_until_silent(max_wait=12.0)
+    except Exception as e:
+        log(f"push-to-talk listen failed: {e}")
+
+
 def main():
     log("listener starting")
     if not wait_for_server():
         log("server never came up; listener exiting")
         return
 
-    # Push-to-talk: don't open the system mic at all. Avoids a multipoint
-    # Bluetooth headset switching to the laptop every listen cycle (which cuts
-    # your phone audio). Talk to KALKI with the HUD mic button instead.
+    # Push-to-talk: don't open the system mic continuously.
+    # Maintain heartbeats so listenerOnline stays True, and capture single commands on wake.
     mode = (getattr(config, "LISTEN_MODE", "always") or "always").lower()
     if mode != "always":
         log(f"LISTEN_MODE={mode} — continuous mic OFF (push-to-talk). "
             f"Use the HUD mic button to talk.")
         try:
             while True:
-                time.sleep(60)
+                st = _status()
+                wake_act = st.get("wakeRequested") or (time.time() - st.get("wakeRequestedAt", 0) < 5.0)
+                if wake_act:
+                    LAST_STATUS["wakeRequested"] = False
+                    LAST_STATUS["wakeRequestedAt"] = 0
+                    _listen_once()
+                time.sleep(3)
         except KeyboardInterrupt:
             pass
         return
@@ -633,10 +677,14 @@ def main():
                 wait_until_silent(max_wait=12.0)
                 continue
 
-            if not contains_wake(phrase):
+            wake_act = (time.time() - st.get("wakeRequestedAt", 0) < 8.0) or st.get("wakeRequested")
+
+            if not contains_wake(phrase) and not wake_act:
                 continue
 
-            inline = extract_inline(phrase)
+            inline = extract_inline(phrase) if contains_wake(phrase) else phrase
+            LAST_STATUS["wakeRequested"] = False
+            LAST_STATUS["wakeRequestedAt"] = 0
             if inline:
                 post_chat_voice(inline)
                 wait_until_silent(max_wait=12.0)

@@ -14,8 +14,16 @@ INSULT_WORDS = (
     "idiot", "moron", "asshole", "dumbass", "jackass", "bitch", "bastard",
     "motherfucker", "fucker", "stfu",
     # Hinglish
-    "chutiya", "chutiye", "bhosdike", "bhenchod", "madarchod", "gandu",
-    "harami", "bsdk",
+    "chutiya", "chutiye", "chutiyo", "bhosdike", "bhosdiwale", "bhosdi", "bhenchod", "behenchod", "behnchod",
+    "madarchod", "maderchod", "gandu", "gaandu", "harami", "haramkhor", "bsdk", "lodu", "lawde", "lavde",
+    "kamina", "kamine", "randi", "chodu",
+)
+
+# The same insults written in Devanagari. Matched as text: word boundaries don't work
+# reliably with Hindi vowel marks, and none of these are parts of everyday words.
+DEVANAGARI_INSULTS = (
+    "चूतिया", "चुतिया", "चूतिये", "मादरचोद", "बहनचोद", "बहनचोद", "भोसड़ीके", "भोसडीके", "भोसड़ी",
+    "गांडू", "गाँडू", "हरामी", "हरामखोर", "कमीना", "कमीने", "लौड़े", "लोडू", "रंडी",
 )
 
 # Insulting phrases aimed at the assistant, matched with word boundaries at
@@ -44,7 +52,7 @@ def is_abusive(text):
     """True when the message contains a clear insult as a whole word."""
     if not text or not isinstance(text, str):
         return False
-    return bool(_WORD_RE.search(text) or _PHRASE_RE.search(text))
+    return bool(_WORD_RE.search(text) or _PHRASE_RE.search(text) or any(w in text for w in DEVANAGARI_INSULTS))
 
 
 def update(state, text):

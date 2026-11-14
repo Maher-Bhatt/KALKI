@@ -9,11 +9,34 @@ approval, which already returns that pair.
 
 import re
 import urllib.parse
+import urllib.request
 from typing import Any, Callable, Dict, Optional, Tuple
 
 import config
 
 Reply = Optional[Tuple[bool, str]]
+
+def get_youtube_play_url(query: str) -> str:
+    """Find the first playable YouTube video URL for query to start playback directly."""
+    clean = (query or "").strip()
+    if not clean:
+        clean = "top hits music playlist"
+    try:
+        url = f"https://www.youtube.com/results?search_query={urllib.parse.quote(clean)}"
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        )
+        with urllib.request.urlopen(req, timeout=3.5) as r:
+            html = r.read().decode("utf-8", errors="ignore")
+        matches = re.findall(r"/watch\?v=([a-zA-Z0-9_-]{11})", html)
+        if matches:
+            for m in matches:
+                if len(m) == 11:
+                    return f"https://www.youtube.com/watch?v={m}&autoplay=1"
+    except Exception:
+        pass
+    return f"https://www.youtube.com/results?search_query={urllib.parse.quote(clean)}"
 
 _PAUSE = ("pause", "pause music", "pause song", "pause spotify", "pause the music")
 _RESUME = ("resume", "resume music", "resume song", "play music", "play the music", "play some music", "play any music",
@@ -94,10 +117,13 @@ def music_command(t: str, deps: Dict[str, Any]) -> Reply:
         if apple:
             return True, deps["apple_music"](None if plain in _GENERIC else query)
         if plain in _GENERIC or plain.replace("-", "").replace(" ", "") == "lofi":
-            open_url("https://music.youtube.com")
-            return True, "Opened YouTube Music. Connect Spotify in Settings to play songs directly."
-        open_url(f"https://www.youtube.com/results?search_query={urllib.parse.quote(query)}")
-        return True, f"Opened a YouTube search for '{query}'. Connect Spotify in Settings to play songs directly."
+            play_q = "lofi hip hop radio live chill beats" if "lofi" in plain else "top hits music playlist"
+            url = get_youtube_play_url(play_q)
+            open_url(url)
+            return True, "Opened YouTube to play music. Connect Spotify in Settings to play songs directly."
+        url = get_youtube_play_url(query)
+        open_url(url)
+        return True, f"Opened a YouTube search for '{query}' and started playback. Connect Spotify in Settings to play songs directly."
     return None
 
 

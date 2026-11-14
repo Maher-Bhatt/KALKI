@@ -101,7 +101,7 @@ WAKE_WORDS = ["hey kalki", "kalki", "hey sir", "ok kalki"]
 # "always" = hands-free always-on wake word (continuous mic).
 # "push"   = push-to-talk (mic off until you tap the HUD mic button). Use this
 #            if you share a Bluetooth headset with a phone (no audio cuts).
-LISTEN_MODE = "push"
+LISTEN_MODE = "always"
 
 # ── MIC / STT INPUT ─────────────────────────────────────────
 # Keep Bluetooth headphones in high-quality A2DP: the listener avoids the
@@ -113,7 +113,7 @@ STT_LANGUAGE        = "en-IN"         # Google STT language. Default en-IN for I
 VOSK_MODEL_PATH     = "data/vosk-model"
 
 # ── STARTUP ─────────────────────────────────────────────────
-AUTO_START = False
+AUTO_START = True
 GREET_ON_START       = True
 OPEN_BROWSER_ON_WAKE = True
 

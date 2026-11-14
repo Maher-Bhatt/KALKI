@@ -9,7 +9,7 @@ import { icon } from '../lib/icons.js';
 import { relative } from '../lib/format.js';
 import { store } from '../state/store.js';
 import { system, activity } from '../api/endpoints.js';
-import { refreshStatus } from '../state/status.js';
+import { refreshStatus, setAttending } from '../state/status.js';
 import { ok, err } from '../state/toasts.js';
 import { go } from './router.js';
 
@@ -157,8 +157,14 @@ export function paintVoiceMode() {
   parts.mainBtn.title = talking ? 'Stop' : 'Start listening';
   mount(parts.mainBtn, icon(talking ? 'stop' : 'mic', 24));
   parts.mainBtn.onclick = async () => {
-    const r = talking ? await system.stop() : await system.wake('');
-    if (!r.ok) err(r.message, r.detail);
+    if (talking) {
+      const r = await system.stop();
+      if (!r.ok) err(r.message, r.detail);
+    } else {
+      setAttending();
+      const r = await system.wake('');
+      if (!r.ok) err(r.message, r.detail);
+    }
     refreshStatus();
   };
 

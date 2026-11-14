@@ -135,6 +135,34 @@ class Screen(unittest.TestCase):
         self.assertTrue(re.search(r"unchecked:\s*\{", page))
 
 
+class Quarantine(unittest.TestCase):
+    def test_encrypted_and_restored_exactly(self):
+        import hashlib
+        src = os.path.join(tempfile.mkdtemp(), "sample.exe")
+        payload = b"MZ" + os.urandom(4000)
+        with open(src, "wb") as f:
+            f.write(payload)
+        r = antivirus.quarantine_file(src, "test")
+        self.assertTrue(r["ok"], r)
+        self.assertFalse(os.path.exists(src))
+        with open(r["entry"]["quarantine_path"], "rb") as f:
+            stored = f.read()
+        self.assertNotIn(payload[50:90], stored)  # nothing runnable left behind
+        self.assertTrue(antivirus.resolve_quarantine(r["entry"]["id"], "restore")["ok"])
+        with open(src, "rb") as f:
+            self.assertEqual(hashlib.sha256(f.read()).digest(), hashlib.sha256(payload).digest())
+
+    def test_restore_never_overwrites(self):
+        src = os.path.join(tempfile.mkdtemp(), "a.txt")
+        with open(src, "w") as f:
+            f.write("one")
+        r = antivirus.quarantine_file(src, "test")
+        with open(src, "w") as f:
+            f.write("new file in the same place")
+        self.assertFalse(antivirus.resolve_quarantine(r["entry"]["id"], "restore")["ok"])
+        self.assertTrue(antivirus.resolve_quarantine(r["entry"]["id"], "delete")["ok"])
+
+
 @unittest.skipUnless(os.environ.get("KALKI_LIVE_DEFENDER") == "1", "set KALKI_LIVE_DEFENDER=1 to run against real Defender")
 class LiveDefender(unittest.TestCase):
     """Run by hand: writes the harmless EICAR test file, which Defender treats as a threat."""
