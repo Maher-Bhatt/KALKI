@@ -100,10 +100,15 @@ export const notes = {
     return r.ok ? { ok: true, items: r.data.notes || [] } : r;
   },
   add: (text) => post('/api/notes/add', { text }),
-  async search(q) {
-    const r = await post('/api/notes/search', { q });
+  async search(q, tag = '') {
+    const r = await post('/api/notes/search', { q, tag });
     return r.ok ? { ok: true, items: r.data.notes || [] } : r;
   },
+  update: (id, text) => post('/api/notes/update', { id, text }),
+  remove: (id) => post('/api/notes/delete', { id }),
+  restore: (note) => post('/api/notes/restore', { note }),
+  tags: () => post('/api/notes/tags', {}),
+  exportMarkdown: (q = '', tag = '') => post('/api/notes/export', { q, tag }),
 };
 
 /* ── Calendar / mail / music / messaging ──────────────────────────── */
