@@ -153,7 +153,7 @@ TOOLS_SCHEMA = [
         "type": "function",
         "function": {
             "name": "get_daily_briefing",
-            "description": "Fetches a comprehensive morning briefing including weather, news, first calendar event, and urgent emails.",
+            "description": "Builds the user's daily briefing from the sections they chose in Settings (calendar, reminders, tasks, mail, watched sites, screen time, weather). Each section says whether it worked, was empty, isn't set up or failed.",
             "parameters": {
                 "type": "object",
                 "properties": {}

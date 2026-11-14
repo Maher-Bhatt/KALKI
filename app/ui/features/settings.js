@@ -17,7 +17,7 @@ import { shortcuts, label as keyLabel } from '../lib/keys.js';
 import { getPetState, savePetState, openPetSettings } from './pet.js';
 
 const SECTIONS = [
-  ['general', 'Profile'], ['pet', 'Pet'], ['appearance', 'Appearance'], ['voice', 'Voice'], ['models', 'Models'],
+  ['general', 'Profile'], ['briefing', 'Briefing'], ['pet', 'Pet'], ['appearance', 'Appearance'], ['voice', 'Voice'], ['models', 'Models'],
   ['memory', 'Memory'], ['integrations', 'Integrations'], ['privacy', 'Privacy'], ['security', 'Security'],
   ['performance', 'Performance'], ['shortcuts', 'Shortcuts'], ['backup', 'Backup'], ['advanced', 'Advanced'], ['about', 'About'],
 ];
@@ -42,6 +42,16 @@ const TTS_VOICE_PRESETS = [
   { id: 'en-IN-PrabhatNeural', name: 'Prabhat (India - Natural)' },
   { id: 'en-US-JennyNeural', name: 'Jenny (US - Warm Female)' },
   { id: 'en-US-AriaNeural', name: 'Aria (US - Vibrant Female)' },
+];
+
+const BRIEFING_PARTS = [
+  ['calendar', 'Calendar', "Today's events from Google Calendar."],
+  ['reminders', 'Reminders', "Reminders due today."],
+  ['tasks', 'Tasks', 'Your open tasks, top three first.'],
+  ['mail', 'Mail', 'Unread mail, and which looks important. Needs your mail set up.'],
+  ['sites', 'Watched sites', 'Whether the sites you watch are up. Checks them live.'],
+  ['screen_time', 'Screen time', "Yesterday's screen time by category."],
+  ['weather', 'Weather', 'Needs your location below.'],
 ];
 
 let active = 'general';
@@ -192,6 +202,32 @@ const SECTION_BODY = {
       textRow('Country', null, 'OWNER_COUNTRY', 'Country')
     )
   ],
+
+  briefing: () => {
+    const chosen = Array.isArray(store.settings.values.BRIEFING_SECTIONS)
+      ? store.settings.values.BRIEFING_SECTIONS : ['calendar', 'reminders', 'tasks', 'sites'];
+    const sectionRow = ([id, label, desc]) => row(label, desc, toggleSwitch({
+      checked: chosen.includes(id),
+      label,
+      onClick: () => {
+        const next = chosen.includes(id) ? chosen.filter((s) => s !== id) : [...chosen, id];
+        save({ BRIEFING_SECTIONS: next }, chosen.includes(id) ? `${label} removed from the briefing` : `${label} added to the briefing`);
+      },
+    }));
+    return [
+      h('div.card.col.g12', null,
+        h('h2', null, 'What the briefing covers'),
+        h('div.sub', null, 'Shown on Today and read aloud when you say "brief me". Each part is fetched on its own, so one that fails never stops the rest.'),
+        ...BRIEFING_PARTS.map(sectionRow)
+      ),
+      h('div.card.col.g12', null,
+        h('h2', null, 'Location for weather'),
+        h('div.sub', null, 'Only these coordinates are sent to Open-Meteo, a free weather service. Leave empty to skip weather.'),
+        textRow('Latitude', 'For example 19.07', 'LATITUDE', 'Latitude'),
+        textRow('Longitude', 'For example 72.88', 'LONGITUDE', 'Longitude')
+      ),
+    ];
+  },
 
   pet: () => {
     const petState = getPetState();

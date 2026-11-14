@@ -158,3 +158,7 @@ body.ask-home .hist, body.ask-home .th-h, body.ask-home aside { display: none !i
 .glance-link { display: block; width: 100%; padding: 2px 0; text-align: left; font-size: var(--type-sm); color: var(--t2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .glance-link:hover { color: var(--text); text-decoration: underline; }
 @media (min-width: 1300px) { .glance-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* Today: briefing sections, one per row. */
+.briefing-row { display: grid; gap: 2px; }
+.briefing-row + .briefing-row { border-top: 1px solid var(--line); padding-top: 8px; }
