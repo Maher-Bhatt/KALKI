@@ -43,9 +43,55 @@ export function frag(...children) {
 }
 
 export function mount(container, ...nodes) {
+  const typing = captureTyping(container);
   container.replaceChildren();
   append(container, nodes);
+  if (typing) restoreTyping(container, typing);
   return container;
+}
+
+/* ── Typing survives re-renders ──────────────────────────────────────────
+ * Screens rebuild their content when data changes. Without this, a field you
+ * were typing in was swapped for a fresh one: the text, the cursor and focus
+ * were lost and you had to click it again. If the focused field is replaced,
+ * its replacement (same id, name, label or placeholder) gets your text,
+ * cursor position and focus back. Your text wins over the rebuilt value. */
+
+const TEXT_INPUTS = new Set(['', 'text', 'search', 'email', 'url', 'tel', 'password', 'number']);
+
+function isTypingField(el) {
+  if (!el) return false;
+  if (el.tagName === 'TEXTAREA') return true;
+  if (el.tagName === 'INPUT') return TEXT_INPUTS.has((el.getAttribute('type') || '').toLowerCase());
+  if (el.tagName === 'SELECT') return true;
+  return false;
+}
+
+function fieldKey(el) {
+  const k = el.id || el.getAttribute('name') || el.getAttribute('aria-label') || el.getAttribute('placeholder');
+  return k ? `${el.tagName}|${k}` : null;
+}
+
+function captureTyping(container) {
+  const el = typeof document !== 'undefined' ? document.activeElement : null;
+  if (!isTypingField(el) || !container.contains(el)) return null;
+  const key = fieldKey(el);
+  if (!key) return null;
+  let start = null, end = null, dir = null;
+  try { start = el.selectionStart; end = el.selectionEnd; dir = el.selectionDirection; } catch { /* not a text field */ }
+  return { el, key, value: el.value, start, end, dir, scroll: el.scrollTop };
+}
+
+function restoreTyping(container, t) {
+  if (container.contains(t.el)) { t.el.focus({ preventScroll: true }); return; } // the same node was re-added
+  const match = Array.from(container.querySelectorAll(t.el.tagName)).find((n) => fieldKey(n) === t.key);
+  if (!match) return;
+  if (match.value !== t.value) match.value = t.value;
+  match.focus({ preventScroll: true });
+  if (t.start != null) {
+    try { match.setSelectionRange(t.start, t.end, t.dir || 'none'); } catch { /* not a text field */ }
+  }
+  match.scrollTop = t.scroll;
 }
 
 export const qs = (sel, root = document) => root.querySelector(sel);
