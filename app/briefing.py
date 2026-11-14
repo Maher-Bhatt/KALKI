@@ -10,7 +10,7 @@ import json
 import time
 import urllib.parse
 import urllib.request
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 
 # id -> title. The order here is the order of the briefing.
@@ -23,7 +23,7 @@ SECTIONS: Dict[str, str] = {
     "screen_time": "Yesterday's screen time",
     "weather": "Weather",
 }
-DEFAULT_SECTIONS = ("calendar", "reminders", "tasks", "sites")
+DEFAULT_SECTIONS = ("calendar", "reminders", "tasks", "weather")
 DEADLINE_SECONDS = 8.0
 
 
@@ -140,9 +140,14 @@ def weather_section(latitude: Any = None, longitude: Any = None) -> Dict[str, An
     """Open-Meteo: free, no account. Only your saved coordinates are sent."""
     if latitude in (None, "") or longitude in (None, ""):
         import config
+        from core import location_provider
+        if location_provider.enabled():
+            fix = location_provider.refresh()  # this PC's location, refreshed every 30 minutes
+            if not fix.get("ok") and getattr(config, "LATITUDE", None) is None:
+                raise RuntimeError(fix.get("reason") or "Windows couldn't find this PC's location.")
         latitude, longitude = getattr(config, "LATITUDE", None), getattr(config, "LONGITUDE", None)
     if latitude in (None, "") or longitude in (None, ""):
-        raise Unavailable("Set your location in Settings to get the weather.")
+        raise Unavailable("Turn on \"Use this PC's location\" in Settings > Briefing, or enter your coordinates there.")
     query = urllib.parse.urlencode({
         "latitude": f"{float(latitude):.2f}", "longitude": f"{float(longitude):.2f}",
         "current": "temperature_2m,weather_code", "daily": "temperature_2m_max,temperature_2m_min,precipitation_probability_max",
@@ -278,3 +283,100 @@ def get_route(body: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
 
 
 GET_ROUTES = {"/api/briefing/get": get_route}
+
+
+# ── The spoken briefing when your day starts ─────────────────────────────
+# The first time KALKI starts or the PC wakes each day, once you're actually at
+# the PC (it waits for keyboard or mouse), KALKI reads the briefing aloud.
+
+DAY_STARTS_HOUR = 4          # before 4 am still counts as last night
+SLEEP_GAP_SECONDS = 5 * 60   # a clock jump this big means the PC was asleep
+PRESENT_WITHIN_SECONDS = 90  # someone touched the keyboard or mouse this recently
+WAIT_FOR_YOU_SECONDS = 3 * 60 * 60
+
+
+def _state_path() -> str:
+    from runtime_paths import prepare_runtime
+    import os
+    return os.path.join(prepare_runtime().user_data_dir, "data", "briefing_state.json")
+
+
+def _day(now: datetime) -> str:
+    return (now - timedelta(hours=DAY_STARTS_HOUR)).date().isoformat()
+
+
+def due_today(now: Optional[datetime] = None, state: Optional[Dict[str, Any]] = None) -> bool:
+    """Whether today's spoken briefing hasn't happened yet."""
+    import safe_json
+    now = now or datetime.now()
+    if state is None:
+        state = safe_json.read_json(_state_path(), {}) or {}
+    return state.get("last_spoken_day") != _day(now)
+
+
+def mark_spoken(now: Optional[datetime] = None) -> None:
+    import safe_json
+    safe_json.write_json(_state_path(), {"last_spoken_day": _day(now or datetime.now())})
+
+
+def morning_text(title: str = "") -> str:
+    """Refresh the location first (if it's on), so the weather is for where you are now."""
+    try:
+        from core import location_provider
+        if location_provider.enabled():
+            location_provider.refresh()
+    except Exception as exc:  # the briefing still runs without weather
+        _log(f"briefing location refresh failed: {exc}")
+    value, saved_title = _settings()
+    result = build(chosen_sections(value), log=_log, deadline=DEADLINE_SECONDS)
+    return spoken(result["sections"], title or saved_title)
+
+
+def run_day_start(speak: Callable[[str], Any], enabled: Callable[[], bool], idle_seconds: Callable[[], float],
+                  reason: str = "start", now: Callable[[], datetime] = datetime.now,
+                  sleep: Callable[[float], None] = time.sleep) -> bool:
+    """Speak today's briefing if it's due, once you're at the PC. Returns whether it spoke."""
+    if not enabled() or not due_today(now()):
+        return False
+    waited = 0.0
+    while idle_seconds() > PRESENT_WITHIN_SECONDS:
+        if waited >= WAIT_FOR_YOU_SECONDS:
+            return False
+        sleep(15)
+        waited += 15
+    if not due_today(now()):  # another trigger got there first
+        return False
+    mark_spoken(now())
+    _log(f"speaking the day's briefing ({reason})")
+    speak(morning_text())
+    return True
+
+
+_watch_started = False
+
+
+def start_day_watch(speak: Callable[[str], Any], enabled: Callable[[], bool], idle_seconds: Callable[[], float]) -> None:
+    """Brief on start, then again the first time the PC wakes on a new day."""
+    global _watch_started
+    if _watch_started:
+        return
+    _watch_started = True
+    import threading
+
+    def watch():
+        try:
+            run_day_start(speak, enabled, idle_seconds, "start")
+        except Exception as exc:
+            _log(f"day-start briefing failed: {exc}")
+        last = time.time()
+        while True:
+            time.sleep(30)
+            gap = time.time() - last
+            last = time.time()
+            if gap > SLEEP_GAP_SECONDS:
+                try:
+                    run_day_start(speak, enabled, idle_seconds, "wake")
+                except Exception as exc:
+                    _log(f"wake briefing failed: {exc}")
+
+    threading.Thread(target=watch, daemon=True, name="day-start-briefing").start()

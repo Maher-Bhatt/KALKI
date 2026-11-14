@@ -839,7 +839,8 @@ if __name__ == '__main__':
 
         is_store = os.path.exists(os.path.join(BASE_DIR, "store_build.txt"))
 
-        if getattr(config, "AUTO_START", True) and not is_store:
+        # add_to_startup() also removes the entry when AUTO_START is off, so it always runs.
+        if not is_store:
 
             add_to_startup()
 

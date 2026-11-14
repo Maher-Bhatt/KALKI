@@ -199,6 +199,7 @@ export const settings = {
   findOllama: () => post('/api/setup/ollama', {}),
   testAi: () => post('/api/setup/test_ai', {}),
   exportUrl: '/api/settings/export',
+  deviceLocation: (refresh = false) => post('/api/location/device', { refresh }, { timeout: 60000 }),
 };
 
 export const vault = {

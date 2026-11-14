@@ -179,6 +179,30 @@ function screenTimeSection() {
   ];
 }
 
+/* ── Device location (for weather) ── */
+
+let locationBusy = false;
+let locationResult = null;
+
+function locationText() {
+  const r = locationResult;
+  if (locationBusy) return 'Asking Windows…';
+  if (!r) return 'Not checked yet.';
+  if (!r.ok) return r.reason || "Windows couldn't find this PC.";
+  const place = [r.city, r.state, r.country].filter(Boolean).join(', ');
+  return `${place || `${r.latitude.toFixed(2)}, ${r.longitude.toFixed(2)}`} · within about ${r.accuracy_m} m (${r.source === 'WiFi' ? 'Wi-Fi' : r.source})`;
+}
+
+async function findLocation() {
+  locationBusy = true;
+  renderFn();
+  const r = await api.deviceLocation(true);
+  locationBusy = false;
+  locationResult = r.ok ? r.data : { ok: false, reason: r.message };
+  if (locationResult.ok) ok('Found this PC'); else err("Couldn't find this PC", locationResult.reason);
+  renderFn();
+}
+
 const BRIEFING_PARTS = [
   ['calendar', 'Calendar', "Today's events from Google Calendar."],
   ['reminders', 'Reminders', "Reminders due today."],
@@ -356,8 +380,22 @@ const SECTION_BODY = {
         ...BRIEFING_PARTS.map(sectionRow)
       ),
       h('div.card.col.g12', null,
+        h('h2', null, 'When it plays'),
+        toggleRow('Brief me when I start my PC', 'The first time KALKI starts or your PC wakes each day, it reads your briefing aloud once you are at the keyboard.', 'BRIEFING_ON_START'),
+        toggleRow('Start KALKI when I sign in to Windows', 'Needed for the briefing when your PC starts. Takes effect the next time KALKI opens.', 'AUTO_START'),
+        row('Hear it now', null, h('button.btn', {
+          type: 'button',
+          onClick: async () => { const r = await system.command('brief me'); if (!r.ok) err(r.message, r.detail); },
+        }, h('i', { 'data-i': 'play' }), 'Read my briefing'))
+      ),
+      h('div.card.col.g12', null,
         h('h2', null, 'Location for weather'),
-        h('div.sub', null, 'Only these coordinates are sent to Open-Meteo, a free weather service. Leave empty to skip weather.'),
+        h('div.sub', null, "Windows finds this PC with GPS or nearby Wi-Fi, never your IP address. The position is only sent to Open-Meteo for the weather and to OpenStreetMap to name your city, and isn't saved."),
+        toggleRow("Use this PC's location", 'Updated every 30 minutes while KALKI runs.', 'USE_DEVICE_LOCATION',
+          (val) => { save({ USE_DEVICE_LOCATION: val }, val ? "KALKI will use this PC's location" : 'Location is off'); if (val) findLocation(); }),
+        row('Where am I', locationText(),
+          h('button.btn', { type: 'button', disabled: locationBusy, onClick: findLocation }, locationBusy ? 'Finding…' : 'Find now')),
+        h('div.xs.mut', null, 'Or enter coordinates yourself. They are used when location is off.'),
         textRow('Latitude', 'For example 19.07', 'LATITUDE', 'Latitude'),
         textRow('Longitude', 'For example 72.88', 'LONGITUDE', 'Longitude')
       ),
@@ -614,6 +652,15 @@ const SECTION_BODY = {
           async () => { const r = await api.setupTool('spotify'); r.ok ? ok('Setup opened in a new window') : err(r.message, r.detail); }),
         card('GitHub', !!store.settings.values.GITHUB_TOKEN, 'Surfaces notifications.',
           async () => { const v = await promptDialog({ title: 'GitHub token', label: 'A personal access token with notification scope.' }); if (v) { await save({ GITHUB_TOKEN: v }); loadSettings(); } })
+      ),
+      h('div.card.col.g12', null,
+        h('h2', null, 'Music'),
+        row('Plays music with', 'On Automatic: Spotify if connected, then Apple Music if installed, then YouTube Music.',
+          h('select.select', {
+            style: { maxWidth: '12rem' }, 'aria-label': 'Music app',
+            onChange: (e) => save({ MUSIC_APP: e.target.value }, 'Music app saved'),
+          }, ...[['auto', 'Automatic'], ['spotify', 'Spotify'], ['apple_music', 'Apple Music'], ['youtube', 'YouTube Music']]
+            .map(([v, label]) => h('option', { value: v, selected: (store.settings.values.MUSIC_APP || 'auto') === v }, label))))
       ),
       h('div.card.col.g12', null,
         h('h2', null, 'Email integration'),
