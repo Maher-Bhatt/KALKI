@@ -76,6 +76,25 @@ const STATUS_CHIP = {
   timeout: ['.warn', 'Too slow'],
 };
 
+/** A one-click way to set up a section that isn't set up yet. */
+function briefingFix(id) {
+  if (id === 'weather') {
+    return h('div', null, h('button.btn.btn-sm', {
+      type: 'button',
+      onClick: async () => {
+        const r = await settings.save({ USE_DEVICE_LOCATION: true });
+        if (!r.ok) { err(r.message, r.detail); return; }
+        ok("Using this PC's location. Finding it…");
+        loadBriefing();
+      },
+    }, "Use this PC's location"));
+  }
+  if (id === 'calendar') {
+    return h('div', null, h('button.btn.btn-sm', { type: 'button', onClick: () => go('settings', { section: 'integrations' }) }, 'Connect Google Calendar'));
+  }
+  return null;
+}
+
 function briefingCardView(d, rerender) {
   if (briefingSnoozed()) return null;
   const sections = d.briefing?.sections || [];
@@ -91,7 +110,8 @@ function briefingCardView(d, rerender) {
       const [cls, label] = STATUS_CHIP[sec.status] || ['', ''];
       return h('div.briefing-row', null,
         h('div.row.g8', null, h('strong.sm', null, sec.title), label ? h('span.chip' + cls, null, label) : null),
-        h('div.sm' + (sec.status === 'ok' ? '' : '.mut'), null, sec.text));
+        h('div.sm' + (sec.status === 'ok' ? '' : '.mut'), null, sec.text),
+        sec.status === 'unavailable' ? briefingFix(sec.id) : null);
     }));
   }
   return h('div.card', { style: { marginBottom: '16px' } },
@@ -411,7 +431,7 @@ export function todayView() {
   }, h('div.field', { style: { margin: '10px 0 4px', display: 'flex' } }, taskInput));
 
   const noteInput = h('input', {
-    placeholder: 'Capture a thought. Use #tags to group notes',
+    placeholder: 'Jot a note. #tags group them',
     'aria-label': 'Add a note',
     style: { border: 'none', background: 'transparent', flex: '1', outline: 'none', color: 'inherit' },
     onInput: (e) => { noteDraft = e.target.value; },

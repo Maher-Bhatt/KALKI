@@ -61,6 +61,7 @@ updater.start_update_daemon = lambda *a, **k: None
 
 import server  # noqa: E402
 
+server._original_speak = getattr(server, "_original_speak", server.speak)  # kept for tests of speak itself
 server.speak = lambda *a, **k: None
 _real_ask_ai = server.ask_ai
 _real_ask_ai_stream = server.ask_ai_stream

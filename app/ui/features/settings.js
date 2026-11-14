@@ -528,6 +528,7 @@ const SECTION_BODY = {
           }, 'Test voice')
         )
       ),
+      toggleRow('Use the Windows voice if the natural voice fails', 'Otherwise KALKI stays silent when the online voice service is down.', 'TTS_WINDOWS_FALLBACK'),
       row('Voice', 'How KALKI sounds when it speaks (Andrew, Ryan, Brian, Guy, Tony, etc.).',
         h('select.select', {
           style: { maxWidth: '24rem', width: '100%' }, 'aria-label': 'Voice identity',

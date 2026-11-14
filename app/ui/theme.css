@@ -178,3 +178,6 @@ button.chip { cursor: pointer; }
 
 /* Fill the remaining space in a row. */
 .grow { flex: 1; min-width: 0; }
+
+/* Reply actions with a word next to the icon (Copy, Read/Stop) need more than the 30px icon square. */
+.ib.btn-copy-msg, .ib.btn-tts-speaker { width: auto; min-width: 0; display: inline-flex; align-items: center; gap: 5px; padding: 0 8px; white-space: nowrap; }

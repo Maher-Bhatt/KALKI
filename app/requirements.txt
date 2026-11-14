@@ -1,6 +1,6 @@
 SpeechRecognition>=3.10.0
 pyaudio>=0.2.14
-edge-tts>=6.1.9
+edge-tts>=7.0.0
 pygame>=2.5.0
 psutil>=5.9.0
 pywin32>=306
