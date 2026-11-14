@@ -171,3 +171,10 @@ body.ask-home .hist, body.ask-home .th-h, body.ask-home aside { display: none !i
 @media (hover: none) { .note-actions { opacity: 1; } }
 .notes-list { max-height: min(60vh, 520px); overflow-y: auto; }
 button.chip { cursor: pointer; }
+
+/* Settings → Screen time: one bar per day. */
+.st-day { display: flex; align-items: center; gap: 10px; }
+.st-day .meter { flex: 1; }
+
+/* Fill the remaining space in a row. */
+.grow { flex: 1; min-width: 0; }

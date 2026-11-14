@@ -7,7 +7,7 @@
 
 import { h, mount, frag } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
-import { settings as api, voice, backup, system, vault, desktop, petOverlay } from '../api/endpoints.js';
+import { settings as api, voice, backup, system, vault, desktop, petOverlay, screenTime } from '../api/endpoints.js';
 import { store, set, applyUi } from '../state/store.js';
 import { skeletonRows, errorState, toggleSwitch, emptyState } from '../components/states.js';
 import { openDialog, confirmDialog, promptDialog } from '../components/dialog.js';
@@ -17,7 +17,7 @@ import { shortcuts, label as keyLabel } from '../lib/keys.js';
 import { getPetState, savePetState, openPetSettings } from './pet.js';
 
 const SECTIONS = [
-  ['general', 'Profile'], ['briefing', 'Briefing'], ['pet', 'Pet'], ['appearance', 'Appearance'], ['voice', 'Voice'], ['models', 'Models'],
+  ['general', 'Profile'], ['briefing', 'Briefing'], ['screentime', 'Screen time'], ['pet', 'Pet'], ['appearance', 'Appearance'], ['voice', 'Voice'], ['models', 'Models'],
   ['memory', 'Memory'], ['integrations', 'Integrations'], ['privacy', 'Privacy'], ['security', 'Security'],
   ['performance', 'Performance'], ['shortcuts', 'Shortcuts'], ['backup', 'Backup'], ['advanced', 'Advanced'], ['about', 'About'],
 ];
@@ -43,6 +43,141 @@ const TTS_VOICE_PRESETS = [
   { id: 'en-US-JennyNeural', name: 'Jenny (US - Warm Female)' },
   { id: 'en-US-AriaNeural', name: 'Aria (US - Vibrant Female)' },
 ];
+
+/* ── Screen time ── */
+
+const st = { data: null, loading: false, error: null };
+
+async function loadScreenTime() {
+  st.loading = true;
+  const r = await screenTime.overview();
+  st.loading = false;
+  st.data = r.ok ? r.data : null;
+  st.error = r.ok ? null : (r.message || "Screen time couldn't load.");
+  renderFn();
+}
+
+function hm(sec) {
+  const m = Math.round((sec || 0) / 60);
+  if (m < 1) return sec > 0 ? '<1m' : '0m';
+  return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`;
+}
+
+async function setScreenTime(patch, message) {
+  if (await save(patch, message)) loadScreenTime();
+}
+
+function screenTimeStatus(status) {
+  if (!status.available) return ['.sub', 'Not available on this PC'];
+  if (!status.enabled) return ['.sub', 'Off'];
+  if (status.pausedUntil) {
+    const t = new Date(status.pausedUntil * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return ['.warn', `Paused until ${t}`];
+  }
+  return ['.ok', 'Counting'];
+}
+
+function showStoredScreenTime() {
+  screenTime.raw().then((r) => {
+    if (!r.ok) { err(r.message || "Couldn't read the stored data", r.detail); return; }
+    openDialog({
+      title: 'What screen time stores',
+      description: `This is the whole file, kept only on this PC: ${r.data.file}`,
+      width: 'min(680px, 94vw)',
+      body: h('pre.pre-out', { style: { maxHeight: '60vh', overflow: 'auto', whiteSpace: 'pre-wrap' } },
+        JSON.stringify(r.data.data, null, 2) || '{}'),
+    });
+  });
+}
+
+function screenTimeSection() {
+  if (!st.data && !st.loading && !st.error) loadScreenTime();
+  if (st.error) return [errorState({ title: "Screen time couldn't load", message: st.error, onRetry: () => { st.error = null; loadScreenTime(); } })];
+  if (!st.data) return [h('div.card', null, skeletonRows(3))];
+  const { status, week } = st.data;
+  const [chipCls, chipText] = screenTimeStatus(status);
+  const max = Math.max(1, ...week.days.map((d) => d.total));
+  const excluded = status.excluded || [];
+
+  const dayRows = week.days.map((d) => {
+    const label = new Date(d.date + 'T12:00').toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' });
+    return h('div.st-day', null,
+      h('span.xs.mut', { style: { width: '4.5rem' } }, label),
+      h('div.meter.grow', null, h('i', { style: { width: `${(d.total / max) * 100}%` } })),
+      h('span.xs.mono', { style: { width: '4.5rem', textAlign: 'right' } }, hm(d.total)),
+      d.total ? h('button.icon-btn', {
+        type: 'button', 'aria-label': `Delete ${label}`, title: 'Delete this day',
+        onClick: async () => {
+          if (!await confirmDialog({ title: `Delete screen time for ${label}?`, description: "This can't be undone.", confirmLabel: 'Delete' })) return;
+          const r = await screenTime.clear(d.date);
+          if (r.ok) { ok('Day deleted'); loadScreenTime(); } else err(r.message, r.detail);
+        },
+      }, icon('trash', 14)) : h('span', { style: { width: '28px' } }));
+  });
+
+  const appRows = week.topApps.map((a) => h('div.li', null,
+    h('span.sm.grow', null, a.app.replace(/\.exe$/i, '')),
+    h('span.xs.mut', null, a.category),
+    h('span.xs.mono', { style: { minWidth: '4rem', textAlign: 'right' } }, hm(a.seconds)),
+    h('button.btn.gh', {
+      type: 'button',
+      onClick: async () => {
+        const name = a.app.toLowerCase().endsWith('.exe') ? a.app.toLowerCase() : `${a.app.toLowerCase()}.exe`;
+        if (!await confirmDialog({ title: `Stop tracking ${a.app}?`, description: 'Its stored time is deleted too.', confirmLabel: 'Stop tracking' })) return;
+        if (await save({ SCREEN_TIME_EXCLUDED: [...excluded, name] }, `${a.app} won't be tracked`)) {
+          await screenTime.forget(a.app);
+          loadScreenTime();
+        }
+      },
+    }, 'Exclude')));
+
+  return [
+    h('div.card.col.g12', null,
+      h('div.row.sb', null, h('h2', null, 'Tracking'), h('span.chip' + chipCls, null, chipText)),
+      h('div.sub', null, 'Counts how long each app is in front, by category. Only app names and minutes per day are kept, on this PC. Window titles are never stored, and time while you are away (2 minutes without keyboard or mouse) or the PC sleeps does not count.'),
+      row('Track screen time', status.enabled ? 'On' : 'Off. Nothing is recorded.', toggleSwitch({
+        checked: status.enabled, label: 'Track screen time',
+        onClick: () => setScreenTime({ SCREEN_TIME_ENABLED: !status.enabled }, status.enabled ? 'Screen time is off' : 'Screen time is on'),
+      })),
+      status.enabled ? row('Pause', 'Stop counting for a while without turning it off.',
+        status.pausedUntil
+          ? h('button.btn', { type: 'button', onClick: async () => { const r = await screenTime.resume(); if (r.ok) { ok('Counting again'); loadScreenTime(); } else err(r.message, r.detail); } }, 'Resume')
+          : h('div.row.g8', null, ...[[60, '1 hour'], [240, '4 hours']].map(([m, label]) => h('button.btn', {
+            type: 'button',
+            onClick: async () => { const r = await screenTime.pause(m); if (r.ok) { ok(`Paused for ${label}`); loadScreenTime(); } else err(r.message, r.detail); },
+          }, label)))) : null
+    ),
+    h('div.card.col.g12', null,
+      h('div.row.sb', null, h('h2', null, 'This week'), h('span.xs.mut', null, `${hm(week.total)} total`)),
+      week.total ? h('div.col.g8', null, ...dayRows) : h('div.sm.mut', null, status.enabled ? 'Nothing recorded yet this week.' : 'Turn on tracking to see your week here.'),
+      week.topApps.length ? h('h3.sm', { style: { marginTop: '8px' } }, 'Top apps') : null,
+      ...appRows
+    ),
+    h('div.card.col.g12', null,
+      h('h2', null, 'Your data'),
+      row('Keep for', 'Older days are deleted automatically.',
+        h('select.select', {
+          style: { maxWidth: '9rem' }, 'aria-label': 'Keep screen time for',
+          onChange: (e) => setScreenTime({ SCREEN_TIME_RETENTION_DAYS: Number(e.target.value) }, 'Saved'),
+        }, ...[7, 30, 90, 365].map((d) => h('option', { value: d, selected: status.retentionDays === d }, d === 365 ? '1 year' : `${d} days`)))),
+      row('Not tracked', excluded.length ? null : 'Use Exclude next to an app to stop tracking it.',
+        h('div.row.g8', { style: { flexWrap: 'wrap', justifyContent: 'flex-end' } }, ...excluded.map((app) => h('button.chip', {
+          type: 'button', title: `Track ${app} again`, 'aria-label': `Track ${app} again`,
+          onClick: () => setScreenTime({ SCREEN_TIME_EXCLUDED: excluded.filter((x) => x !== app) }, `${app} will be tracked again`),
+        }, app.replace(/\.exe$/i, ''), icon('close', 12))))),
+      h('div.row.g8', { style: { marginTop: '6px' } },
+        h('button.btn', { type: 'button', onClick: showStoredScreenTime }, 'See what is stored'),
+        h('button.btn.warn', {
+          type: 'button',
+          onClick: async () => {
+            if (!await confirmDialog({ title: 'Delete all screen time?', description: "Every recorded day is deleted. This can't be undone.", confirmLabel: 'Delete all' })) return;
+            const r = await screenTime.clear();
+            if (r.ok) { ok(`Deleted ${r.data.removedDays} day${r.data.removedDays === 1 ? '' : 's'} of screen time`); loadScreenTime(); } else err(r.message, r.detail);
+          },
+        }, 'Delete all'))
+    ),
+  ];
+}
 
 const BRIEFING_PARTS = [
   ['calendar', 'Calendar', "Today's events from Google Calendar."],
@@ -228,6 +363,8 @@ const SECTION_BODY = {
       ),
     ];
   },
+
+  screentime: () => screenTimeSection(),
 
   pet: () => {
     const petState = getPetState();

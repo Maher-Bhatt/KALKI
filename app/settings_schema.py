@@ -101,6 +101,12 @@ def _subset(*options: str) -> Callable[[Any], List[str]]:
     return check
 
 
+def _app_names(value: Any) -> List[str]:
+    if not isinstance(value, list) or not all(isinstance(v, str) and 0 < len(v.strip()) <= 120 for v in value):
+        raise SettingError("must be a list of app names")
+    return sorted({v.strip().lower() for v in value})[:200]
+
+
 def _phrases(value: Any) -> List[str]:
     if not isinstance(value, list) or not value or not all(isinstance(v, str) and v.strip() for v in value):
         raise SettingError("must be a list of phrases")
@@ -191,6 +197,10 @@ SCHEMA: Dict[str, Spec] = {
     "THEME_GLOW": Spec(_bool, True),
     "SCREENSAVER_ENABLED": Spec(_bool, True),
     "SCREENSAVER_IDLE_MINS": Spec(_number(int, 1, 1440), 5),
+    # Screen time. Off unless you turn it on; only app names and seconds are kept.
+    "SCREEN_TIME_ENABLED": Spec(_bool, False),
+    "SCREEN_TIME_EXCLUDED": Spec(_app_names, []),
+    "SCREEN_TIME_RETENTION_DAYS": Spec(_number(int, 1, 365), 30),
     # Daily briefing.
     "BRIEFING_SECTIONS": Spec(_subset("calendar", "reminders", "tasks", "mail", "sites", "screen_time", "weather"),
                               ["calendar", "reminders", "tasks", "sites"]),

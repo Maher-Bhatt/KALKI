@@ -114,6 +114,7 @@ import routes_settings
 import routes_setup
 import briefing
 import focus
+import routes_screen_time
 import commands_productivity
 import db
 import wifi_security
@@ -4478,7 +4479,7 @@ class Handler(BaseHTTPRequestHandler):
 
         route = (routes_pet.GET_ROUTES.get(path) or routes_settings.GET_ROUTES.get(path)
                  or routes_calendar.GET_ROUTES.get(path) or briefing.GET_ROUTES.get(path)
-                 or focus.GET_ROUTES.get(path))
+                 or focus.GET_ROUTES.get(path) or routes_screen_time.GET_ROUTES.get(path))
         if route:
             payload, status = route({})
             self._json(payload, status=status)
@@ -4947,7 +4948,7 @@ class Handler(BaseHTTPRequestHandler):
                  or approvals.POST_ROUTES.get(path) or activity.POST_ROUTES.get(path)
                  or routes_settings.POST_ROUTES.get(path) or routes_calendar.POST_ROUTES.get(path)
                  or routes_setup.POST_ROUTES.get(path) or routes_backup.POST_ROUTES.get(path)
-                 or focus.POST_ROUTES.get(path))
+                 or focus.POST_ROUTES.get(path) or routes_screen_time.POST_ROUTES.get(path))
         if route:
             payload, status = route(body)
             self._json(payload, status=status)
@@ -6226,6 +6227,9 @@ def main():
 
     try:
         import core.productivity
+        if getattr(config, "SCREEN_TIME_ENABLED", None) is None and core.productivity.is_enabled():
+            # Tracking from before screen time had a switch: save that it's on, so it stays on.
+            routes_settings.save_settings({"SCREEN_TIME_ENABLED": True})
         core.productivity.start_tracking()
     except Exception as e:
         log(f"Failed to start productivity tracker: {e}")

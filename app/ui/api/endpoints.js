@@ -111,6 +111,15 @@ export const notes = {
   exportMarkdown: (q = '', tag = '') => post('/api/notes/export', { q, tag }),
 };
 
+export const screenTime = {
+  overview: () => get('/api/screentime'),
+  raw: () => get('/api/screentime/raw'),
+  pause: (minutes = 60) => post('/api/screentime/pause', { minutes }),
+  resume: () => post('/api/screentime/resume', {}),
+  clear: (date = null) => post('/api/screentime/clear', date ? { date } : {}),
+  forget: (app) => post('/api/screentime/forget', { app }),
+};
+
 /* ── Calendar / mail / music / messaging ──────────────────────────── */
 export const calendar = {
   status: () => get('/api/calendar/status'),
