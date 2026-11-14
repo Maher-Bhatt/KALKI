@@ -271,7 +271,7 @@ function renderMessage(msg) {
   }
 
   let chipText = msg.model ? modelLabel(msg.model) : '';
-  if (msg.done && msg.durationMs) chipText += `${chipText ? ' · ' : ''}${(msg.durationMs / 1000).toFixed(1)} s`;
+  if (msg.done && msg.durationMs >= 100) chipText += `${chipText ? ' · ' : ''}${(msg.durationMs / 1000).toFixed(1)} s`;
 
   return h('div.kmsg', { dataset: { id: msg.id } },
     h('div.who', null, 

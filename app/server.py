@@ -1214,6 +1214,37 @@ def _speak_local_linux(text: str) -> bool:
     return True
 
 
+def _default_output_id():
+    """Windows' current default speaker or headset, so speech can follow it when it changes."""
+    if not PYCAW_OK:
+        return None
+    try:
+        import comtypes
+        comtypes.CoInitialize()
+    except Exception:
+        pass
+    try:
+        device = AudioUtilities.GetSpeakers()
+        get_id = getattr(device, "GetId", None)
+        return get_id() if callable(get_id) else getattr(device, "id", None)
+    except Exception:
+        return None
+
+
+def _ensure_tts_output():
+    """Open audio output, or reopen it if Windows' default device changed since it was opened.
+    KALKI often starts with Windows before the speakers or a Bluetooth headset are ready, and
+    a mixer left on the old device plays into nothing without any error."""
+    current = None if _tts_output_device() else _default_output_id()
+    if not pygame.mixer.get_init() or (current and current != STATE.get("tts_output_id")):
+        _init_tts_mixer()
+        STATE["tts_output_id"] = current
+
+
+def _fallback_voice_allowed():
+    return bool(getattr(config, "TTS_WINDOWS_FALLBACK", True))
+
+
 def _init_tts_mixer():
     if not PYGAME_OK:
         raise RuntimeError(f"pygame audio is unavailable: {PYGAME_PROBE_ERROR}")
@@ -1319,7 +1350,13 @@ def speak(text, is_notification=False):
             try:
                 STATE["speaking"] = True
                 STATE["last_tts_error"] = ""
-                tmp, provider = _build_tts_file(text)
+                try:
+                    tmp, provider = _build_tts_file(text)
+                except Exception as first_error:
+                    # The natural voice service sometimes drops a request; one retry usually works.
+                    log(f"TTS first attempt failed, retrying: {first_error}")
+                    time.sleep(0.4)
+                    tmp, provider = _build_tts_file(text)
                 STATE["last_tts_provider"] = provider
                 STATE["last_tts_at"] = time.time()
                 STATE["last_tts_latency_ms"] = int((time.perf_counter() - started_at) * 1000)
@@ -1330,8 +1367,7 @@ def speak(text, is_notification=False):
                     _play_audio_file_linux(tmp)
                     STATE["last_tts_provider"] = "edge-linux-player"
                 else:
-                    if not pygame.mixer.get_init():
-                        _init_tts_mixer()
+                    _ensure_tts_output()
                     pygame.mixer.music.load(tmp)
                     pygame.mixer.music.play()
                     while pygame.mixer.music.get_busy():
@@ -1339,10 +1375,10 @@ def speak(text, is_notification=False):
             except Exception as e:
                 edge_error = str(e)
                 log(f"TTS primary provider failed: {edge_error}")
-                # Never replace user's natural human neural voice with robotic Windows SAPI!
-                # Only use Windows SAPI if user explicitly configured 'sapi', 'windows', or 'david'
+                # Silence is worse than a plainer voice: unless the user turned it off
+                # (TTS_WINDOWS_FALLBACK), the Windows voice says it instead.
                 configured_voice = (getattr(config, "TTS_VOICE", "") or "").lower()
-                use_sapi = configured_voice in ("sapi", "windows", "david", "zira")
+                use_sapi = configured_voice in ("sapi", "windows", "david", "zira") or _fallback_voice_allowed()
                 if use_sapi:
                     try:
                         if os.name != "nt" and tmp:
@@ -1354,6 +1390,7 @@ def speak(text, is_notification=False):
                         STATE["last_tts_provider"] = "windows-sapi"
                         STATE["last_tts_error"] = ""
                         STATE["last_tts_latency_ms"] = int((time.perf_counter() - started_at) * 1000)
+                        STATE["last_tts_notice"] = f"The natural voice failed ({edge_error}), so the Windows voice was used."
                         log("TTS fallback: Windows SAPI")
                     except Exception as fallback_error:
                         STATE["last_tts_error"] = f"{edge_error}; {fallback_error}"

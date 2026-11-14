@@ -143,6 +143,7 @@ SCHEMA: Dict[str, Spec] = {
     "TTS_PITCH": Spec(_SIGNED_HZ, "+0Hz"),
     "TTS_VOLUME": Spec(_SIGNED_PERCENT, "+0%"),
     "TTS_OUTPUT_DEVICE": Spec(_text(200), ""),
+    "TTS_WINDOWS_FALLBACK": Spec(_bool, True),
     "TTS_GROQ_TIMEOUT_SEC": Spec(_number(float, 1, 10), 3),
     "WAKE_WORDS": Spec(_phrases, ["hey kalki", "kalki"]),
     "LISTEN_MODE": Spec(_choice("always", "push"), "push"),
