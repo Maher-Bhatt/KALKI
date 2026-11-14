@@ -284,25 +284,99 @@ async function addNote(text) {
 
 /* ── Focus ───────────────────────────────────────────────────────────── */
 
-export async function syncFocus() {
-  const r = await system.focus();
-  if (!r.ok) return;
-  set('today', { focus: r.data });
+// The server owns the session (it survives restarts). The page counts down on its own
+// between checks, and checks again every 30 seconds and when the time runs out.
+let focusEndsAt = 0;
+let focusLastSync = 0;
+const FOCUS_LENGTHS = [15, 25, 45, 50, 90];
+const FOCUS_LENGTH_KEY = 'kalki.focusMinutes';
 
+function preferredFocusMinutes() {
+  try {
+    const v = Number(localStorage.getItem(FOCUS_LENGTH_KEY));
+    return FOCUS_LENGTHS.includes(v) ? v : 25;
+  } catch { return 25; }
+}
+
+function paintFocusClock() {
+  const f = store.today.focus;
+  if (!f?.active) return;
+  const left = Math.max(0, (focusEndsAt - Date.now()) / 1000);
+  const el = document.getElementById('focus-clock');
+  if (el) el.textContent = clock(left);
+  const bar = document.getElementById('focus-meter');
+  if (bar && f.minutes) bar.style.width = `${Math.min(100, 100 - (left / (f.minutes * 60)) * 100)}%`;
+  if (left <= 0 || Date.now() - focusLastSync > 30000) syncFocus();
+}
+
+export async function syncFocus() {
+  focusLastSync = Date.now();
+  const [r, hist] = await Promise.all([system.focus(), system.focusHistory(7).catch(() => ({ ok: false }))]);
+  if (!r.ok) return;
+  const wasActive = Boolean(store.today.focus?.active);
+  focusEndsAt = r.data.active ? Date.now() + r.data.remainingSec * 1000 : 0;
+  set('today', { focus: r.data, focusHistory: hist.ok ? hist.data : store.today.focusHistory });
+  if (wasActive && !r.data.active) ok('Focus session done. Take a short break.');
   clearInterval(focusTimer);
-  if (r.data.active) {
-    focusTimer = setInterval(async () => {
-      const fr = await system.focus();
-      if (fr.ok && fr.data.active) {
-        const el = document.getElementById('focus-clock');
-        if (el) el.textContent = clock(fr.data.remainingSec);
-        store.today.focus = fr.data;
-      } else {
-        clearInterval(focusTimer);
-        syncFocus();
-      }
-    }, 1000);
+  focusTimer = r.data.active ? setInterval(paintFocusClock, 1000) : null;
+}
+
+async function startFocus(minutes, label) {
+  const r = await system.focusStart(minutes, label);
+  if (!r.ok) { err(r.message || "The focus session couldn't start", r.detail); return; }
+  try { localStorage.setItem(FOCUS_LENGTH_KEY, String(minutes)); } catch { /* private mode */ }
+  ok(`Focus session started: ${minutes} minutes`);
+  syncFocus();
+}
+
+async function stopFocus() {
+  const r = await system.focusStop();
+  if (!r.ok) { err(r.message || "The focus session couldn't be stopped", r.detail); return; }
+  const done = r.data?.stopped?.focusedMinutes;
+  ok(done != null ? `Stopped after ${Math.round(done)} min` : 'No focus session was running');
+  syncFocus();
+}
+
+function focusMinutesText(min) {
+  min = Math.round(min || 0);
+  return min >= 60 ? `${Math.floor(min / 60)}h ${min % 60}m` : `${min} min`;
+}
+
+function focusCardView(f, hist) {
+  const recent = (hist?.sessions || []).slice(0, 3);
+  let main;
+  if (f?.active) {
+    const left = Math.max(0, (focusEndsAt - Date.now()) / 1000) || f.remainingSec;
+    main = [
+      f.label ? h('div.sm', null, f.label) : null,
+      h('div.big', { style: { fontSize: '34px' }, id: 'focus-clock', role: 'timer', 'aria-live': 'off' }, clock(left)),
+      h('div.meter', null, h('i', { id: 'focus-meter', style: { width: `${Math.min(100, 100 - (left / (f.minutes * 60)) * 100)}%` } })),
+      h('div.row.g8', null,
+        h('span.xs.mut.grow', null, `Ends at ${new Date(f.endsAt * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`),
+        h('button.btn', { type: 'button', onClick: stopFocus }, 'End early')),
+    ];
+  } else {
+    const lengthSel = h('select.select', { 'aria-label': 'Session length', style: { maxWidth: '7.5rem' } },
+      ...FOCUS_LENGTHS.map((m) => h('option', { value: m, selected: m === preferredFocusMinutes() }, `${m} min`)));
+    const labelIn = h('input.input', { 'aria-label': 'What you are focusing on', placeholder: 'What are you working on? (optional)', maxLength: 120 });
+    main = [
+      labelIn,
+      h('div.row.g8', null, lengthSel,
+        h('button.btn.pri', { type: 'button', onClick: () => startFocus(Number(lengthSel.value), labelIn.value) },
+          h('i', { 'data-i': 'play' }), 'Start')),
+    ];
   }
+  return h('div.card.col.g12', null,
+    h('div.row.sb', null, h('h2', null, 'Focus session'),
+      h('span.chip', null, f?.active ? `${f.minutes} min` : `Today ${focusMinutesText(f?.todayMinutes)}`)),
+    ...main,
+    recent.length ? h('div.col.g4', null,
+      h('div.xs.mut', null, `This week: ${focusMinutesText(hist.periodMinutes)} across ${hist.completed + hist.stopped} sessions`),
+      ...recent.map((s) => h('div.row.g8.xs', null,
+        h('span.grow', null, s.label || 'Focus'),
+        h('span.mut', null, `${focusMinutesText(s.focusedMinutes)}${s.completed ? '' : ' (ended early)'}`),
+        h('span.mut', null, relative(s.startedAt))))) : null,
+    h('div.xs.mut', null, "While it runs, KALKI holds back non-urgent spoken alerts. It doesn't block apps or sites."));
 }
 
 /* ── View ────────────────────────────────────────────────────────────── */
@@ -494,26 +568,7 @@ export function todayView() {
     );
 
     // Focus
-    const focusCard = h('div.card.col.g12', null,
-      h('div.row.sb', null, h('h2', null, 'Focus session'), h('span.chip', null, (f?.minutes || 25) + ' min')),
-      h('div.big', { style: { fontSize: '34px' }, id: 'focus-clock' }, f?.active ? clock(f.remainingSec) : `${f?.minutes || 25}:00`),
-      h('div.meter', null, h('i', { style: { width: f?.active && f.minutes ? `${100 - (f.remainingSec / (f.minutes * 60) * 100)}%` : '0%' } })),
-      h('div.row.g8', null,
-        f?.active
-          ? h('button.btn.pri', { type: 'button', onClick: () => ok(`${clock(f.remainingSec)} left`) }, 'Running')
-          : h('button.btn.pri', { type: 'button', onClick: async () => { await system.command('start a focus session'); setTimeout(syncFocus, 600); } }, 'Start session'),
-        h('button.btn.gh', {
-          type: 'button',
-          onClick: async () => {
-            await system.command('stop focus session');
-            clearInterval(focusTimer);
-            set('today', { focus: { active: false, remainingSec: 0, minutes: 25 } });
-            ok('Focus session ended');
-            view.render();
-          }
-        }, 'End session')
-      )
-    );
+    const focusCard = focusCardView(f, d.focusHistory);
 
     // One row for every account that isn't connected yet, instead of a card for each.
     const liveStatus = store.status;
