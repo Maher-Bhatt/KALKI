@@ -158,3 +158,16 @@ body.ask-home .hist, body.ask-home .th-h, body.ask-home aside { display: none !i
 .glance-link { display: block; width: 100%; padding: 2px 0; text-align: left; font-size: var(--type-sm); color: var(--t2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .glance-link:hover { color: var(--text); text-decoration: underline; }
 @media (min-width: 1300px) { .glance-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* Today: briefing sections, one per row. */
+.briefing-row { display: grid; gap: 2px; }
+.briefing-row + .briefing-row { border-top: 1px solid var(--line); padding-top: 8px; }
+
+/* Notes: actions show on hover or keyboard focus; long notes wrap. */
+.note-row { align-items: flex-start; gap: 8px; }
+.note-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.note-actions { opacity: 0; transition: opacity var(--dur-fast, .15s); }
+.note-row:hover .note-actions, .note-row:focus-within .note-actions { opacity: 1; }
+@media (hover: none) { .note-actions { opacity: 1; } }
+.notes-list { max-height: min(60vh, 520px); overflow-y: auto; }
+button.chip { cursor: pointer; }

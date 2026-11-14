@@ -98,6 +98,18 @@ MIGRATIONS: List[Tuple[int, str]] = [
     ALTER TABLE reminders ADD COLUMN repeat TEXT NOT NULL DEFAULT '';
     ALTER TABLE reminders ADD COLUMN fired_at TEXT;
     """),
+    (5, """
+    CREATE TABLE focus_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        started REAL NOT NULL,
+        planned_minutes INTEGER NOT NULL,
+        ended REAL,
+        completed INTEGER NOT NULL DEFAULT 0,
+        announced INTEGER NOT NULL DEFAULT 0,
+        label TEXT NOT NULL DEFAULT ''
+    );
+    CREATE INDEX focus_sessions_started ON focus_sessions (started);
+    """),
 ]
 SCHEMA_VERSION = MIGRATIONS[-1][0]
 

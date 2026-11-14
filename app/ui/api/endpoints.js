@@ -16,6 +16,12 @@ export const system = {
   dashboard: () => get('/api/dashboard'),
   metrics: () => get('/api/metrics'),
   focus: () => get('/api/focus'),
+  focusStart: (minutes, label = '') => post('/api/focus/start', { minutes, label }),
+  focusStop: () => post('/api/focus/stop', {}),
+  focusHistory: (days = 7) => post('/api/focus/history', { days }),
+  focusStart: (minutes, label = '') => post('/api/focus/start', { minutes, label }),
+  focusStop: () => post('/api/focus/stop', {}),
+  focusHistory: (days = 7) => post('/api/focus/history', { days }),
   models: () => get('/api/models'),
   setModel: (model) => post('/api/model', { model }),
   stop: () => post('/api/stop', {}),
@@ -94,10 +100,15 @@ export const notes = {
     return r.ok ? { ok: true, items: r.data.notes || [] } : r;
   },
   add: (text) => post('/api/notes/add', { text }),
-  async search(q) {
-    const r = await post('/api/notes/search', { q });
+  async search(q, tag = '') {
+    const r = await post('/api/notes/search', { q, tag });
     return r.ok ? { ok: true, items: r.data.notes || [] } : r;
   },
+  update: (id, text) => post('/api/notes/update', { id, text }),
+  remove: (id) => post('/api/notes/delete', { id }),
+  restore: (note) => post('/api/notes/restore', { note }),
+  tags: () => post('/api/notes/tags', {}),
+  exportMarkdown: (q = '', tag = '') => post('/api/notes/export', { q, tag }),
 };
 
 /* ── Calendar / mail / music / messaging ──────────────────────────── */

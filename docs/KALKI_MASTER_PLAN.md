@@ -68,6 +68,9 @@
 | Phase 3, desktop | Clipboard, site watching, note capture and PC control moved to `commands_desktop.py`. "Fix my code" never worked: it called a function that doesn't exist; it now asks the AI. "Save my work" no longer becomes a note, "watch the news." no longer adds a site, a failed recycle-bin empty is reported, VS Code opens without a shell, and clipboard captures show what was saved. `server.py` is down to 6,367 lines |
 | Phase 3, private | Password vault and screen reading moved to `commands_private.py`. "Save password X for Y" stored the password in lowercase, so it was wrong; passwords now keep their capitals. Copied and generated passwords leave the clipboard after a minute. A password not in the vault no longer blocks other commands. The screen is only captured when you clearly ask: phrases like "help me with this essay" or "look at this code" used to send a picture of your screen to the AI service. `server.py` is down to 6,268 lines |
 | Phase 4, reminders (feature 8) | Repeats (every day, every weekday, every week or a named weekday), snooze ("snooze 15 minutes"), delete by voice and from Today, and missed reminders said as missed instead of lost. "Tomorrow", weekdays, "in an hour" and "in half an hour" are understood; before, "tomorrow at 9pm" at 8pm meant today. A time KALKI can't read is now an error, not a silent "in one hour". The AI tool reports the real time it set. Notifications report when they can't be shown. Database migration 4 adds the repeat columns |
+| Phase 4, daily briefing (feature 12) | Rebuilt in `briefing.py`. You choose its sections in Settings → Briefing (calendar, reminders, tasks, mail, watched sites, screen time, weather). Each runs on its own with an 8-second limit and says whether it worked, had nothing, isn't set up, failed or was too slow, so one failure no longer empties the whole briefing. It's a plain GET now and no longer switched off by default. Today loads it separately, so a slow source doesn't hold up the page; "Hide until tomorrow" is remembered. "Brief me" and "morning brief" read it aloud instead of the security brief or the local plan. The AI tool uses the same briefing instead of web-searching "weather today". Weather uses Open-Meteo with only your saved coordinates; news is left out until there's a real source |
+| Phase 4, focus sessions (feature 10) | Rebuilt in `focus.py`, stored in SQLite (migration 5), so a session carries on after KALKI restarts, and one whose time ran out while KALKI was closed counts as done and is noted in alerts instead of announced late. Two bugs fixed: the End button sent "stop focus session", which the command matcher didn't know, so the session kept running while the screen said it had ended; and a finished session left KALKI in focus mode, holding back notifications indefinitely. Now: lengths from 1 to 240 minutes by voice or the Today card ("focus on the essay for 45 minutes", "focus for an hour"), an optional label, "end early", a spoken and desktop "done" notice, and history with today's and this week's totals. The card says what a session really does: it holds back non-urgent spoken alerts, and doesn't block apps or sites |
+| Phase 4, notes (feature 9) | Notes got a full screen from Today ("All notes"): live search, #tag filters with counts, edit, delete with Undo, and export to Markdown, all or just the current search or tag. Each note on Today can be edited or deleted. The Today box said "Capture a thought or search notes" but only ever saved, and its "this week" count was really the number shown; both fixed. Search now runs in SQLite and treats `%` and `_` as plain characters. New routes: update, restore, tags, export |
 | Test isolation, second fix | Tests run through `python -m unittest` or directly didn't load `conftest.py`, so the first file to load the server could still reach the real profile. Every test file now imports `tests/_isolation.py` first, and a test enforces it. Checked with pytest, unittest and a direct run |
 | F7, 13 Nov 2026 | Handlers that hid real failures now log them or catch only what they expect: web lookups, the backup-model fallback, memory extraction, the briefing and usage tracking. Silent `except: pass` count 165 → 149, enforced by a test |
 | F3 FastAPI move | Started without FastAPI: tasks, reminders, notes and memory moved to `routes_productivity.py` and `routes_memory.py`, written to work with any framework. The move itself should wait until CI is green |
@@ -401,12 +404,13 @@ The rail shows labels and can collapse to icons. The top bar has only search and
 - **Build:** Repeat rules, snooze, delete. Windows toast notifications with action buttons. Run in the tray after the window closes. Show missed reminders on next launch.
 - **Done when:** A reminder survives a reboot, fires within 30 seconds on time, and a missed one is never lost.
 
-### 9. Notes 🟡
+### 9. Notes 🟢
+- **Today (14 Nov 2026):** Search, tags, edit, delete with Undo and Markdown export all have a UI, and notes appear in Library search. Still to do: links to chat threads, and showing Markdown formatted.
 - **Build:** Add search and delete to the UI. Markdown, tags, link to threads. Include in Library search.
 - **Done when:** Every note function has a working UI, and notes can be exported.
 
 ### 10. Focus sessions 🟡
-- **Today:** A timer. Mode cards imply distraction blocking that doesn't exist.
+- **Today (14 Nov 2026):** A stored timer that survives restarts, with history and an honest description. Still to do: optional linked automation, and a button that opens Windows Focus / Do Not Disturb settings, since Windows offers no reliable public API to switch it on.
 - **Build:** Timer that survives restart, optional linked automation, session history. Windows has limited public API control over Do Not Disturb, so research and label honestly, opening the settings if it can't be automated.
 - **Done when:** Every promise on the screen is something the session really does.
 
@@ -415,8 +419,8 @@ The rail shows labels and can collapse to icons. The top bar has only search and
 - **Build:** Clear opt-in, pause, retention limit, delete, per-app exclusions, weekly view. Local only.
 - **Done when:** A user can see exactly what's stored and clear it in one click.
 
-### 12. Daily briefing 🔴
-- **Today:** The UI gets 404 because of a method mismatch. It's also disabled by default.
+### 12. Daily briefing 🟡
+- **Today (14 Nov 2026):** On demand, readable and spoken, with chosen sections and per-section status. Still to do: a scheduled briefing, and news once there's a real source.
 - **Build:** Sections the user chooses (calendar, tasks, weather, mail, news). Show which ones are unavailable. Scheduled or on demand; readable or spoken.
 - **Done when:** It loads in under 10 seconds, and one failed source doesn't break the rest.
 

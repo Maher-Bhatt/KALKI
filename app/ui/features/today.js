@@ -12,6 +12,7 @@ import { emptyState, errorState, skeletonRows } from '../components/states.js';
 import { promptDialog, confirmDialog, openDialog } from '../components/dialog.js';
 import { ok, err, toast } from '../state/toasts.js';
 import { go } from './router.js';
+import { noteRow, openNotesDialog } from './notes.js';
 
 let focusTimer = null;
 let loadTodayInFlight = false;
@@ -21,18 +22,14 @@ export async function loadToday() {
   loadTodayInFlight = true;
   try {
     set('today', { loading: true });
-  const [t, r, n, b, c] = await Promise.all([
+  // The briefing checks live sources, so it loads on its own and never holds up the rest.
+  loadBriefing();
+  const [t, r, n, c] = await Promise.all([
     tasks.list(),
     reminders.list(),
     notes.list(6),
-    system.briefing().catch(() => ({ ok: false })),
     calendar.today().catch((err) => ({ ok: false, error: err }))
   ]);
-
-  let briefingData = null;
-  if (b.ok) {
-    briefingData = b.data?.text || b.data || b.text;
-  }
 
   const s = store.status;
   const isGcalConnected = (s && s.gcalConfigured === false)
@@ -47,7 +44,6 @@ export async function loadToday() {
     tasksError: t.ok ? null : t,
     reminders: r.ok ? r.items : [],
     notes: n.ok ? n.items : [],
-    briefing: store.today?.snoozedBriefing ? null : briefingData,
     events: rawEvents,
     calendarConfigured: isGcalConnected,
     agendaError: c.ok ? null : c,
@@ -55,6 +51,74 @@ export async function loadToday() {
   } finally {
     loadTodayInFlight = false;
   }
+}
+
+const SNOOZE_KEY = 'kalki.briefingSnoozedOn';
+
+function briefingSnoozed() {
+  try { return localStorage.getItem(SNOOZE_KEY) === new Date().toDateString(); } catch { return false; }
+}
+
+export async function loadBriefing() {
+  set('today', { briefingLoading: true });
+  const b = await system.briefing().catch((e) => ({ ok: false, message: e?.message }));
+  set('today', {
+    briefingLoading: false,
+    briefing: b.ok ? (b.data?.briefing || null) : null,
+    briefingError: b.ok ? null : (b.message || "The briefing couldn't load."),
+  });
+}
+
+const STATUS_CHIP = {
+  empty: ['', 'Nothing today'],
+  unavailable: ['.sub', 'Not set up'],
+  failed: ['.warn', "Couldn't load"],
+  timeout: ['.warn', 'Too slow'],
+};
+
+function briefingCardView(d, rerender) {
+  if (briefingSnoozed()) return null;
+  const sections = d.briefing?.sections || [];
+  let body;
+  if (d.briefingLoading && !d.briefing) {
+    body = h('div.sm.mut', null, 'Putting your briefing together…');
+  } else if (d.briefingError) {
+    body = h('div.sm.mut', null, d.briefingError);
+  } else if (!sections.length) {
+    body = h('div.sm.mut', null, 'The briefing has nothing to cover. Choose its sections in Settings.');
+  } else {
+    body = h('div.col.g8', null, ...sections.map((sec) => {
+      const [cls, label] = STATUS_CHIP[sec.status] || ['', ''];
+      return h('div.briefing-row', null,
+        h('div.row.g8', null, h('strong.sm', null, sec.title), label ? h('span.chip' + cls, null, label) : null),
+        h('div.sm' + (sec.status === 'ok' ? '' : '.mut'), null, sec.text));
+    }));
+  }
+  return h('div.card', { style: { marginBottom: '16px' } },
+    h('div.row.sb', null,
+      h('h2', null, 'Your briefing'),
+      h('button.btn.gh', { type: 'button', 'aria-label': 'Refresh the briefing', onClick: () => loadBriefing() },
+        h('i', { 'data-i': 'refresh' }), d.briefingLoading ? 'Refreshing…' : 'Refresh')),
+    h('div', { style: { marginTop: '10px', lineHeight: '1.6' } }, body),
+    h('div.row.g8', { style: { marginTop: '14px' } },
+      h('button.btn.pri', {
+        type: 'button',
+        disabled: !d.briefing,
+        onClick: async () => {
+          const r = await system.command('read my briefing');
+          if (!r.ok) err(r.message, r.detail);
+        }
+      }, h('i', { 'data-i': 'play' }), 'Read aloud'),
+      h('button.btn', {
+        type: 'button',
+        onClick: () => {
+          try { localStorage.setItem(SNOOZE_KEY, new Date().toDateString()); } catch { /* private mode */ }
+          toast({ kind: 'info', text: "Briefing hidden until tomorrow" });
+          rerender();
+        }
+      }, 'Hide until tomorrow'),
+      h('button.btn.gh', { type: 'button', onClick: () => go('settings', { section: 'briefing' }) }, 'Choose sections')
+    ));
 }
 
 export async function loadAgenda() {
@@ -221,25 +285,99 @@ async function addNote(text) {
 
 /* ── Focus ───────────────────────────────────────────────────────────── */
 
-export async function syncFocus() {
-  const r = await system.focus();
-  if (!r.ok) return;
-  set('today', { focus: r.data });
+// The server owns the session (it survives restarts). The page counts down on its own
+// between checks, and checks again every 30 seconds and when the time runs out.
+let focusEndsAt = 0;
+let focusLastSync = 0;
+const FOCUS_LENGTHS = [15, 25, 45, 50, 90];
+const FOCUS_LENGTH_KEY = 'kalki.focusMinutes';
 
+function preferredFocusMinutes() {
+  try {
+    const v = Number(localStorage.getItem(FOCUS_LENGTH_KEY));
+    return FOCUS_LENGTHS.includes(v) ? v : 25;
+  } catch { return 25; }
+}
+
+function paintFocusClock() {
+  const f = store.today.focus;
+  if (!f?.active) return;
+  const left = Math.max(0, (focusEndsAt - Date.now()) / 1000);
+  const el = document.getElementById('focus-clock');
+  if (el) el.textContent = clock(left);
+  const bar = document.getElementById('focus-meter');
+  if (bar && f.minutes) bar.style.width = `${Math.min(100, 100 - (left / (f.minutes * 60)) * 100)}%`;
+  if (left <= 0 || Date.now() - focusLastSync > 30000) syncFocus();
+}
+
+export async function syncFocus() {
+  focusLastSync = Date.now();
+  const [r, hist] = await Promise.all([system.focus(), system.focusHistory(7).catch(() => ({ ok: false }))]);
+  if (!r.ok) return;
+  const wasActive = Boolean(store.today.focus?.active);
+  focusEndsAt = r.data.active ? Date.now() + r.data.remainingSec * 1000 : 0;
+  set('today', { focus: r.data, focusHistory: hist.ok ? hist.data : store.today.focusHistory });
+  if (wasActive && !r.data.active) ok('Focus session done. Take a short break.');
   clearInterval(focusTimer);
-  if (r.data.active) {
-    focusTimer = setInterval(async () => {
-      const fr = await system.focus();
-      if (fr.ok && fr.data.active) {
-        const el = document.getElementById('focus-clock');
-        if (el) el.textContent = clock(fr.data.remainingSec);
-        store.today.focus = fr.data;
-      } else {
-        clearInterval(focusTimer);
-        syncFocus();
-      }
-    }, 1000);
+  focusTimer = r.data.active ? setInterval(paintFocusClock, 1000) : null;
+}
+
+async function startFocus(minutes, label) {
+  const r = await system.focusStart(minutes, label);
+  if (!r.ok) { err(r.message || "The focus session couldn't start", r.detail); return; }
+  try { localStorage.setItem(FOCUS_LENGTH_KEY, String(minutes)); } catch { /* private mode */ }
+  ok(`Focus session started: ${minutes} minutes`);
+  syncFocus();
+}
+
+async function stopFocus() {
+  const r = await system.focusStop();
+  if (!r.ok) { err(r.message || "The focus session couldn't be stopped", r.detail); return; }
+  const done = r.data?.stopped?.focusedMinutes;
+  ok(done != null ? `Stopped after ${Math.round(done)} min` : 'No focus session was running');
+  syncFocus();
+}
+
+function focusMinutesText(min) {
+  min = Math.round(min || 0);
+  return min >= 60 ? `${Math.floor(min / 60)}h ${min % 60}m` : `${min} min`;
+}
+
+function focusCardView(f, hist) {
+  const recent = (hist?.sessions || []).slice(0, 3);
+  let main;
+  if (f?.active) {
+    const left = Math.max(0, (focusEndsAt - Date.now()) / 1000) || f.remainingSec;
+    main = [
+      f.label ? h('div.sm', null, f.label) : null,
+      h('div.big', { style: { fontSize: '34px' }, id: 'focus-clock', role: 'timer', 'aria-live': 'off' }, clock(left)),
+      h('div.meter', null, h('i', { id: 'focus-meter', style: { width: `${Math.min(100, 100 - (left / (f.minutes * 60)) * 100)}%` } })),
+      h('div.row.g8', null,
+        h('span.xs.mut.grow', null, `Ends at ${new Date(f.endsAt * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`),
+        h('button.btn', { type: 'button', onClick: stopFocus }, 'End early')),
+    ];
+  } else {
+    const lengthSel = h('select.select', { 'aria-label': 'Session length', style: { maxWidth: '7.5rem' } },
+      ...FOCUS_LENGTHS.map((m) => h('option', { value: m, selected: m === preferredFocusMinutes() }, `${m} min`)));
+    const labelIn = h('input.input', { 'aria-label': 'What you are focusing on', placeholder: 'What are you working on? (optional)', maxLength: 120 });
+    main = [
+      labelIn,
+      h('div.row.g8', null, lengthSel,
+        h('button.btn.pri', { type: 'button', onClick: () => startFocus(Number(lengthSel.value), labelIn.value) },
+          h('i', { 'data-i': 'play' }), 'Start')),
+    ];
   }
+  return h('div.card.col.g12', null,
+    h('div.row.sb', null, h('h2', null, 'Focus session'),
+      h('span.chip', null, f?.active ? `${f.minutes} min` : `Today ${focusMinutesText(f?.todayMinutes)}`)),
+    ...main,
+    recent.length ? h('div.col.g4', null,
+      h('div.xs.mut', null, `This week: ${focusMinutesText(hist.periodMinutes)} across ${hist.completed + hist.stopped} sessions`),
+      ...recent.map((s) => h('div.row.g8.xs', null,
+        h('span.grow', null, s.label || 'Focus'),
+        h('span.mut', null, `${focusMinutesText(s.focusedMinutes)}${s.completed ? '' : ' (ended early)'}`),
+        h('span.mut', null, relative(s.startedAt))))) : null,
+    h('div.xs.mut', null, "While it runs, KALKI holds back non-urgent spoken alerts. It doesn't block apps or sites."));
 }
 
 /* ── View ────────────────────────────────────────────────────────────── */
@@ -273,7 +411,7 @@ export function todayView() {
   }, h('div.field', { style: { margin: '10px 0 4px', display: 'flex' } }, taskInput));
 
   const noteInput = h('input', {
-    placeholder: 'Capture a thought or search notes',
+    placeholder: 'Capture a thought. Use #tags to group notes',
     'aria-label': 'Add a note',
     style: { border: 'none', background: 'transparent', flex: '1', outline: 'none', color: 'inherit' },
     onInput: (e) => { noteDraft = e.target.value; },
@@ -289,7 +427,7 @@ export function todayView() {
         await addNote(val);
       }
     }
-  }, h('div.field', { style: { margin: '10px 0 4px', display: 'flex', alignItems: 'center', gap: '8px' } }, h('i', { 'data-i': 'search' }), noteInput));
+  }, h('div.field', { style: { margin: '10px 0 4px', display: 'flex', alignItems: 'center', gap: '8px' } }, h('i', { 'data-i': 'note' }), noteInput));
 
   view.render = () => {
     const d = store.today;
@@ -318,44 +456,7 @@ export function todayView() {
     }
     const nowBlock = nowItems.length ? h('div.today-now', null, ...nowItems) : null;
 
-    // Morning Briefing Card
-    const briefingCard = (d.briefing && !d.snoozedBriefing) ? h('div.card', {
-      style: {
-        marginBottom: '16px'
-      }
-    },
-      h('div.row.sb', null,
-        h('span.row.g8', null,
-          h('h2', null, 'Morning briefing')
-        ),
-        null
-      ),
-      h('div', { style: { marginTop: '10px', lineHeight: '1.6', color: 'var(--text)' } },
-        typeof d.briefing === 'string' ? h('div.sm', null, d.briefing) : h('div.sm', null, JSON.stringify(d.briefing))
-      ),
-      h('div.row.g8', { style: { marginTop: '14px' } },
-        h('button.btn.pri', {
-          type: 'button',
-          onClick: async () => {
-            const r = await system.command('read morning briefing');
-            if (!r.ok) err(r.message, r.detail);
-          }
-        }, h('i', { 'data-i': 'play' }), 'Read aloud'),
-        h('button.btn', {
-          type: 'button',
-          onClick: () => {
-            store.today.snoozedBriefing = true;
-            set('today', { briefing: null, snoozedBriefing: true });
-            toast({ kind: 'info', text: 'Morning briefing snoozed until tomorrow' });
-            view.render();
-          }
-        }, 'Snooze until tomorrow'),
-        h('button.btn.gh', {
-          type: 'button',
-          onClick: () => go('settings', { section: 'routines' })
-        }, 'Change briefing time')
-      )
-    ) : null;
+    const briefingCard = briefingCardView(d, () => view.render());
 
     // Agenda Section
     let agendaContent;
@@ -458,36 +559,18 @@ export function todayView() {
 
     // Notes
     const notesContent = d.notes && d.notes.length
-      ? frag(...d.notes.map((n) => h('div.li.col', { style: { alignItems: 'flex-start', gap: '2px' } }, h('span.xs.mut', null, relative(n.date || n.added)), h('span.sm', null, n.text || String(n)))))
+      ? frag(...d.notes.map((n) => noteRow(n, loadToday)))
       : h('div.li', null, h('span.sm', null, 'No notes yet'));
 
     const notesCard = h('div.card', null,
-      h('div.row.sb', null, h('h2', null, 'Notes'), h('span.xs.mut', null, (d.notes?.length || 0) + ' this week')),
+      h('div.row.sb', null, h('h2', null, 'Notes'),
+        h('button.btn.gh', { type: 'button', onClick: () => openNotesDialog(loadToday) }, 'All notes')),
       noteForm,
       notesContent
     );
 
     // Focus
-    const focusCard = h('div.card.col.g12', null,
-      h('div.row.sb', null, h('h2', null, 'Focus session'), h('span.chip', null, (f?.minutes || 25) + ' min')),
-      h('div.big', { style: { fontSize: '34px' }, id: 'focus-clock' }, f?.active ? clock(f.remainingSec) : `${f?.minutes || 25}:00`),
-      h('div.meter', null, h('i', { style: { width: f?.active && f.minutes ? `${100 - (f.remainingSec / (f.minutes * 60) * 100)}%` : '0%' } })),
-      h('div.row.g8', null,
-        f?.active
-          ? h('button.btn.pri', { type: 'button', onClick: () => ok(`${clock(f.remainingSec)} left`) }, 'Running')
-          : h('button.btn.pri', { type: 'button', onClick: async () => { await system.command('start a focus session'); setTimeout(syncFocus, 600); } }, 'Start session'),
-        h('button.btn.gh', {
-          type: 'button',
-          onClick: async () => {
-            await system.command('stop focus session');
-            clearInterval(focusTimer);
-            set('today', { focus: { active: false, remainingSec: 0, minutes: 25 } });
-            ok('Focus session ended');
-            view.render();
-          }
-        }, 'End session')
-      )
-    );
+    const focusCard = focusCardView(f, d.focusHistory);
 
     // One row for every account that isn't connected yet, instead of a card for each.
     const liveStatus = store.status;

@@ -93,6 +93,14 @@ def _optional_float(low: float, high: float) -> Callable[[Any], Optional[float]]
     return check
 
 
+def _subset(*options: str) -> Callable[[Any], List[str]]:
+    def check(value: Any) -> List[str]:
+        if not isinstance(value, list) or not all(v in options for v in value):
+            raise SettingError("must be a list of: " + ", ".join(options))
+        return [o for o in options if o in value]
+    return check
+
+
 def _phrases(value: Any) -> List[str]:
     if not isinstance(value, list) or not value or not all(isinstance(v, str) and v.strip() for v in value):
         raise SettingError("must be a list of phrases")
@@ -183,6 +191,9 @@ SCHEMA: Dict[str, Spec] = {
     "THEME_GLOW": Spec(_bool, True),
     "SCREENSAVER_ENABLED": Spec(_bool, True),
     "SCREENSAVER_IDLE_MINS": Spec(_number(int, 1, 1440), 5),
+    # Daily briefing.
+    "BRIEFING_SECTIONS": Spec(_subset("calendar", "reminders", "tasks", "mail", "sites", "screen_time", "weather"),
+                              ["calendar", "reminders", "tasks", "sites"]),
     # Mail and integrations.
     "EMAIL_ADDRESS": Spec(_text(320), ""),
     "IMAP_SERVER": Spec(_text(255), "imap.gmail.com"),
