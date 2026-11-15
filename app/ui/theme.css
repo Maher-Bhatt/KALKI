@@ -484,7 +484,7 @@ html.ob-open, html.ob-open body { overflow: hidden; }
 .vm-top { width: 100%; max-width: 900px; display: flex; align-items: center; justify-content: space-between; }
 .vm-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--raised); font-size: var(--type-sm); color: var(--t2); }
 .vm-stage { display: grid; justify-items: center; align-content: center; gap: 10px; text-align: center; min-height: 0; }
-.vm-orb { position: relative; width: 168px; height: 168px; margin-bottom: 14px; --lv: 1; }
+.vm-orb { position: relative; width: 168px; height: 168px; margin: 30px 0 52px; --lv: 1; }
 .vm-orb i { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--fil) 85%, #fff), var(--fil) 60%); transform: scale(var(--lv)); transition: transform .08s linear; box-shadow: 0 20px 60px -20px color-mix(in srgb, var(--fil) 70%, transparent); }
 .vm-orb i:nth-child(2) { inset: -18px; opacity: .14; transform: scale(calc(var(--lv) * 1.04)); }
 .vm-orb i:nth-child(3) { inset: -38px; opacity: .07; transform: scale(calc(var(--lv) * 1.08)); }
@@ -517,3 +517,9 @@ html.ob-open, html.ob-open body { overflow: hidden; }
 .vm-end:hover { background: var(--dng); color: #fff; border-color: transparent; }
 @media (prefers-reduced-motion: reduce) { .vm-orb i { animation: none !important; transition: none; } }
 @media (max-height: 700px) { .vm-orb { width: 120px; height: 120px; } .vm-title { font-size: 30px; } }
+
+/* Chat bubbles used hard-coded graphite colours from the old dark-only design:
+   in light mode your messages had a dark gradient and hovering a reply greyed it out. */
+.umsg .umsg-inner { background: var(--overlay); border-color: var(--line); box-shadow: 0 1px 2px rgba(0, 0, 0, .06); }
+.umsg .umsg-inner:hover { border-color: var(--lst); box-shadow: 0 1px 2px rgba(0, 0, 0, .06); }
+.kmsg:hover { background: color-mix(in srgb, var(--raised) 75%, transparent); }

@@ -322,7 +322,7 @@ function firstName() {
 
 function paintLevel(level) {
   if (!el) return;
-  const scale = 1 + Math.min(0.45, level * 7);
+  const scale = 1 + Math.min(0.16, level * 4); // breathes with your voice, without crowding the text
   el.orb.style.setProperty('--lv', scale.toFixed(3));
 }
 

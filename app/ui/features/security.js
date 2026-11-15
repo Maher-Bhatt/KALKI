@@ -12,7 +12,7 @@ import { h, mount } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { bytes, relative, dateTime } from '../lib/format.js';
 import { cyber, antivirus, desktop, wifi } from '../api/endpoints.js';
-import { emptyState, loadingRow, toggleSwitch, errorState } from '../components/states.js';
+import { emptyState, loadingRow, toggleSwitch, errorState, skeletonRows } from '../components/states.js';
 import { ok, err, toast } from '../state/toasts.js';
 
 /* ── 12 Comprehensive Cybersecurity Tools ────────────────────────── */
