@@ -71,7 +71,32 @@ def setup_tool(body: Dict[str, Any]) -> Result:
     return {"ok": True, "secretStatus": routes_settings.secret_status()}, 200
 
 
+def _marker_path() -> str:
+    """The same marker the old desktop setup wizard wrote: setup is done once it exists."""
+    import os
+    from runtime_paths import prepare_runtime
+    return os.path.join(prepare_runtime().user_data_dir, "setup_complete.marker")
+
+
+def setup_state(body: Dict[str, Any]) -> Result:
+    """Whether first-time setup is finished, for the onboarding screen."""
+    import os
+    return {"ok": True, "complete": os.path.exists(_marker_path())}, 200
+
+
+def setup_complete(body: Dict[str, Any]) -> Result:
+    """Record that onboarding is finished, so it doesn't show again."""
+    import os
+    path = _marker_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("Setup complete")
+    return {"ok": True, "complete": True}, 200
+
+
 POST_ROUTES = {
+    "/api/setup/state": setup_state,
+    "/api/setup/complete": setup_complete,
     "/api/setup/ollama": find_ollama,
     "/api/setup/test_ai": test_ai,
     "/api/setup/tool": setup_tool,

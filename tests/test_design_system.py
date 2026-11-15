@@ -94,9 +94,11 @@ class Navigation(unittest.TestCase):
         self.assertIn('html[data-theme="light"]', tokens)
 
     def test_voice_mode_says_when_voice_is_off(self):
+        """Voice mode never pretends to listen: no microphone means a clear reason and a retry."""
         voice = (UI / "features" / "voice.js").read_text(encoding="utf-8")
-        self.assertIn("voice listener isn", voice)
-        self.assertIn("parts.mainBtn.disabled = !online", voice)
+        self.assertIn("Microphone access was blocked", voice)
+        self.assertIn("No microphone was found", voice)
+        self.assertIn("s.set('error', s.error)", voice)
 
     def test_the_top_bar_has_no_chips(self):
         shell = (UI / "features" / "shell.js").read_text(encoding="utf-8")

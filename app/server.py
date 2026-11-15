@@ -28,7 +28,15 @@ import webbrowser
 import tempfile
 import shutil
 import asyncio
+import concurrent.futures
 import ctypes
+
+# Prevent Windows ProactorEventLoop issues with asyncio background workers
+if sys.platform == "win32":
+    try:
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    except Exception as _policy_err:
+        _ = _policy_err
 from datetime import datetime, timezone
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
@@ -116,6 +124,7 @@ import briefing
 import focus
 import routes_screen_time
 import app_launcher
+import voice_turn
 from core import location_provider
 import commands_productivity
 import db
@@ -160,6 +169,8 @@ except Exception as _pygame_import_error:
 
 # Serializes mixer open/close so overlapping speak() calls don't clash.
 _audio_lock = __import__("threading").Lock()
+_tts_executor = concurrent.futures.ThreadPoolExecutor(max_workers=2, thread_name_prefix="kalki-tts")
+_stop_speaking_flag = threading.Event()
 
 try:
     import psutil
@@ -962,30 +973,59 @@ def copy_scan_to_desktop(result):
 async def _speak_async(text, voice, rate, volume, pitch="+0Hz"):
     with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
         tmp = f.name
-    try:
-        import aiohttp
-        ssl_ctx = ssl.create_default_context()
-        # Enforce valid certificates for edge-tts
-        connector = aiohttp.TCPConnector(ssl=ssl_ctx)
-        communicate = edge_tts.Communicate(
-            text, voice, rate=rate, volume=volume, pitch=pitch, connector=connector)
-        # Resilient 30s deadline ensuring Edge TTS natural human voice completes cleanly
-        await asyncio.wait_for(communicate.save(tmp), timeout=30)
-        return tmp
-    except Exception:
+
+    voices_to_try = [voice]
+    if "Multilingual" in voice:
+        alt = voice.replace("MultilingualNeural", "Neural")
+        if alt not in voices_to_try:
+            voices_to_try.append(alt)
+    if "en-US-AndrewNeural" not in voices_to_try:
+        voices_to_try.append("en-US-AndrewNeural")
+
+    last_exc = None
+    for target_voice in voices_to_try:
         try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        raise
+            communicate = edge_tts.Communicate(
+                text, target_voice, rate=rate, volume=volume, pitch=pitch)
+            await asyncio.wait_for(communicate.save(tmp), timeout=25)
+            if os.path.exists(tmp) and os.path.getsize(tmp) > 0:
+                return tmp
+        except Exception as exc:
+            last_exc = exc
+            connector = None
+            try:
+                import aiohttp
+                connector = aiohttp.TCPConnector(ssl=False)
+                communicate = edge_tts.Communicate(
+                    text, target_voice, rate=rate, volume=volume, pitch=pitch, connector=connector)
+                await asyncio.wait_for(communicate.save(tmp), timeout=25)
+                if os.path.exists(tmp) and os.path.getsize(tmp) > 0:
+                    return tmp
+            except Exception as _fb_err:
+                _ = _fb_err
+            finally:
+                if connector:
+                    try:
+                        await connector.close()
+                    except Exception as _c_err:
+                        _ = _c_err
+
+    try:
+        os.unlink(tmp)
+    except OSError as _unlink_err:
+        _ = _unlink_err
+    raise last_exc or RuntimeError("Edge TTS failed for candidate voices")
 
 
 # Strip markdown so edge-tts doesn't pronounce "asterisk asterisk"
 _SPEECH_FILTERS = [
-    (re.compile(r"\[(?:TASK|REMIND|NOTE):[\s\S]*?\]", re.IGNORECASE), " "),
+    (re.compile(r"\[(?:TASK|REMIND|NOTE|ACTION):[\s\S]*?\]", re.IGNORECASE), " "),
     (re.compile(r"\[[A-Z_]+:\s*[^\]]+\]"), " "),
+    (re.compile(r"TOOL CALL:\s*.+"), " "),
     (re.compile(r"```[\s\S]*?```"), " "),                    # code blocks: skip entirely
     (re.compile(r"`([^`]+)`"), r"\1"),                       # `inline code`
+    (re.compile(r"https?://\S+"), " "),                      # URLs: skip raw links
+    (re.compile(r"\|.*\|"), " "),                            # table lines
     (re.compile(r"\*\*([^*]+)\*\*"), r"\1"),                 # **bold**
     (re.compile(r"(?<!\w)\*([^*]+)\*(?!\w)"), r"\1"),        # *italic*
     (re.compile(r"__([^_]+)__"), r"\1"),                     # __bold__
@@ -1011,17 +1051,40 @@ def clean_for_speech(text):
     return out
 
 
-def extract_conversational_lead(text, max_sentences=2, max_chars=220):
-    """Extracts concise opening conversational sentences from AI responses for natural desktop speech."""
+def split_sentences_for_tts(text):
+    """Splits conversational text into two chunks for instant pipelined playback:
+    chunk 0 plays immediately, while chunk 1 synthesizes in the background."""
+    clean = clean_for_speech(text)
+    if not clean:
+        return []
+    # If text is relatively short (under 120 chars or under 18 words), keep as 1 chunk
+    if len(clean) < 120 or len(clean.split()) < 18:
+        return [clean]
+    parts = re.split(r'(?<=[.!?])\s+(?=[A-Z0-9"\'(\[])|\n+', clean)
+    parts = [p.strip() for p in parts if p.strip()]
+    if len(parts) <= 1:
+        return [clean]
+    # First chunk should have at least 4 words / 20 chars for natural rhythm
+    s0 = parts[0]
+    idx = 1
+    while idx < len(parts) and (len(s0.split()) < 4 or len(s0) < 20):
+        s0 = s0 + " " + parts[idx]
+        idx += 1
+    s_rest = " ".join(parts[idx:]).strip()
+    return [s0, s_rest] if s_rest else [s0]
+
+
+def extract_conversational_lead(text, max_sentences=25, max_chars=3000):
+    """Extracts full conversational text from AI responses for natural desktop speech."""
     if not text:
         return ""
     clean = clean_for_speech(text)
     if len(clean) <= max_chars:
         return clean
-    sentences = re.split(r"(?<=[.!?])\s+", clean)
+    parts = re.split(r'(?<=[.!?])\s+(?=[A-Z0-9"\'(\[])|\n+', clean)
     lead = []
     total = 0
-    for s in sentences:
+    for s in parts:
         s = s.strip()
         if not s:
             continue
@@ -1038,6 +1101,7 @@ def extract_conversational_lead(text, max_sentences=2, max_chars=220):
 def stop_speaking():
     """Hard-cut whatever KALKI is currently saying and free the audio device."""
     try:
+        _stop_speaking_flag.set()
         if PYGAME_OK:
             try:
                 pygame.mixer.music.stop()
@@ -1104,12 +1168,6 @@ def _tts_timeout_seconds():
 def _build_edge_tts_file(text):
     if edge_tts is None:
         raise RuntimeError("edge-tts is not installed")
-        
-    # Prevent Windows ProactorEventLoop deadlock when tearing down asyncio loops in background threads
-    import sys
-    if sys.platform == 'win32':
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-        
     # One voice identity and one neutral delivery across every mode. Mode
     # changes may alter UI color/status, but never make KALKI sound like a
     # different assistant.
@@ -1359,7 +1417,7 @@ def is_urgent(text):
     return False
 
 
-def speak(text, is_notification=False):
+def speak(text, is_notification=False, preloaded_first=None, first_chunk=None):
     """Non-blocking TTS using the configured neural voice. Markdown stripped first."""
     if is_notification and (STATE.get("gaming") or STATE.get("workflow") == "gaming" or _focus_active()):
         if not is_urgent(text):
@@ -1378,36 +1436,80 @@ def speak(text, is_notification=False):
         log(f"[TTS missing] {text} ({STATE['last_tts_error']})")
         return False
 
+    def _play_one_file(path):
+        if not path or not os.path.exists(path) or _stop_speaking_flag.is_set():
+            return
+        if os.name != "nt" and not PYGAME_OK:
+            _play_audio_file_linux(path)
+        else:
+            _ensure_tts_output()
+            _ensure_own_volume_audible()
+            pygame.mixer.music.load(path)
+            pygame.mixer.music.play()
+            while pygame.mixer.music.get_busy() and not _stop_speaking_flag.is_set():
+                time.sleep(0.04)
+
     def _run():
-        tmp = None
+        _stop_speaking_flag.clear()
         started_at = time.perf_counter()
+        temp_files = []
         with _audio_lock:
             try:
                 STATE["speaking"] = True
                 STATE["last_tts_error"] = ""
-                try:
-                    tmp, provider = _build_tts_file(text)
-                except Exception as first_error:
-                    # The natural voice service sometimes drops a request; one retry usually works.
-                    log(f"TTS first attempt failed, retrying: {first_error}")
-                    time.sleep(0.4)
-                    tmp, provider = _build_tts_file(text)
+                
+                chunks = split_sentences_for_tts(text)
+                if not chunks:
+                    return
+
+                first_file = None
+                provider = "edge"
+                
+                # Check if we have preloaded first chunk
+                if preloaded_first and first_chunk and clean_for_speech(first_chunk) == chunks[0]:
+                    try:
+                        first_file, provider = preloaded_first.result(timeout=4.0)
+                        temp_files.append(first_file)
+                    except Exception as pe:
+                        log(f"Preloaded TTS error, regenerating: {pe}")
+                        first_file = None
+
+                if not first_file:
+                    try:
+                        first_file, provider = _build_tts_file(chunks[0])
+                        temp_files.append(first_file)
+                    except Exception as first_error:
+                        # The natural voice service sometimes drops a request; one retry usually works.
+                        log(f"TTS first attempt failed, retrying: {first_error}")
+                        time.sleep(0.3)
+                        first_file, provider = _build_tts_file(chunks[0])
+                        temp_files.append(first_file)
+
                 STATE["last_tts_provider"] = provider
                 STATE["last_tts_at"] = time.time()
                 STATE["last_tts_latency_ms"] = int((time.perf_counter() - started_at) * 1000)
-                # Open the audio device only now, for the duration of speech.
-                # If TTS_OUTPUT_DEVICE is set, try that output first and then
-                # fall back to the Windows default output.
-                if os.name != "nt" and not PYGAME_OK:
-                    _play_audio_file_linux(tmp)
-                    STATE["last_tts_provider"] = "edge-linux-player"
-                else:
-                    _ensure_tts_output()
-                    _ensure_own_volume_audible()
-                    pygame.mixer.music.load(tmp)
-                    pygame.mixer.music.play()
-                    while pygame.mixer.music.get_busy():
-                        time.sleep(0.1)
+
+                # Synthesize rest chunk in background while playing chunk 0
+                rest_future = None
+                if len(chunks) > 1 and not _stop_speaking_flag.is_set():
+                    rest_text = " ".join(chunks[1:])
+                    try:
+                        rest_future = _tts_executor.submit(_build_tts_file, rest_text)
+                    except Exception as err:
+                        _ = err
+
+                # Play chunk 0 immediately
+                _play_one_file(first_file)
+
+                # Play rest chunk seamlessly
+                if rest_future and not _stop_speaking_flag.is_set():
+                    try:
+                        rest_file, _ = rest_future.result(timeout=20.0)
+                        temp_files.append(rest_file)
+                        _play_one_file(rest_file)
+                    except Exception as re_err:
+                        log(f"TTS rest chunk error: {re_err}")
+
             except Exception as e:
                 edge_error = str(e)
                 log(f"TTS primary provider failed: {edge_error}")
@@ -1415,10 +1517,10 @@ def speak(text, is_notification=False):
                 # (TTS_WINDOWS_FALLBACK), the Windows voice says it instead.
                 configured_voice = (getattr(config, "TTS_VOICE", "") or "").lower()
                 use_sapi = configured_voice in ("sapi", "windows", "david", "zira") or _fallback_voice_allowed()
-                if use_sapi:
+                if use_sapi and not _stop_speaking_flag.is_set():
                     try:
-                        if os.name != "nt" and tmp:
-                            _play_audio_file_linux(tmp)
+                        if os.name != "nt" and temp_files:
+                            _play_audio_file_linux(temp_files[0])
                             STATE["last_tts_provider"] = "edge-linux-player"
                             STATE["last_tts_error"] = ""
                             return
@@ -1438,17 +1540,17 @@ def speak(text, is_notification=False):
                 # back to the phone the moment KALKI stops talking.
                 try:
                     pygame.mixer.music.unload()
-                except Exception:
-                    pass
-                # Keep pygame.mixer initialized to avoid Bluetooth/audio device thrashing
-                if tmp:
-                    try:
-                        os.unlink(tmp)
-                    except Exception:
-                        pass
-                # Echo Protection Delay: Wait 600ms before releasing the speaking lock
+                except Exception as err:
+                    _ = err
+                for tf in temp_files:
+                    if tf:
+                        try:
+                            os.unlink(tf)
+                        except Exception as err:
+                            _ = err
+                # Echo Protection Delay: Wait 400ms before releasing the speaking lock
                 # so the microphone doesn't pick up room reverb/echo of the TTS.
-                time.sleep(0.6)
+                time.sleep(0.4)
                 STATE["speaking"] = False
 
     threading.Thread(target=_run, daemon=True).start()
@@ -2930,6 +3032,7 @@ def _focus_changed(running):
 
 
 focus.configure(_focus_changed)
+voice_turn.configure(lambda text: _build_tts_file(clean_for_speech(text)), log)
 briefing.configure(lambda: (getattr(config, "BRIEFING_SECTIONS", None), getattr(config, "OWNER_TITLE", "")), log)
 
 
@@ -5131,7 +5234,7 @@ class Handler(BaseHTTPRequestHandler):
                  or routes_settings.POST_ROUTES.get(path) or routes_calendar.POST_ROUTES.get(path)
                  or routes_setup.POST_ROUTES.get(path) or routes_backup.POST_ROUTES.get(path)
                  or focus.POST_ROUTES.get(path) or routes_screen_time.POST_ROUTES.get(path)
-                 or location_provider.POST_ROUTES.get(path))
+                 or location_provider.POST_ROUTES.get(path) or voice_turn.POST_ROUTES.get(path))
         if route:
             payload, status = route(body)
             self._json(payload, status=status)
@@ -5349,9 +5452,14 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/chat":
             messages = body.get("messages") or []
+            if body.get("voiceMode"):
+                # Voice mode plays the reply aloud: ask for something that sounds like talking.
+                messages = [{"role": "system", "content": voice_turn.VOICE_STYLE}] + [m for m in messages if m.get("role") != "system"]
             is_voice = (body.get("source") == "voice")
             # Other sources have no window keeping their conversation, so the server does.
             shared_source = body.get("source") if body.get("source") in ("voice", "telegram") else None
+            if body.get("source") == "voice-mode":
+                shared_source = "voice"  # saved like other spoken turns, without opening a window
             if body.get("threadId"):
                 threads.set_active(str(body["threadId"]))
             stream_req = body.get("stream", False)
@@ -5412,21 +5520,42 @@ class Handler(BaseHTTPRequestHandler):
                 
                 full_reply = []
                 _send_tool_cards(self)
+                first_chunk = ""
+                preloaded_first = None
+
+                def _check_preload():
+                    nonlocal first_chunk, preloaded_first
+                    if preloaded_first is not None or client_speech:
+                        return
+                    accum = "".join(full_reply)
+                    clean_accum = clean_for_speech(accum)
+                    if len(clean_accum) >= 20 and (re.search(r'(?<=[.!?])\s+', clean_accum) or '\n' in clean_accum or len(clean_accum) >= 120):
+                        chunks = split_sentences_for_tts(clean_accum)
+                        if chunks and len(chunks[0].split()) >= 3:
+                            first_chunk = chunks[0]
+                            try:
+                                preloaded_first = _tts_executor.submit(_build_tts_file, first_chunk)
+                            except Exception as err:
+                                _ = err
+
                 if first_token:
                     full_reply.append(first_token)
                     self.wfile.write(f"data: {json.dumps({'token': first_token})}\n\n".encode())
                     self.wfile.flush()
+                    _check_preload()
                 for token in generator:
                     _send_tool_cards(self)
                     full_reply.append(token)
                     self.wfile.write(f"data: {json.dumps({'token': token})}\n\n".encode())
                     self.wfile.flush()
+                    if preloaded_first is None:
+                        _check_preload()
                 _send_tool_cards(self)
                 
                 reply_str = "".join(full_reply)
                 spoken_reply = _apply_reply_actions(reply_str)
                 if not client_speech:
-                    speak(extract_conversational_lead(spoken_reply or reply_str))
+                    speak(spoken_reply or reply_str, preloaded_first=preloaded_first, first_chunk=first_chunk)
                 append_history(user_text, spoken_reply or reply_str)
                 _record_exchange(spoken_reply or reply_str)
                 _remember_from_turn(user_text, reply_str)
