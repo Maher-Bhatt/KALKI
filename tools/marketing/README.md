@@ -30,7 +30,16 @@ pip install playwright Pillow edge-tts imageio-ffmpeg
    ```bash
    python tools/marketing/make_video.py h v
    ```
-5. Stop the demo studio (Ctrl+C).
+5. Render the 16-second beat-synced Reel (needs only the dark screenshots, including `09_savage_roast`):
+   ```bash
+   python tools/marketing/make_reel.py
+   ```
+   It writes `marketing/video/reel/`; that folder's README explains how to add a trending sound.
+6. Stop the demo studio (Ctrl+C).
+
+To recapture only some screens, set `KALKI_SCENES`, for example
+`KALKI_SCENES=09_savage_roast python tools/marketing/capture.py dark`. Restart the demo studio
+first if you captured chats before, so earlier conversations don't show up on other screens.
 
 `edge-tts` needs an internet connection for the voiceover. Everything else runs offline.
 

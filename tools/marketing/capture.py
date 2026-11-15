@@ -25,6 +25,17 @@ def open_app(page, theme, route="#/ask"):
 
 def scene_ask_home(page, theme):
     open_app(page, theme, "#/ask")
+    page.wait_for_selector(".comp textarea", timeout=20000)
+    settle(page, 1.5)
+
+
+def scene_savage(page, theme):
+    open_app(page, theme, "#/ask")
+    box = page.locator(".comp textarea").first
+    box.click()
+    box.fill("bro you're kinda useless ngl")
+    box.press("Enter")
+    page.wait_for_timeout(6000)
 
 
 def scene_ask_chat(page, theme):
@@ -84,7 +95,9 @@ SCENES = [
     ("01_ask_home", scene_ask_home), ("02_conversation", scene_ask_chat), ("03_today_briefing", scene_today),
     ("04_voice_mode", scene_voice), ("05_onboarding", scene_onboarding), ("06_notes", scene_notes),
     ("07_security_checkup", scene_security), ("08_screen_time", scene_screentime),
+    ("09_savage_roast", scene_savage),
 ]
+ONLY = [n for n in os.environ.get("KALKI_SCENES", "").split(",") if n]
 
 
 def main():
@@ -99,6 +112,8 @@ def main():
             ctx = browser.new_context(viewport={"width": 1920, "height": 1080}, device_scale_factor=2,
                                       color_scheme="dark" if theme == "dark" else "light", permissions=["microphone"])
             for name, scene in SCENES:
+                if ONLY and name not in ONLY:
+                    continue
                 page = ctx.new_page()
                 try:
                     scene(page, theme)
