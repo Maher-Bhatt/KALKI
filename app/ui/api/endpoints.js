@@ -42,6 +42,8 @@ export const voice = {
   pause: () => post('/api/listener/pause', {}),
   resume: () => post('/api/listener/resume', {}),
   testTts: (text) => post('/api/tts/test', { text }),
+  transcribe: (audio) => post('/api/voice/transcribe', { audio }, { timeout: 40000 }),
+  speak: (text) => post('/api/voice/speak', { text }, { timeout: 30000 }),
   meetingStart: () => post('/api/meeting/start', {}),
   meetingStop: () => post('/api/meeting/stop', {}),
 };
@@ -197,7 +199,9 @@ export const settings = {
   testSpotify: () => get('/api/settings/test_spotify'),
   setupTool: (tool) => post('/api/setup/tool', { tool }),
   findOllama: () => post('/api/setup/ollama', {}),
-  testAi: () => post('/api/setup/test_ai', {}),
+  testAi: () => post('/api/setup/test_ai', {}, { timeout: 45000 }),
+  setupState: () => post('/api/setup/state', {}),
+  setupComplete: () => post('/api/setup/complete', {}),
   exportUrl: '/api/settings/export',
   deviceLocation: (refresh = false) => post('/api/location/device', { refresh }, { timeout: 60000 }),
 };

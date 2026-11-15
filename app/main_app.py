@@ -817,19 +817,14 @@ if __name__ == '__main__':
 
     # 1. First-time setup check
 
-    if not is_setup_complete():
+    # First-time setup now happens inside the app (ui/features/firstrun.js), in the same
+    # design as everything else; it writes setup_complete.marker when you finish. The old
+    # desktop wizard is only used when asked for with KALKI_CLASSIC_WIZARD=1.
+    if not is_setup_complete() and os.environ.get("KALKI_CLASSIC_WIZARD") == "1":
 
-        print("Setup not complete. Launching Setup Wizard...")
+        print("Setup not complete. Launching the classic setup wizard...")
 
         run_setup_wizard()
-
-        
-
-        if not is_setup_complete():
-
-            print("Setup was cancelled or incomplete. Exiting KALKI.")
-
-            sys.exit(0)
 
             
 

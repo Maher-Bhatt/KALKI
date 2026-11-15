@@ -123,7 +123,7 @@ SCHEMA: Dict[str, Spec] = {
     **{key: Spec(_text()) for key in (
         "GROQ_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY", "ELEVENLABS_API_KEY",
         "EMAIL_APP_PASSWORD", "GITHUB_TOKEN", "SHODAN_API_KEY", "SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_SECRET",
-        "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "CLOUD_SYNC_PASSPHRASE",
+        "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "CLOUD_SYNC_PASSPHRASE", "TELEGRAM_BOT_TOKEN",
     )},
     # You.
     "OWNER_NAME": Spec(_text(100), "YourName"),
@@ -134,6 +134,7 @@ SCHEMA: Dict[str, Spec] = {
     "LATITUDE": Spec(_optional_float(-90, 90)),
     "LONGITUDE": Spec(_optional_float(-180, 180)),
     "AUTO_IP_LOCATION": Spec(_bool, False),
+    "TELEGRAM_USER_ID": Spec(_pattern(r"\d{0,20}", "your numeric Telegram user ID"), ""),
     # This PC's location from Windows (GPS, Wi-Fi), for the weather. Never the IP address.
     "USE_DEVICE_LOCATION": Spec(_bool, False),
     # Voice.
