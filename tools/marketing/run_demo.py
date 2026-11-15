@@ -73,6 +73,9 @@ REPLIES = [
      "In simple terms: a vector database stores meaning, not just words. Each note becomes a list of numbers that captures "
      "what it's about, so a search for \"trip ideas\" also finds \"weekend in Goa\" even though no word matches."),
 ]
+REPLIES.insert(0, (("useless",),
+     "Useless? Bro, I've reminded you to drink water three times today and you're still dehydrated. "
+     "Your Saturday plan is done, your report's due Friday, and you're here picking fights with your laptop. 💀"))
 DEFAULT_REPLY = "Sure. I've got that. Anything else you'd like me to take care of?"
 
 
