@@ -1,7 +1,7 @@
 # KALKI Privacy Notice
 
-**Version:** 2.0.0
-**Last updated:** August 26, 2026
+**Version:** 2.1.0
+**Last updated:** November 15, 2026
 
 KALKI is designed as a local-first desktop assistant for Windows and Linux. This Privacy Notice explains what may be stored on the device, what may leave the device when optional features are enabled, and the controls available to the person using KALKI.
 
@@ -21,6 +21,8 @@ Each provider controls its own processing, retention, security, and privacy term
 
 Voice recognition and wake-word features require operating-system microphone permission and may use a configured recognition provider. The optional background listener may capture audio while enabled. Speech synthesis may send reply text to the configured speech provider unless a local fallback is selected. The microphone can be disabled through KALKI controls and operating-system permissions.
 
+In voice mode, KALKI records only while you speak, and sends that short recording to the speech-to-text service available: Groq or OpenAI Whisper when you've added their key, otherwise Google's speech recognition. The recording isn't saved; the transcript is saved with your conversations. The reply text is sent to the speech provider to create the voice, unless the Windows voice is used.
+
 Do not enable microphone or background listening in places where recording or processing would be unlawful or where appropriate notice and consent have not been provided.
 
 ## Screen, clipboard, and files
@@ -29,7 +31,9 @@ KALKI can offer actions that read a selected screen region, selected file, or cl
 
 ## Location, weather, and diagnostics
 
-If enabled or required by a configured feature, KALKI may request approximate location from an IP-location service or request weather data. The local interface may also display device health information such as CPU, memory, disk, battery, and application uptime. Screen-time summaries are intended to remain local to the device runtime data directory.
+Using this PC's location is off until you turn it on. When it's on, KALKI asks Windows for the position (Windows uses GPS or nearby Wi-Fi), never your IP address. The coordinates stay in memory, are refreshed every 30 minutes, and are sent only to Open-Meteo for the weather and to OpenStreetMap to name your city. An older IP-based lookup exists only behind a separate setting that is off by default.
+
+Screen time is off until you turn it on. It stores app names and minutes per day only, never window titles, keeps them for the period you choose, and can be viewed in full and deleted from Settings. The local interface may also display device health information such as CPU, memory, disk, battery, and application uptime.
 
 ## Security controls
 

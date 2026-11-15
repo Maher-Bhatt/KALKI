@@ -1,5 +1,30 @@
 # KALKI Change History
 
+## Unreleased (next: 1.6.0)
+
+**New**
+- **Voice mode is a real conversation.** KALKI listens in the app, notices when you stop, transcribes with Groq Whisper (or OpenAI Whisper, or Google), answers with short spoken replies sentence by sentence, and stops the moment you interrupt. The transcript is saved with your chats.
+- **One onboarding inside the app.** Seven short steps with a guide, a link and a real test for every key (Gemini, Groq, OpenAI, Anthropic, Ollama), voice choice, optional Calendar, Spotify, Gmail, Telegram and GitHub, daily habits and a companion. Replaces the separate desktop wizard, which exited KALKI if not finished.
+- **Daily briefing** with sections you choose, each fetched on its own so one failure never empties it, read aloud the first time your PC starts or wakes each day.
+- **Weather from this PC's location** (Windows GPS or Wi-Fi, never your IP), with one-click setup on Today.
+- **Apple Music** when Spotify isn't connected, and a "Plays music with" setting.
+- **Open any installed app**, Microsoft Store apps included (Spotify, WhatsApp, Apple Music).
+- **Focus sessions** that survive restarts, with labels, lengths from 1 to 240 minutes and history.
+- **Notes**: full list, search, #tag filters, edit, delete with Undo, Markdown export.
+- **Screen time** you control: off until you turn it on, pause, exclusions, retention, a week view, "see what's stored" and delete.
+- **Repeating reminders**, snooze, and missed reminders reported as missed.
+- **Security check-up**: Windows Defender decides by its exit codes; four honest verdicts; no invented malware names; encrypted quarantine with exact restore.
+- **Savage mode** and replies that follow your language (English, Hindi, Hinglish).
+
+**Fixed**
+- KALKI was silent because Windows had its own volume at 0 in the Volume Mixer; it now turns only its own volume back up, follows the current speaker or headset, and falls back to the Windows voice if the natural voice fails.
+- Typing was interrupted every few seconds by background refreshes.
+- The focus End button didn't end the session, and finished sessions kept notifications held back.
+- "Open spotify" and "open apple music" failed; "tomorrow at 9pm" meant today; vault passwords lost their capitals; turning auto-start off didn't remove it; Copy and Read buttons overlapped.
+
+**Website and docs**
+- New website in the app's design (home, download, docs), honest security wording, correct GitHub links, a rewritten README and an updated privacy notice.
+
 ## 1.5.0 Sovereign Native Desktop Architecture, Embedded Terminal, 3D Mascots & Live Process Defense
 
 - **100% Native Desktop Operating Architecture (`app/main_app.py`, `app/server.py`, `app/ui/api/endpoints.js`, `app/ui/features/shell.js`):**
