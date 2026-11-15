@@ -532,6 +532,12 @@ const SECTION_BODY = {
           }, 'Test voice')
         )
       ),
+      row('Listening', 'Hands-free listens for "Hey KALKI" all the time. Push-to-talk keeps the microphone off until you press the mic button.',
+        h('select.select', {
+          style: { maxWidth: '14rem' }, 'aria-label': 'Listening mode',
+          onChange: (e) => save({ LISTEN_MODE: e.target.value }, e.target.value === 'always' ? 'KALKI now listens for "Hey KALKI"' : 'Push-to-talk is on'),
+        }, ...[['always', 'Hands-free: "Hey KALKI"'], ['push', 'Push-to-talk']].map(([v, label]) =>
+          h('option', { value: v, selected: (store.settings.values.LISTEN_MODE || 'always') === v }, label)))),
       toggleRow('Use the Windows voice if the natural voice fails', 'Otherwise KALKI stays silent when the online voice service is down.', 'TTS_WINDOWS_FALLBACK'),
       toggleRow("Keep KALKI's volume up", "If KALKI's own volume in the Windows Volume Mixer is at 0 or muted, turn it back up before speaking.", 'TTS_FIX_APP_VOLUME'),
       row('Voice', 'How KALKI sounds when it speaks (Andrew, Ryan, Brian, Guy, Tony, etc.).',
