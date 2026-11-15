@@ -56,8 +56,10 @@ def _multipart(fields: Dict[str, str], filename: str, data: bytes, mime: str) ->
     return out.getvalue(), f"multipart/form-data; boundary={boundary}"
 
 
-def _whisper(url: str, key: str, model: str, wav: bytes) -> str:
+def _whisper(url: str, key: str, model: str, wav: bytes, prompt: str = "") -> str:
     fields = {"model": model, "response_format": "json", "temperature": "0"}
+    if prompt:
+        fields["prompt"] = prompt  # helps spell names like KALKI
     body, ctype = _multipart(fields, "speech.wav", wav, "audio/wav")
     req = urllib.request.Request(url, data=body, method="POST", headers={
         "Authorization": f"Bearer {key}", "Content-Type": ctype,
@@ -76,16 +78,17 @@ def _google(wav: bytes) -> str:
         return ""
 
 
-def transcribe(wav: bytes) -> Dict[str, Any]:
-    """Text for a short WAV recording, from the first engine that works."""
+def transcribe(wav: bytes, prompt: str = "KALKI") -> Dict[str, Any]:
+    """Text for a short WAV recording, from the first engine that works. The prompt tells
+    Whisper how to spell the name, which it otherwise rarely gets right."""
     tried = []
     engines = []
     if _key("GROQ_API_KEY"):
         engines.append(("groq-whisper", lambda: _whisper("https://api.groq.com/openai/v1/audio/transcriptions",
-                                                         _key("GROQ_API_KEY"), "whisper-large-v3-turbo", wav)))
+                                                         _key("GROQ_API_KEY"), "whisper-large-v3-turbo", wav, prompt)))
     if _key("OPENAI_API_KEY"):
         engines.append(("openai-whisper", lambda: _whisper("https://api.openai.com/v1/audio/transcriptions",
-                                                           _key("OPENAI_API_KEY"), "whisper-1", wav)))
+                                                           _key("OPENAI_API_KEY"), "whisper-1", wav, prompt)))
     engines.append(("google", lambda: _google(wav)))
     for name, run in engines:
         try:
@@ -133,7 +136,8 @@ def transcribe_route(body: Dict[str, Any]) -> Result:
         return {"ok": False, "error": "That recording is too long."}, 413
     if wav[:4] != b"RIFF":
         return {"ok": False, "error": "audio must be WAV"}, 400
-    return transcribe(wav), 200
+    prompt = str(body.get("prompt") or "KALKI")[:120]
+    return transcribe(wav, prompt), 200
 
 
 def speak_route(body: Dict[str, Any]) -> Result:

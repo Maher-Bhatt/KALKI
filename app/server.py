@@ -5044,6 +5044,7 @@ class Handler(BaseHTTPRequestHandler):
                 "hardware": getattr(config, "HARDWARE_PROFILE", {}),
                 "wakeRequested": wake_req,
                 "wakeRequestedAt": STATE.get("wake_requested_at", 0),
+                "listenMode": (getattr(config, "LISTEN_MODE", "always") or "always").lower(),
                 "conversationSeq": STATE.get("conversation_seq", 0),
                 "recentExchange": STATE.get("recent_exchange"),
                 "listenerPaused": STATE.get("listener_paused", False),

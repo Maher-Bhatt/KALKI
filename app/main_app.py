@@ -398,9 +398,9 @@ def _supervise_services():
 
             listen_mode = (getattr(config, "LISTEN_MODE", "always") or "always").lower()
 
-            if (listener_process is not None and listener_process.poll() is not None
-
-                    and listen_mode == "always"):
+            # The listener handles both hands-free and push-to-talk and switches between them
+            # live, so it's restarted whichever mode is set.
+            if listener_process is not None and listener_process.poll() is not None:
 
                 print("[KALKI] listener stopped; retrying in 10 seconds")
 

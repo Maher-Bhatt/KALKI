@@ -134,6 +134,7 @@ def main():
             
         if script == "listener.py":
             cmd.append("--hidden-import=pyaudio")
+            cmd.append("--hidden-import=wake_detect")
             cmd.append("--collect-all=speech_recognition")
             
         cmd.append(script)

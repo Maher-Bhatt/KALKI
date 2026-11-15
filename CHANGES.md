@@ -3,6 +3,7 @@
 ## Unreleased (next: 1.6.0)
 
 **New**
+- **Hands-free "Hey KALKI".** A new wake check knows how speech services mishear the name and confirms doubtful matches with Groq Whisper: in testing, 25 of 25 wake phrases caught and 0 of 50 everyday sentences. Commands are transcribed word for word. Settings → Voice switches between hands-free and push-to-talk, live.
 - **Voice mode is a real conversation.** KALKI listens in the app, notices when you stop, transcribes with Groq Whisper (or OpenAI Whisper, or Google), answers with short spoken replies sentence by sentence, and stops the moment you interrupt. The transcript is saved with your chats.
 - **One onboarding inside the app.** Seven short steps with a guide, a link and a real test for every key (Gemini, Groq, OpenAI, Anthropic, Ollama), voice choice, optional Calendar, Spotify, Gmail, Telegram and GitHub, daily habits and a companion. Replaces the separate desktop wizard, which exited KALKI if not finished.
 - **Daily briefing** with sections you choose, each fetched on its own so one failure never empties it, read aloud the first time your PC starts or wakes each day.

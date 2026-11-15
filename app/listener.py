@@ -196,8 +196,10 @@ def _word_match(needle, haystack):
 
 
 def contains_wake(phrase):
-    low = phrase.lower()
-    return any(_word_match(w, low) for w in WAKE_WORDS + WAKE_FUZZY)
+    """Whether the phrase calls KALKI. Uses wake_detect, which knows how speech services
+    mishear the name and never fires on everyday words like "hockey"."""
+    level, _, confirm = wake_detect.classify(phrase)
+    return bool(level) and not confirm
 
 
 def contains_stop(phrase):
@@ -208,17 +210,8 @@ def contains_stop(phrase):
 
 
 def extract_inline(phrase):
-    """Return text after the EARLIEST whole-word wake match."""
-    low = phrase.lower()
-    best = None
-    for w in WAKE_WORDS + WAKE_FUZZY:
-        m = re.search(r"\b" + re.escape(w) + r"\b", low)
-        if m and (best is None or m.start() < best):
-            best = m.start()
-            end = m.end()
-    if best is not None:
-        return phrase[end:].strip(" ,.:;-?!")
-    return ""
+    """The command after the name, or "" when there isn't one."""
+    return wake_detect.classify(phrase)[1]
 
 
 def listen_once(recognizer, mic, phrase_time_limit=4, timeout=None):
@@ -504,7 +497,11 @@ def _listen_once():
             log("push-to-talk: listening...")
             audio = recognizer.listen(source, timeout=6.0, phrase_time_limit=8.0)
         lang = getattr(config, "STT_LANGUAGE", "en-US")
-        phrase = recognizer.recognize_google(audio, language=lang).strip()
+        try:
+            heard = recognizer.recognize_google(audio, language=lang).strip()
+        except Exception:
+            heard = ""
+        phrase = command_text(heard, audio)  # Whisper when a key is set: word for word, Hindi too
         log(f"push-to-talk heard: {phrase}")
         if phrase:
             if contains_stop(phrase):
@@ -517,43 +514,106 @@ def _listen_once():
         log(f"push-to-talk listen failed: {e}")
 
 
-def main():
-    log("listener starting")
-    if not wait_for_server():
-        log("server never came up; listener exiting")
-        return
+# ── Hands-free "Hey KALKI": two stages ────────────────────────────────────
+# Stage 1 is Google's free recognizer on every phrase, checked by wake_detect (it knows
+# how Google mishears the name). Stage 2 only runs when something sounds like the name:
+# the same audio goes to KALKI's own /api/voice/transcribe (Groq or OpenAI Whisper when a
+# key is set) to confirm doubtful matches and to get the command word for word.
 
-    # Push-to-talk: don't open the system mic continuously.
-    # Maintain heartbeats so listenerOnline stays True, and capture single commands on wake.
-    mode = (getattr(config, "LISTEN_MODE", "always") or "always").lower()
-    if mode != "always":
-        log(f"LISTEN_MODE={mode} — continuous mic OFF (push-to-talk). "
-            f"Use the HUD mic button to talk.")
-        try:
-            while True:
-                st = _status()
-                wake_act = st.get("wakeRequested") or (time.time() - st.get("wakeRequestedAt", 0) < 5.0)
-                if wake_act:
-                    LAST_STATUS["wakeRequested"] = False
-                    LAST_STATUS["wakeRequestedAt"] = 0
-                    _listen_once()
-                time.sleep(3)
-        except KeyboardInterrupt:
-            pass
-        return
+import base64 as _b64
+import wake_detect
 
-    log("server reachable, opening mic")
+
+def current_mode():
+    """The listening mode from KALKI's settings, read live so a change applies at once."""
+    st = LAST_STATUS if LAST_STATUS else _status()
+    mode = str(st.get("listenMode") or getattr(config, "LISTEN_MODE", "always") or "always").lower()
+    return "push" if mode == "push" else "always"
+
+
+def transcribe_with_kalki(audio, prompt="KALKI"):
+    """Accurate text for a phrase, via the server's Whisper. Returns (text, engine) or (None, None)."""
+    try:
+        wav = audio.get_wav_data(convert_rate=16000, convert_width=2)
+    except Exception as e:
+        log(f"couldn't prepare audio for transcription: {e}")
+        return None, None
+    raw = _post("/api/voice/transcribe", {"audio": _b64.b64encode(wav).decode("ascii"), "prompt": prompt}, timeout=20)
+    try:
+        data = json.loads(raw) if raw else None
+    except ValueError:
+        data = None
+    if not data or not data.get("ok"):
+        return None, None
+    return str(data.get("text") or "").strip(), data.get("engine")
+
+
+NOT_FOR_KALKI = object()
+
+
+def decide(text, audio):
+    """What to do with one heard phrase: NOT_FOR_KALKI, "" (wake only) or the command."""
+    level, command, confirm = wake_detect.classify(text)
+    if not level:
+        return NOT_FOR_KALKI
+    if not (confirm or level == "maybe" or command):
+        return ""  # a clear "Hey KALKI" on its own: no need to ask Whisper
+    better, engine = transcribe_with_kalki(audio, prompt="Hey KALKI.")
+    if better is not None and engine and engine != "google":
+        w_level, w_command, _ = wake_detect.classify(better)
+        if w_level == "wake":
+            log(f"confirmed by {engine}: {better}")
+            return w_command
+        if confirm or level == "maybe":
+            log(f"not for KALKI ({engine} heard: {better})")
+            return NOT_FOR_KALKI
+    if confirm:
+        return NOT_FOR_KALKI  # doubtful and nothing accurate to confirm it with
+    return command
+
+
+def command_text(text, audio):
+    """The most accurate text for a command phrase: Whisper when available, else what Google heard."""
+    better, engine = transcribe_with_kalki(audio)
+    if better and engine and engine != "google":
+        return better
+    return text
+
+
+def run_push():
+    """Push-to-talk: the microphone is off until the mic button is pressed. Returns when
+    the setting changes to hands-free."""
+    log("push-to-talk mode: the microphone is off until you press the mic button. "
+        "Turn on \"Hey KALKI\" in Settings > Voice for hands-free.")
+    while True:
+        st = _status()
+        if current_mode() != "push":
+            return
+        wake_act = st.get("wakeRequested") or (time.time() - st.get("wakeRequestedAt", 0) < 5.0)
+        if wake_act:
+            LAST_STATUS["wakeRequested"] = False
+            LAST_STATUS["wakeRequestedAt"] = 0
+            _listen_once()
+        time.sleep(2)
+
+
+def run_continuous():
+    """Hands-free: listen for "Hey KALKI" all the time. Returns when the setting changes to push."""
+    log("hands-free mode: listening for \"Hey KALKI\"")
     dev_index = pick_input_device()
 
-    # Prefer offline Vosk (no network, less heat). Fall back to Google STT.
+    # Offline Vosk, only when chosen (STT_ENGINE=vosk) and its model is installed.
     if vosk_available():
         try:
             if run_vosk(dev_index):
                 return
         except Exception as e:
             log(f"vosk engine crashed: {e}; using Google STT")
-        log("falling back to Google STT")
 
+    if sr is None:
+        log("speech_recognition isn't available, so hands-free listening can't start")
+        time.sleep(30)
+        return
     recognizer = sr.Recognizer()
     recognizer.dynamic_energy_threshold = True
     recognizer.pause_threshold = 0.7
@@ -565,6 +625,7 @@ def main():
             mic = sr.Microphone()
         except Exception as e2:
             log(f"default mic open failed: {e2}")
+            time.sleep(15)
             return
 
     with mic as source:
@@ -573,36 +634,24 @@ def main():
         except Exception as e:
             log(f"ambient calibration failed: {e}")
 
-    log(f"listening (continuous, wake words: {WAKE_WORDS})")
-
     import queue as _queue
     import threading as _threading
     phrases = _queue.Queue()
-
-    # A flag the callback checks — when set, audio frames are silently
-    # discarded so we never accidentally transcribe KALKI's own speech.
-    _mic_muted = _threading.Event()
-
-    # Heartbeat: tracks the last time the background callback was invoked.
-    # If the daemon thread dies silently, we detect it here.
+    _mic_muted = _threading.Event()  # set while KALKI speaks or the listener is paused
     _last_callback_time = [time.time()]
 
     def _bg_callback(rec, audio):
         _last_callback_time[0] = time.time()
-        # If muted (KALKI speaking / listener paused), silently drop frames.
         if _mic_muted.is_set():
             return
         try:
-            lang = getattr(config, "STT_LANGUAGE", "en-US")
-            txt = rec.recognize_google(audio, language=lang)
+            txt = rec.recognize_google(audio, language=getattr(config, "STT_LANGUAGE", "en-IN"))
         except Exception:
             return
-        # Double-check after the network round-trip — KALKI may have started
-        # speaking while we were waiting for Google's response.
-        if _mic_muted.is_set():
+        if _mic_muted.is_set():  # KALKI may have started speaking during the round trip
             return
         if txt:
-            phrases.put(txt)
+            phrases.put((txt, audio))
 
     def _drain():
         try:
@@ -611,115 +660,121 @@ def main():
         except _queue.Empty:
             pass
 
-    def _start_bg():
-        """Start the background listening thread. Returns the stop callable."""
-        nonlocal mic, recognizer
-        try:
-            stopper = recognizer.listen_in_background(
-                mic, _bg_callback, phrase_time_limit=6)
-            _last_callback_time[0] = time.time()
-            log("background listener thread started")
-            return stopper
-        except Exception as e:
-            log(f"listen_in_background failed: {e}")
-            return None
-
-    stop_bg = _start_bg()
-    if stop_bg is None:
-        log("FATAL: could not start background listener")
+    try:
+        stop_bg = recognizer.listen_in_background(mic, _bg_callback, phrase_time_limit=8)
+    except Exception as e:
+        log(f"listen_in_background failed: {e}")
+        time.sleep(15)
         return
+    log(f"listening (hands-free, wake words: {WAKE_WORDS})")
 
-    HEARTBEAT_TIMEOUT = 30  # seconds — if no callback for this long, restart
-    _last_heartbeat_log = 0
+    def _finish():
+        try:
+            stop_bg(wait_for_stop=False)
+        except Exception:
+            pass
 
+    last_mode_check = time.time()
+    last_heartbeat = 0
     while True:
         try:
             now = time.time()
+            if now - last_heartbeat > 60:
+                last_heartbeat = now
+                log(f"heartbeat OK (last audio {now - _last_callback_time[0]:.0f}s ago, muted={_mic_muted.is_set()})")
+            if now - last_mode_check > 3:
+                last_mode_check = now
+                if current_mode() != "always":
+                    log("switching to push-to-talk")
+                    _finish()
+                    return
 
-            # ── Heartbeat: log proof-of-life every 60 seconds ──
-            if now - _last_heartbeat_log > 60:
-                _last_heartbeat_log = now
-                age = now - _last_callback_time[0]
-                log(f"heartbeat OK (last callback {age:.0f}s ago, muted={_mic_muted.is_set()})")
-
-            # Background listener thread handles silence continuously without restarts.
-            # ── Mute/unmute based on server state ──
-            should_mute = get_mute_decision()
-
-            if should_mute:
+            if get_mute_decision():
                 if not _mic_muted.is_set():
                     _mic_muted.set()
                     post_mic_state(True)
                     _drain()
-                    log("listener muted")
                 time.sleep(0.3)
                 continue
-
             if _mic_muted.is_set():
                 _mic_muted.clear()
                 post_mic_state(False)
-                _last_callback_time[0] = time.time()  # reset heartbeat on unmute
                 _drain()
-                log("listener unmuted — accepting audio")
 
             try:
-                phrase = phrases.get(timeout=1.0)
+                phrase, audio = phrases.get(timeout=1.0)
             except _queue.Empty:
                 continue
             log(f"heard: {phrase}")
 
             if contains_stop(phrase):
-                post_stop(); continue
-                
+                post_stop()
+                continue
             st = _status()
             if st.get("clipboardPromptPending"):
                 post_clipboard_response(phrase)
                 wait_until_silent(max_wait=12.0)
                 continue
 
-            wake_act = (time.time() - st.get("wakeRequestedAt", 0) < 8.0) or st.get("wakeRequested")
-
-            if not contains_wake(phrase) and not wake_act:
+            # The mic button in the app counts as "Hey KALKI" for the next phrase.
+            if (time.time() - st.get("wakeRequestedAt", 0) < 8.0) or st.get("wakeRequested"):
+                LAST_STATUS["wakeRequested"] = False
+                LAST_STATUS["wakeRequestedAt"] = 0
+                post_chat_voice(command_text(phrase, audio))
+                wait_until_silent(max_wait=12.0)
+                _drain()
                 continue
 
-            inline = extract_inline(phrase) if contains_wake(phrase) else phrase
-            LAST_STATUS["wakeRequested"] = False
-            LAST_STATUS["wakeRequestedAt"] = 0
-            if inline:
-                post_chat_voice(inline)
+            command = decide(phrase, audio)
+            if command is NOT_FOR_KALKI:
+                continue
+            if command:
+                post_chat_voice(command)
                 wait_until_silent(max_wait=12.0)
-            else:
-                # wake only → greet, then capture the follow-up command
-                post_wake("")
-                wait_until_silent(max_wait=4.0)
-
-                log("waiting for follow-up command...")
                 _drain()
-                try:
-                    follow = phrases.get(timeout=6.0)
-                except _queue.Empty:
-                    follow = None
+                continue
 
-                if follow:
-                    log(f"follow-up: {follow}")
-                    if contains_stop(follow):
-                        post_stop()
-                    else:
-                        post_chat_voice(follow)
-                        wait_until_silent(max_wait=12.0)
-                else:
-                    log("no follow-up command within window")
-
+            # "Hey KALKI" on its own: answer, then take the next phrase as the command.
+            post_wake("")
+            wait_until_silent(max_wait=4.0)
+            _drain()
+            log("waiting for the command...")
+            try:
+                follow, follow_audio = phrases.get(timeout=7.0)
+            except _queue.Empty:
+                log("no command within 7 seconds")
+                continue
+            follow = command_text(follow, follow_audio)
+            log(f"command: {follow}")
+            if contains_stop(follow):
+                post_stop()
+            else:
+                post_chat_voice(follow)
+                wait_until_silent(max_wait=12.0)
             _drain()
 
         except KeyboardInterrupt:
-            try: stop_bg(wait_for_stop=False)
-            except Exception: pass
-            log("listener stopped by user")
-            return
+            _finish()
+            raise
         except Exception as e:
             log(f"loop error: {e}")
             time.sleep(1)
+
+
+def main():
+    log("listener starting")
+    if not wait_for_server():
+        log("server never came up; listener exiting")
+        return
+    _status()
+    try:
+        while True:
+            if current_mode() == "push":
+                run_push()
+            else:
+                run_continuous()
+    except KeyboardInterrupt:
+        log("listener stopped by user")
 
 
 if __name__ == "__main__":
