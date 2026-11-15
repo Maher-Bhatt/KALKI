@@ -92,6 +92,7 @@ KALKI provides production-ready native releases for **Windows**, **Linux**, and 
 2. Follow the setup wizard to install to `%LOCALAPPDATA%\Programs\KALKI`.
 3. Optionally select **Create a desktop shortcut** and **Start KALKI on system startup**.
 4. Click **Install** and launch KALKI from your Desktop or Start Menu.
+   The first time it opens, a setup guide inside the app walks you through your name, an AI service (with a link, steps and a real test for each key), voice, and optional apps. Everything can be skipped and changed later in Settings. When Windows asks, allow the microphone for voice mode.
 5. Alternatively, for corporate or Windows 11 enterprise deployment, install the MSIX package:
    ```powershell
    Add-AppxPackage -Path Output\windows\KALKI_v1.5.0.msix
@@ -140,7 +141,7 @@ For developers wanting to modify KALKI's source code, create custom workflows, o
 
 ### Step 1: Clone Repository
 ```powershell
-git clone https://github.com/maher-kalki/KALKI.git
+git clone https://github.com/Maher-Bhatt/KALKI.git
 cd KALKI
 ```
 

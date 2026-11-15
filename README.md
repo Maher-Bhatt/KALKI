@@ -1,251 +1,106 @@
 <div align="center">
 
-# ⚡ KALKI AI ASSISTANT
-### Sovereign AI Desktop Assistant & Endpoint Defense Engine
+# KALKI
 
-[![Release](https://img.shields.io/badge/Release-v1.5.0-FFF4E2.svg?style=flat-square&logo=rocket&logoColor=black&labelColor=191D22)](https://github.com/maher-kalki/KALKI/releases)
-[![Platforms](https://img.shields.io/badge/Platforms-Windows%20%7C%20Linux%20%7C%20macOS-FFF4E2.svg?style=flat-square&logo=windows&logoColor=black&labelColor=191D22)](https://github.com/maher-kalki/KALKI#platform-status)
-[![Privacy](https://img.shields.io/badge/Privacy-100%25%20Local--First%20%7C%20Zero%20Telemetry-4CC061.svg?style=flat-square&logo=shield&logoColor=white&labelColor=191D22)](PRIVACY.md)
-[![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-E08C33.svg?style=flat-square&logo=python&logoColor=white&labelColor=191D22)](https://www.python.org/)
-[![License](https://img.shields.io/badge/License-MIT-E6EBEF.svg?style=flat-square&logo=open-source-initiative&logoColor=black&labelColor=191D22)](LICENSE)
+**A personal AI assistant that lives on your Windows PC, and talks back.**
 
-<br>
+It plans your day, plays your music, opens your apps, remembers what matters and keeps your PC safe, and it always asks before anything important.
 
-<p align="center">
-  <a href="https://kalki-marketing.vercel.app/" target="_blank" rel="noopener">
-    <img src="https://img.shields.io/badge/%F0%9F%8C%90_LAUNCH_LIVE_INTERACTIVE_WEB_PORTAL-FFF4E2?style=for-the-badge&labelColor=070809&color=FFF4E2" alt="Launch Live Interactive Web Portal" height="38">
-  </a>
-</p>
+[![Release](https://img.shields.io/github/v/release/Maher-Bhatt/KALKI?style=flat-square&label=release&color=2a2520)](https://github.com/Maher-Bhatt/KALKI/releases/latest)
+[![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-2a2520?style=flat-square)](https://github.com/Maher-Bhatt/KALKI/releases/latest)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-2a2520?style=flat-square)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-2a2520?style=flat-square)](LICENSE)
 
-<p align="center">
-  <img src="marketing/assets/kalki_hero_live.svg" alt="KALKI Live Animated Hero Vector Banner" width="940" style="border-radius: 14px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); border: 1px solid #333b44;">
-</p>
-
-<p align="center">
-  <strong><a href="https://kalki-marketing.vercel.app/download.html" target="_blank" rel="noopener">⚡ Standalone Downloads</a></strong> &nbsp;•&nbsp;
-  <strong><a href="https://kalki-marketing.vercel.app/pets.html" target="_blank" rel="noopener">🐱 Companion Pets Fleet</a></strong> &nbsp;•&nbsp;
-  <strong><a href="https://kalki-marketing.vercel.app/security.html" target="_blank" rel="noopener">🛡️ ShieldCore Cyber &amp; 12 Tools</a></strong> &nbsp;•&nbsp;
-  <strong><a href="https://kalki-marketing.vercel.app/docs.html" target="_blank" rel="noopener">📚 Architecture &amp; API Docs</a></strong> &nbsp;•&nbsp;
-  <strong><a href="INSTALLATION_GUIDE.md">📖 Install Guide</a></strong>
-</p>
+[**Download**](https://github.com/Maher-Bhatt/KALKI/releases/latest) · [Website](https://kalki-marketing.vercel.app/) · [Docs](https://kalki-marketing.vercel.app/docs.html) · [Privacy](PRIVACY.md) · [Changelog](CHANGES.md)
 
 </div>
 
 ---
 
-## 🌟 What is KALKI?
+## What KALKI does
 
-**KALKI** is a sovereign, local-first personal AI operating workspace for power users, developers, and security professionals. Built on the **Filament Design System**—cold machined graphite surfaces with warm presence light—KALKI operates directly on your workstation loopback (`127.0.0.1:8888`), binds to your native hardware, enforces zero third-party telemetry, and features real system access:
+| | |
+|---|---|
+| **Talk naturally** | A real voice conversation: it notices when you stop, answers out loud, and stops the moment you interrupt. English, Hindi and Hinglish. |
+| **Your day, briefed** | The first time your PC starts each day, KALKI reads your calendar, reminders, tasks and the weather for where you are. |
+| **Music and apps** | "Play some music" uses Spotify, Apple Music or YouTube Music. "Open WhatsApp" opens any installed app, Microsoft Store apps included. |
+| **Tasks, reminders, notes** | Repeating reminders with snooze, focus sessions that survive a restart, searchable tagged notes with Markdown export. |
+| **Remembers you** | Facts and preferences you share are kept encrypted on your PC and used to fit answers to you. |
+| **Security check-up** | Works with Windows Defender: real status, file checks judged by Defender's own exit codes, plain reasons when something looks suspicious, and encrypted quarantine. |
+| **A desktop companion** | A see-through pixel-art pet that floats over your windows and shows when KALKI is working or needs you. |
+| **Savage mode** | Optional. Blunt, witty and free to swear; insults get roasted back in your language. |
 
-- 🖥️ **100% Native Desktop Operating Architecture**: Seamless native PyWebView IPC bridge (`WebApi`) connecting the frontend directly to OS APIs—zero external browser popups, embedded PowerShell execution, direct directory tree exploration, in-place code editing with disk save, and native window titlebar controls.
-- 🛡️ **ShieldCore Live Process Defense & Antivirus**: Real-time hardware telemetry (CPU, RAM, loopback ports), live process scanner with PID inspection, 1-click suspicious process termination, Shannon entropy analysis, Windows Defender integration, and an interactive studio of 12 verified cybersecurity tools.
-- 💻 **Embedded System Terminal & Workspace Studio**: Dedicated terminal console executing real PowerShell and CMD commands with exit codes and execution timers, plus a built-in file explorer and code editor for seamless developer productivity.
-- 🐱 **Desktop pet**: A see-through pixel-art companion that floats over your other windows and shows when KALKI is working, needs your approval, or has finished.
-- 🛡️ **ShieldCore Native Antivirus & 12 Cyber Tools**: Dedicated visual cyber command center with real-time heuristic radar sweeps, Shannon entropy analysis, Windows Defender integration, cryptominer detection, clipboard anti-clipper protection, and an interactive studio of 12 defensive cybersecurity tools.
-- 🧠 **Dynamic Cognitive Auto-Router**: Real-time prompt complexity classification automatically routing casual queries to ultra-fast sub-200ms models (Gemini 2.5 Flash, GPT-4o Mini) and technical/reasoning tasks to Pro tiers (Gemini 2.5 Pro, LLaMA 3.3 70B, Claude 3.5 Sonnet).
-- ⚡ **Real System Execution & Attitude Enforcement**: Direct Win32 workstation lock (`LockWorkStation`), dynamic application launch (Apple Music `music:`, Brave, Valorant, DaVinci Resolve), and an unrestricted Savage Roast Mode that defends against abusive prompts.
-- 🎨 **Filament 5-Destination Workspace**: 30-module, zero-build-step modern frontend (Ask, Today, Memory, Workbench, Settings) powered by pure native ES modules, GPU spring animations, and encrypted local semantic memory.
+## Get started
 
----
+1. **Download** the installer from the [latest release](https://github.com/Maher-Bhatt/KALKI/releases/latest) and run it.
+2. **Open KALKI.** A three-minute setup guide walks you through your name, an AI service (each key has numbered steps, a link to the right page and a real test), voice, and optional apps: Google Calendar, Gmail, Spotify, Telegram and GitHub.
+3. **Talk to it.** Say "Hey KALKI", or open voice mode and try *"brief me"*, *"play some music"* or *"remind me to stretch in 30 minutes"*.
 
-## 🌐 Complete Multi-Page Web Portal
+You need one AI service for questions and chat. **Google Gemini** and **Groq** have free tiers; **OpenAI** and **Anthropic** are paid; **Ollama** runs fully offline on your PC. Tasks, notes, reminders, focus, music and app control work without any of them.
 
-KALKI features a fully-realized multi-page marketing and documentation website designed for public hosting:
+## Privacy and safety
 
-| Page | Description | Direct Link |
-|---|---|---|
-| **Overview Portal** | 3D Filament WebGL Core, system architecture, feature breakdown, and terminal simulator. | [KALKI — Sovereign AI Desktop Assistant & Endpoint Defense](https://kalki-marketing.vercel.app/) |
-| **Companion Pets Fleet** | Deep lore & interactive playground for all 6 companion species (Gobi, Kittu, Byte, Draco, Nova, Kitsu) with feeding, dance mode, speech synthesis, and Web Audio SFX. | [Companion Pets Fleet](https://kalki-marketing.vercel.app/pets.html) |
-| **ShieldCore &amp; 12 Cyber Tools** | 60FPS radar sweep scope, live heuristic telemetry, and interactive sandbox workbench testing all 12 offensive/defensive cyber tools in the browser. | [ShieldCore & 12 Cyber Tools](https://kalki-marketing.vercel.app/security.html) |
-| **System Documentation** | Searchable system manual covering all 83 REST/SSE API routes, DPAPI & AES-256 vault security, and offline LLM setup. | [System Documentation](https://kalki-marketing.vercel.app/docs.html) |
-| **Standalone Downloads** | Multi-OS binaries for Windows, Linux, and macOS with client-side SHA-256 Web Crypto verification. Zero store middleware. | [Standalone Downloads](https://kalki-marketing.vercel.app/download.html) |
+- **Your data stays on your PC**, in `%APPDATA%\KALKI`. Memories and keys are encrypted with Windows' own protection (DPAPI).
+- **Your questions go only to the AI service you choose**, or nowhere if you use Ollama.
+- **Anything consequential waits for your approval**: sending messages, deleting things, running commands. Reading untrusted web content blocks automatic actions for that request.
+- **Location and screen time are off until you turn them on.** Location comes from Windows (GPS or Wi-Fi), never your IP address, and isn't saved. Screen time stores app names and minutes only, never window titles.
+- **KALKI isn't an antivirus.** It works with Windows Defender and says plainly when something couldn't be checked.
 
----
+Read the full [privacy notice](PRIVACY.md).
 
-## 🚀 Quick Download Matrix
-
-KALKI v1.5.0 is fully built, tested, and validated for Windows, Linux, and macOS:
-
-| Operating System | Package Format | Binary Size | Integrity Hash (SHA-256) | Installation Command |
-|---|---|---|---|---|
-| **Windows 10 / 11 (1-Click Installer)** | [KALKI_Setup_v1.5.0.exe](Output/windows/KALKI_Setup_v1.5.0.exe) | 289.59 MB | 655d4f0feb130f2c871292d4f072988f7eb636974bda4e58053d8df7d6a54368 | Double-click or KALKI_Setup_v1.5.0.exe /VERYSILENT |
-| **Windows 10 / 11 (Store MSIX Package)** | [KALKI_v1.5.0.msix](Output/windows/KALKI_v1.5.0.msix) | 408.76 MB | 67493dccc55c4d7518f4ad0bcc3b44e43c5a5f961be52e39872372029bd3ef9e | Add-AppxPackage -Path KALKI_v1.5.0.msix |
-| **Linux (Ubuntu / Debian / Arch)** | [KALKI_Ubuntu_Installer_v1.5.0.sh](Output/linux/KALKI_Ubuntu_Installer_v1.5.0.sh) | 10.93 MB | `dd464a90da803943cd635da44c0f7b83250ad66b69a47064196748e53ea3814c` | `chmod +x KALKI_Ubuntu_Installer_v1.5.0.sh && ./KALKI_Ubuntu_Installer_v1.5.0.sh` |
-| **Linux (Portable)** | [KALKI_v1.5.0_Linux.tar.gz](Output/linux/KALKI_v1.5.0_Linux.tar.gz) | 8.20 MB | `2e38db79219edb5e65c7d54e348aebb3e9bf61045c88179c1bed3ccf38a6b21b` | `tar -xzf KALKI_v1.5.0_Linux.tar.gz && ./install.sh` |
-| **macOS (Apple Silicon & Intel)** | [KALKI_v1.5.0_macOS.tar.gz](Output/macos/KALKI_v1.5.0_macOS.tar.gz) | 8.20 MB | `149dd774f24d0f1c2a722ce2a118640ff0e53aeb4bb940f5558726db35ed08e8` | `tar -xzf KALKI_v1.5.0_macOS.tar.gz && ./install_mac.sh` |
-
----
-
-## 🐱 Desktop pet
-
-A small pixel-art companion that floats over your other windows and shows what KALKI is doing, so you can see when it needs you without keeping the app open. The idea is inspired by Codex pets; the six characters and their art are KALKI's own.
-
-- **Really see-through**: the pet has its own layered window. There's no box around it, and clicks on empty pixels reach whatever is behind it.
-- **Shows real status**: working, needs your approval, done, listening, enjoying the music, or resting. A request for approval always takes priority.
-- **Click it** to open a small card where you can ask something or open KALKI. **Drag it** to move it.
-- **Six characters**: Gobi (a rice ball), Kittu (a cat), Byte (a robot pup), Draco (a dragon), Kitsu (a two-tailed fox) and Nova (a hover drone).
-- **Respects your settings**: off by default on the desktop, and still images if your system asks for less motion.
-
----
-
-## 🛡️ ShieldCore Antivirus & Cybersecurity Direct Viewer
-
-Dedicated cybersecurity workspace pinned permanently to the navigation rail, featuring real endpoint defense and an interactive penetration testing studio:
-
-<p align="center">
-  <img src="marketing/assets/kalki_radar_live.svg" alt="KALKI ShieldCore Antivirus Animated Telemetry Radar" width="600" style="border-radius: 14px; box-shadow: 0 12px 36px rgba(0,0,0,0.7); border: 1px solid #333b44;">
-</p>
-
-### 1. Endpoint Defense Engine (`app/antivirus.py`)
-- **Windows Defender Native Bridge**: Directly interfaces with `MpCmdRun.exe` and PowerShell `Get-MpComputerStatus` to query real-time protection, definition freshness, and scan history.
-- **Shannon Entropy Heuristic Analysis**: Inspects executables for high Shannon byte entropy (>7.2/8.0), double extensions (`.pdf.exe`), and macro droppers.
-- **Process & Cryptominer Audit**: Scans active PIDs against 48 known cryptomining pool ports and flags suspicious executions running out of `%TEMP%` or `AppData\Local`.
-- **Clipboard Anti-Clipper**: Real-time regex scanner blocking cryptocurrency wallet address replacement attacks (BTC, ETH, SOL) and dangerous pipe-to-shell patterns.
-- **Hardened Quarantine Vault**: Automatically revokes execute permissions and moves suspicious files to an AES-256 + DPAPI encrypted quarantine store.
-
-### 2. 12 Verified Cybersecurity Tools (`app/cybertools.py`)
-Direct visual execution studio with parameter presets and structured JSON inspection:
-
-| Module | Category | Primary Function | Real-World Capability |
-|---|---|---|---|
-| `portscan` | Recon | Async TCP socket prober | Scans common/extended ports with banner grabbing |
-| `cve` | Vulnerability | NIST NVD & VulnCheck lookup | Returns CVSS scores, descriptions, and patch advisories |
-| `subdomains` | OSINT | Certificate Transparency | Queries `crt.sh` logs for discovered hostnames |
-| `crack` | Cryptography | Offline dictionary hash attack | Auto-detects MD5/SHA-1/SHA-256 and checks bundled wordlist |
-| `headers` | Web Defense | Security header auditor | Analyzes HSTS, CSP, X-Frame-Options, and CORS flags |
-| `dns` | Recon | DNS record enumerator | Resolves A, AAAA, MX, NS, TXT, and SOA records |
-| `surface` | Recon | Attack surface overview | Combines IP, reverse DNS, and web status in one pass |
-| `dorks` | OSINT | Search engine recon | Generates targeted search queries for exposed portals |
-| `identify` | Cryptography | Hash format detector | Identifies hash algorithms by length, charset, and salt |
-| `hash` | Cryptography | Multi-algorithm hasher | Computes MD5, SHA-1, SHA-256, SHA-512 hashes |
-| `encode` | Utility | Payload encoder | Encodes strings into Base64, Hex, and URL formats |
-| `decode` | Utility | Payload decoder | Decodes Base64, Hex, and URL encoded strings |
-
----
-
-## 🧠 Dynamic Smart Model Auto-Router
-
-KALKI never forces you to manually switch models. The built-in heuristic classifier analyzes prompt structure, tokens, and technical depth:
+## How it's built
 
 ```
-[User Prompt]
-      │
-      ├── Casual conversation / System command? ────► FLASH TIER (Gemini 2.5 Flash / GPT-4o Mini)
-      │                                                ⚡ Sub-200ms latency, high speed
-      │
-      ├── Code generation / CVE analysis / Logic? ──► PRO TIER (Gemini 2.5 Pro / Claude 3.5 Sonnet)
-      │                                                🧠 Deep reasoning, complex problem solving
-      │
-      ├── "Search...", "Who is...", "Patent..."? ───► WEB SEARCH PIPELINE (DuckDuckGo + IPv6 NAT64)
-      │                                                🌐 Real-time grounded factual results
-      │
-      └── Abusive prompt streak? ───────────────────► ATTITUDE ENFORCEMENT PROTOCOL
-                                                       🔒 Physical Workstation Lock (`LockWorkStation`)
+KALKI.exe (main_app.py)         Desktop window: pywebview on WebView2, auto-start
+ └─ KALKI_Server (server.py)    Local API on 127.0.0.1:8888, token-protected
+     ├─ ui/                     The app: plain ES modules, no build step
+     ├─ db.py                   SQLite store with versioned migrations
+     ├─ vault.py, secure_store  DPAPI-encrypted secrets
+     ├─ tool_policy, approvals  Risk levels and the approval queue for AI actions
+     ├─ voice_turn.py           Voice mode: Whisper speech-to-text, Edge neural voice
+     ├─ briefing, focus, tasks, notes, core/productivity   Your day
+     └─ antivirus, shield_monitors, cybertools, wifi_security   Security
+ ├─ KALKI_Listener (listener.py) Background "Hey KALKI" wake word
+ └─ KALKI_Pet (desktop_pet.py)   Layered, click-through desktop companion
 ```
 
-- **Uncensored Savage Roast Mode**: If abusive language or insults are detected, KALKI discards polite boilerplate apologies and delivers sharp, witty responses matching energy.
-- **Attitude Enforcement Protocol**: Repeated abuse streaks physically lock the workstation using Win32 `LockWorkStation()`, stopping workstation tampering instantly.
-- **Grounded Web Search**: Seamless DuckDuckGo integration supporting IPv6 NAT64 translation (`64:ff9b::/96`) to conduct deep research (e.g., patent documentation, CVE alerts).
+Route modules (`routes_*.py`, `focus.py`, `briefing.py`) take a request body and return `(payload, status)`, with no dependence on the web server, so they're easy to test and ready for a move to FastAPI. The plan for that move, and everything else in progress, is in the [master plan](docs/KALKI_MASTER_PLAN.md).
 
----
+## Develop
 
-## 🏗️ System Architecture
-
-```mermaid
-flowchart TD
-    User["Workstation User"]
-    
-    subgraph UI ["Filament Presentation Layer (Port 8888)"]
-        DeskPet["🐱 Standalone Desktop Pet (PyWebView / Win32)"]
-        Shell["Desktop Shell (Edge WebView2)"]
-        Nav["5-Destination Rail (Ask, Today, Memory, Workbench, Security)"]
-    end
-
-    subgraph Core ["Sovereign Core (app/server.py)"]
-        Router["Dynamic Auto-Router (Flash vs Pro)"]
-        LocalHandler["Real System Controller (Win32 / Apple Music)"]
-        ShieldCore["ShieldCore Antivirus & Endpoint Defense"]
-        CyberTools["12 Verified Cybersecurity Tools Engine"]
-        MemVault["Encrypted Semantic Memory (AES-256 + DPAPI)"]
-    end
-
-    subgraph Providers ["AI Provider Connectors"]
-        Gemini["Google Gemini 2.5 (Pro & Flash)"]
-        OpenAI["OpenAI (GPT-4o / GPT-4o-mini)"]
-        Groq["Groq LPU (LLaMA 3.3 70B)"]
-        Claude["Anthropic Claude 3.5"]
-        Ollama["Local Ollama Instance"]
-    end
-
-    User -->|Click Pet / Unminimize| DeskPet
-    DeskPet -->|Win32 Foreground Hook| Shell
-    User -->|Keyboard / Mouse| Shell
-    Shell --> Nav
-    Nav -->|Localhost REST & SSE| Core
-    
-    Router --> Gemini
-    Router --> OpenAI
-    Router --> Groq
-    Router --> Claude
-    Router --> Ollama
-    
-    LocalHandler -->|ctypes LockWorkStation| User
-    LocalHandler -->|music: Protocol| AppleMusic["Apple Music Player"]
+```powershell
+git clone https://github.com/Maher-Bhatt/KALKI.git
+cd KALKI\app
+python -m pip install -r requirements.txt
+python main_app.py
 ```
 
----
+Run the tests from the repository folder (552 tests; each runs on a throwaway profile, never your real data):
 
-## ⚡ Live Animated Showcase & Desktop Subsystems
-
-Experience KALKI's real-time desktop subsystems in action:
-
-<p align="center">
-  <img src="marketing/assets/kalki_pet_live.svg" alt="KALKI Codex Desktop Pet Animated Showcase" width="48%" style="border-radius: 14px; margin-right: 1%; box-shadow: 0 12px 36px rgba(0,0,0,0.7); border: 1px solid #333b44;">
-  <img src="marketing/assets/kalki_radar_live.svg" alt="KALKI ShieldCore Antivirus Animated Telemetry Radar" width="48%" style="border-radius: 14px; box-shadow: 0 12px 36px rgba(0,0,0,0.7); border: 1px solid #333b44;">
-</p>
-
-<p align="center">
-  <a href="https://kalki-marketing.vercel.app/" target="_blank" rel="noopener"><strong>🌐 Open Full Live Interactive Experience (Interactive Workspace Simulator, Live Pet Playground & Synthesizer) →</strong></a>
-</p>
-
----
-
-## 🛠️ Verification & Test Suite
-
-KALKI undergoes rigorous verification across both frontend and backend layers:
-
-```bash
-# 1. Validate all 30 Frontend ES Modules
-node --experimental-vm-modules .github/scripts/validate-ui-modules.mjs
-# Result: 30/30 modules clean, 0 syntax errors, 0 missing exports
-
-# 2. Compile and verify entire Python backend
-python -m compileall app/
-# Result: 57 Python files compiled cleanly, 0 syntax errors
-
-# 3. Deterministic verification sandbox
-python app/verification_sandbox.py --report Output/verification.json
-
-# 4. Cybersecurity tools suite verification
-python -m unittest app/sandbox_tool_test.py
+```powershell
+python -m pytest tests
 ```
 
----
+Build the Windows installer (needs [Inno Setup](https://jrsoftware.org/isinfo.php)):
 
-## 📚 Complete Documentation & Guides
+```powershell
+python app\build_tools\build_installer.py
+```
 
-- 📖 [**Installation & Deployment Guide (INSTALLATION_GUIDE.md)**](INSTALLATION_GUIDE.md): Hardware specs, 1-click Windows installer, Linux setup script, macOS configuration, and API keys.
-- 📚 [**Complete System Documentation (KALKI_COMPLETE_SYSTEM_DOCUMENTATION.md)**](KALKI_COMPLETE_SYSTEM_DOCUMENTATION.md): Deep architectural manual covering all 30 frontend modules, server APIs, and cryptographic security.
-- 📝 [**Release Notes (release_notes.md)**](release_notes.md): Chronological history of all features, bug fixes, and improvements.
-- 📋 [**Changelog (CHANGES.md)**](CHANGES.md): Granular file-by-file update log.
-- 🌐 [**KALKI — Sovereign AI Desktop Assistant & Endpoint Defense**](https://kalki-marketing.vercel.app/): Live multi-page web portal deployed on Vercel (also available locally in `marketing/index.html`).
+Linux and macOS run from source with Windows-only features (Defender, app launching, location) switched off; see the [install guide](INSTALLATION_GUIDE.md).
 
----
+## Documentation
 
-## ⚖️ License & Responsible Use
+- [Website docs](https://kalki-marketing.vercel.app/docs.html): setup, voice, things to say, keys, apps, troubleshooting
+- [Install guide](INSTALLATION_GUIDE.md)
+- [Master plan and progress](docs/KALKI_MASTER_PLAN.md)
+- [Changelog](CHANGES.md)
+- [Privacy](PRIVACY.md) · [Terms](TERMS.md)
 
-KALKI is distributed under the [MIT License](LICENSE). Please review [TERMS.md](TERMS.md) and [PRIVACY.md](PRIVACY.md) for ethical AI guidelines, local data handling, and operational boundaries.
+## Responsible use
 
-<div align="center">
-  <sub>Engineered with precision by Maher & the KALKI Core Team. Sovereign intelligence, within reach.</sub>
-</div>
+The security tools are for your own devices and for systems you're authorised to test. KALKI doesn't build attack payloads.
+
+## License
+
+[MIT](LICENSE) © KALKI contributors.
