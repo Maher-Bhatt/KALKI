@@ -179,7 +179,7 @@ def html():
 <div class="bub ub" id="rub" style="margin:0;width:auto">bro you're kinda useless ngl</div>
 <div class="bub kb" id="rkb" style="margin:0"><div class="who">{MARK}KALKI <span style="font-size:20px;background:#efe4cf;color:#151413;padding:4px 12px;border-radius:999px;letter-spacing:.08em">SAVAGE</span></div>Useless? I've reminded you to drink water three times today and you're still dehydrated. 💀</div>
 <div id="skull">💀</div>
-<div class="t2d" id="tG" style="top:640px;font-size:100px;line-height:1.25"></div>
+<div class="t2d" id="tG" style="top:1240px;font-size:84px;line-height:1.22"></div>
 <div id="logo"><div class="mk" id="lmk">{MARK}</div><div class="nm" id="lnm">KALKI</div><div class="sb" id="lsb">Your AI assistant for Windows</div><div class="pl" id="lpl">Free · link in bio</div></div>
 """
     body = (f'<canvas class="full" id="sky" width="540" height="960"></canvas>'
@@ -234,15 +234,16 @@ function camera(t) {
   if (t < 22) return {x: 0, y: 0, z: lerp(-9500, -9800, (t - 19.6) / 2.4), ry: 0};
   if (t < 23) { const p = ioC(t - 22); return {x: 0, y: 0, z: lerp(-9800, -12300, p), ry: 0}; }
   if (t < 27.5) return {x: 0, y: 0, z: lerp(-12300, -12480, (t - 23) / 4.5), ry: 0};
-  if (t < 30.5) { const p = ioC((t - 27.5) / 3); return {x: 0, y: lerp(0, -1100, p), z: lerp(-12480, 4600, p), ry: lerp(0, 0.06, p)}; }
-  return {x: 0, y: -1100, z: 4600, ry: 0.06};
+  if (t < 27.8) return {x: 0, y: 0, z: -12480, ry: 0};
+  const p = ioC(P_(t, 27.8, 6.2));
+  return {x: lerp(-90, 0, p), y: lerp(-120, -180, p), z: lerp(4200, 2500, p), ry: lerp(-0.03, 0, p)};
 }
 function view(c, X, Y, Z) {
   const dx = X - c.x, dy = Y - c.y, dz = c.z - Z, cs = Math.cos(c.ry), sn = Math.sin(c.ry);
   return {vx: dx * cs - dz * sn, vy: dy, vz: dz * cs + dx * sn};
 }
 function proj(v) { const s = P / v.vz; return {x: W / 2 + v.vx * s, y: H / 2 + v.vy * s, s}; }
-function orbY(t) { return lerp(720, 0, ioC(P_(t, 0.3, 3.7))); }
+function orbY(t) { return t >= 27.8 ? -330 : lerp(720, 0, ioC(P_(t, 0.3, 3.7))); }
 function focusAt(t, c) {
   const vz = id => view(c, ...OBJ[id]).vz;
   if (t < 4.5) return view(c, 0, orbY(t), 0).vz;
@@ -252,9 +253,9 @@ function focusAt(t, c) {
   if (t < 18.6) return view(c, RING[0], 0, RING[1]).vz;
   if (t < 22) return vz('sh');
   if (t < 27.5) return vz('win');
-  return 3500;
+  return view(c, 0, orbY(t), 0).vz;
 }
-const suck = t => ioC(P_(t, 30.5, 1.0));
+const suck = t => ioC(P_(t, 30.6, 0.9));
 
 (() => { const c = document.createElement('canvas'); c.width = 270; c.height = 480; const g = c.getContext('2d');
   const d = g.createImageData(270, 480); let s = 3;
@@ -424,6 +425,7 @@ window.render = (t) => {
     const sh = SHOW[id]; if (sh) op *= P_(t, sh[0], 0.5);
     if (sk > 0 && id !== 'orb') op *= 1 - clamp((sk - 0.6) / 0.4);
     if (t >= 31.5 && id === 'orb') op = 0;
+    if (t >= 27.8 && id !== 'orb') op = 0;
     if (op <= 0.001 || v.vz < 60) { el.style.display = 'none'; continue; }
     el.style.display = 'block';
     let sc = 1;
@@ -739,6 +741,9 @@ def make_score():
             for i in range(int(a * SR), min(N, int(b * SR))):
                 buf[i] *= 0.05
     wb, wd, ws, wa = reverb(big, 0.35), reverb([d * 0.6 for d in drums], 0.25, 0.97), reverb(strings, 0.3), reverb(air, 0.6)
+    sfx_dry = [fx[i] + 0.55 * big[i] for i in range(N)]
+    sfx_wet = reverb(sfx_dry, 0.3)
+    sfx = [sfx_dry[i] + sfx_wet[i] for i in range(N)]
     left, right = [0.0] * N, [0.0] * N
     d1, d2 = int(0.375 * SR), int(0.5 * SR)
     for i in range(N):
@@ -748,13 +753,14 @@ def make_score():
         left[i] = base + el
         right[i] = base + er
     fade = int(1.8 * SR)
-    for ch in (left, right):
+    sfx_r = sfx[:]
+    for ch in (left, right, sfx, sfx_r):
         for i in range(fade):
             ch[N - 1 - i] *= (i / fade) ** 1.3
         peak = max(1e-9, max(abs(x) for x in ch))
         for i in range(N):
             ch[i] = math.tanh(1.4 * ch[i] / peak) / math.tanh(1.4)
-    return left, right
+    return left, right, sfx, sfx_r
 
 
 def write_wav(path, left, right):
@@ -790,13 +796,25 @@ def render_video(path, checks):
             return
         ff = subprocess.Popen([FFMPEG, "-y", "-loglevel", "error", "-f", "image2pipe", "-framerate", str(FPS), "-i", "-",
                                "-vf", "scale=in_range=pc:out_range=tv,format=yuv420p", "-color_range", "tv",
-                               "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-maxrate", "12M", "-bufsize", "24M",
+                               "-c:v", "libx264", "-preset", "slow", "-crf", "20", "-maxrate", "8M", "-bufsize", "16M",
                                "-movflags", "+faststart", str(path)], stdin=subprocess.PIPE)
         for i in range(frames):
             acc = None
             for k in range(SUB):
-                pg.evaluate(f"window.render({(i + k / SUB * 0.75) / FPS})")
-                im = Image.open(io.BytesIO(pg.screenshot(type="jpeg", quality=95))).convert("RGB")
+                tt = (i + k / SUB * 0.75) / FPS
+                for attempt in range(4):              # the browser occasionally stalls; reload and retry
+                    try:
+                        pg.evaluate(f"window.render({tt})")
+                        shot = pg.screenshot(type="jpeg", quality=95, timeout=120000)
+                        break
+                    except Exception as e:
+                        print(f"  retry frame {i} ({e.__class__.__name__})", flush=True)
+                        pg.reload()
+                        pg.wait_for_load_state("networkidle")
+                        pg.wait_for_timeout(1500)
+                else:
+                    raise RuntimeError(f"frame {i} failed")
+                im = Image.open(io.BytesIO(shot)).convert("RGB")
                 acc = im if acc is None else Image.blend(acc, im, 1 / (k + 1))
             buf = io.BytesIO()
             acc.save(buf, "JPEG", quality=94)
@@ -819,8 +837,12 @@ def main():
     if "--checks-only" in sys.argv:
         return
     print("video done", flush=True)
-    left, right = make_score()
+    left, right, sl, sr = make_score()
     write_wav(TMP / "score.wav", left, right)
+    write_wav(TMP / "sfx.wav", sl, sr)
+    subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-i", str(silent), "-i", str(TMP / "sfx.wav"), "-c:v", "copy",
+                    "-af", "loudnorm=I=-20:TP=-2.0:LRA=11", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-shortest",
+                    "-movflags", "+faststart", str(OUT / "kalki_reel_epic_sfx.mp4")], check=True)
     subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-i", str(silent), "-i", str(TMP / "score.wav"), "-c:v", "copy",
                     "-af", "loudnorm=I=-13:TP=-1.0:LRA=11", "-c:a", "aac", "-b:a", "256k", "-ar", "48000", "-shortest",
                     "-movflags", "+faststart", str(OUT / "kalki_reel_epic.mp4")], check=True)
