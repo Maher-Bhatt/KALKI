@@ -35,15 +35,25 @@ body.dark{background:#141413;color:#ece6dc}
 body.dark .ridges{color:#6b6357;opacity:.45}
 .mark{display:inline-flex;align-items:center;gap:.5em;font-weight:650;letter-spacing:.16em}
 .mark svg{width:1.25em;height:1.25em}
-.win{position:relative;z-index:1;border-radius:1.4vw;overflow:hidden;background:#fcfbf8;border:1px solid #d9d1c4;box-shadow:0 3vw 7vw -2.5vw rgba(40,30,15,.45)}
+.win{position:relative;z-index:1;border-radius:.62vw;overflow:hidden;background:#fcfbf8;border:1px solid #d9d1c4;box-shadow:0 3vw 7vw -2.5vw rgba(40,30,15,.45)}
 body.dark .win{background:#1b1a18;border-color:#3a3631;box-shadow:0 3vw 7vw -2vw rgba(0,0,0,.8)}
-.win .bar{height:2.2vw;min-height:14px;display:flex;align-items:center;gap:.55vw;padding:0 1vw;background:#efebe4;border-bottom:1px solid #e2dbcf}
+.win .bar{height:2.3vw;min-height:16px;display:flex;align-items:center;gap:.5vw;padding:0 0 0 .9vw;background:#efebe4;border-bottom:1px solid #e2dbcf;font-family:"Segoe UI Variable Text","Segoe UI",sans-serif;font-size:.78vw;color:#3a342c}
+.win .bar .ttl{display:flex;align-items:center;gap:.45vw;flex:1}
+.win .bar .ttl svg{width:1vw;height:1vw}
+.win .bar .cap{display:flex;height:100%}
+.win .bar .cap span{width:3.4vw;height:100%;display:flex;align-items:center;justify-content:center}
+.win .bar .cap svg{width:.72vw;height:.72vw}
+body.dark .win .bar{color:#e6dfd3}
 body.dark .win .bar{background:#23211e;border-color:#34312c}
-.win .bar i{width:.75vw;height:.75vw;min-width:7px;min-height:7px;border-radius:50%;background:#cdc4b5}
 .win img{display:block;width:100%}
 .pill{display:inline-block;padding:.45em 1.1em;border-radius:999px;border:1px solid currentColor;opacity:.8;font-size:.9em}
 .ink{background:#2a2520;color:#f7f2ea}
 """
+
+
+WINCAPS = ('<span><svg viewBox="0 0 10 10"><path d="M0 5h10" stroke="currentColor" stroke-width=".9"/></svg></span>'
+           '<span><svg viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9" rx="1.2" fill="none" stroke="currentColor" stroke-width=".9"/></svg></span>'
+           '<span><svg viewBox="0 0 10 10"><path d="M.5 .5l9 9M9.5 .5l-9 9" stroke="currentColor" stroke-width=".9"/></svg></span>')
 
 
 def page(body, cls=""):
@@ -51,7 +61,7 @@ def page(body, cls=""):
 
 
 def window(src, extra=""):
-    return f'<div class="win" style="{extra}"><div class="bar"><i></i><i></i><i></i></div><img src="{src}"></div>'
+    return f'<div class="win" style="{extra}"><div class="bar"><div class="ttl">{MARK}<span>KALKI</span></div><div class="cap">{WINCAPS}</div></div><img src="{src}"></div>'
 
 
 # ── Store screenshots with a headline (kept in the top third, per Store guidance) ──
@@ -96,13 +106,13 @@ def poster(theme="light"):
       <div class="mark" style="font-size:4.4vw">{MARK}KALKI</div>
       <h1 class="serif" style="font-size:10.5vw;line-height:1.02;margin-top:7vw">An assistant<br>that lives on<br>your PC, and<br>talks back.</h1>
       <p style="font-size:3.8vw;line-height:1.45;opacity:.72;margin-top:4vw">Plans your day, plays your music, opens your apps, keeps you safe.</p>
-      <div style="margin-top:auto;margin-right:-30vw">{window(shot(theme, "03_today_briefing"))}</div>
+      <div style="margin-top:auto">{window(shot(theme, "03_today_briefing"))}</div>
     </div>""", theme)
 
 
 def hero(theme="light"):
     return page(f"""{RIDGES}
-    <div style="position:absolute;right:-6vw;top:9vw;width:68vw;z-index:1">{window(shot(theme, "01_ask_home"))}</div>""", theme)
+    <div style="position:absolute;right:4vw;top:10vw;width:60vw;z-index:1">{window(shot(theme, "01_ask_home"))}</div>""", theme)
 
 
 # ── Social posts ──
