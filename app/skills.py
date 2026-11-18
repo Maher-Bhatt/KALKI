@@ -36,7 +36,10 @@ from runtime_paths import prepare_runtime
 _runtime = prepare_runtime()
 SKILLS_DIR = os.path.join(_runtime.user_data_dir, "skills")
 INDEX_FILE = os.path.join(SKILLS_DIR, "index.json")
-BUILTIN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "skills_builtin")
+# Installed: next to KALKI.exe (the installer copies it there). From source: next to this file.
+BUILTIN_DIR = next((d for d in (os.path.join(_runtime.app_root, "skills_builtin"),
+                                os.path.join(os.path.dirname(os.path.abspath(__file__)), "skills_builtin")) if os.path.isdir(d)),
+                   os.path.join(os.path.dirname(os.path.abspath(__file__)), "skills_builtin"))
 
 MAX_BYTES = 200_000
 MAX_PROMPT_CHARS = 6000
