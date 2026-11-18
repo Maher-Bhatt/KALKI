@@ -156,6 +156,10 @@ Source: "..\config.example.py"; DestDir: "{app}"; Flags: ignoreversion; Componen
 
 Source: "..\plugins\*"; DestDir: "{app}\plugins"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
 
+; Skills included with KALKI (instructions only; Settings → Skills offers them).
+
+Source: "..\skills_builtin\*"; DestDir: "{app}\skills_builtin"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
+
 Source: "..\..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion; Components: core
 
 Source: "..\..\TERMS.md"; DestDir: "{app}"; Flags: ignoreversion; Components: core
