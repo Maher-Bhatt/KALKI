@@ -7,7 +7,7 @@
 
 import { h, mount, frag } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
-import { settings as api, voice, backup, system, vault, desktop, petOverlay, screenTime } from '../api/endpoints.js';
+import { settings as api, voice, backup, system, vault, desktop, petOverlay, screenTime, skills as skillsApi, learning as learningApi } from '../api/endpoints.js';
 import { store, set, applyUi } from '../state/store.js';
 import { skeletonRows, errorState, toggleSwitch, emptyState } from '../components/states.js';
 import { openDialog, confirmDialog, promptDialog } from '../components/dialog.js';
@@ -17,7 +17,7 @@ import { shortcuts, label as keyLabel } from '../lib/keys.js';
 import { getPetState, savePetState, openPetSettings } from './pet.js';
 
 const SECTIONS = [
-  ['general', 'Profile'], ['briefing', 'Briefing'], ['screentime', 'Screen time'], ['pet', 'Pet'], ['appearance', 'Appearance'], ['voice', 'Voice'], ['models', 'Models'],
+  ['general', 'Profile'], ['briefing', 'Briefing'], ['screentime', 'Screen time'], ['pet', 'Pet'], ['appearance', 'Appearance'], ['voice', 'Voice'], ['models', 'Models'], ['skills', 'Skills'], ['learning', 'Learning'],
   ['memory', 'Memory'], ['integrations', 'Integrations'], ['privacy', 'Privacy'], ['security', 'Security'],
   ['performance', 'Performance'], ['shortcuts', 'Shortcuts'], ['backup', 'Backup'], ['advanced', 'Advanced'], ['about', 'About'],
 ];
@@ -47,6 +47,239 @@ const TTS_VOICE_PRESETS = [
 /* ── Screen time ── */
 
 const st = { data: null, loading: false, error: null };
+
+/* ── Skills ──────────────────────────────────────────────────────────── */
+
+const sk = { data: null, loading: false, error: null, url: '' };
+
+async function loadSkills() {
+  sk.loading = true;
+  const r = await skillsApi.list();
+  sk.loading = false;
+  sk.data = r.ok ? r.data : null;
+  sk.error = r.ok ? null : (r.message || "Skills couldn't load.");
+  renderFn();
+}
+
+function warnLine(text, bad = false) {
+  return h('div.skill-warn' + (bad ? '.bad' : ''), null, icon(bad ? 'close' : 'alert', 14), h('span', null, text));
+}
+
+async function previewSkill(source) {
+  const r = await skillsApi.preview(source);
+  if (!r.ok) { err(r.detail || r.message, r.detail); return; }
+  const p = r.data;
+  const blocked = !p.review.ok;
+  const { close } = openDialog({
+    title: blocked ? "This skill can't be installed" : `Install “${p.name || 'skill'}”?`,
+    description: p.description || 'No description.',
+    width: '40rem',
+    body: h('div.col.g12', null,
+      h('div.xs.mut', null, `From: ${p.source}`),
+      ...p.review.problems.map((t) => warnLine(t, true)),
+      ...p.review.warnings.map((t) => warnLine(t)),
+      !blocked ? warnLine('KALKI only follows the written instructions below. It never runs scripts from a skill, and anything that needs your approval still asks first.') : null,
+      p.replaces ? warnLine('A skill with this name is installed already. Installing replaces it.') : null,
+      h('div.xs.mut', null, 'Instructions'),
+      h('div.skill-instr', null, p.instructions || '(empty)'),
+    ),
+    actions: [
+      h('button.btn.btn-secondary', { type: 'button', onClick: () => close() }, blocked ? 'Close' : 'Cancel'),
+      blocked ? null : h('button.btn.btn-primary', {
+        type: 'button',
+        onClick: async () => {
+          const res = await skillsApi.install(source);
+          if (res.ok) { ok(`Skill “${p.name}” installed`); close(); sk.url = ''; loadSkills(); } else err(res.detail || res.message, res.detail);
+        },
+      }, 'Install'),
+    ],
+  });
+}
+
+function skillsSection() {
+  if (!sk.data && !sk.loading && !sk.error) loadSkills();
+  if (sk.error) return [errorState({ title: "Skills couldn't load", message: sk.error, onRetry: () => { sk.error = null; loadSkills(); } })];
+  if (!sk.data) return [h('div.card', null, skeletonRows(3))];
+  const { installed, available } = sk.data;
+
+  const rows = installed.map((s) => h('div.skill-row', null,
+    h('div.grow.col.g4', null,
+      h('div.sm', { style: { fontWeight: 600 } }, s.name),
+      h('div.xs.mut', null, s.description),
+      h('div.xs.mut', null, `${s.source === 'Included with KALKI' ? 'Included with KALKI' : 'From ' + s.source} · used ${s.uses || 0} time${s.uses === 1 ? '' : 's'}`),
+      ...(s.warnings || []).map((t) => warnLine(t))),
+    h('div.row.g8', null,
+      toggleSwitch({
+        checked: !!s.enabled, label: `Use ${s.name}`,
+        onClick: async () => { const r = await skillsApi.toggle(s.id, !s.enabled); if (r.ok) { ok(s.enabled ? `${s.name} is off` : `${s.name} is on`); loadSkills(); } else err(r.message, r.detail); },
+      }),
+      h('button.btn.gh', {
+        type: 'button',
+        onClick: async () => {
+          const r = await skillsApi.view(s.id);
+          if (!r.ok) { err(r.message, r.detail); return; }
+          const { close } = openDialog({ title: r.data.name, description: r.data.description, width: '40rem',
+            body: h('div.skill-instr', null, r.data.instructions),
+            actions: [h('button.btn.btn-primary', { type: 'button', onClick: () => close() }, 'Close')] });
+        },
+      }, 'View'),
+      h('button.icon-btn', {
+        type: 'button', 'aria-label': `Remove ${s.name}`, title: 'Remove',
+        onClick: async () => {
+          if (!await confirmDialog({ title: `Remove ${s.name}?`, description: 'You can install it again later.', confirmLabel: 'Remove' })) return;
+          const r = await skillsApi.remove(s.id);
+          if (r.ok) { ok('Skill removed'); loadSkills(); } else err(r.message, r.detail);
+        },
+      }, icon('trash', 14)))));
+
+  const urlInput = h('input.input.grow', { type: 'url', placeholder: 'https://github.com/owner/repo/tree/main/my-skill', value: sk.url,
+    onInput: (e) => { sk.url = e.target.value; } });
+
+  return [
+    h('div.card.col.g12', null,
+      h('div.row.sb', null, h('h2', null, 'Skills'), h('span.chip.sub', null, `${installed.filter((s) => s.enabled).length} on`)),
+      h('div.sub', null, 'Skills teach KALKI how you like certain jobs done: planning trips, writing emails, studying. When a request matches a skill, KALKI follows its instructions. Skills use the open Agent Skills format (a folder with a SKILL.md), so you can add ones from GitHub.'),
+      installed.length ? h('div', null, ...rows) : h('div.sm.mut', null, 'No skills yet. Add one below.'),
+    ),
+    available.length ? h('div.card.col.g12', null,
+      h('h2', null, 'Included with KALKI'),
+      ...available.map((b) => h('div.skill-row', null,
+        h('div.grow.col.g4', null, h('div.sm', { style: { fontWeight: 600 } }, b.name), h('div.xs.mut', null, b.description)),
+        h('button.btn', { type: 'button', onClick: () => previewSkill({ builtin: b.builtinFolder }) }, 'Add')))) : null,
+    h('div.card.col.g12', null,
+      h('h2', null, 'Add a skill'),
+      h('div.sub', null, 'Paste a GitHub link to a skill folder or its SKILL.md. You see the whole skill, and anything that looks risky, before it is installed.'),
+      h('div.row.g8', null, urlInput,
+        h('button.btn.pri', { type: 'button', onClick: () => { if (!sk.url.trim()) { err('Paste a link first'); return; } previewSkill({ url: sk.url.trim() }); } }, 'Preview')),
+      h('div.row.g8', null,
+        h('button.btn.gh', {
+          type: 'button',
+          onClick: () => {
+            let ta;
+            const { close } = openDialog({ title: 'Paste a SKILL.md', width: '40rem',
+              body: h('textarea.textarea', { rows: 12, placeholder: '---\nname: my-skill\ndescription: What it does and when to use it.\n---\n\nInstructions…', ref: (el) => { ta = el; } }),
+              actions: [h('button.btn.btn-secondary', { type: 'button', onClick: () => close() }, 'Cancel'),
+                h('button.btn.btn-primary', { type: 'button', onClick: () => { const text = ta.value.trim(); if (!text) return; close(); previewSkill({ text }); } }, 'Preview')] });
+          },
+        }, 'Paste SKILL.md instead')),
+      h('div.xs.mut', null, 'KALKI never runs scripts that come with a skill, and a skill can never skip an approval.'),
+    ),
+  ];
+}
+
+/* ── Learning: feedback, lessons, smarter Auto and benchmarks ────────── */
+
+const ls = { data: null, loading: false, error: null, reflecting: false, poll: null };
+
+async function loadLearning() {
+  ls.loading = true;
+  const r = await learningApi.overview();
+  ls.loading = false;
+  ls.data = r.ok ? r.data : null;
+  ls.error = r.ok ? null : (r.message || "Learning couldn't load.");
+  clearTimeout(ls.poll);
+  if (ls.data?.running?.running) ls.poll = setTimeout(loadLearning, 1500);
+  renderFn();
+}
+
+async function setLearning(patch, message) {
+  const r = await learningApi.settings(patch);
+  if (r.ok) { ok(message); loadLearning(); } else err(r.message, r.detail);
+}
+
+function secs(ms) { return ms == null ? '–' : `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)} s`; }
+
+function benchCard(d) {
+  const run = d.bench;
+  const running = d.running?.running;
+  const pct = running && d.running.total ? Math.round((d.running.done / d.running.total) * 100) : 0;
+  const rec = d.recommendation;
+  const table = run ? h('table.bench-table', null,
+    h('thead', null, h('tr', null, h('th', null, 'AI'), h('th', null, 'Score'), h('th', null, 'Tasks'), h('th', null, 'Typical speed'))),
+    h('tbody', null, ...run.results.slice().sort((a, b) => b.score - a.score).map((r) => h('tr', null,
+      h('td', null, r.label),
+      h('td.mono', null, `${r.passed}/${r.total}`),
+      h('td', null, ...r.tasks.map((t) => h('span.bench-dot' + (t.ok ? '.ok' : '.no'), { title: `${t.label}: ${t.ok ? 'passed' : (t.error ? 'error' : 'failed')}` }))),
+      h('td.mono', null, secs(r.medianMs)))))) : null;
+  return h('div.card.col.g12', null,
+    h('div.row.sb', null, h('h2', null, 'Benchmark'),
+      h('button.btn' + (running ? '' : '.pri'), { type: 'button', disabled: running, onClick: async () => {
+        const r = await learningApi.benchmark();
+        if (r.ok) { ok(`Testing ${r.data.models.join(', ')}`); loadLearning(); } else err(r.detail || r.message, r.detail);
+      } }, running ? 'Running…' : (run ? 'Run again' : 'Run benchmark'))),
+    h('div.sub', null, `Tests every AI you have set up on ${d.tasks.length} everyday KALKI tasks (${d.tasks.map((t) => t.label.toLowerCase()).join(', ')}), graded automatically, and times each answer. It uses a little of each AI's quota.`),
+    running ? h('div.col.g8', null, h('div.meter', null, h('i', { style: { width: `${pct}%` } })), h('div.xs.mut', null, `${d.running.done} of ${d.running.total} · ${d.running.current || ''}`)) : null,
+    table,
+    rec ? h('div.sm', null, `Best answers: ${rec.best}. Fastest good one: ${rec.fastest}.`) : null,
+    run ? h('div.xs.mut', null, `Last run ${new Date(run.ts * 1000).toLocaleString()} · ${d.benchHistory.length} run${d.benchHistory.length === 1 ? '' : 's'} saved`) : (running ? null : h('div.sm.mut', null, 'No benchmark yet.')),
+  );
+}
+
+function learningSection() {
+  if (!ls.data && !ls.loading && !ls.error) loadLearning();
+  if (ls.error) return [errorState({ title: "Learning couldn't load", message: ls.error, onRetry: () => { ls.error = null; loadLearning(); } })];
+  if (!ls.data) return [h('div.card', null, skeletonRows(3))];
+  const d = ls.data;
+  const fb = d.feedback;
+
+  const lessonRows = d.lessons.map((l) => h('div.li', null,
+    h('span.sm.grow', null, l.text),
+    h('button.btn.gh', { type: 'button', onClick: async () => {
+      const text = await promptDialog({ title: 'Edit lesson', label: 'Lesson', value: l.text, confirmLabel: 'Save' });
+      if (text == null) return;
+      const r = await learningApi.lesson({ id: l.id, text });
+      if (r.ok) { ok('Lesson saved'); loadLearning(); } else err(r.detail || r.message, r.detail);
+    } }, 'Edit'),
+    h('button.icon-btn', { type: 'button', 'aria-label': 'Delete lesson', title: 'Delete', onClick: async () => {
+      const r = await learningApi.lesson({ id: l.id, delete: true });
+      if (r.ok) { ok('Lesson deleted'); loadLearning(); } else err(r.message, r.detail);
+    } }, icon('trash', 14))));
+
+  return [
+    h('div.card.col.g12', null,
+      h('div.row.sb', null, h('h2', null, 'Learn from my feedback'), h('span.chip' + (d.learn ? '.ok' : '.sub'), null, d.learn ? 'On' : 'Off')),
+      h('div.sub', null, 'Rate replies with thumbs up or down in Ask. Every few ratings KALKI turns them into short lessons about how you like answers, and follows them from then on. Lessons can only change style and content, never approvals or safety. Everything stays on this PC.'),
+      row('Learn from my feedback', d.learn ? 'Lessons are used in every reply.' : 'Lessons are kept but not used.', toggleSwitch({
+        checked: d.learn, label: 'Learn from my feedback',
+        onClick: () => setLearning({ learn: !d.learn }, d.learn ? 'KALKI stopped using lessons' : 'KALKI will use its lessons'),
+      })),
+      h('div.xs.mut', null, `${fb.total} rating${fb.total === 1 ? '' : 's'} (${fb.up} up, ${fb.down} down)` + (d.learn && fb.total ? ` · new lessons after ${fb.untilNextLesson || 5} more` : '')),
+    ),
+    h('div.card.col.g12', null,
+      h('div.row.sb', null, h('h2', null, 'What KALKI has learned'), h('span.xs.mut', null, `${d.lessons.length} lesson${d.lessons.length === 1 ? '' : 's'}`)),
+      d.lessons.length ? h('div.col', null, ...lessonRows) : h('div.sm.mut', null, fb.total ? 'No lessons yet. Update them now, or rate a few more replies.' : 'Nothing yet. Rate some replies in Ask to teach KALKI your preferences.'),
+      h('div.row.g8', null,
+        h('button.btn', { type: 'button', disabled: ls.reflecting || !fb.total, onClick: async () => {
+          ls.reflecting = true; renderFn();
+          const r = await learningApi.reflect();
+          ls.reflecting = false;
+          if (r.ok) ok(r.data.added?.length ? `Learned ${r.data.added.length} new lesson${r.data.added.length === 1 ? '' : 's'}` : 'Lessons are up to date');
+          else err(r.detail || r.message, r.detail);
+          loadLearning();
+        } }, ls.reflecting ? 'Learning…' : 'Update lessons now'),
+        h('button.btn.gh', { type: 'button', onClick: async () => {
+          const text = await promptDialog({ title: 'Add a lesson', label: 'For example: Keep replies under 5 lines unless I ask for detail', value: '', confirmLabel: 'Add' });
+          if (!text) return;
+          const r = await learningApi.lesson({ text });
+          if (r.ok) { ok('Lesson added'); loadLearning(); } else err(r.detail || r.message, r.detail);
+        } }, 'Add a lesson'),
+        fb.total ? h('button.btn.gh', { type: 'button', onClick: async () => {
+          if (!await confirmDialog({ title: 'Forget all ratings?', description: 'Your lessons stay until you delete them.', confirmLabel: 'Forget ratings' })) return;
+          const r = await learningApi.clear({});
+          if (r.ok) { ok('Ratings forgotten'); loadLearning(); } else err(r.message, r.detail);
+        } }, 'Forget ratings') : null),
+    ),
+    h('div.card.col.g12', null,
+      h('h2', null, 'Smarter Auto'),
+      h('div.sub', null, 'When the model is set to Auto, KALKI uses your latest benchmark: the best-scoring AI for hard questions, the fastest good one for quick chats. It also skips an AI that keeps failing right now.'),
+      row('Use benchmark results', d.routing ? 'On' : 'Off. Auto uses its fixed order.', toggleSwitch({
+        checked: d.routing, label: 'Use benchmark results',
+        onClick: () => setLearning({ routing: !d.routing }, d.routing ? 'Auto uses its fixed order' : 'Auto will use benchmark results'),
+      })),
+    ),
+    benchCard(d),
+  ];
+}
 
 async function loadScreenTime() {
   st.loading = true;
@@ -407,6 +640,8 @@ const SECTION_BODY = {
   },
 
   screentime: () => screenTimeSection(),
+  skills: () => skillsSection(),
+  learning: () => learningSection(),
 
   pet: () => {
     const petState = getPetState();

@@ -122,6 +122,25 @@ export const screenTime = {
   forget: (app) => post('/api/screentime/forget', { app }),
 };
 
+export const skills = {
+  list: () => get('/api/agent-skills'),
+  preview: (source) => post('/api/agent-skills/preview', source, { timeout: 20000 }),
+  install: (source) => post('/api/agent-skills/install', source, { timeout: 20000 }),
+  toggle: (id, enabled) => post('/api/agent-skills/toggle', { id, enabled }),
+  remove: (id) => post('/api/agent-skills/remove', { id }),
+  view: (id) => post('/api/agent-skills/view', { id }),
+};
+
+export const learning = {
+  overview: () => get('/api/learning'),
+  feedback: (rating, response, prompt = '', note = '', model = '') => post('/api/learning/feedback', { rating, response, prompt, note, model }),
+  reflect: () => post('/api/learning/reflect', {}, { timeout: 60000 }),
+  settings: (patch) => post('/api/learning/settings', patch),
+  lesson: (patch) => post('/api/learning/lesson', patch),
+  clear: (what = {}) => post('/api/learning/clear', what),
+  benchmark: () => post('/api/learning/benchmark', {}),
+};
+
 /* ── Calendar / mail / music / messaging ──────────────────────────── */
 export const calendar = {
   status: () => get('/api/calendar/status'),

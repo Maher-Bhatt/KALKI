@@ -104,6 +104,9 @@ import settings_schema
 import routes_productivity
 import routes_memory
 import routes_threads
+import research
+import skills as skillsmod  # "skills" is a local name in the request handler
+import learning
 import threads
 import tool_policy
 import activity
@@ -2951,6 +2954,7 @@ def build_system_prompt(query=""):
         + context_block
         + hardware_prompt_block()
         + get_memory_prompt(query)
+        + _skills_and_lessons(query)
         + f"\n\nCURRENT TIME: {now.strftime('%I:%M %p')}"
         + f"\nCURRENT DATE: {now.strftime('%A, %B %d, %Y')}"
     )
@@ -3963,6 +3967,16 @@ def resolve_auto_model(last_user):
         return best_groq
     else:
         is_complex = any(k in low_prompt for k in _HARD_HINTS) or "```" in (last_user or "") or len(low_prompt.split()) > 14
+        # Smarter Auto: prefer what scored best in the latest benchmark, and skip an AI that keeps failing.
+        candidates = (["gemini-2.5-flash"] if has_gemini else []) + ([best_groq] if has_groq else []) \
+            + (["gpt-4o-mini"] if has_openai else []) + (["llama-3.1-8b-instant"] if has_groq and not is_complex else [])
+        try:
+            learned = learning.preferred_model(candidates, is_complex)
+        except Exception as e:
+            learned = None
+            log(f"learned routing skipped: {e}")
+        if learned:
+            return learned
         if is_complex:
             if has_gemini: return "gemini-2.5-flash"
             elif has_openai: return "gpt-4o"
@@ -3973,6 +3987,158 @@ def resolve_auto_model(last_user):
             elif has_groq: return best_groq
             elif has_openai: return "gpt-4o-mini"
             else: return "ollama"
+
+# ── Skills, learning and research ────────────────────────────────────────────
+
+def _note_card(label, detail="", status="done", tool="info"):
+    """A plain progress line in Ask (the same strip that shows tool calls)."""
+    cards = getattr(_tool_cards, "pending", None)
+    if cards is None:
+        cards = _tool_cards.pending = []
+    cards.append({"tool": tool, "label": label, "status": status, "detail": str(detail or "")[:200]})
+
+
+def _skills_and_lessons(query):
+    """Installed skills that fit this request, and what KALKI learned from feedback."""
+    block = ""
+    try:
+        text, names = skillsmod.prompt_block(query)
+        if names:
+            _note_card("Used a skill", ", ".join(names), tool="skill")
+            block += text
+    except Exception as e:
+        log(f"skills skipped: {e}")
+    try:
+        block += learning.lessons_block()
+    except Exception as e:
+        log(f"lessons skipped: {e}")
+    return block
+
+
+def _has_key(name):
+    value = getattr(config, name, "") or ""
+    return bool(value) and not value.startswith("PASTE_")
+
+
+def _ask_model(model, msgs):
+    """One plain reply (no tools) from a specific model."""
+    start = time.time()
+    try:
+        if model.startswith("gemini-"):
+            reply = ask_gemini(msgs, model=model, use_tools=False)
+        elif model.startswith("gpt-"):
+            reply = ask_openai(msgs, model=model, use_tools=False)
+        elif model.startswith("claude-"):
+            reply = ask_anthropic(msgs, model=model)
+        elif model == "ollama":
+            reply = ask_ollama(msgs)
+        else:
+            reply = ask_groq(msgs, model=model, use_tools=False)
+        learning.record_call(model, True, (time.time() - start) * 1000)
+        return _strip_think(reply or "")
+    except Exception:
+        learning.record_call(model, False, (time.time() - start) * 1000)
+        raise
+
+
+def _ask_plain(msgs, hint=""):
+    """A plain reply from the best AI that works right now, trying the others if it fails."""
+    first = STATE["model"] if STATE["model"] != "auto" else resolve_auto_model(hint)
+    order = [first] + [m["model"] for m in _bench_models() if m["model"] != first]
+    last = None
+    for model in order:
+        try:
+            return _ask_model(model, msgs)
+        except Exception as e:
+            last = e
+            log(f"[plain ask] {model} failed: {e}")
+    raise RuntimeError(f"No AI could answer ({str(last)[:120]})" if last else NO_PROVIDER_MESSAGE)
+
+
+def _bench_models():
+    """The AIs set up on this PC, as [{"model", "label"}]."""
+    out = []
+    if _has_key("GEMINI_API_KEY"):
+        out.append({"model": "gemini-2.5-flash", "label": "Gemini 2.5 Flash"})
+    if _has_key("GROQ_API_KEY"):
+        best = "qwen/qwen3.8-27b" if "qwen/qwen3.8-27b" in AVAILABLE_GROQ_MODELS else (AVAILABLE_GROQ_MODELS[0] if AVAILABLE_GROQ_MODELS else "llama-3.3-70b-versatile")
+        out.append({"model": best, "label": f"Groq · {best.split('/')[-1]}"})
+        if best != "llama-3.1-8b-instant":
+            out.append({"model": "llama-3.1-8b-instant", "label": "Groq · Llama 3.1 8B"})
+    if _has_key("OPENAI_API_KEY"):
+        out.append({"model": "gpt-4o-mini", "label": "OpenAI GPT-4o mini"})
+    if _has_key("ANTHROPIC_API_KEY"):
+        out.append({"model": "claude-3-5-sonnet-20241022", "label": "Claude 3.5 Sonnet"})
+    if _ollama_reachable():
+        out.append({"model": "ollama", "label": "Ollama (offline)"})
+    return out
+
+
+def _ollama_reachable():
+    try:
+        urllib.request.urlopen(f"{config.OLLAMA_URL}/api/tags", timeout=1.5).read()
+        return True
+    except Exception:
+        return False
+
+
+def _research_fetch(url):
+    if not _safe_public_url(url):
+        raise ValueError("not a public address")
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) KALKI-research"})
+    with _open_public_url(req, 7) as resp:
+        if "html" not in (resp.headers.get("Content-Type") or "text/html").lower() and "text" not in (resp.headers.get("Content-Type") or "").lower():
+            raise ValueError("not a web page")
+        return resp.read(1_500_000).decode("utf-8", "ignore")
+
+
+def _research_search(query, n):
+    return web_search(query, n=n).get("results", [])
+
+
+def run_research(topic, progress=lambda label, detail: None):
+    return research.run(topic, ask=lambda msgs: _ask_plain(msgs, topic), search=_research_search,
+                        fetch=_research_fetch, notes=lambda q: notesmod.search(q)[:3], progress=progress)
+
+
+def _research_stream(user_text):
+    """Research as a reply stream: progress lines while it works, then the cited answer."""
+    topic = research.topic_of(user_text) or user_text
+    _note_card("Researching", topic, tool="research")
+    yield ""
+    result_box = {}
+    # run_research reports progress on its own thread; hand its cards to this one as they arrive
+    cards_seen = 0
+    worker_cards = []
+
+    def progress_from_worker(label, detail):
+        worker_cards.append({"tool": "research", "label": label, "status": "done", "detail": str(detail)[:200]})
+
+    worker = threading.Thread(target=lambda: result_box.update(run_research(topic, progress_from_worker) or {}), daemon=True)
+    worker.start()
+    while worker.is_alive():
+        worker.join(0.4)
+        while cards_seen < len(worker_cards):
+            pending = getattr(_tool_cards, "pending", None)
+            if pending is None:
+                pending = _tool_cards.pending = []
+            pending.append(worker_cards[cards_seen])
+            cards_seen += 1
+            yield ""
+    while cards_seen < len(worker_cards):
+        _tool_cards.pending = (getattr(_tool_cards, "pending", None) or []) + [worker_cards[cards_seen]]
+        cards_seen += 1
+    answer = result_box.get("answer") or "The research didn't finish. Check the internet connection and try again."
+    add_activity(f"Researched: {topic[:80]}", "ai", kind="research")
+    for i in range(0, len(answer), 400):
+        yield answer[i:i + 400]
+
+
+skillsmod.FETCH = lambda url: _http_get(url, timeout=8)
+learning.ASK = lambda msgs: _ask_plain(msgs)
+learning.ASK_MODEL = _ask_model
+learning.MODELS = _bench_models
+
 
 def _lock_pc_soon(seconds=4):
     """Lock Windows after the reply has had time to show."""
@@ -4758,7 +4924,8 @@ class Handler(BaseHTTPRequestHandler):
 
         route = (routes_pet.GET_ROUTES.get(path) or routes_settings.GET_ROUTES.get(path)
                  or routes_calendar.GET_ROUTES.get(path) or briefing.GET_ROUTES.get(path)
-                 or focus.GET_ROUTES.get(path) or routes_screen_time.GET_ROUTES.get(path))
+                 or focus.GET_ROUTES.get(path) or routes_screen_time.GET_ROUTES.get(path)
+                 or skillsmod.GET_ROUTES.get(path) or learning.GET_ROUTES.get(path))
         if route:
             payload, status = route({})
             self._json(payload, status=status)
@@ -5235,7 +5402,8 @@ class Handler(BaseHTTPRequestHandler):
                  or routes_settings.POST_ROUTES.get(path) or routes_calendar.POST_ROUTES.get(path)
                  or routes_setup.POST_ROUTES.get(path) or routes_backup.POST_ROUTES.get(path)
                  or focus.POST_ROUTES.get(path) or routes_screen_time.POST_ROUTES.get(path)
-                 or location_provider.POST_ROUTES.get(path) or voice_turn.POST_ROUTES.get(path))
+                 or location_provider.POST_ROUTES.get(path) or voice_turn.POST_ROUTES.get(path)
+                 or skillsmod.POST_ROUTES.get(path) or learning.POST_ROUTES.get(path))
         if route:
             payload, status = route(body)
             self._json(payload, status=status)
@@ -5481,7 +5649,8 @@ class Handler(BaseHTTPRequestHandler):
                 if shared_source:
                     _share_exchange(user_text, reply, shared_source)
 
-            handled, local_reply = handle_local(user_text)
+            wants_research = research.is_research_request(user_text) and not body.get("voiceMode")
+            handled, local_reply = (False, None) if wants_research else handle_local(user_text)
             if handled:
                 local_reply = maybe_add_joke_offer(user_text, local_reply)
                 if not client_speech:
@@ -5504,7 +5673,7 @@ class Handler(BaseHTTPRequestHandler):
             if stream_req:
                 start_time = time.time()
                 _take_tool_cards()  # Threads are reused, so drop anything left from an earlier request.
-                generator = _counting_reply(ask_ai_stream(messages))
+                generator = _counting_reply(_research_stream(user_text) if wants_research else ask_ai_stream(messages))
                 try:
                     first_token = next(generator)
                 except StopIteration:
@@ -5526,7 +5695,7 @@ class Handler(BaseHTTPRequestHandler):
 
                 def _check_preload():
                     nonlocal first_chunk, preloaded_first
-                    if preloaded_first is not None or client_speech:
+                    if preloaded_first is not None or client_speech or wants_research:
                         return
                     accum = "".join(full_reply)
                     clean_accum = clean_for_speech(accum)
@@ -5556,7 +5725,10 @@ class Handler(BaseHTTPRequestHandler):
                 reply_str = "".join(full_reply)
                 spoken_reply = _apply_reply_actions(reply_str)
                 if not client_speech:
-                    speak(spoken_reply or reply_str, preloaded_first=preloaded_first, first_chunk=first_chunk)
+                    if wants_research:
+                        speak(f"Here's my research on {research.topic_of(user_text)}. The sources are listed under the answer.")
+                    else:
+                        speak(spoken_reply or reply_str, preloaded_first=preloaded_first, first_chunk=first_chunk)
                 append_history(user_text, spoken_reply or reply_str)
                 _record_exchange(spoken_reply or reply_str)
                 _remember_from_turn(user_text, reply_str)
@@ -5578,7 +5750,7 @@ class Handler(BaseHTTPRequestHandler):
                     # Prepend recent conversation so KALKI remembers context.
                     convo = (_shared_context() + messages) if shared_source else messages
                     with _ReplyInProgress():
-                        reply = ask_ai(convo)
+                        reply = run_research(research.topic_of(user_text))["answer"] if wants_research else ask_ai(convo)
                 except Exception as e:
                     self._json({"ok": False, "error": str(e)})
                     return

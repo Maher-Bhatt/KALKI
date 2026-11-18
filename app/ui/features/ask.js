@@ -8,7 +8,7 @@ import { icon } from '../lib/icons.js';
 import { renderMarkdown, toPlain } from '../lib/markdown.js';
 import { relative, bytes, modelLabel } from '../lib/format.js';
 import { streamChat } from '../api/stream.js';
-import { system, vision, tasks, media, voice } from '../api/endpoints.js';
+import { system, vision, tasks, media, voice, learning } from '../api/endpoints.js';
 import { store, set, notify } from '../state/store.js';
 import { refreshStatus, loadModels } from '../state/status.js';
 import * as conv from '../state/conversations.js';
@@ -122,6 +122,7 @@ function messageActions(msg) {
 
     actions.push(ttsBtn);
     actions.push(btn('ref', 'Regenerate reply', () => regenerate(msg)));
+    actions.push(...rateButtons(msg));
     actions.push(btn('flag', 'Report this response', () => reportDialog(msg)));
   }
 
@@ -399,6 +400,54 @@ async function editAndResend(msg) {
   await send(next, []);
 }
 
+/* ── Feedback: thumbs up/down teach KALKI your preferences ──────────── */
+
+const rated = new Map();
+
+function promptFor(msg) {
+  const t = conv.active();
+  if (!t) return '';
+  const i = t.messages.findIndex((m) => m.id === msg.id);
+  const prior = [...t.messages.slice(0, Math.max(0, i))].reverse().find((m) => m.role === 'user');
+  return prior ? prior.content || '' : '';
+}
+
+async function sendRating(msg, rating, note, buttons) {
+  const r = await learning.feedback(rating, msg.content || '', promptFor(msg), note, msg.model || '');
+  if (!r.ok) { err(r.message, r.detail); return; }
+  rated.set(msg.id, rating);
+  buttons.forEach((b) => b.classList.toggle('is-on', b.dataset.rating === rating));
+  ok(rating === 'up' ? 'Thanks! KALKI will keep doing that' : 'Thanks. KALKI will learn from this');
+}
+
+function rateButtons(msg) {
+  const make = (rating, name, label) => {
+    const b = h('button.ib.rate-btn', { type: 'button', 'aria-label': label, title: label, 'data-rating': rating }, icon(name, 14));
+    if (rated.get(msg.id) === rating) b.classList.add('is-on');
+    return b;
+  };
+  const up = make('up', 'thumbUp', 'Good reply');
+  const down = make('down', 'thumbDown', 'Bad reply');
+  const buttons = [up, down];
+  up.addEventListener('click', () => sendRating(msg, 'up', '', buttons));
+  down.addEventListener('click', () => {
+    let note;
+    const { close } = openDialog({
+      title: 'What should KALKI do better?',
+      description: 'Optional. KALKI turns your ratings into lessons you can see in Settings → Learning. Everything stays on this PC.',
+      width: '30rem',
+      body: h('div.field', null,
+        h('label', { for: 'rate-note' }, 'For example: shorter, in Hinglish, less formal, more detail'),
+        h('textarea.textarea', { id: 'rate-note', rows: 3, ref: (el) => { note = el; } })),
+      actions: [
+        h('button.btn.btn-secondary', { type: 'button', onClick: () => close() }, 'Cancel'),
+        h('button.btn.btn-primary', { type: 'button', onClick: () => { close(); sendRating(msg, 'down', note.value.trim(), buttons); } }, 'Send'),
+      ],
+    });
+  });
+  return buttons;
+}
+
 function reportDialog(msg) {
   let reason = 'other';
   let details;
@@ -611,7 +660,7 @@ export function askView() {
     c.ta.dispatchEvent(new Event('input', { bubbles: true }));
   };
   const quickActions = [
-    { title: 'Research', sub: 'Search the web and summarise', icon: 'search', run: () => startWith('Research ') },
+    { title: 'Research', sub: 'Deep research, with sources', icon: 'search', run: () => startWith('Research ') },
     { title: 'Build', sub: 'Write, run or debug code', icon: 'code', run: () => go('workbench') },
     { title: 'Automate', sub: 'Routines that run for you', icon: 'flow', run: () => go('workbench') },
     { title: 'Analyze', sub: 'Files, data and PDFs', icon: 'layers', run: () => document.getElementById('composer-file')?.click() },
