@@ -131,6 +131,9 @@ def main():
             cmd.append("--hidden-import=media_mod")
             cmd.append("--hidden-import=antivirus")
             cmd.append("--hidden-import=tool_policy")
+            cmd.append("--hidden-import=research")
+            cmd.append("--hidden-import=skills")
+            cmd.append("--hidden-import=learning")
             
         if script == "listener.py":
             cmd.append("--hidden-import=pyaudio")

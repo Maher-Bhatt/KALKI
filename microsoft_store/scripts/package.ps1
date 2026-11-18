@@ -119,6 +119,12 @@ if (Test-Path $pluginsDir) {
     Copy-Item -Path $pluginsDir -Destination (Join-Path $PackageRoot "plugins") -Recurse -Force
 }
 
+$skillsDir = Join-Path $AppDir "skills_builtin"
+if (Test-Path $skillsDir) {
+    Log "Copying built-in skills..."
+    Copy-Item -Path $skillsDir -Destination (Join-Path $PackageRoot "skills_builtin") -Recurse -Force
+}
+
 foreach ($docFile in @("LICENSE", "TERMS.md")) {
     $src = Join-Path $ProjectRoot $docFile
     if (Test-Path $src) {
